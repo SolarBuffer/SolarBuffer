@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolarBuffer Control</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: hsl(30, 25%, 97%); color: hsl(220, 20%, 14%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+        .container { width: 100%; max-width: 480px; }
+        .header { text-align: center; margin-bottom: 1.5rem; }
+        .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
+        .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+        .header h1 .solar { background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .card { background: white; border: 1px solid hsl(30, 15%, 88%); border-radius: 0.75rem; box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15); }
+        .stat-card { padding: 1.25rem; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
+        .stat-card .stat-icon { font-size: 1.5rem; }
+        .stat-card .label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: hsl(220, 10%, 46%); }
+        .stat-card .value { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 700; }
+        .stat-card .unit { font-size: 0.85rem; color: hsl(220, 10%, 46%); }
+
+        .control-card { padding: 1.25rem; }
+        .control-card h2 { font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .control-card h2 .ctrl-icon { color: hsl(32, 95%, 52%); }
+        .control-row { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-radius: 0.5rem; background: hsl(30, 15%, 95%); margin-bottom: 0.75rem; cursor: pointer; }
+        .control-row:last-child { margin-bottom: 0; }
+        .control-label .name { font-weight: 500; font-size: 0.95rem; }
+        .control-label .sub { font-size: 0.8rem; color: hsl(220, 10%, 46%); }
+        .control-right { display: flex; align-items: center; gap: 0.75rem; }
+
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: hsl(220, 10%, 80%); }
+        .dot.active { background: #22c55e; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
+        .toggle input { display: none; }
+        .toggle .slider { position: absolute; inset: 0; background: hsl(30, 15%, 88%); border-radius: 12px; transition: background 0.3s; }
+        .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+        .toggle .slider::before { content: ''; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: white; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.2); transition: transform 0.3s; }
+        .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+        .footer { text-align: center; font-size: 0.75rem; color: hsl(220, 10%, 46%); margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon">☀️</div>
+            <h1><span class="solar">Solar</span>Buffer Control</h1>
+            <p>PID &amp; Shelly Brightness Control</p>
+        </div>
+
+        <div class="grid">
+            <div class="card stat-card">
+                <span class="stat-icon">⚡</span>
+                <span class="label">Vermogen</span>
+                <span class="value" id="current_power">0.0</span>
+                <span class="unit">W</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-icon">🔥</span>
+                <span class="label">Sturing</span>
+                <span class="value" id="current_brightness">0.0</span>
+                <span class="unit">%</span>
+            </div>
+        </div>
+
+        <div class="card control-card">
+            <h2><span class="ctrl-icon"></span> Besturing</h2>
+
+            <div class="control-row" onclick="togglePID()">
+                <div class="control-label">
+                    <div class="name">PID Controller</div>
+                    <div class="sub" id="pid_sub">Uitgeschakeld</div>
+                </div>
+                <div class="control-right">
+                    <div class="dot" id="pid_dot"></div>
+                    <label class="toggle">
+                        <input type="checkbox" id="pid_toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-row" onclick="toggleShelly()">
+                <div class="control-label">
+                    <div class="name">Shelly</div>
+                    <div class="sub" id="shelly_sub">Uitgeschakeld</div>
+                </div>
+                <div class="control-right">
+                    <div class="dot" id="shelly_dot"></div>
+                    <label class="toggle">
+                        <input type="checkbox" id="shelly_toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card control-card">
+            <h2><span class="ctrl-icon">⚙️</span> Wizard</h2>
+            <div class="control-row" onclick="goToWizard()">
+                <div class="control-label">
+                    <div class="name">Ga naar Wizard</div>
+                    <div class="sub">Herconfigureer IP-adressen</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">Live data · Verversing elke seconde</div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            fetch('/status_json')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('current_power').textContent = data.power.toFixed(1);
+                    document.getElementById('current_brightness').textContent = data.brightness.toFixed(1);
+
+                    document.getElementById('pid_toggle').checked = data.enabled;
+                    document.getElementById('pid_sub').textContent = data.enabled ? 'Actief' : 'Uitgeschakeld';
+                    document.getElementById('pid_dot').className = 'dot' + (data.enabled ? ' active' : '');
+
+                    document.getElementById('shelly_toggle').checked = data.shelly_on;
+                    document.getElementById('shelly_sub').textContent = data.shelly_on ? 'Actief' : 'Uitgeschakeld';
+                    document.getElementById('shelly_dot').className = 'dot' + (data.shelly_on ? ' active' : '');
+                })
+                .catch(err => console.error("Update error:", err));
+        }
+
+        function togglePID() { fetch('/toggle_pid').then(updateStatus); }
+        function toggleShelly() { fetch('/toggle_shelly').then(updateStatus); }
+        function goToWizard() { window.location.href = '/wizard_forced'; }
+
+        setInterval(updateStatus, 1000);
+        updateStatus();
+    </script>
+</body>
+</html>
