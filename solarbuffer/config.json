@@ -1,1 +1,1 @@
-{"username": "SolarBuffer", "password": "GodMode"}
+{"username": "SolarBuffer", "password": "GodMode", "p1_ip": "192.168.178.21", "shelly_devices": [{"name": "Boiler 2", "ip": "192.168.178.195"}]}
