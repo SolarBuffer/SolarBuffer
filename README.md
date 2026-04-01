@@ -23,6 +23,15 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
+#### Check Python
+```bash
+python3 --version
+```
+#### Installeer pip
+```bash
+sudo apt install python3-pip -y
+pip3 --version
+```
 
 ### 2. Repository clonen
 ```bash
