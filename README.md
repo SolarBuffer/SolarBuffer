@@ -22,3 +22,8 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 ### 1. Raspberry Pi updaten
 ```bash
 sudo apt update && sudo apt upgrade -y
+
+### 2. Repository clonen
+```bash
+git clone https://github.com/SolarBuffer/SolarBuffer.git
+cd SolarBuffer/solarbuffer
