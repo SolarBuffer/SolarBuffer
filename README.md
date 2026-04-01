@@ -42,12 +42,12 @@ pip install --upgrade pip
 pip install simple-pid flask requests
 ```
 ### 5. Automatisch starten bij opstart
-## Maak nieuw service bestand
+#### Maak nieuw service bestand
 ```bash
 sudo nano /etc/systemd/system/solarbuffer.service
 ```
 
-## Voeg de volgende gegevens toe
+#### Voeg de volgende gegevens toe
 ```bash
 [Unit]
 Description=SolarBuffer Service
@@ -62,16 +62,16 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ```
-## Sla het bestand op Cntrl+O, Enter, Cntrl+X
+#### Sla het bestand op Cntrl+O, Enter, Cntrl+X
 
-## Herlaad systemd en start de service
+#### Herlaad systemd en start de service
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable solarbuffer.service
 sudo systemctl start solarbuffer.service
 ```
 
-## Check de status
+#### Check de status
 ```bash
 sudo systemctl status solarbuffer.service
 ```
