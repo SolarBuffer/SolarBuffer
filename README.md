@@ -47,8 +47,8 @@ source venv/bin/activate
 
 ### 4. Dependencies installeren
 ```bash
-pip install --upgrade pip
-pip install simple-pid flask requests
+pip3 install --upgrade pip
+pip3 install simple-pid flask requests
 ```
 ### 5. Automatisch starten bij opstart
 #### Maak nieuw service bestand
