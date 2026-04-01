@@ -38,6 +38,12 @@ current_power = 0
 current_brightness = 0
 last_brightness = 0
 
+# ================= OVERRIDE LOGICA =================
+high_power_start = None
+low_power_start = None
+force_off = False
+force_on = False
+
 # ================= FLASK =================
 app = Flask(__name__)
 app.secret_key = "verander_dit_naar_iets_veiligs!"
@@ -47,7 +53,6 @@ def require_login():
     return session.get("logged_in", False)
 
 # ================= ROUTES =================
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     config_data = load_config()
@@ -120,6 +125,8 @@ def dashboard():
 
 @app.route("/status_json")
 def status_json():
+    global force_off, force_on  # ← vergeet dit niet!
+    
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
 
@@ -129,10 +136,19 @@ def status_json():
     for device in config_data.get("shelly_devices", []):
         ip = device["ip"]
         state = device_states.get(ip, {"on": True, "brightness": 0, "online": False})
+
+        # Force logica zichtbaar maken op web
+        if force_off:
+            display_on = False
+        elif force_on:
+            display_on = True
+        else:
+            display_on = state["on"]
+
         devices_status.append({
             "name": device["name"],
             "ip": ip,
-            "on": state["on"],
+            "on": display_on,
             "brightness": state["brightness"],
             "online": state.get("online", False)
         })
@@ -141,7 +157,9 @@ def status_json():
         power=current_power,
         brightness=current_brightness,
         enabled=enabled,
-        devices=devices_status
+        devices=devices_status,
+        force_off=force_off,
+        force_on=force_on
     )
 
 @app.route("/toggle_pid")
@@ -192,6 +210,7 @@ def init_device_states(devices):
 # ================= LOOP =================
 def control_loop():
     global current_power, current_brightness, last_brightness
+    global high_power_start, low_power_start, force_off, force_on
 
     online_check_interval = 10  # seconden tussen online-checks
     last_online_check = {}
@@ -207,7 +226,6 @@ def control_loop():
                 continue
 
             init_device_states(shelly_devices)
-
             now = time.time()
 
             # Online-check elke 10 seconden per apparaat
@@ -220,14 +238,37 @@ def control_loop():
             # P1 uitlezen
             data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
             measured_power = data.get("active_power_w", 0)
+            current_power = measured_power
 
             if -5 <= measured_power <= 45:
                 pid_power = 0
             else:
                 pid_power = measured_power
 
-            current_power = measured_power
+            # ================= OVERRIDE LOGICA =================
+            # Reset timers als buiten thresholds
+            if measured_power < 300:
+                high_power_start = None
+            if measured_power > -50:
+                low_power_start = None
 
+            # UIT na 300W voor 2 min
+            if measured_power >= 300:
+                if high_power_start is None:
+                    high_power_start = now
+                elif now - high_power_start >= 120:
+                    force_off = True
+                    force_on = False
+
+            # AAN bij -50W voor 30 sec
+            if measured_power <= -50:
+                if low_power_start is None:
+                    low_power_start = now
+                elif now - low_power_start >= 30:
+                    force_on = True
+                    force_off = False
+
+            # PID berekening
             if enabled:
                 brightness = pid(pid_power)
                 brightness = max(0, min(100, brightness))
@@ -237,13 +278,19 @@ def control_loop():
 
             current_brightness = brightness
 
-            # Stuur naar alle actieve Shelly-apparaten
+            # Stuur naar Shelly apparaten
             for device in shelly_devices:
                 ip = device["ip"]
                 state = device_states.get(ip, {"on": True, "online": False})
 
                 if state.get("online"):
-                    if state["on"]:
+                    if force_off:
+                        set_shelly(0, False, ip)
+                        device_states[ip]["brightness"] = 0
+                    elif force_on:
+                        set_shelly(100, True, ip)
+                        device_states[ip]["brightness"] = 100
+                    elif state["on"]:
                         set_shelly(brightness, brightness > 0, ip)
                         device_states[ip]["brightness"] = brightness
                     else:

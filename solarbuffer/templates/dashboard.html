@@ -209,7 +209,7 @@
     <!-- PID besturing -->
     <div class="card control-card">
       <h2><span class="ctrl-icon">🎛️</span> Besturing</h2>
-      <div class="control-row" onclick="togglePID()">
+      <div class="control-row">
         <div class="control-label">
           <div class="name">PID Controller</div>
           <div class="sub" id="pid_sub">Uitgeschakeld</div>
@@ -262,7 +262,8 @@
     }
 
     function togglePID() {
-      fetch("/toggle_pid").then(updateStatus);
+      fetch("/toggle_pid")
+        .then(() => setTimeout(updateStatus, 200));
     }
 
     function toggleDevice(ip) {
