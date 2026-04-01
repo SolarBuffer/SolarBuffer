@@ -22,7 +22,6 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 ### 1. Raspberry Pi updaten
 ```bash
 sudo apt update && sudo apt upgrade -y
-bash
 ```
 ### 2. Repository clonen
 ```bash
