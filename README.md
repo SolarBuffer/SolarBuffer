@@ -20,35 +20,37 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 ## ⚡ Installatie
 
 ### 1. Raspberry Pi updaten
+Update eerst je Raspberry Pi zodat alle pakketten up-to-date zijn. Dit zorgt ervoor dat je systeem stabiel draait en de nieuwste beveiligingsupdates heeft.
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
 #### Check Python
+Controleer of je Python 3.14 of hoger hebt:
 ```bash
 python3 --version
 ```
-#### Installeer pip
-```bash
-sudo apt install python3-pip -y
-pip3 --version
-```
+Zo niet, update Python dan naar een recente versie.
 
 ### 2. Repository clonen
+Download de SolarBuffer-code van GitHub en ga naar de juiste map
 ```bash
 git clone https://github.com/SolarBuffer/SolarBuffer.git
 cd SolarBuffer/solarbuffer
 ```
+Hier staat zowel app.py als config.json.
 
 ### 3. Python virtual environment aanmaken
+Om te zorgen dat alle Python-pakketten netjes geïsoleerd zijn, maken we een virtuele omgeving:
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
 ### 4. Dependencies installeren
+Upgrade pip en installeer de benodigde pakketten:
 ```bash
-pip3 install --upgrade pip
-pip3 install simple-pid flask requests
+pip install --upgrade pip
+pip install simple-pid flask requests
 ```
 ### 5. Automatisch starten bij opstart
 #### Maak nieuw service bestand
