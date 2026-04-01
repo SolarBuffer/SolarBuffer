@@ -7,7 +7,7 @@ from flask import Flask, render_template, jsonify, request, redirect, session
 import threading
 
 # ================= CONFIG =================
-CONFIG_FILE = "config.json"
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -105,11 +105,33 @@ def wizard():
 
     return render_template("wizard.html", config=config_data)
 
-@app.route("/wizard_forced")
+@app.route("/wizard_forced", methods=["GET", "POST"])
 def wizard_forced():
     if not require_login():
         return redirect("/login")
+
     config_data = load_config()
+
+    if request.method == "POST":
+        # Nieuwe P1 IP
+        config_data["p1_ip"] = request.form["p1ip"]
+
+        # Nieuwe Shelly apparaten
+        shelly_devices = []
+        names = request.form.getlist("shelly_name[]")
+        ips = request.form.getlist("shelly_ip[]")
+
+        for name, ip in zip(names, ips):
+            if name.strip() and ip.strip():
+                shelly_devices.append({"name": name.strip(), "ip": ip.strip()})
+
+        config_data["shelly_devices"] = shelly_devices
+        save_config(config_data)
+        init_device_states(shelly_devices)
+
+        return redirect("/dashboard")
+
+    # GET: toon het formulier
     return render_template("wizard.html", config=config_data)
 
 @app.route("/dashboard")
