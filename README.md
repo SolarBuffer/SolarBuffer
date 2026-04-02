@@ -8,12 +8,11 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 ## 📦 Functies
 
 - Lees real-time P1-energiemeterdata uit  
-- Stuur Shelly-apparaten aan (aan/uit en dimmen)  
+- Stuur SolarBuffer-apparaten aan (aan/uit en dimmen)  
 - PID-gestuurde automatische regeling van verbruik  
 - Webgebaseerde configuratie wizard  
 - Real-time status dashboard  
-- Forceer aan/uit modus voor apparaten  
-- Logging en foutafhandeling  
+- Forceer aan/uit modus voor apparaten   
 
 ---
 
