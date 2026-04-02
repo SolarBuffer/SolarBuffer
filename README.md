@@ -59,7 +59,7 @@ cp config.voorbeeld.json config.json
 ```
 ---
 
-> [!TIP] 
+
 ## Auto Boot
 ### 1. Maak nieuw service bestand
 Configureer een service bestand in de system files om automatisch de python script te starten tijdens boot.
@@ -96,6 +96,8 @@ sudo systemctl start solarbuffer.service
 sudo systemctl status solarbuffer.service
 ```
 ---
+> [!TIP]
+> Om volledig up to date te blijven voer het volgende uit
 
 ## Auto Git Pull
 ### 1. Open cron
