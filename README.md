@@ -53,7 +53,7 @@ pip install simple-pid flask requests
 ```
 ---
 
-# Automatisch starten bij opstart
+# Automatisch starten bij boot
 ### Maak nieuw service bestand
 ```bash
 sudo nano /etc/systemd/system/solarbuffer.service
