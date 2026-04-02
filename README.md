@@ -60,7 +60,7 @@ cp config.voorbeeld.json config.json
 ```
 ---
 
-# Automatisch starten bij boot
+# Auto boot
 ### 1. Maak nieuw service bestand
 Configureer een service bestand in de system files om automatisch de python script te starten tijdens boot.
 ```bash
@@ -97,6 +97,20 @@ sudo systemctl status solarbuffer.service
 ```
 ---
 
+# Auto git pull met cron
+### 1. Open cron
+```bash
+crontab -e
+```
+### 2. Auto update command
+Elke 24 uur wordt er gecontroleerd of er nieuwe updates beschikbaar zijn via de command
+```bash
+0 3 * * * * cd /home/pi/SolarBuffer && git pull && sudo systemctl restart solarbuffer
+```
+Nu wordt er elke nacht om 03:00 uur 's nachts controleert voor nieuwe updates en uitgevoerd indien er een update heeft plaats gevonden.
+
+---
+
 ## 🧙‍♂️ Wizard
 Als de SolarBuffer service draait dienen de parameters via de webbrowser geconfigureerd te worden.
 ```bash
@@ -110,5 +124,3 @@ Username: solarbuffer
 Password: solarbuffer
 ```
 Na het inloggen kom je in het configuratiescherm, hierin worden de IP-adressen van de HomeWizard P1-meter ingevuld en de IP-adressen van de Shelly-devices (5 max). Later kan de configuratie altijd nog gewijzigd worden.
-
-
