@@ -51,6 +51,13 @@ Upgrade pip en installeer de benodigde pakketten:
 pip install --upgrade pip
 pip install simple-pid flask requests
 ```
+
+### 5. Config.json aanmaken
+Handmatig moet er een config.json file komen om configuratie in op te slaan:
+```bash
+cd /home/{jouw_pi}/SolarBuffer
+cp config.voorbeeld.json config.json
+```
 ---
 
 # Automatisch starten bij boot
