@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SolarBuffer Configuratie Wizard</title>
     <style>
-        @import url('[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -42,7 +42,7 @@
 
         form { display: flex; flex-direction: column; gap: 1.25rem; }
         label { font-weight: 600; font-size: 0.95rem; color: hsl(220, 20%, 14%); }
-        input[type="text"] {
+        input[type="text"], input[type="number"] {
             padding: 0.6rem 0.75rem;
             border: 1px solid hsl(30, 15%, 88%);
             border-radius: 0.5rem;
@@ -51,7 +51,10 @@
             transition: border-color 0.3s;
             width: 100%;
         }
-        input[type="text"]:focus { border-color: hsl(32, 95%, 52%); outline: none; }
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: hsl(32, 95%, 52%);
+            outline: none;
+        }
         button {
             background: hsl(32, 95%, 52%);
             color: white;
@@ -97,7 +100,7 @@
         <div class="header" role="banner">
             <div class="icon" aria-hidden="true">☀️</div>
             <h1><span class="solar">Solar</span>Buffer Wizard</h1>
-            <p>Voer de IP‑adressen in van je apparaten</p>
+            <p>Voer de IP‑adressen in van je apparaten en stel de prioriteit in.</p>
         </div>
 
         <form id="configForm" method="POST" action="/wizard_forced">
@@ -114,6 +117,9 @@
                     <input type="text" name="shelly_name[]" placeholder="Naam (bijv. Woonkamer)" required>
                     <input type="text" name="shelly_ip[]" placeholder="IP (bijv. 192.168.178.195)" required
                         pattern="^(\d{1,3}\.){3}\d{1,3}$">
+                    <!-- Prioriteit invoerveld met de stijl van de andere velden -->
+                    <input type="number" name="shelly_priority[]" placeholder="Prioriteit (1 = hoogst)"
+                           min="1" max="5" required>
                     <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
                 </div>
             </div>
@@ -135,14 +141,14 @@
             container.innerHTML = '';
 
             if (devices.length > 0) {
-                devices.forEach(d => addDevice(d.name, d.ip));
+                devices.forEach(d => addDevice(d.name, d.ip, d.priority));
             } else {
                 addDevice();
             }
         });
 
         // Dynamisch Shelly-apparaat toevoegen
-        function addDevice(name = '', ip = '') {
+        function addDevice(name = '', ip = '', priority = 1) {
             const container = document.getElementById('deviceContainer');
             const row = document.createElement('div');
             row.className = 'device-row';
@@ -150,6 +156,7 @@
                 <input type="text" name="shelly_name[]" placeholder="Naam (bijv. Woonkamer)" value="${name}" required>
                 <input type="text" name="shelly_ip[]" placeholder="IP (bijv. 192.168.178.195)" value="${ip}"
                        required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                <input type="number" name="shelly_priority[]" placeholder="Prioriteit (1 = hoogst)" min="1" max="5" value="${priority}" required>
                 <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
             `;
             container.appendChild(row);
