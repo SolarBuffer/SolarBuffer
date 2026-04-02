@@ -1,6 +1,6 @@
 # SolarBuffer ☀️
 
-SolarBuffer is een Python-app voor het aansturen van Shelly-apparaten en het uitlezen van P1-energiemeterdata via een Raspberry Pi.  
+Ondersteunigs Python-app voor SolarBuffer besturing en het uitlezen van P1-energiemeterdata via een Raspberry Pi.  
 Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en het systeem automatisch regelen via PID.
 
 ---
