@@ -49,7 +49,6 @@
             font-size: 1rem;
             font-family: 'Inter', sans-serif;
             transition: border-color 0.3s;
-            width: 100%;
         }
         input[type="text"]:focus, input[type="number"]:focus {
             border-color: hsl(32, 95%, 52%);
@@ -73,9 +72,28 @@
 
         /* Shelly device rows */
         .device-row {
-            display: flex; gap: 0.5rem; align-items: center;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem; /* Ruimte tussen top en bottom rij */
+            margin-bottom: 1rem; /* Ruimte tussen apparaten */
         }
-        .device-row input { flex: 1; }
+        .device-row-top input {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+        }
+        .device-row-bottom {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .device-row-bottom input[name="shelly_ip[]"] {
+            flex: 2; /* 2/3 van de breedte */
+            padding: 0.6rem 0.75rem;
+        }
+        .device-row-bottom input[name="priority[]"] {
+            flex: 1; /* 1/3 van de breedte */
+            padding: 0.6rem 0.75rem;
+        }
         .remove-btn {
             background: hsl(0, 70%, 55%);
             border: none;
@@ -85,6 +103,7 @@
             padding: 0.3rem 0.6rem;
             cursor: pointer;
             font-weight: bold;
+            margin-left: 0.25rem; /* kleine ruimte tussen input en knop */
         }
         .remove-btn:hover { background: hsl(0, 70%, 45%); }
         #addDeviceBtn {
@@ -112,17 +131,8 @@
 
             <!-- Shelly devices -->
             <label>Shelly‑apparaten</label>
-            <div id="deviceContainer">
-                <div class="device-row">
-                    <input type="text" name="shelly_name[]" placeholder="Naam (bijv. Woonkamer)" required>
-                    <input type="text" name="shelly_ip[]" placeholder="IP (bijv. 192.168.178.195)" required
-                        pattern="^(\d{1,3}\.){3}\d{1,3}$">
-                    <!-- Prioriteit invoerveld met de stijl van de andere velden -->
-                    <input type="number" name="priority[]" placeholder="Prioriteit (1 = hoogst)"
-                           min="1" max="5" required>
-                    <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
-                </div>
-            </div>
+            <div id="deviceContainer"></div>
+
             <button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
 
             <button type="submit">Opslaan en verder</button>
@@ -131,14 +141,12 @@
     </div>
 
     <script>
-        // Vult bestaande config-values in vanuit Flask
         window.addEventListener('DOMContentLoaded', () => {
             const savedP1 = "{{ config.p1_ip or '' }}";
             const devices = {{ config.shelly_devices|tojson or [] }};
             if (savedP1) document.getElementById('p1ip').value = savedP1;
 
             const container = document.getElementById('deviceContainer');
-            container.innerHTML = '';
 
             if (devices.length > 0) {
                 devices.forEach(d => addDevice(d.name, d.ip, d.priority));
@@ -147,17 +155,26 @@
             }
         });
 
-        // Dynamisch Shelly-apparaat toevoegen
         function addDevice(name = '', ip = '', priority = 1) {
             const container = document.getElementById('deviceContainer');
+            
+            // Limiet van 5 apparaten
+            if (container.children.length >= 5) {
+                alert("Je kunt maximaal 5 apparaten toevoegen.");
+                return;
+            }
+
             const row = document.createElement('div');
             row.className = 'device-row';
             row.innerHTML = `
-                <input type="text" name="shelly_name[]" placeholder="Naam (bijv. Woonkamer)" value="${name}" required>
-                <input type="text" name="shelly_ip[]" placeholder="IP (bijv. 192.168.178.195)" value="${ip}"
-                       required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
-                <input type="number" name="priority[]" placeholder="Prioriteit (1 = hoogst)" min="1" max="5" value="${priority}" required>
-                <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
+                <div class="device-row-top">
+                    <input type="text" name="shelly_name[]" placeholder="Naam (bijv. Woonkamer)" value="${name}" required>
+                </div>
+                <div class="device-row-bottom">
+                    <input type="text" name="shelly_ip[]" placeholder="IP (bijv. 192.168.178.195)" value="${ip}" required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                    <input type="number" name="priority[]" placeholder="Prioriteit (1 = hoogst)" min="1" max="5" value="${priority}" required>
+                    <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
+                </div>
             `;
             container.appendChild(row);
         }
@@ -165,7 +182,7 @@
         function removeDevice(btn) {
             const container = document.getElementById('deviceContainer');
             if (container.children.length > 1) {
-                btn.parentElement.remove();
+                btn.parentElement.parentElement.remove();
             }
         }
     </script>
