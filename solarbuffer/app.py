@@ -44,6 +44,10 @@ low_power_start = None
 force_off = False
 force_on = False
 
+# ================= PRIORITY LOGICA =================
+# Prioriteiten: 1 = hoogste prioriteit, 5 = laagste prioriteit
+device_priority = {}  # {shelly_ip: priority_level}
+
 # ================= FLASK =================
 app = Flask(__name__)
 app.secret_key = "verander_dit_naar_iets_veiligs!"
@@ -92,10 +96,11 @@ def wizard():
         shelly_devices = []
         names = request.form.getlist("shelly_name[]")
         ips = request.form.getlist("shelly_ip[]")
+        priorities = request.form.getlist("priority[]")
 
-        for name, ip in zip(names, ips):
+        for name, ip, prio in zip(names, ips, priorities):
             if name.strip() and ip.strip():
-                shelly_devices.append({"name": name.strip(), "ip": ip.strip()})
+                shelly_devices.append({"name": name.strip(), "ip": ip.strip(), "priority": int(prio)})
 
         config_data["shelly_devices"] = shelly_devices
         save_config(config_data)
@@ -103,35 +108,6 @@ def wizard():
 
         return redirect("/dashboard")
 
-    return render_template("wizard.html", config=config_data)
-
-@app.route("/wizard_forced", methods=["GET", "POST"])
-def wizard_forced():
-    if not require_login():
-        return redirect("/login")
-
-    config_data = load_config()
-
-    if request.method == "POST":
-        # Nieuwe P1 IP
-        config_data["p1_ip"] = request.form["p1ip"]
-
-        # Nieuwe Shelly apparaten
-        shelly_devices = []
-        names = request.form.getlist("shelly_name[]")
-        ips = request.form.getlist("shelly_ip[]")
-
-        for name, ip in zip(names, ips):
-            if name.strip() and ip.strip():
-                shelly_devices.append({"name": name.strip(), "ip": ip.strip()})
-
-        config_data["shelly_devices"] = shelly_devices
-        save_config(config_data)
-        init_device_states(shelly_devices)
-
-        return redirect("/dashboard")
-
-    # GET: toon het formulier
     return render_template("wizard.html", config=config_data)
 
 @app.route("/dashboard")
@@ -290,43 +266,24 @@ def control_loop():
                     force_on = True
                     force_off = False
 
-            # PID berekening
-            if enabled:
-                brightness = pid(pid_power)
-                brightness = max(0, min(100, brightness))
-                last_brightness = brightness
-            else:
-                brightness = last_brightness
-
-            current_brightness = brightness
-
-            # Stuur naar Shelly apparaten
+            # Prioriteitslogica
             for device in shelly_devices:
+                prio = device["priority"]
                 ip = device["ip"]
-                state = device_states.get(ip, {"on": True, "online": False})
-
-                if state.get("online"):
-                    if force_off:
-                        set_shelly(0, False, ip)
-                        device_states[ip]["brightness"] = 0
-                    elif force_on:
+                if force_off:
+                    set_shelly(0, False, ip)
+                    device_states[ip]["brightness"] = 0
+                elif force_on:
+                    if all(device_priority.get(priority) == 0 for priority in range(prio+1, 6)):
                         set_shelly(100, True, ip)
                         device_states[ip]["brightness"] = 100
-                    elif state["on"]:
-                        set_shelly(brightness, brightness > 0, ip)
-                        device_states[ip]["brightness"] = brightness
-                    else:
-                        set_shelly(0, False, ip)
-                        device_states[ip]["brightness"] = 0
-                else:
-                    device_states[ip]["brightness"] = 0
+                elif device_states[ip]["on"]:
+                    brightness = pid(pid_power)
+                    brightness = max(0, min(100, brightness))
+                    device_states[ip]["brightness"] = brightness
+                    set_shelly(brightness, brightness > 0, ip)
 
-            print(f"{current_power}W → {brightness:.1f}% ({len(shelly_devices)} devices)")
-            time.sleep(1)
-
-        except Exception as e:
-            print("Loop error:", e)
-            time.sleep(2)
+            print
 
 # ================= START =================
 threading.Thread(target=control_loop, daemon=True).start()
