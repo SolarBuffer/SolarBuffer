@@ -60,7 +60,7 @@ cp config.voorbeeld.json config.json
 ```
 ---
 
-# Auto boot
+# Auto Boot
 ### 1. Maak nieuw service bestand
 Configureer een service bestand in de system files om automatisch de python script te starten tijdens boot.
 ```bash
@@ -97,7 +97,7 @@ sudo systemctl status solarbuffer.service
 ```
 ---
 
-# Auto git pull met cron
+# Auto Git Pull
 ### 1. Open cron
 ```bash
 crontab -e
