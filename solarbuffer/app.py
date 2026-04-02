@@ -75,6 +75,33 @@ def login():
 
     return render_template("login.html")
 
+@app.route("/wizard_forced", methods=["GET", "POST"])
+def wizard_forced():
+    if not require_login():
+        return redirect("/login")
+
+    config_data = load_config()
+
+    if request.method == "POST":
+        config_data["p1_ip"] = request.form["p1ip"]
+
+        shelly_devices = []
+        names = request.form.getlist("shelly_name[]")
+        ips = request.form.getlist("shelly_ip[]")
+        priorities = request.form.getlist("priority[]")
+
+        for name, ip, prio in zip(names, ips, priorities):
+            if name.strip() and ip.strip():
+                shelly_devices.append({"name": name.strip(), "ip": ip.strip(), "priority": int(prio)})
+
+        config_data["shelly_devices"] = shelly_devices
+        save_config(config_data)
+        init_device_states(shelly_devices)
+
+        return redirect("/dashboard")
+
+    return render_template("wizard.html", config=config_data)
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -209,7 +236,9 @@ def init_device_states(devices):
 def control_loop():
     global current_power, current_brightness, last_brightness
     global high_power_start, low_power_start, force_off, force_on
+    global last_print_time  # toegevoegd voor print throttling
 
+    last_print_time = 0  # starttijd voor throttling
     online_check_interval = 10  # seconden tussen online-checks
     last_online_check = {}
 
@@ -283,7 +312,14 @@ def control_loop():
                     device_states[ip]["brightness"] = brightness
                     set_shelly(brightness, brightness > 0, ip)
 
-            print
+            # ================= PRINTS 1x/sec =================
+            if now - last_print_time >= 1:
+                print(f"[POWER] {measured_power}W | [PID IN] {pid_power} | [OUT] {brightness}")
+                last_print_time = now
+
+        except Exception as e:
+            print("Fout in control_loop:", e)
+            time.sleep(2)
 
 # ================= START =================
 threading.Thread(target=control_loop, daemon=True).start()
