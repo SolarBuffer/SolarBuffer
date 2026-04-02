@@ -19,7 +19,7 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 > Alle functionele toepassingen zijn van SolarBuffer. Zonder een SolarBuffer installatie, heeft deze repository geen toepassing.
 ---
 > [!NOTE]
-> Geïnteresseerd in SolarBuffer, vraag er één aan via [SolarBuffer] (https://www.solarbuffer.nl)
+> Geïnteresseerd in SolarBuffer, vraag er één aan via [SolarBuffer](https://www.solarbuffer.nl)
 ---
 
 ## ⚡ Installatie
