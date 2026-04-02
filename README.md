@@ -23,7 +23,7 @@ Update eerst je Raspberry Pi zodat alle pakketten up-to-date zijn. Dit zorgt erv
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
-#### Check Python
+#### 1.1 Check Python
 Controleer of je Python 3.14 of hoger hebt.
 ```bash
 python3 --version
