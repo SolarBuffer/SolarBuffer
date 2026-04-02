@@ -16,8 +16,12 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 
 ---
 > [!IMPORTANT]
-> Alle functionele toepassingen zijn van SolarBuffer. Zonder installatie van een SolarBuffer, heeft deze repository geen toepassing.
+> Alle functionele toepassingen zijn van SolarBuffer. Zonder een SolarBuffer installatie, heeft deze repository geen toepassing.
 ---
+> [!NOTE]
+> Geïnteresseerd in SolarBuffer, vraag er één aan via [SolarBuffer] (https://www.solarbuffer.nl)
+---
+
 ## ⚡ Installatie
 
 ### 1. Raspberry Pi updaten
