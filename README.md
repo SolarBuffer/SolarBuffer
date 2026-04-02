@@ -61,13 +61,13 @@ cp config.voorbeeld.json config.json
 ---
 
 # Automatisch starten bij boot
-### Maak nieuw service bestand
+### 1. Maak nieuw service bestand
 Configureer een service bestand in de system files om automatisch de python script te starten tijdens boot.
 ```bash
 sudo nano /etc/systemd/system/solarbuffer.service
 ```
 
-### Voeg de volgende gegevens toe
+### 2. Voeg de volgende gegevens toe
 ```bash
 [Unit]
 Description=SolarBuffer Service
@@ -82,16 +82,16 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ```
-### Sla het bestand op Cntrl+O, Enter, Cntrl+X, Enter
+### 3. Sla het bestand op Cntrl+O, Enter, Cntrl+X, Enter
 
-### Herlaad systemd en start de service
+### 4. Herlaad systemd en start de service
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable solarbuffer.service
 sudo systemctl start solarbuffer.service
 ```
 
-### Check de status
+### 5. Check de status
 ```bash
 sudo systemctl status solarbuffer.service
 ```
