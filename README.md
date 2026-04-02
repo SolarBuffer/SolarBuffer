@@ -34,7 +34,6 @@ Zo niet, update Python dan naar een recente versie.
 Download de SolarBuffer-code van GitHub en ga naar de juiste map.
 ```bash
 git clone https://github.com/SolarBuffer/SolarBuffer.git
-cd SolarBuffer/solarbuffer
 ```
 Hier staat zowel app.py als config.json.
 
