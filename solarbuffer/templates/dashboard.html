@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SolarBuffer Control</title>
   <style>
-    @import url("[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap)");
+    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -20,6 +20,7 @@
     }
     h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
     .container { width: 100%; max-width: 480px; }
+
     .header { text-align: center; margin-bottom: 1.5rem; }
     .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
     .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
@@ -84,10 +85,7 @@
 
     .dot { width: 10px; height: 10px; border-radius: 50%; background: hsl(220, 10%, 80%); }
     .dot.active { background: #22c55e; animation: pulse 2s infinite; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
     .toggle input { display: none; }
@@ -113,14 +111,9 @@
     }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
 
-    .footer {
-      text-align: center;
-      font-size: 0.75rem;
-      color: hsl(220, 10%, 46%);
-      margin-top: 1rem;
-    }
+    .footer { text-align: center; font-size: 0.75rem; color: hsl(220, 10%, 46%); margin-top: 1rem; }
 
-    /* ── Device cards ── */
+    /* Device cards */
     .device-card {
       border: 1px solid hsl(30, 15%, 88%);
       border-radius: 0.6rem;
@@ -132,58 +125,22 @@
     .device-card:last-child { margin-bottom: 0; }
     .device-card.offline { opacity: 0.5; cursor: default; }
 
-    .device-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 0.6rem;
-    }
+    .device-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.6rem; }
     .device-info .name { font-weight: 600; font-size: 0.92rem; }
     .device-info .ip { font-size: 0.78rem; color: hsl(220, 10%, 46%); margin-top: 0.1rem; }
 
-    /* Online / offline badge */
-    .online-badge {
-      font-size: 0.68rem;
-      font-weight: 600;
-      padding: 0.2rem 0.55rem;
-      border-radius: 999px;
-      letter-spacing: 0.03em;
-      white-space: nowrap;
-    }
-    .online-badge.online {
-      background: hsl(145, 55%, 90%);
-      color: hsl(145, 60%, 28%);
-    }
-    .online-badge.offline {
-      background: hsl(0, 60%, 93%);
-      color: hsl(0, 65%, 42%);
-    }
+    .online-badge { font-size: 0.68rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 999px; letter-spacing: 0.03em; white-space: nowrap; }
+    .online-badge.online { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .online-badge.offline { background: hsl(0, 60%, 93%); color: hsl(0, 65%, 42%); }
 
-    .device-bottom {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .bar {
-      flex: 1;
-      height: 6px;
-      background: hsl(32, 95%, 88%);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .fill {
-      height: 6px;
-      background: hsl(32, 95%, 52%);
-      border-radius: 3px;
-      transition: width 0.4s ease;
-      width: 0;
-    }
+    .device-bottom { display: flex; align-items: center; gap: 0.75rem; }
+    .bar { flex: 1; height: 6px; background: hsl(32, 95%, 88%); border-radius: 3px; overflow: hidden; }
+    .fill { height: 6px; background: hsl(32, 95%, 52%); border-radius: 3px; transition: width 0.4s ease; width: 0; }
   </style>
 </head>
 
 <body>
   <div class="container">
-
     <div class="header">
       <div class="icon">☀️</div>
       <h1><span class="solar">Solar</span>Buffer Control</h1>
@@ -206,7 +163,7 @@
       </div>
     </div>
 
-    <!-- PID besturing -->
+    <!-- PID Controller -->
     <div class="card control-card">
       <h2><span class="ctrl-icon">🎛️</span> Besturing</h2>
       <div class="control-row">
@@ -217,7 +174,7 @@
         <div class="control-right">
           <div class="dot" id="pid_dot"></div>
           <label class="toggle">
-            <input type="checkbox" id="pid_toggle" />
+            <input type="checkbox" id="pid_toggle" onchange="togglePID()"/>
             <span class="slider"></span>
           </label>
         </div>
@@ -262,12 +219,11 @@
     }
 
     function togglePID() {
-      fetch("/toggle_pid")
-        .then(() => setTimeout(updateStatus, 200));
+      fetch("/toggle_pid").then(() => setTimeout(updateStatus, 200));
     }
 
     function toggleDevice(ip) {
-      fetch("/toggle_shelly/" + encodeURIComponent(ip)).then(updateStatus);
+      fetch("/toggle_shelly/" + encodeURIComponent(ip)).then(() => setTimeout(updateStatus, 200));
     }
 
     function goToWizard() {
@@ -276,16 +232,13 @@
 
     function renderDevices(devices) {
       const cont = document.getElementById("devicesContainer");
-
       if (devices.length === 0) {
         cont.innerHTML = '<div class="control-label"><div class="sub">Geen apparaten ingesteld.</div></div>';
         return;
       }
 
       cont.innerHTML = devices.map(d => `
-        <div class="device-card ${d.online ? '' : 'offline'}"
-             onclick="${d.online ? `toggleDevice('${d.ip}')` : ''}">
-
+        <div class="device-card ${d.online ? '' : 'offline'}">
           <div class="device-top">
             <div class="device-info">
               <div class="name">${d.name}</div>
@@ -295,18 +248,17 @@
               ${d.online ? '● Online' : '● Offline'}
             </span>
           </div>
-
           <div class="device-bottom">
             <div class="dot ${d.online && d.on ? 'active' : ''}"></div>
             <label class="toggle">
-              <input type="checkbox" ${d.online && d.on ? 'checked' : ''} disabled>
+              <input type="checkbox" ${d.online && d.on ? 'checked' : ''} ${d.online ? '' : 'disabled'}
+                     onchange="toggleDevice('${d.ip}')">
               <span class="slider"></span>
             </label>
             <div class="bar">
               <div class="fill" style="width: ${d.online ? d.brightness : 0}%"></div>
             </div>
           </div>
-
         </div>
       `).join("");
     }

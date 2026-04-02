@@ -32,7 +32,7 @@ pid = PID(0.016, 0.0008, 0.0, setpoint=0)
 pid.output_limits = (34, 100)
 
 enabled = True
-device_states = {}  # {shelly_ip: {"on": True, "brightness": 0, "online": False}}
+device_states = {}  # {shelly_ip: {"on": False, "brightness": 0, "online": False, "manual_override": False}}
 
 current_power = 0
 current_brightness = 0
@@ -45,14 +45,12 @@ force_off = False
 force_on = False
 
 # ================= PRIORITY LOGICA =================
-# Prioriteiten: 1 = hoogste prioriteit, 5 = laagste prioriteit
 device_priority = {}  # {shelly_ip: priority_level}
 
 # ================= FLASK =================
 app = Flask(__name__)
 app.secret_key = "verander_dit_naar_iets_veiligs!"
 
-# ================= AUTH HELPER =================
 def require_login():
     return session.get("logged_in", False)
 
@@ -62,44 +60,34 @@ def login():
     config_data = load_config()
     username_cfg = config_data.get("username", "admin")
     password_cfg = config_data.get("password", "admin123")
-
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-
         if username == username_cfg and password == password_cfg:
             session["logged_in"] = True
             return redirect("/")
         else:
             return render_template("login.html", error="Ongeldige login")
-
     return render_template("login.html")
 
 @app.route("/wizard_forced", methods=["GET", "POST"])
 def wizard_forced():
     if not require_login():
         return redirect("/login")
-
     config_data = load_config()
-
     if request.method == "POST":
         config_data["p1_ip"] = request.form["p1ip"]
-
         shelly_devices = []
         names = request.form.getlist("shelly_name[]")
         ips = request.form.getlist("shelly_ip[]")
         priorities = request.form.getlist("priority[]")
-
         for name, ip, prio in zip(names, ips, priorities):
             if name.strip() and ip.strip():
                 shelly_devices.append({"name": name.strip(), "ip": ip.strip(), "priority": int(prio)})
-
         config_data["shelly_devices"] = shelly_devices
         save_config(config_data)
         init_device_states(shelly_devices)
-
         return redirect("/dashboard")
-
     return render_template("wizard.html", config=config_data)
 
 @app.route("/logout")
@@ -111,65 +99,49 @@ def logout():
 def wizard():
     if not require_login():
         return redirect("/login")
-
     config_data = load_config()
-
     if config_data.get("p1_ip") and config_data.get("shelly_devices"):
         return redirect("/dashboard")
-
     if request.method == "POST":
         config_data["p1_ip"] = request.form["p1ip"]
-
         shelly_devices = []
         names = request.form.getlist("shelly_name[]")
         ips = request.form.getlist("shelly_ip[]")
         priorities = request.form.getlist("priority[]")
-
         for name, ip, prio in zip(names, ips, priorities):
             if name.strip() and ip.strip():
                 shelly_devices.append({"name": name.strip(), "ip": ip.strip(), "priority": int(prio)})
-
         config_data["shelly_devices"] = shelly_devices
         save_config(config_data)
         init_device_states(shelly_devices)
-
         return redirect("/dashboard")
-
     return render_template("wizard.html", config=config_data)
 
 @app.route("/dashboard")
 def dashboard():
     if not require_login():
         return redirect("/login")
-
     config_data = load_config()
     if not config_data.get("p1_ip") or not config_data.get("shelly_devices"):
         return redirect("/")
-
     return render_template("dashboard.html", config=config_data)
 
 @app.route("/status_json")
 def status_json():
-    global force_off, force_on  # ← vergeet dit niet!
-    
+    global force_off, force_on
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
-
     config_data = load_config()
     devices_status = []
-
     for device in config_data.get("shelly_devices", []):
         ip = device["ip"]
-        state = device_states.get(ip, {"on": True, "brightness": 0, "online": False})
-
-        # Force logica zichtbaar maken op web
+        state = device_states.get(ip, {"on": False, "brightness": 0, "online": False})
         if force_off:
             display_on = False
         elif force_on:
             display_on = True
         else:
             display_on = state["on"]
-
         devices_status.append({
             "name": device["name"],
             "ip": ip,
@@ -177,7 +149,6 @@ def status_json():
             "brightness": state["brightness"],
             "online": state.get("online", False)
         })
-
     return jsonify(
         power=current_power,
         brightness=current_brightness,
@@ -192,7 +163,6 @@ def toggle_pid():
     global enabled
     if not require_login():
         return jsonify(success=False), 401
-
     enabled = not enabled
     return jsonify(success=True)
 
@@ -200,11 +170,12 @@ def toggle_pid():
 def toggle_shelly(ip):
     if not require_login():
         return jsonify(success=False), 401
-
     if ip in device_states:
         device_states[ip]["on"] = not device_states[ip]["on"]
+        device_states[ip]["manual_override"] = True  # handmatige toggle
+        device_states[ip]["brightness"] = 100 if device_states[ip]["on"] else 0
+        set_shelly(device_states[ip]["brightness"], device_states[ip]["on"], ip)
         return jsonify(success=True, on=device_states[ip]["on"])
-
     return jsonify(success=False), 404
 
 # ================= SHELLY =================
@@ -230,7 +201,12 @@ def init_device_states(devices):
     for device in devices:
         ip = device["ip"]
         if ip not in device_states:
-            device_states[ip] = {"on": True, "brightness": 0, "online": False}
+            device_states[ip] = {
+                "on": False,
+                "brightness": 0,
+                "online": False,
+                "manual_override": False  # start uit, geen override
+            }
 
 # ================= LOOP =================
 def control_loop():
@@ -273,13 +249,11 @@ def control_loop():
                 pid_power = measured_power
 
             # ================= OVERRIDE LOGICA =================
-            # Reset timers als buiten thresholds
             if measured_power < 300:
                 high_power_start = None
             if measured_power > -50:
                 low_power_start = None
 
-            # UIT na 300W voor 2 min
             if measured_power >= 300:
                 if high_power_start is None:
                     high_power_start = now
@@ -287,7 +261,6 @@ def control_loop():
                     force_off = True
                     force_on = False
 
-            # AAN bij -50W voor 30 sec
             if measured_power <= -50:
                 if low_power_start is None:
                     low_power_start = now
@@ -296,6 +269,7 @@ def control_loop():
                     force_off = False
 
             # Prioriteitslogica
+            brightness = 0  # ← hier vooraf definiëren
             for device in shelly_devices:
                 prio = device["priority"]
                 ip = device["ip"]
@@ -306,11 +280,15 @@ def control_loop():
                     if all(device_priority.get(priority) == 0 for priority in range(prio+1, 6)):
                         set_shelly(100, True, ip)
                         device_states[ip]["brightness"] = 100
+                        brightness = 100
                 elif device_states[ip]["on"]:
-                    brightness = pid(pid_power)
-                    brightness = max(0, min(100, brightness))
-                    device_states[ip]["brightness"] = brightness
-                    set_shelly(brightness, brightness > 0, ip)
+                    b = pid(pid_power)
+                    b = max(0, min(100, b))
+                    device_states[ip]["brightness"] = b
+                    set_shelly(b, b > 0, ip)
+                    brightness = b
+
+            current_brightness = brightness  # update globale status
 
             # ================= PRINTS 1x/sec =================
             if now - last_print_time >= 1:
