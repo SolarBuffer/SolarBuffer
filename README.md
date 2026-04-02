@@ -15,7 +15,9 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 - Forceer aan/uit modus voor apparaten   
 
 ---
-
+> [!IMPORTANT]
+> Alle functionele toepassingen zijn van SolarBuffer. Zonder installatie van een SolarBuffer, heeft deze repository geen toepassing.
+---
 ## ⚡ Installatie
 
 ### 1. Raspberry Pi updaten
