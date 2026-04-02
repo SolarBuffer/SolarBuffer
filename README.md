@@ -24,14 +24,14 @@ Update eerst je Raspberry Pi zodat alle pakketten up-to-date zijn. Dit zorgt erv
 sudo apt update && sudo apt upgrade -y
 ```
 #### Check Python
-Controleer of je Python 3.14 of hoger hebt:
+Controleer of je Python 3.14 of hoger hebt.
 ```bash
 python3 --version
 ```
 Zo niet, update Python dan naar een recente versie.
 
 ### 2. Repository clonen
-Download de SolarBuffer-code van GitHub en ga naar de juiste map
+Download de SolarBuffer-code van GitHub en ga naar de juiste map.
 ```bash
 git clone https://github.com/SolarBuffer/SolarBuffer.git
 cd SolarBuffer/solarbuffer
@@ -46,14 +46,14 @@ source venv/bin/activate
 ```
 
 ### 4. Dependencies installeren
-Upgrade pip en installeer de benodigde pakketten:
+Upgrade pip en installeer de benodigde pakketten.
 ```bash
 pip install --upgrade pip
 pip install simple-pid flask requests
 ```
 
 ### 5. Config.json aanmaken
-Handmatig moet er een config.json file komen om configuratie in op te slaan:
+Handmatig moet er een config.json file komen om configuratie in op te slaan.
 ```bash
 cd /home/{jouw_pi}/SolarBuffer
 cp config.voorbeeld.json config.json
@@ -62,6 +62,7 @@ cp config.voorbeeld.json config.json
 
 # Automatisch starten bij boot
 ### Maak nieuw service bestand
+Configureer een service bestand in de system files om automatisch de python script te starten tijdens boot.
 ```bash
 sudo nano /etc/systemd/system/solarbuffer.service
 ```
@@ -81,7 +82,7 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ```
-### Sla het bestand op Cntrl+O, Enter, Cntrl+X
+### Sla het bestand op Cntrl+O, Enter, Cntrl+X, Enter
 
 ### Herlaad systemd en start de service
 ```bash
@@ -94,3 +95,20 @@ sudo systemctl start solarbuffer.service
 ```bash
 sudo systemctl status solarbuffer.service
 ```
+---
+
+## 🧙‍♂️ Wizard
+Als de SolarBuffer service draait dienen de parameters via de webbrowser geconfigureerd te worden.
+```bash
+solarbuffer.local:5001
+of
+IP-ADRESS:5001
+```
+Login op de webbrowser
+```bash
+Username: solarbuffer
+Password: solarbuffer
+```
+Na het inloggen kom je in het configuratiescherm, hierin worden de IP-adressen van de HomeWizard P1-meter ingevuld en de IP-adressen van de Shelly-devices (5 max). Later kan de configuratie altijd nog gewijzigd worden.
+
+
