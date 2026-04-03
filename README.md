@@ -276,34 +276,113 @@ button:active {
 <body>
 
 <div class="container">
-<div class="header">
-<div class="icon">📡</div>
-<h1><span class="solar">Solar</span>Buffer</h1>
-<p>Configureer uw WiFi netwerk</p>
+    <div class="header">
+        <div class="icon">📡</div>
+        <h1><span class="solar">Solar</span>Buffer</h1>
+        <p>Configureer uw WiFi netwerk</p>
+    </div>
+
+    <div class="message {{ status_class }}">
+        {{ message or "" }}
+    </div>
+
+    <form method="POST">
+        <div>
+            <label>WiFi naam (SSID)</label>
+            <input name="ssid" required>
+        </div>
+
+        <div>
+            <label>WiFi wachtwoord</label>
+            <input name="password" type="password">
+        </div>
+
+        <button type="submit">Verbinden met netwerk</button>
+    </form>
 </div>
 
-<div class="message {{ status_class }}">
-{{ message or "" }}
-</div>
+</body>
+</html>
+"""
 
-<form method="POST">
+SUCCESS_HTML = """
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolarBuffer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-<div>
-<label>WiFi naam (SSID)</label>
-<input name="ssid" required>
-</div>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-<div>
-<label>WiFi wachtwoord</label>
-<input name="password" type="password">
-</div>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: hsl(30, 25%, 97%);
+            color: hsl(220, 20%, 14%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
 
-<button type="submit">Verbinden met netwerk</button>
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+            padding: 2rem;
+            text-align: center;
+        }
 
-</form>
+        .icon {
+            font-size: 2rem;
+            color: hsl(32, 95%, 52%);
+            margin-bottom: 0.75rem;
+        }
 
-</div>
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.6rem;
+            margin-bottom: 0.5rem;
+        }
 
+        h1 .solar {
+            background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h3 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: hsl(140, 60%, 40%);
+        }
+
+        p {
+            color: hsl(220, 10%, 46%);
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">✅</div>
+        <h1><span class="solar">Solar</span>Buffer</h1>
+        <h3>WiFi opgeslagen</h3>
+        <p>SolarBuffer herstart over enkele seconden...</p>
+    </div>
+
+    <script>
+        setTimeout(function() {
+            window.location.href = "/reboot";
+        }, 3000);
+    </script>
 </body>
 </html>
 """
@@ -383,14 +462,27 @@ def index():
             )
 
             if result.returncode == 0:
-                return "<h3>WiFi opgeslagen en verbonden.</h3>"
+                return SUCCESS_HTML
             else:
-                return f"<h3>WiFi opgeslagen, maar verbinden mislukte:</h3><pre>{result.stderr}</pre>"
+                return render_template_string(
+                    HTML,
+                    message=f"WiFi opgeslagen, maar verbinden mislukte: {result.stderr}",
+                    status_class="error"
+                )
 
         except Exception as e:
-            return f"<h3>Fout:</h3><pre>{e}</pre>"
+            return render_template_string(
+                HTML,
+                message=f"Fout: {e}",
+                status_class="error"
+            )
 
-    return render_template_string(HTML)
+    return render_template_string(HTML, message="", status_class="")
+
+@app.route("/reboot")
+def reboot():
+    subprocess.Popen(["systemctl", "reboot"])
+    return "SolarBuffer wordt opnieuw opgestart..."
 
 app.run(host="0.0.0.0", port=8080)
 ```
