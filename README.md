@@ -132,3 +132,47 @@ Username: solarbuffer
 Password: solarbuffer
 ```
 Na het inloggen kom je in het configuratiescherm, hierin worden de IP-adressen van de HomeWizard P1-meter ingevuld en de IP-adressen van de Shelly-devices (5 max). Later kan de configuratie altijd nog gewijzigd worden.
+
+```bash
+from flask import Flask, request, render_template_string
+import os
+
+app = Flask(__name__)
+
+HTML = """
+<h2>WiFi instellen</h2>
+<form method="post">
+SSID:<br>
+<input name="ssid"><br><br>
+Wachtwoord:<br>
+<input name="password"><br><br>
+<input type="submit">
+</form>
+"""
+
+@app.route("/", methods=["GET","POST"])
+def setup():
+    if request.method == "POST":
+        ssid = request.form["ssid"]
+        password = request.form["password"]
+
+        config = f'''
+country=NL
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+
+network={{
+    ssid="{ssid}"
+    psk="{password}"
+}}
+'''
+
+        with open("/etc/wpa_supplicant/wpa_supplicant.conf", "w") as f:
+            f.write(config)
+
+        os.system("reboot")
+
+    return render_template_string(HTML)
+
+app.run(host="0.0.0.0", port=80)
+```
