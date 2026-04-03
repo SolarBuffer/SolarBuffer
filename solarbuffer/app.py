@@ -31,14 +31,36 @@ def save_config(data):
         json.dump(data, f, indent=4)
 
 # ================= PID =================
-pid = PID(0.016, 0.0008, 0.0, setpoint=0)
-pid.output_limits = (0, 100)
+PID_KP = 0.016
+PID_KI = 0.0008
+PID_KD = 0.0
+
+device_pids = {}
 
 enabled = True
 device_states = {}
 
 current_power = 0
 current_brightness = 0
+
+# ================= CONTROL CONSTANTS =================
+MIN_BRIGHTNESS = 34
+MAX_BRIGHTNESS = 100
+
+EXPORT_THRESHOLD = -50               # bij <= -50W export
+EXPORT_DELAY = 15                    # 15s voordat volgende prio start
+
+FREEZE_AT = 95                       # freeze vanaf 95%
+FREEZE_CONFIRM = 2                   # 2s bevestigd op >=95%
+
+IMPORT_UNFREEZE_THRESHOLD = 200      # bij >=200W import mag hogere prio terug regelen
+UNFREEZE_DELAY = 5                   # 5s
+
+IMPORT_OFF_THRESHOLD = 300           # bij >=300W import mag laagste actieve prio uit
+OFF_DELAY = 120                      # 2 minuten
+
+PID_NEUTRAL_LOW = -5
+PID_NEUTRAL_HIGH = 45
 
 # ================= FLASK =================
 app = Flask(__name__)
@@ -106,7 +128,7 @@ def detect_shelly(ip):
 
         return {
             "type": "shelly",
-            "name": data.get("name") or f"Shelly Dimmer Gen3 ({ip})",
+            "name": data.get("name") or f"Shelly Dimmer Gen3",
             "ip": ip,
             "model": model,
             "gen": data.get("gen", 3)
@@ -226,6 +248,7 @@ def wizard():
         cfg["shelly_devices"] = devices
         save_config(cfg)
         init_device_states(devices)
+        init_device_pids(devices)
         return redirect("/dashboard")
 
     return render_template("wizard.html", config=cfg)
@@ -260,6 +283,7 @@ def wizard_forced():
         cfg["shelly_devices"] = devices
         save_config(cfg)
         init_device_states(devices)
+        init_device_pids(devices)
 
         return redirect("/dashboard")
 
@@ -291,6 +315,7 @@ def status_json():
             "brightness": s.get("brightness", 0),
             "online": s.get("online", False),
             "freeze": s.get("freeze", False),
+            "started": s.get("started", False),
             "power": s.get("power", 0),
             "power_meter": d.get("power_meter"),
             "power_ip": d.get("power_ip")
@@ -376,43 +401,144 @@ def init_device_states(devices):
                 "online":False,
                 "manual_override":False,
                 "freeze":False,
+                "started":False,
+                "saturated_since":None,
+                "min_since":None,
                 "last_active_time":time.time(),
-                "power": 0
+                "power":0
             }
+
+def init_device_pids(devices):
+    global device_pids
+    for d in devices:
+        ip = d["ip"]
+        if ip not in device_pids:
+            p = PID(PID_KP, PID_KI, PID_KD, setpoint=0)
+            p.output_limits = (MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+            device_pids[ip] = p
+
+# ================= CONTROL HELPERS =================
+def get_sorted_devices(devices):
+    return sorted(devices, key=lambda x: x["priority"])
+
+def get_device_state(device):
+    return device_states[device["ip"]]
+
+def is_started(device):
+    return get_device_state(device)["started"]
+
+def is_frozen(device):
+    return get_device_state(device)["freeze"]
+
+def is_running(device):
+    st = get_device_state(device)
+    return st["started"] and not st["freeze"] and st["on"]
+
+def higher_priorities_started_and_frozen(devices_sorted, priority):
+    for d in devices_sorted:
+        if d["priority"] < priority:
+            st = get_device_state(d)
+            if not st["started"] or not st["freeze"]:
+                return False
+    return True
+
+def lower_priorities_off(devices_sorted, priority):
+    for d in devices_sorted:
+        if d["priority"] > priority:
+            st = get_device_state(d)
+            if st["started"] or st["on"] or st["brightness"] > 0:
+                return False
+    return True
+
+def get_next_startable_device(devices_sorted):
+    for d in devices_sorted:
+        st = get_device_state(d)
+        prio = d["priority"]
+
+        if st["started"]:
+            continue
+
+        if prio == 1:
+            return d
+
+        if higher_priorities_started_and_frozen(devices_sorted, prio):
+            return d
+
+    return None
+
+def get_lowest_priority_running(devices_sorted):
+    for d in reversed(devices_sorted):
+        if is_running(d):
+            return d
+    return None
+
+def get_highest_frozen_allowed_to_unfreeze(devices_sorted):
+    for d in reversed(devices_sorted):
+        st = get_device_state(d)
+        if st["started"] and st["freeze"] and lower_priorities_off(devices_sorted, d["priority"]):
+            return d
+    return None
+
+def is_last_possible_priority(devices_sorted, device):
+    if not devices_sorted:
+        return False
+    last_priority = max(d["priority"] for d in devices_sorted)
+    return device["priority"] == last_priority
+
+def reset_device_to_off(ip):
+    state = device_states[ip]
+    state["on"] = False
+    state["brightness"] = 0
+    state["freeze"] = False
+    state["started"] = False
+    state["saturated_since"] = None
+    state["min_since"] = None
+    set_shelly(0, False, ip)
+
+def hold_frozen_output(ip):
+    state = device_states[ip]
+    if state["brightness"] < MIN_BRIGHTNESS:
+        state["brightness"] = MIN_BRIGHTNESS
+    state["on"] = True
+    set_shelly(state["brightness"], True, ip)
 
 # ================= CONTROL LOOP =================
 def control_loop():
     global current_power, current_brightness
 
-    online_check_interval=10
-    last_online_check={}
-    low_power_start={}
-    high_power_start={}
+    online_check_interval = 10
+    last_online_check = {}
+
+    export_start = None
+    import_unfreeze_start = None
+    import_off_start = None
 
     while True:
         try:
-            cfg=load_config()
-            p1_ip=cfg.get("p1_ip")
-            devices=cfg.get("shelly_devices",[])
+            cfg = load_config()
+            p1_ip = cfg.get("p1_ip")
+            devices = cfg.get("shelly_devices", [])
 
             if not p1_ip or not devices:
                 time.sleep(2)
                 continue
 
             init_device_states(devices)
-            now=time.time()
+            init_device_pids(devices)
+
+            now = time.time()
 
             # ONLINE CHECK
             for d in devices:
-                ip=d["ip"]
-                if now - last_online_check.get(ip,0) > online_check_interval:
-                    device_states[ip]["online"]=check_shelly_online(ip)
-                    last_online_check[ip]=now
+                ip = d["ip"]
+                if now - last_online_check.get(ip, 0) > online_check_interval:
+                    device_states[ip]["online"] = check_shelly_online(ip)
+                    last_online_check[ip] = now
 
             # DEVICE POWER
             for d in devices:
-                ip=d["ip"]
-                state=device_states[ip]
+                ip = d["ip"]
+                state = device_states[ip]
                 if not state.get("online"):
                     state["power"] = 0
                     continue
@@ -428,66 +554,161 @@ def control_loop():
                     state["power"] = 0
 
             # P1 POWER
-            data=requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
-            measured_power=data.get("active_power_w",0)
-            current_power=measured_power
-            pid_power=0 if -5<=measured_power<=45 else measured_power
+            data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
+            measured_power = data.get("active_power_w", 0)
+            current_power = measured_power
 
-            # PRIORITEIT
-            devices_sorted=sorted(devices,key=lambda x:x["priority"])
-            active_brightness=0
+            pid_power = 0 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
 
-            for idx,d in enumerate(devices_sorted):
-                ip=d["ip"]
-                prio=d["priority"]
-                state=device_states[ip]
+            devices_sorted = get_sorted_devices(devices)
+            active_brightness = 0
 
-                # hogere prio check
-                if prio>1:
-                    higher_frozen=True
-                    for h in devices_sorted[:idx]:
-                        if not device_states[h["ip"]]["freeze"]:
-                            higher_frozen=False
-                    if not higher_frozen:
+            # PID uitgeschakeld -> huidige standen vasthouden
+            if not enabled:
+                for d in devices_sorted:
+                    ip = d["ip"]
+                    st = device_states[ip]
+
+                    if not st["started"]:
                         continue
 
-                # start delay
-                if prio>1:
-                    if measured_power>-50:
-                        continue
-                    if ip not in low_power_start:
-                        low_power_start[ip]=now
-                    elif now - low_power_start[ip]<30:
-                        continue
+                    if st["freeze"]:
+                        hold_frozen_output(ip)
+                    elif st["on"] and st["brightness"] >= MIN_BRIGHTNESS:
+                        set_shelly(st["brightness"], True, ip)
 
-                # PID
-                if not state["freeze"] and state["on"]:
-                    b=pid(pid_power)
-                    b=max(0,min(100,b))
-                    state["brightness"]=b
-                    set_shelly(b,b>0,ip)
-                    active_brightness=b
-                    if prio==1 and b>=95:
-                        state["freeze"]=True
+                current_brightness = 0
+                time.sleep(1)
+                continue
 
-                current_brightness=active_brightness
+            # 1. Start timer voor export
+            if measured_power <= EXPORT_THRESHOLD:
+                if export_start is None:
+                    export_start = now
+            else:
+                export_start = None
 
-            # force off
-            for d in reversed(devices_sorted):
-                ip=d["ip"]
-                state=device_states[ip]
-                if state["on"] and state["brightness"]<=5:
-                    if ip not in high_power_start:
-                        high_power_start[ip]=now
-                    elif now - high_power_start[ip]>=120 and measured_power>200:
-                        state["on"]=False
-                        state["freeze"]=True
-                        set_shelly(0,False,ip)
+            # 2. Start volgende prio bij export
+            if export_start is not None and (now - export_start) >= EXPORT_DELAY:
+                next_dev = get_next_startable_device(devices_sorted)
+                if next_dev:
+                    ip = next_dev["ip"]
+                    st = device_states[ip]
+
+                    st["started"] = True
+                    st["on"] = True
+                    st["freeze"] = False
+                    st["saturated_since"] = None
+                    st["min_since"] = None
+
+                    if st["brightness"] < MIN_BRIGHTNESS:
+                        st["brightness"] = MIN_BRIGHTNESS
+
+                    set_shelly(st["brightness"], True, ip)
+                    export_start = None
+
+            # 3. Bepaal welke prio actief mag regelen
+            regulating_device = get_lowest_priority_running(devices_sorted)
+
+            for d in devices_sorted:
+                ip = d["ip"]
+                st = device_states[ip]
+
+                if not st["started"]:
+                    if st["on"] or st["brightness"] != 0 or st["freeze"]:
+                        reset_device_to_off(ip)
+                    continue
+
+                if not st["online"]:
+                    continue
+
+                if st["freeze"]:
+                    hold_frozen_output(ip)
+                    continue
+
+                if regulating_device and ip == regulating_device["ip"]:
+                    b = device_pids[ip](pid_power)
+                    b = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, b))
+
+                    st["brightness"] = b
+                    st["on"] = True
+                    set_shelly(b, True, ip)
+                    active_brightness = b
+
+                    # freeze logica
+                    if b >= FREEZE_AT and not is_last_possible_priority(devices_sorted, d):
+                        if st["saturated_since"] is None:
+                            st["saturated_since"] = now
+                        elif (now - st["saturated_since"]) >= FREEZE_CONFIRM:
+                            st["freeze"] = True
+                            st["saturated_since"] = None
+                    else:
+                        st["saturated_since"] = None
+
+                    # minimum logica
+                    if b <= MIN_BRIGHTNESS:
+                        if st["min_since"] is None:
+                            st["min_since"] = now
+                    else:
+                        st["min_since"] = None
+
+                else:
+                    # veiligheid: actieve niet-frozen devices buiten de regelende prio
+                    # hun huidige stand gewoon vasthouden
+                    if st["brightness"] < MIN_BRIGHTNESS:
+                        st["brightness"] = MIN_BRIGHTNESS
+                    st["on"] = True
+                    set_shelly(st["brightness"], True, ip)
+
+            current_brightness = active_brightness
+
+            # 4. Laagste actieve prio uitschakelen als:
+            #    - hij op minimum staat
+            #    - EN 2 minuten >= 300W import
+            lowest_running = get_lowest_priority_running(devices_sorted)
+
+            if lowest_running:
+                st = get_device_state(lowest_running)
+                at_minimum = st["brightness"] <= MIN_BRIGHTNESS and st["min_since"] is not None
+
+                if at_minimum and measured_power >= IMPORT_OFF_THRESHOLD:
+                    if import_off_start is None:
+                        import_off_start = now
+                    elif (now - import_off_start) >= OFF_DELAY:
+                        reset_device_to_off(lowest_running["ip"])
+                        import_off_start = None
+                        import_unfreeze_start = None
+                else:
+                    import_off_start = None
+            else:
+                import_off_start = None
+
+            # 5. Hogere frozen prio pas unfreeze als alle lagere prio's uit staan
+            candidate_unfreeze = get_highest_frozen_allowed_to_unfreeze(devices_sorted)
+
+            if candidate_unfreeze and get_lowest_priority_running(devices_sorted) is None:
+                if measured_power >= IMPORT_UNFREEZE_THRESHOLD:
+                    if import_unfreeze_start is None:
+                        import_unfreeze_start = now
+                    elif (now - import_unfreeze_start) >= UNFREEZE_DELAY:
+                        st = get_device_state(candidate_unfreeze)
+                        st["freeze"] = False
+                        st["on"] = True
+                        st["saturated_since"] = None
+                        st["min_since"] = None
+                        if st["brightness"] < MIN_BRIGHTNESS:
+                            st["brightness"] = MIN_BRIGHTNESS
+                        set_shelly(st["brightness"], True, candidate_unfreeze["ip"])
+                        import_unfreeze_start = None
+                else:
+                    import_unfreeze_start = None
+            else:
+                import_unfreeze_start = None
 
             time.sleep(1)
 
         except Exception as e:
-            print("Fout control_loop:",e)
+            print("Fout control_loop:", e)
             time.sleep(2)
 
 # ================= START =================

@@ -102,7 +102,7 @@ button:hover{background:hsl(32,85%,45%);}
 <div id="deviceContainer"></div>
 
 <button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
-<button type="button" id="scanBtn" onclick="scanDevices()">🔎 Autoscan netwerk</button>
+<button type="button" id="scanBtn" onclick="scanDevices()">Autoscan netwerk</button>
 
 <div class="scan-status" id="scanStatus" aria-live="polite"></div>
 <div class="scan-results" id="scanResults"></div>
@@ -378,7 +378,7 @@ async function scanDevices(){
 
             if (!filledExistingRow) {
                 const added = addDevice(
-                    device.name || `Shelly ${ip}`,
+                    device.name || `Shelly`,
                     ip,
                     '',
                     '',
