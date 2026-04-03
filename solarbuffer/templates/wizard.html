@@ -1,235 +1,445 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SolarBuffer Configuratie Wizard</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarBuffer Configuratie Wizard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: hsl(30, 25%, 97%);
-            color: hsl(220, 20%, 14%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-        .container {
-            width: 100%;
-            max-width: 480px;
-            background: white;
-            border: 1px solid hsl(30, 15%, 88%);
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
-            padding: 2rem;
-        }
-        .header { text-align: center; margin-bottom: 2rem; }
-        .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
-        .header h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 700; font-size: 1.75rem; margin-top: 0.25rem;
-        }
-        .header h1 .solar {
-            background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',sans-serif; background:hsl(30,25%,97%); color:hsl(220,20%,14%); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
 
-        form { display: flex; flex-direction: column; gap: 1.25rem; }
-        label { font-weight: 600; font-size: 0.95rem; color: hsl(220, 20%, 14%); }
-        input[type="text"], input[type="number"], select {
-            padding: 0.6rem 0.75rem;
-            border: 1px solid hsl(30, 15%, 88%);
-            border-radius: 0.5rem;
-            font-size: 1rem;
-            font-family: 'Inter', sans-serif;
-            transition: border-color 0.3s;
-        }
-        input[type="text"]:focus, input[type="number"]:focus, select:focus {
-            border-color: hsl(32, 95%, 52%);
-            outline: none;
-        }
-        button {
-            background: hsl(32, 95%, 52%);
-            color: white;
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover { background: hsl(32, 85%, 45%); }
+.container { width:100%; max-width:480px; background:white; border:1px solid hsl(30,15%,88%); border-radius:.75rem; box-shadow:0 10px 40px -10px hsla(32,95%,52%,0.15); padding:2rem; }
+.header{text-align:center;margin-bottom:2rem;}
+.header .icon{font-size:2rem;color:hsl(32,95%,52%);}
+.header h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.75rem;margin-top:.25rem;}
+.header h1 .solar{background:linear-gradient(135deg,hsl(32,95%,52%),hsl(40,100%,60%));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.header p{color:hsl(220,10%,46%);font-size:.85rem;margin-top:.25rem;}
 
-        .status { margin-top: 1rem; font-size: 0.9rem; color: hsl(0, 75%, 60%);
-                  min-height: 1.2rem; text-align: center; }
+form{display:flex;flex-direction:column;gap:1.25rem;}
+label{font-weight:600;font-size:.95rem;color:hsl(220,20%,14%);}
+input[type="text"],input[type="number"],select{padding:.6rem .75rem;border:1px solid hsl(30,15%,88%);border-radius:.5rem;font-size:1rem;font-family:'Inter',sans-serif;transition:border-color .3s;line-height:1.5;}
+input[type="text"]:focus,input[type="number"]:focus,select:focus{border-color:hsl(32,95%,52%);outline:none;}
 
-        /* Shelly device rows */
-        .device-row {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .device-row-top, .device-row-bottom { display: flex; flex-direction: column; gap: 0.25rem; }
-        .device-row-top input, .device-row-bottom input, .device-row-bottom select { width: 100%; }
-        .device-row-bottom {
-            flex-direction: row;
-            gap: 0.5rem;
-            align-items: flex-end;
-        }
-        .device-row-bottom input[name="shelly_ip[]"], 
-        .device-row-bottom select[name="priority[]"] {
-            padding: 0.6rem 0.75rem;
-            border: 1px solid hsl(30, 15%, 88%);
-            border-radius: 0.5rem;
-            font-size: 1rem;
-            font-family: 'Inter', sans-serif;
-            line-height: 1.5;
-            appearance: none;
-        }
-        .device-row-bottom input[name="shelly_ip[]"] { flex: 2; } 
-        .device-row-bottom select[name="priority[]"] { flex: 1; } 
+button{background:hsl(32,95%,52%);color:white;font-weight:600;font-size:1rem;padding:.75rem;border:none;border-radius:.5rem;cursor:pointer;transition:background .3s;}
+button:hover{background:hsl(32,85%,45%);}
 
-        .remove-btn {
-            background: hsl(0, 70%, 55%);
-            border: none;
-            color: white;
-            font-size: 1.1rem;
-            border-radius: 0.4rem;
-            padding: 0.3rem 0.6rem;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .remove-btn:hover { background: hsl(0, 70%, 45%); }
-        #addDeviceBtn {
-            background: hsl(145, 65%, 40%);
-        }
-        #addDeviceBtn:hover {
-            background: hsl(145, 65%, 32%);
-        }
-    </style>
+.status{margin-top:1rem;font-size:.9rem;color:hsl(0,75%,60%);min-height:1.2rem;text-align:center;}
+.scan-status{
+    margin-top:.5rem;
+    font-size:.9rem;
+    color:hsl(220,10%,46%);
+    min-height:1.2rem;
+    text-align:center;
+}
+.scan-results{
+    margin-top:.5rem;
+    padding:.75rem;
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.5rem;
+    background:hsl(30,25%,98%);
+    font-size:.9rem;
+    color:hsl(220,20%,14%);
+    display:none;
+}
+.scan-results.visible{display:block;}
+.scan-results h3{
+    font-size:.95rem;
+    margin-bottom:.5rem;
+    font-family:'Space Grotesk',sans-serif;
+}
+.scan-results ul{
+    margin:.25rem 0 .75rem 1rem;
+}
+.scan-results li{
+    margin-bottom:.25rem;
+}
+
+.device-row{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;}
+.device-row-top,.device-row-bottom{display:flex;flex-direction:column;gap:.25rem;}
+.device-row-top input,.device-row-bottom input,.device-row-bottom select{width:100%;}
+
+.device-row-bottom{flex-direction:row;gap:.5rem;align-items:flex-end;}
+.device-row-bottom input[name="shelly_ip[]"],.device-row-bottom select[name="priority[]"], 
+.device-row-bottom select[name="power_meter[]"], .device-row-bottom input[name="power_ip[]"] {
+    padding:.6rem .75rem;
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.5rem;
+    font-size:1rem;
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    appearance:none;
+}
+
+.device-row-bottom input[name="shelly_ip[]"], .device-row-bottom input[name="power_ip[]"]{flex:2;}
+.device-row-bottom select[name="priority[]"], .device-row-bottom select[name="power_meter[]"]{flex:1;}
+
+.remove-btn{background:hsl(0,70%,55%);border:none;color:white;font-size:1.1rem;border-radius:.4rem;padding:.3rem .6rem;cursor:pointer;font-weight:bold;}
+.remove-btn:hover{background:hsl(0,70%,45%);}
+
+#addDeviceBtn{background:hsl(145,65%,40%);}
+#addDeviceBtn:hover{background:hsl(145,65%,32%);}
+
+#scanBtn{background:hsl(215,70%,52%);}
+#scanBtn:hover{background:hsl(215,70%,45%);}
+#scanBtn:disabled{opacity:.7;cursor:wait;}
+</style>
 </head>
 <body>
-    <div class="container" role="main">
-        <div class="header" role="banner">
-            <div class="icon" aria-hidden="true">☀️</div>
-            <h1><span class="solar">Solar</span>Buffer Wizard</h1>
-            <p>Voer de IP‑adressen in van je apparaten en stel de prioriteit in.</p>
+<div class="container" role="main">
+<div class="header" role="banner">
+<div class="icon" aria-hidden="true">☀️</div>
+<h1><span class="solar">Solar</span>Buffer Wizard</h1>
+<p>Voer de IP-adressen in van je apparaten en stel de prioriteit in.</p>
+</div>
+
+<form id="configForm" method="POST" action="/wizard_forced">
+<label for="p1ip">IP-adres P1-meter</label>
+<input type="text" id="p1ip" name="p1ip" placeholder="Bijv. 192.168.178.21" required pattern="^(\d{1,3}\.){3}\d{1,3}$" />
+
+<label>Shelly-apparaten</label>
+<div id="deviceContainer"></div>
+
+<button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
+<button type="button" id="scanBtn" onclick="scanDevices()">🔎 Autoscan netwerk</button>
+
+<div class="scan-status" id="scanStatus" aria-live="polite"></div>
+<div class="scan-results" id="scanResults"></div>
+
+<button type="submit">Opslaan en verder</button>
+<div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
+</form>
+</div>
+
+<script>
+function escapeHtml(value){
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function createPriorityOptions(selected="") {
+    let options = '<option value="">Kies</option>';
+    for(let i = 1; i <= 5; i++){
+        options += `<option value="${i}" ${String(selected) == String(i) ? 'selected' : ''}>${i}</option>`;
+    }
+    return options;
+}
+
+function getUsedPriorities(){
+    return Array.from(document.querySelectorAll('select[name="priority[]"]'))
+        .map(s => parseInt(s.value, 10))
+        .filter(v => !Number.isNaN(v));
+}
+
+function getNextPriority(){
+    const used = getUsedPriorities();
+    for(let i = 1; i <= 5; i++){
+        if(!used.includes(i)) return i;
+    }
+    return "";
+}
+
+function updatePriorities(){
+    const selects = document.querySelectorAll('select[name="priority[]"]');
+    const used = new Set();
+
+    selects.forEach(select => {
+        if(select.value){
+            used.add(parseInt(select.value, 10));
+        }
+    });
+
+    selects.forEach(select => {
+        if(!select.value){
+            for(let p = 1; p <= 5; p++){
+                if(!used.has(p)){
+                    select.value = p;
+                    used.add(p);
+                    break;
+                }
+            }
+        }
+    });
+}
+
+function getExistingDeviceIps(){
+    return Array.from(document.querySelectorAll('input[name="shelly_ip[]"]'))
+        .map(i => (i.value || "").trim())
+        .filter(Boolean);
+}
+
+function hasDeviceIp(ip){
+    return getExistingDeviceIps().includes((ip || "").trim());
+}
+
+function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
+    const container = document.getElementById('deviceContainer');
+    if(container.children.length >= 5){
+        alert("Je kunt maximaal 5 apparaten toevoegen.");
+        return false;
+    }
+
+    const finalPriority = priority || getNextPriority();
+
+    const row = document.createElement('div');
+    row.className = 'device-row';
+    row.innerHTML = `
+        <div class="device-row-top">
+            <label>Naam</label>
+            <input type="text" name="shelly_name[]" placeholder="Bijv. Woonkamer" value="${escapeHtml(name)}" required>
         </div>
+        <div class="device-row-bottom">
+            <div style="flex:2;display:flex;flex-direction:column;">
+                <label>IP-adres</label>
+                <input type="text" name="shelly_ip[]" placeholder="Bijv. 192.168.178.195" value="${escapeHtml(ip)}" required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;">
+                <label>Prioriteit</label>
+                <select name="priority[]" required>${createPriorityOptions(finalPriority)}</select>
+            </div>
+            <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
+        </div>
+        <div class="device-row-bottom">
+            <div style="flex:1;display:flex;flex-direction:column;">
+                <label>Power meter</label>
+                <select name="power_meter[]">
+                    <option value="" ${power_meter==""?'selected':''}>Geen</option>
+                    <option value="shelly" ${power_meter=="shelly"?'selected':''}>Shelly</option>
+                    <option value="homewizard" ${power_meter=="homewizard"?'selected':''}>HomeWizard</option>
+                </select>
+            </div>
+            <div style="flex:2;display:flex;flex-direction:column;">
+                <label>Power IP</label>
+                <input type="text" name="power_ip[]" placeholder="Bijv. 192.168.178.50" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+            </div>
+        </div>
+    `;
 
-        <form id="configForm" method="POST" action="/wizard_forced">
-            <!-- P1 meter -->
-            <label for="p1ip">IP‑adres P1‑meter</label>
-            <input type="text" id="p1ip" name="p1ip"
-                   placeholder="Bijv. 192.168.178.21"
-                   required pattern="^(\d{1,3}\.){3}\d{1,3}$" />
+    container.appendChild(row);
+    updatePriorities();
+    return true;
+}
 
-            <!-- Shelly devices -->
-            <label>Shelly‑apparaten</label>
-            <div id="deviceContainer"></div>
+function removeDevice(btn){
+    const c = document.getElementById('deviceContainer');
+    if(c.children.length > 1){
+        btn.closest('.device-row').remove();
+        normalizePriorities();
+    }
+}
 
-            <button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
+function normalizePriorities(){
+    const rows = Array.from(document.querySelectorAll('.device-row'));
 
-            <button type="submit">Opslaan en verder</button>
-            <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
-        </form>
-    </div>
+    const filledRows = rows.filter(row => {
+        const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+        const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
+        return ip !== '' || name !== '';
+    });
 
-    <script>
-        function createPriorityOptions(selected = "") {
-            let options = '<option value="">Kies</option>';
-            for (let i = 1; i <= 5; i++) {
-                options += `<option value="${i}" ${selected == i ? 'selected' : ''}>${i}</option>`;
-            }
-            return options;
+    filledRows.forEach((row, index) => {
+        const priorityField = row.querySelector('select[name="priority[]"]');
+        if (priorityField) {
+            priorityField.value = String(index + 1);
         }
+    });
 
-        function updatePriorities() {
-            const selects = document.querySelectorAll('select[name="priority[]"]');
-            selects.forEach((select, index) => {
-                if (!select.value) select.value = index + 1;
-            });
-        }
-
-        function addDevice(name = '', ip = '', priority = '') {
-            const container = document.getElementById('deviceContainer');
-            if (container.children.length >= 5) {
-                alert("Je kunt maximaal 5 apparaten toevoegen.");
-                return;
-            }
-
-            const row = document.createElement('div');
-            row.className = 'device-row';
-
-            row.innerHTML = `
-                <div class="device-row-top">
-                    <label>Naam</label>
-                    <input type="text" name="shelly_name[]" placeholder="Bijv. Woonkamer" value="${name}" required>
-                </div>
-                <div class="device-row-bottom">
-                    <div style="flex:2; display:flex; flex-direction:column;">
-                        <label>IP-adres</label>
-                        <input type="text" name="shelly_ip[]" placeholder="Bijv. 192.168.178.195" value="${ip}" required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
-                    </div>
-                    <div style="flex:1; display:flex; flex-direction:column;">
-                        <label>Prioriteit</label>
-                        <select name="priority[]" required>${createPriorityOptions(priority)}</select>
-                    </div>
-                    <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
-                </div>
-            `;
-            container.appendChild(row);
-            updatePriorities();
-        }
-
-        function removeDevice(btn) {
-            const container = document.getElementById('deviceContainer');
-            if (container.children.length > 1) {
-                btn.closest('.device-row').remove();
-                updatePriorities();
+    rows.forEach(row => {
+        const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+        const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
+        if (ip === '' && name === '') {
+            const priorityField = row.querySelector('select[name="priority[]"]');
+            if (priorityField) {
+                priorityField.value = '';
             }
         }
+    });
+}
 
-        document.getElementById('configForm').addEventListener('submit', function(e) {
-            const selects = document.querySelectorAll('select[name="priority[]"]');
-            const values = Array.from(selects).map(s => s.value);
-            const status = document.getElementById('statusMessage');
+function renderScanResults(data, addedCount, skippedCount){
+    const results = document.getElementById('scanResults');
+    let html = '';
 
-            if (values.includes("")) {
-                e.preventDefault();
-                status.textContent = "Vul alle prioriteiten in.";
-                return;
-            }
+    const p1 = Array.isArray(data.p1_meters) ? data.p1_meters : [];
+    const shellys = Array.isArray(data.shelly_devices) ? data.shelly_devices : [];
 
-            const unique = new Set(values);
-            if (unique.size !== values.length) {
-                e.preventDefault();
-                status.textContent = "Elke prioriteit mag maar één keer voorkomen.";
-                return;
-            }
+    if(p1.length > 0){
+        html += '<h3>Gevonden HomeWizard P1</h3><ul>';
+        p1.forEach(d => {
+            html += `<li>${escapeHtml(d.name || 'HomeWizard P1')} — ${escapeHtml(d.ip || '')}</li>`;
+        });
+        html += '</ul>';
+    }
 
-            status.textContent = "";
+    if(shellys.length > 0){
+        html += '<h3>Gevonden Shelly apparaten</h3><ul>';
+        shellys.forEach(d => {
+            const model = d.model ? ` (${escapeHtml(d.model)})` : '';
+            html += `<li>${escapeHtml(d.name || 'Shelly')} — ${escapeHtml(d.ip || '')}${model}</li>`;
+        });
+        html += '</ul>';
+    }
+
+    if(p1.length === 0 && shellys.length === 0){
+        html = '<p>Geen apparaten gevonden op het netwerk.</p>';
+    } else {
+        html += `<p><strong>Toegevoegd:</strong> ${addedCount} apparaat(en)</p>`;
+        if(skippedCount > 0){
+            html += `<p><strong>Overgeslagen:</strong> ${skippedCount} duplicaat/dubbele IP’s</p>`;
+        }
+    }
+
+    results.innerHTML = html;
+    results.classList.add('visible');
+}
+
+async function scanDevices(){
+    const scanBtn = document.getElementById('scanBtn');
+    const scanStatus = document.getElementById('scanStatus');
+    const statusMessage = document.getElementById('statusMessage');
+    const results = document.getElementById('scanResults');
+
+    scanBtn.disabled = true;
+    scanStatus.textContent = 'Netwerk wordt gescand... dit kan enkele seconden duren.';
+    statusMessage.textContent = '';
+    results.innerHTML = '';
+    results.classList.remove('visible');
+
+    try{
+        const response = await fetch('/scan_devices', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
         });
 
-        // Correct laden van bestaande config
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedP1 = "{{ config.p1_ip or '' }}";
-            const devices = {{ config.shelly_devices|tojson or [] }};
-            if (savedP1) document.getElementById('p1ip').value = savedP1;
+        const data = await response.json();
 
-            if (devices.length > 0) {
-                devices.forEach(d => addDevice(d.name, d.ip, d.priority));
-            } else {
-                addDevice();
+        if(!response.ok){
+            throw new Error(data.error || 'Onbekende fout tijdens scannen');
+        }
+
+        const p1List = Array.isArray(data.p1_meters) ? data.p1_meters : [];
+        const shellyList = Array.isArray(data.shelly_devices) ? data.shelly_devices : [];
+
+        if(p1List.length > 0){
+            const p1Input = document.getElementById('p1ip');
+            if(p1Input && !p1Input.value.trim()){
+                p1Input.value = p1List[0].ip || '';
             }
-        });
-    </script>
+        }
+
+        let addedCount = 0;
+        let skippedCount = 0;
+
+        for (const device of shellyList) {
+            if (document.getElementById('deviceContainer').children.length >= 5) {
+                break;
+            }
+
+            const ip = (device.ip || '').trim();
+            if (!ip) {
+                continue;
+            }
+
+            if (hasDeviceIp(ip)) {
+                skippedCount++;
+                continue;
+            }
+
+            let filledExistingRow = false;
+
+            const rows = document.querySelectorAll('.device-row');
+            for (const row of rows) {
+                const nameField = row.querySelector('input[name="shelly_name[]"]');
+                const ipField = row.querySelector('input[name="shelly_ip[]"]');
+                const priorityField = row.querySelector('select[name="priority[]"]');
+                const powerMeterField = row.querySelector('select[name="power_meter[]"]');
+                const powerIpField = row.querySelector('input[name="power_ip[]"]');
+
+                const rowIp = (ipField?.value || '').trim();
+                const rowName = (nameField?.value || '').trim();
+
+                if (!rowIp && !rowName) {
+                    nameField.value = device.name || `Shelly ${ip}`;
+                    ipField.value = ip;
+                    priorityField.value = "";
+                    powerMeterField.value = "";
+                    powerIpField.value = "";
+
+                    filledExistingRow = true;
+                    addedCount++;
+                    break;
+                }
+            }
+
+            if (!filledExistingRow) {
+                const added = addDevice(
+                    device.name || `Shelly ${ip}`,
+                    ip,
+                    '',
+                    '',
+                    ''
+                );
+
+                if (added) {
+                    addedCount++;
+                }
+            }
+        }
+
+        normalizePriorities();
+        renderScanResults(data, addedCount, skippedCount);
+
+        if(p1List.length === 0 && shellyList.length === 0){
+            scanStatus.textContent = 'Scan voltooid. Geen apparaten gevonden.';
+        } else {
+            scanStatus.textContent = 'Scan voltooid.';
+        }
+    } catch(err){
+        scanStatus.textContent = 'Scannen mislukt.';
+        statusMessage.textContent = err.message || 'Er ging iets mis tijdens het scannen.';
+    } finally {
+        scanBtn.disabled = false;
+    }
+}
+
+document.getElementById('configForm').addEventListener('submit', function(e){
+    const vals = Array.from(document.querySelectorAll('select[name="priority[]"]')).map(s => s.value);
+    const status = document.getElementById('statusMessage');
+
+    if(vals.includes("")){
+        e.preventDefault();
+        status.textContent = "Vul alle prioriteiten in.";
+        return;
+    }
+
+    if(new Set(vals).size != vals.length){
+        e.preventDefault();
+        status.textContent = "Elke prioriteit mag maar één keer voorkomen.";
+        return;
+    }
+
+    status.textContent = "";
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    const savedP1 = "{{ config.p1_ip or '' }}";
+    const devices = {{ config.shelly_devices|tojson or [] }};
+
+    if(savedP1){
+        document.getElementById('p1ip').value = savedP1;
+    }
+
+    if(devices.length > 0){
+        devices.forEach(d => addDevice(d.name, d.ip, d.priority, d.power_meter || "", d.power_ip || ""));
+    } else {
+        addDevice();
+    }
+});
+</script>
 </body>
 </html>
