@@ -135,7 +135,7 @@ Na het inloggen kom je in het configuratiescherm, hierin worden de IP-adressen v
 
 ```bash
 from flask import Flask, request, render_template_string
-import os
+import subprocess
 
 app = Flask(__name__)
 
@@ -145,34 +145,94 @@ HTML = """
 SSID:<br>
 <input name="ssid"><br><br>
 Wachtwoord:<br>
-<input name="password"><br><br>
-<input type="submit">
+<input name="password" type="password"><br><br>
+<input type="submit" value="Opslaan">
 </form>
 """
 
-@app.route("/", methods=["GET","POST"])
-def setup():
+@app.route("/", methods=["GET", "POST"])
+def index():
     if request.method == "POST":
-        ssid = request.form["ssid"]
+        ssid = request.form["ssid"].strip()
         password = request.form["password"]
 
-        config = f'''
-country=NL
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
+        try:
+            subprocess.run(
+                ["nmcli", "connection", "delete", "customer-wifi"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
 
-network={{
-    ssid="{ssid}"
-    psk="{password}"
-}}
-'''
+            subprocess.run(
+                ["nmcli", "connection", "add",
+                 "type", "wifi",
+                 "ifname", "wlan0",
+                 "con-name", "customer-wifi",
+                 "ssid", ssid],
+                check=True
+            )
 
-        with open("/etc/wpa_supplicant/wpa_supplicant.conf", "w") as f:
-            f.write(config)
+            subprocess.run(
+                ["nmcli", "connection", "modify",
+                 "customer-wifi",
+                 "wifi-sec.key-mgmt",
+                 "wpa-psk"],
+                check=True
+            )
 
-        os.system("reboot")
+            subprocess.run(
+                ["nmcli", "connection", "modify",
+                 "customer-wifi",
+                 "wifi-sec.psk",
+                 password],
+                check=True
+            )
+
+            subprocess.run(
+                ["nmcli", "connection", "modify",
+                 "customer-wifi",
+                 "connection.autoconnect",
+                 "yes"],
+                check=True
+            )
+
+            subprocess.run(
+                ["nmcli", "connection", "modify",
+                 "customer-wifi",
+                 "connection.autoconnect-priority",
+                 "100"],
+                check=True
+            )
+
+            subprocess.run(
+                ["nmcli", "connection", "modify",
+                 "PI-SETUP",
+                 "connection.autoconnect",
+                 "no"],
+                check=True
+            )
+
+            subprocess.run(
+                ["nmcli", "connection", "down", "PI-SETUP"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            result = subprocess.run(
+                ["nmcli", "connection", "up", "customer-wifi"],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0:
+                return "<h3>WiFi opgeslagen en verbonden.</h3>"
+            else:
+                return f"<h3>WiFi opgeslagen, maar verbinden mislukte:</h3><pre>{result.stderr}</pre>"
+
+        except Exception as e:
+            return f"<h3>Fout:</h3><pre>{e}</pre>"
 
     return render_template_string(HTML)
 
-app.run(host="0.0.0.0", port=80)
+app.run(host="0.0.0.0", port=8080)
 ```
