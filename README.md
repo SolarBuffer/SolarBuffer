@@ -140,14 +140,172 @@ import subprocess
 app = Flask(__name__)
 
 HTML = """
-<h2>WiFi instellen</h2>
-<form method="post">
-SSID:<br>
-<input name="ssid"><br><br>
-Wachtwoord:<br>
-<input name="password" type="password"><br><br>
-<input type="submit" value="Opslaan">
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WiFi Setup - SolarBuffer</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: hsl(30, 25%, 97%);
+    color: hsl(220, 20%, 14%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.container {
+    width: 100%;
+    max-width: 420px;
+    background: white;
+    border: 1px solid hsl(30, 15%, 88%);
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+    padding: 2rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header .icon {
+    font-size: 2rem;
+    color: hsl(32, 95%, 52%);
+}
+
+.header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin-top: 0.25rem;
+}
+
+.header h1 .solar {
+    background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.header p {
+    color: hsl(220, 10%, 46%);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+form div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+input {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid hsl(30, 15%, 88%);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s ease;
+}
+
+input:focus {
+    border-color: hsl(32, 95%, 52%);
+    box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.15);
+    outline: none;
+}
+
+button {
+    width: 100%;
+    background: hsl(32, 95%, 52%);
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: hsl(32, 85%, 45%);
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.message {
+    text-align: center;
+    font-size: 0.9rem;
+    min-height: 1.2rem;
+}
+
+.success {
+    color: hsl(140, 60%, 40%);
+}
+
+.error {
+    color: hsl(0, 75%, 60%);
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<div class="header">
+<div class="icon">📡</div>
+<h1><span class="solar">Solar</span>Buffer</h1>
+<p>Configureer uw WiFi netwerk</p>
+</div>
+
+<div class="message {{ status_class }}">
+{{ message or "" }}
+</div>
+
+<form method="POST">
+
+<div>
+<label>WiFi naam (SSID)</label>
+<input name="ssid" required>
+</div>
+
+<div>
+<label>WiFi wachtwoord</label>
+<input name="password" type="password">
+</div>
+
+<button type="submit">Verbinden met netwerk</button>
+
 </form>
+
+</div>
+
+</body>
+</html>
 """
 
 @app.route("/", methods=["GET", "POST"])
