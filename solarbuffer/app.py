@@ -31,8 +31,8 @@ def save_config(data):
         json.dump(data, f, indent=4)
 
 # ================= PID =================
-PID_KP = 0.016
-PID_KI = 0.0012
+PID_KP = 0.02
+PID_KI = 0.0015
 PID_KD = 0.0
 
 device_pids = {}
