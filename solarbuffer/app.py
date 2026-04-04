@@ -12,6 +12,21 @@ import threading
 # ================= CONFIG =================
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
+
+def default_battery_config():
+    return {
+        "enabled": False,
+        "ip": "",
+        "mode": "hybrid",              # battery_first | buffers_first | hybrid
+        "min_soc": 20,
+        "target_soc": 50,
+        "max_soc": 95,
+        "max_charge_w": 1500,
+        "max_discharge_w": 1500,
+        "allow_discharge": True
+    }
+
+
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE) as f:
@@ -23,12 +38,27 @@ def load_config():
         cfg["shelly_devices"] = []
     if "p1_ip" not in cfg:
         cfg["p1_ip"] = ""
+    if "battery" not in cfg or not isinstance(cfg["battery"], dict):
+        cfg["battery"] = default_battery_config()
+    else:
+        merged_battery = default_battery_config()
+        merged_battery.update(cfg["battery"])
+        cfg["battery"] = merged_battery
 
     return cfg
 
+
 def save_config(data):
+    if "battery" not in data or not isinstance(data["battery"], dict):
+        data["battery"] = default_battery_config()
+    else:
+        merged_battery = default_battery_config()
+        merged_battery.update(data["battery"])
+        data["battery"] = merged_battery
+
     with open(CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=4)
+
 
 # ================= PID =================
 PID_KP = 0.02
@@ -41,7 +71,18 @@ enabled = True
 device_states = {}
 
 current_power = 0
+current_virtual_power = 0
 current_brightness = 0
+
+battery_state = {
+    "online": False,
+    "soc": 0,
+    "power": 0,
+    "mode": "idle",                   # idle | charge | discharge
+    "last_command_w": 0,
+    "last_action": "idle",
+    "ip": ""
+}
 
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
@@ -62,12 +103,39 @@ OFF_DELAY = 120                      # 2 minuten
 PID_NEUTRAL_LOW = -5
 PID_NEUTRAL_HIGH = 45
 
+BATTERY_EXPORT_MARGIN = 100
+BATTERY_IMPORT_MARGIN = 150
+BATTERY_BIG_SURPLUS_W = 1200
+BATTERY_BUFFERS_FIRST_EXTRA_SURPLUS = 1500
+
 # ================= FLASK =================
 app = Flask(__name__)
 app.secret_key = "verander_dit_naar_iets_veiligs!"
 
+
 def require_login():
     return session.get("logged_in", False)
+
+
+# ================= HELPERS =================
+def to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+def safe_int(value, default):
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def clamp(value, minimum, maximum):
+    return max(minimum, min(maximum, value))
+
 
 # ================= NETWORK SCAN HELPERS =================
 def get_local_ip():
@@ -80,10 +148,12 @@ def get_local_ip():
     finally:
         s.close()
 
+
 def get_subnet_ips():
     local_ip = get_local_ip()
     network = ipaddress.ip_network(f"{local_ip}/24", strict=False)
     return [str(ip) for ip in network.hosts()]
+
 
 def detect_homewizard_p1(ip):
     try:
@@ -95,7 +165,6 @@ def detect_homewizard_p1(ip):
         if not isinstance(data, dict):
             return None
 
-        # Soepele check: als de HomeWizard API JSON geeft en power-achtige keys bevat
         possible_keys = [
             "active_power_w",
             "total_power_import_t1_kwh",
@@ -113,6 +182,7 @@ def detect_homewizard_p1(ip):
         pass
     return None
 
+
 def detect_shelly(ip):
     try:
         r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.2)
@@ -122,13 +192,12 @@ def detect_shelly(ip):
         data = r.json()
         model = (data.get("model") or "").strip()
 
-        # Alleen Gen3 0/1-10V dimmer toelaten
         if model not in ("S3DM-0010WW", "0010WW"):
             return None
 
         return {
             "type": "shelly",
-            "name": data.get("name") or f"Shelly Dimmer Gen3",
+            "name": data.get("name") or "Shelly Dimmer Gen3",
             "ip": ip,
             "model": model,
             "gen": data.get("gen", 3)
@@ -139,23 +208,6 @@ def detect_shelly(ip):
 
     return None
 
-    # Fallback voor Gen2 / Plus / Pro
-    try:
-        r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.2)
-        if r.status_code == 200:
-            data = r.json()
-            if isinstance(data, dict):
-                return {
-                    "type": "shelly",
-                    "name": data.get("name") or data.get("app") or f"Shelly {ip}",
-                    "ip": ip,
-                    "model": data.get("model", ""),
-                    "gen": data.get("gen", "")
-                }
-    except Exception:
-        pass
-
-    return None
 
 def scan_network_for_devices():
     ips = get_subnet_ips()
@@ -183,7 +235,6 @@ def scan_network_for_devices():
             except Exception as e:
                 print(f"Scan error ({ip}): {e}")
 
-    # Dubbele entries eruit halen
     unique_p1 = []
     seen_p1 = set()
     for d in found_p1:
@@ -203,21 +254,48 @@ def scan_network_for_devices():
         "shelly_devices": unique_shelly
     }
 
+
 # ================= ROUTES =================
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     cfg = load_config()
-    username_cfg = cfg.get("username","admin")
-    password_cfg = cfg.get("password","admin123")
-    if request.method=="POST":
-        if request.form.get("username")==username_cfg and request.form.get("password")==password_cfg:
-            session["logged_in"]=True
+    username_cfg = cfg.get("username", "admin")
+    password_cfg = cfg.get("password", "admin123")
+    if request.method == "POST":
+        if request.form.get("username") == username_cfg and request.form.get("password") == password_cfg:
+            session["logged_in"] = True
             return redirect("/")
         else:
             return render_template("login.html", error="Ongeldige login")
     return render_template("login.html")
 
-@app.route("/", methods=["GET","POST"])
+
+def parse_battery_from_form(form):
+    battery = default_battery_config()
+
+    battery["enabled"] = to_bool(form.get("battery_enabled"))
+    battery["ip"] = form.get("battery_ip", "").strip()
+    battery["mode"] = form.get("battery_mode", "hybrid").strip() or "hybrid"
+    battery["min_soc"] = clamp(safe_int(form.get("battery_min_soc"), 20), 0, 100)
+    battery["target_soc"] = clamp(safe_int(form.get("battery_target_soc"), 50), 0, 100)
+    battery["max_soc"] = clamp(safe_int(form.get("battery_max_soc"), 95), 0, 100)
+    battery["max_charge_w"] = max(0, safe_int(form.get("battery_max_charge_w"), 1500))
+    battery["max_discharge_w"] = max(0, safe_int(form.get("battery_max_discharge_w"), 1500))
+    battery["allow_discharge"] = to_bool(form.get("battery_allow_discharge"))
+
+    if battery["target_soc"] < battery["min_soc"]:
+        battery["target_soc"] = battery["min_soc"]
+
+    if battery["max_soc"] < battery["target_soc"]:
+        battery["max_soc"] = battery["target_soc"]
+
+    if battery["mode"] not in ("battery_first", "buffers_first", "hybrid"):
+        battery["mode"] = "hybrid"
+
+    return battery
+
+
+@app.route("/", methods=["GET", "POST"])
 def wizard():
     if not require_login():
         return redirect("/login")
@@ -225,10 +303,10 @@ def wizard():
     if cfg.get("p1_ip") and cfg.get("shelly_devices"):
         return redirect("/dashboard")
 
-    if request.method=="POST":
-        cfg["p1_ip"] = request.form["p1ip"]
+    if request.method == "POST":
+        cfg["p1_ip"] = request.form["p1ip"].strip()
 
-        devices=[]
+        devices = []
         names = request.form.getlist("shelly_name[]")
         ips = request.form.getlist("shelly_ip[]")
         priorities = request.form.getlist("priority[]")
@@ -241,11 +319,13 @@ def wizard():
                     "name": name.strip(),
                     "ip": ip.strip(),
                     "priority": int(prio),
-                    "power_meter": pm,
-                    "power_ip": pip.strip()
+                    "power_meter": pm.strip() if pm else "",
+                    "power_ip": pip.strip() if pip else ""
                 })
 
         cfg["shelly_devices"] = devices
+        cfg["battery"] = parse_battery_from_form(request.form)
+
         save_config(cfg)
         init_device_states(devices)
         init_device_pids(devices)
@@ -253,7 +333,8 @@ def wizard():
 
     return render_template("wizard.html", config=cfg)
 
-@app.route("/wizard_forced", methods=["GET","POST"])
+
+@app.route("/wizard_forced", methods=["GET", "POST"])
 def wizard_forced():
     if not require_login():
         return redirect("/login")
@@ -281,6 +362,8 @@ def wizard_forced():
                 })
 
         cfg["shelly_devices"] = devices
+        cfg["battery"] = parse_battery_from_form(request.form)
+
         save_config(cfg)
         init_device_states(devices)
         init_device_pids(devices)
@@ -288,6 +371,7 @@ def wizard_forced():
         return redirect("/dashboard")
 
     return render_template("wizard.html", config=cfg)
+
 
 @app.route("/dashboard")
 def dashboard():
@@ -298,16 +382,17 @@ def dashboard():
         return redirect("/")
     return render_template("dashboard.html", config=cfg)
 
+
 @app.route("/status_json")
 def status_json():
     if not require_login():
-        return jsonify({"error":"unauthorized"}),401
+        return jsonify({"error": "unauthorized"}), 401
 
     cfg = load_config()
-    devices=[]
+    devices = []
 
-    for d in cfg.get("shelly_devices",[]):
-        s=device_states.get(d["ip"],{})
+    for d in cfg.get("shelly_devices", []):
+        s = device_states.get(d["ip"], {})
         devices.append({
             "name": d["name"],
             "ip": d["ip"],
@@ -321,29 +406,50 @@ def status_json():
             "power_ip": d.get("power_ip")
         })
 
-    return jsonify(power=current_power, brightness=current_brightness, enabled=enabled, devices=devices)
+    return jsonify(
+        power=current_power,
+        virtual_power=current_virtual_power,
+        brightness=current_brightness,
+        enabled=enabled,
+        devices=devices,
+        battery={
+            "enabled": cfg.get("battery", {}).get("enabled", False),
+            "ip": battery_state.get("ip", ""),
+            "online": battery_state.get("online", False),
+            "soc": battery_state.get("soc", 0),
+            "power": battery_state.get("power", 0),
+            "mode": battery_state.get("mode", "idle"),
+            "strategy": cfg.get("battery", {}).get("mode", "hybrid"),
+            "last_command_w": battery_state.get("last_command_w", 0),
+            "last_action": battery_state.get("last_action", "idle"),
+            "config": cfg.get("battery", {})
+        }
+    )
+
 
 @app.route("/toggle_pid")
 def toggle_pid():
     global enabled
     if not require_login():
-        return jsonify(success=False),401
-    enabled=not enabled
+        return jsonify(success=False), 401
+    enabled = not enabled
     return jsonify(success=True)
+
 
 @app.route("/toggle_shelly/<path:ip>")
 def toggle_shelly(ip):
     if not require_login():
-        return jsonify(success=False),401
+        return jsonify(success=False), 401
 
     if ip in device_states:
-        device_states[ip]["on"]=not device_states[ip]["on"]
-        device_states[ip]["manual_override"]=True
-        device_states[ip]["brightness"]=100 if device_states[ip]["on"] else 0
-        set_shelly(device_states[ip]["brightness"],device_states[ip]["on"],ip)
+        device_states[ip]["on"] = not device_states[ip]["on"]
+        device_states[ip]["manual_override"] = True
+        device_states[ip]["brightness"] = 100 if device_states[ip]["on"] else 0
+        set_shelly(device_states[ip]["brightness"], device_states[ip]["on"], ip)
         return jsonify(success=True, on=device_states[ip]["on"])
 
-    return jsonify(success=False),404
+    return jsonify(success=False), 404
+
 
 @app.route("/scan_devices", methods=["GET"])
 def scan_devices():
@@ -356,23 +462,26 @@ def scan_devices():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # ================= SHELLY =================
 def set_shelly(brightness, on, ip):
     try:
         requests.post(
             f"http://{ip}/rpc/Light.Set",
-            json={"id":0,"on":on,"brightness":round(brightness)},
+            json={"id": 0, "on": on, "brightness": round(brightness)},
             timeout=2
         )
     except Exception as e:
-        print(f"Shelly error ({ip}):",e)
+        print(f"Shelly error ({ip}):", e)
+
 
 def check_shelly_online(ip):
     try:
-        r=requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
-        return r.status_code==200
+        r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
+        return r.status_code == 200
     except Exception:
         return False
+
 
 def get_homewizard_power(ip):
     try:
@@ -382,6 +491,7 @@ def get_homewizard_power(ip):
         print(f"HomeWizard power error ({ip}):", e)
         return 0
 
+
 def get_shelly_device_power(ip):
     try:
         r = requests.get(f"http://{ip}/rpc/Switch.GetStatus?id=0", timeout=2).json()
@@ -390,23 +500,229 @@ def get_shelly_device_power(ip):
         print(f"Power read error ({ip}):", e)
         return 0
 
+
+# ================= BATTERY HELPERS =================
+def get_battery_status(ip):
+    """
+    Probeer zo generiek mogelijk battery data te lezen.
+    Pas deze functie aan zodra je de exacte HomeWizard batterij JSON kent.
+    """
+    try:
+        r = requests.get(f"http://{ip}/api/v1/data", timeout=2)
+        if r.status_code != 200:
+            return {
+                "online": False,
+                "soc": 0,
+                "power": 0
+            }
+
+        data = r.json()
+        if not isinstance(data, dict):
+            return {
+                "online": False,
+                "soc": 0,
+                "power": 0
+            }
+
+        soc = (
+            data.get("soc")
+            or data.get("state_of_charge_pct")
+            or data.get("state_of_charge")
+            or data.get("battery_soc")
+            or 0
+        )
+
+        power = (
+            data.get("active_power_w")
+            or data.get("battery_power_w")
+            or data.get("power_w")
+            or 0
+        )
+
+        return {
+            "online": True,
+            "soc": clamp(safe_int(soc, 0), 0, 100),
+            "power": safe_int(power, 0)
+        }
+    except Exception as e:
+        print(f"Battery status error ({ip}):", e)
+        return {
+            "online": False,
+            "soc": 0,
+            "power": 0
+        }
+
+
+def set_battery_idle(ip):
+    """
+    VUL HIER de echte HomeWizard battery API in.
+    Nu veilig als no-op.
+    """
+    try:
+        # Voorbeeld placeholder:
+        # requests.post(f"http://{ip}/api/v1/battery/idle", timeout=2)
+        return True
+    except Exception as e:
+        print(f"Battery idle error ({ip}):", e)
+        return False
+
+
+def set_battery_charge_power(ip, watts):
+    """
+    VUL HIER de echte HomeWizard battery API in.
+    Nu veilig als no-op.
+    """
+    try:
+        # Voorbeeld placeholder:
+        # requests.post(
+        #     f"http://{ip}/api/v1/battery/charge",
+        #     json={"power_w": int(watts)},
+        #     timeout=2
+        # )
+        return True
+    except Exception as e:
+        print(f"Battery charge error ({ip}):", e)
+        return False
+
+
+def set_battery_discharge_power(ip, watts):
+    """
+    VUL HIER de echte HomeWizard battery API in.
+    Nu veilig als no-op.
+    """
+    try:
+        # Voorbeeld placeholder:
+        # requests.post(
+        #     f"http://{ip}/api/v1/battery/discharge",
+        #     json={"power_w": int(watts)},
+        #     timeout=2
+        # )
+        return True
+    except Exception as e:
+        print(f"Battery discharge error ({ip}):", e)
+        return False
+
+
+def apply_battery_command(ip, action, power_w):
+    power_w = max(0, int(power_w))
+
+    success = False
+    if action == "charge":
+        success = set_battery_charge_power(ip, power_w)
+    elif action == "discharge":
+        success = set_battery_discharge_power(ip, power_w)
+    else:
+        success = set_battery_idle(ip)
+
+    battery_state["last_action"] = action
+    battery_state["last_command_w"] = power_w if action in ("charge", "discharge") else 0
+    battery_state["mode"] = action if success else "idle"
+
+    return success
+
+
+def decide_battery_action(measured_power, battery_cfg, batt_state):
+    """
+    measured_power:
+      negatief = export
+      positief = import
+    """
+    if not battery_cfg.get("enabled"):
+        return {"action": "idle", "power_w": 0}
+
+    if not batt_state.get("online"):
+        return {"action": "idle", "power_w": 0}
+
+    soc = batt_state.get("soc", 0)
+    mode = battery_cfg.get("mode", "hybrid")
+    min_soc = clamp(safe_int(battery_cfg.get("min_soc"), 20), 0, 100)
+    target_soc = clamp(safe_int(battery_cfg.get("target_soc"), 50), 0, 100)
+    max_soc = clamp(safe_int(battery_cfg.get("max_soc"), 95), 0, 100)
+    max_charge_w = max(0, safe_int(battery_cfg.get("max_charge_w"), 1500))
+    max_discharge_w = max(0, safe_int(battery_cfg.get("max_discharge_w"), 1500))
+    allow_discharge = bool(battery_cfg.get("allow_discharge", True))
+
+    surplus_w = max(0, -measured_power)
+    import_w = max(0, measured_power)
+
+    if mode == "battery_first":
+        if surplus_w >= BATTERY_EXPORT_MARGIN and soc < max_soc:
+            return {
+                "action": "charge",
+                "power_w": min(surplus_w, max_charge_w)
+            }
+
+        if allow_discharge and import_w >= BATTERY_IMPORT_MARGIN and soc > min_soc:
+            return {
+                "action": "discharge",
+                "power_w": min(import_w, max_discharge_w)
+            }
+
+        return {"action": "idle", "power_w": 0}
+
+    if mode == "buffers_first":
+        if allow_discharge and import_w >= BATTERY_IMPORT_MARGIN and soc > min_soc:
+            return {
+                "action": "discharge",
+                "power_w": min(import_w, max_discharge_w)
+            }
+
+        if surplus_w >= BATTERY_BUFFERS_FIRST_EXTRA_SURPLUS and soc < max_soc:
+            reserve_for_buffers = 1000
+            available_for_battery = max(0, surplus_w - reserve_for_buffers)
+            if available_for_battery > 0:
+                return {
+                    "action": "charge",
+                    "power_w": min(available_for_battery, max_charge_w)
+                }
+
+        return {"action": "idle", "power_w": 0}
+
+    # hybrid
+    if surplus_w >= BATTERY_EXPORT_MARGIN:
+        if soc < target_soc:
+            return {
+                "action": "charge",
+                "power_w": min(surplus_w, max_charge_w)
+            }
+
+        if soc < max_soc and surplus_w >= BATTERY_BIG_SURPLUS_W:
+            reserve_for_buffers = 800
+            available_for_battery = max(0, surplus_w - reserve_for_buffers)
+            if available_for_battery > 0:
+                return {
+                    "action": "charge",
+                    "power_w": min(available_for_battery, max_charge_w)
+                }
+
+    if allow_discharge and import_w >= BATTERY_IMPORT_MARGIN and soc > min_soc:
+        return {
+            "action": "discharge",
+            "power_w": min(import_w, max_discharge_w)
+        }
+
+    return {"action": "idle", "power_w": 0}
+
+
+# ================= DEVICE STATE INIT =================
 def init_device_states(devices):
     global device_states
     for d in devices:
-        ip=d["ip"]
+        ip = d["ip"]
         if ip not in device_states:
-            device_states[ip]={
-                "on":False,
-                "brightness":0,
-                "online":False,
-                "manual_override":False,
-                "freeze":False,
-                "started":False,
-                "saturated_since":None,
-                "min_since":None,
-                "last_active_time":time.time(),
-                "power":0
+            device_states[ip] = {
+                "on": False,
+                "brightness": 0,
+                "online": False,
+                "manual_override": False,
+                "freeze": False,
+                "started": False,
+                "saturated_since": None,
+                "min_since": None,
+                "last_active_time": time.time(),
+                "power": 0
             }
+
 
 def init_device_pids(devices):
     global device_pids
@@ -417,22 +733,28 @@ def init_device_pids(devices):
             p.output_limits = (MIN_BRIGHTNESS, MAX_BRIGHTNESS)
             device_pids[ip] = p
 
+
 # ================= CONTROL HELPERS =================
 def get_sorted_devices(devices):
     return sorted(devices, key=lambda x: x["priority"])
 
+
 def get_device_state(device):
     return device_states[device["ip"]]
+
 
 def is_started(device):
     return get_device_state(device)["started"]
 
+
 def is_frozen(device):
     return get_device_state(device)["freeze"]
+
 
 def is_running(device):
     st = get_device_state(device)
     return st["started"] and not st["freeze"] and st["on"]
+
 
 def higher_priorities_started_and_frozen(devices_sorted, priority):
     for d in devices_sorted:
@@ -442,6 +764,7 @@ def higher_priorities_started_and_frozen(devices_sorted, priority):
                 return False
     return True
 
+
 def lower_priorities_off(devices_sorted, priority):
     for d in devices_sorted:
         if d["priority"] > priority:
@@ -449,6 +772,7 @@ def lower_priorities_off(devices_sorted, priority):
             if st["started"] or st["on"] or st["brightness"] > 0:
                 return False
     return True
+
 
 def get_next_startable_device(devices_sorted):
     for d in devices_sorted:
@@ -466,11 +790,13 @@ def get_next_startable_device(devices_sorted):
 
     return None
 
+
 def get_lowest_priority_running(devices_sorted):
     for d in reversed(devices_sorted):
         if is_running(d):
             return d
     return None
+
 
 def get_highest_frozen_allowed_to_unfreeze(devices_sorted):
     for d in reversed(devices_sorted):
@@ -479,11 +805,13 @@ def get_highest_frozen_allowed_to_unfreeze(devices_sorted):
             return d
     return None
 
+
 def is_last_possible_priority(devices_sorted, device):
     if not devices_sorted:
         return False
     last_priority = max(d["priority"] for d in devices_sorted)
     return device["priority"] == last_priority
+
 
 def reset_device_to_off(ip):
     state = device_states[ip]
@@ -495,6 +823,7 @@ def reset_device_to_off(ip):
     state["min_since"] = None
     set_shelly(0, False, ip)
 
+
 def hold_frozen_output(ip):
     state = device_states[ip]
     if state["brightness"] < MIN_BRIGHTNESS:
@@ -502,12 +831,14 @@ def hold_frozen_output(ip):
     state["on"] = True
     set_shelly(state["brightness"], True, ip)
 
+
 # ================= CONTROL LOOP =================
 def control_loop():
-    global current_power, current_brightness
+    global current_power, current_virtual_power, current_brightness, battery_state
 
     online_check_interval = 10
     last_online_check = {}
+    last_battery_online_check = 0
 
     export_start = None
     import_unfreeze_start = None
@@ -518,8 +849,9 @@ def control_loop():
             cfg = load_config()
             p1_ip = cfg.get("p1_ip")
             devices = cfg.get("shelly_devices", [])
+            battery_cfg = cfg.get("battery", default_battery_config())
 
-            if not p1_ip or not devices:
+            if not p1_ip:
                 time.sleep(2)
                 continue
 
@@ -528,7 +860,7 @@ def control_loop():
 
             now = time.time()
 
-            # ONLINE CHECK
+            # ONLINE CHECK SHELLY
             for d in devices:
                 ip = d["ip"]
                 if now - last_online_check.get(ip, 0) > online_check_interval:
@@ -558,7 +890,48 @@ def control_loop():
             measured_power = data.get("active_power_w", 0)
             current_power = measured_power
 
-            pid_power = 0 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
+            # BATTERY STATUS
+            battery_ip = (battery_cfg.get("ip") or "").strip()
+            battery_state["ip"] = battery_ip
+
+            if battery_cfg.get("enabled") and battery_ip:
+                if now - last_battery_online_check > 2:
+                    batt = get_battery_status(battery_ip)
+                    battery_state["online"] = batt.get("online", False)
+                    battery_state["soc"] = batt.get("soc", 0)
+                    battery_state["power"] = batt.get("power", 0)
+                    last_battery_online_check = now
+
+                batt_cmd = decide_battery_action(measured_power, battery_cfg, battery_state)
+
+                if enabled:
+                    apply_battery_command(
+                        battery_ip,
+                        batt_cmd["action"],
+                        batt_cmd["power_w"]
+                    )
+                else:
+                    apply_battery_command(battery_ip, "idle", 0)
+
+                # virtual power: wat er overblijft voor buffers na battery-keuze
+                if batt_cmd["action"] == "charge":
+                    virtual_power = measured_power + batt_cmd["power_w"]
+                elif batt_cmd["action"] == "discharge":
+                    virtual_power = measured_power - batt_cmd["power_w"]
+                else:
+                    virtual_power = measured_power
+            else:
+                battery_state["online"] = False
+                battery_state["soc"] = 0
+                battery_state["power"] = 0
+                battery_state["mode"] = "idle"
+                battery_state["last_action"] = "idle"
+                battery_state["last_command_w"] = 0
+                virtual_power = measured_power
+
+            current_virtual_power = virtual_power
+
+            pid_power = 0 if PID_NEUTRAL_LOW <= virtual_power <= PID_NEUTRAL_HIGH else virtual_power
 
             devices_sorted = get_sorted_devices(devices)
             active_brightness = 0
@@ -581,8 +954,14 @@ def control_loop():
                 time.sleep(1)
                 continue
 
-            # 1. Start timer voor export
-            if measured_power <= EXPORT_THRESHOLD:
+            # Als er geen devices zijn, dan alleen batterijlogica draaien
+            if not devices_sorted:
+                current_brightness = 0
+                time.sleep(1)
+                continue
+
+            # 1. Start timer voor export op basis van virtual power
+            if virtual_power <= EXPORT_THRESHOLD:
                 if export_start is None:
                     export_start = now
             else:
@@ -635,7 +1014,6 @@ def control_loop():
                     set_shelly(b, True, ip)
                     active_brightness = b
 
-                    # freeze logica
                     if b >= FREEZE_AT and not is_last_possible_priority(devices_sorted, d):
                         if st["saturated_since"] is None:
                             st["saturated_since"] = now
@@ -645,7 +1023,6 @@ def control_loop():
                     else:
                         st["saturated_since"] = None
 
-                    # minimum logica
                     if b <= MIN_BRIGHTNESS:
                         if st["min_since"] is None:
                             st["min_since"] = now
@@ -653,8 +1030,6 @@ def control_loop():
                         st["min_since"] = None
 
                 else:
-                    # veiligheid: actieve niet-frozen devices buiten de regelende prio
-                    # hun huidige stand gewoon vasthouden
                     if st["brightness"] < MIN_BRIGHTNESS:
                         st["brightness"] = MIN_BRIGHTNESS
                     st["on"] = True
@@ -662,16 +1037,14 @@ def control_loop():
 
             current_brightness = active_brightness
 
-            # 4. Laagste actieve prio uitschakelen als:
-            #    - hij op minimum staat
-            #    - EN 2 minuten >= 300W import
+            # 4. Laagste actieve prio uitschakelen bij import
             lowest_running = get_lowest_priority_running(devices_sorted)
 
             if lowest_running:
                 st = get_device_state(lowest_running)
                 at_minimum = st["brightness"] <= MIN_BRIGHTNESS and st["min_since"] is not None
 
-                if at_minimum and measured_power >= IMPORT_OFF_THRESHOLD:
+                if at_minimum and virtual_power >= IMPORT_OFF_THRESHOLD:
                     if import_off_start is None:
                         import_off_start = now
                     elif (now - import_off_start) >= OFF_DELAY:
@@ -687,7 +1060,7 @@ def control_loop():
             candidate_unfreeze = get_highest_frozen_allowed_to_unfreeze(devices_sorted)
 
             if candidate_unfreeze and get_lowest_priority_running(devices_sorted) is None:
-                if measured_power >= IMPORT_UNFREEZE_THRESHOLD:
+                if virtual_power >= IMPORT_UNFREEZE_THRESHOLD:
                     if import_unfreeze_start is None:
                         import_unfreeze_start = now
                     elif (now - import_unfreeze_start) >= UNFREEZE_DELAY:
@@ -710,6 +1083,7 @@ def control_loop():
         except Exception as e:
             print("Fout control_loop:", e)
             time.sleep(2)
+
 
 # ================= START =================
 threading.Thread(target=control_loop, daemon=True).start()

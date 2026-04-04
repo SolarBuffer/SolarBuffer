@@ -10,7 +10,7 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Inter',sans-serif; background:hsl(30,25%,97%); color:hsl(220,20%,14%); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
 
-.container { width:100%; max-width:480px; background:white; border:1px solid hsl(30,15%,88%); border-radius:.75rem; box-shadow:0 10px 40px -10px hsla(32,95%,52%,0.15); padding:2rem; }
+.container { width:100%; max-width:560px; background:white; border:1px solid hsl(30,15%,88%); border-radius:.75rem; box-shadow:0 10px 40px -10px hsla(32,95%,52%,0.15); padding:2rem; }
 .header{text-align:center;margin-bottom:2rem;}
 .header .icon{font-size:2rem;color:hsl(32,95%,52%);}
 .header h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.75rem;margin-top:.25rem;}
@@ -19,8 +19,20 @@ body { font-family:'Inter',sans-serif; background:hsl(30,25%,97%); color:hsl(220
 
 form{display:flex;flex-direction:column;gap:1.25rem;}
 label{font-weight:600;font-size:.95rem;color:hsl(220,20%,14%);}
-input[type="text"],input[type="number"],select{padding:.6rem .75rem;border:1px solid hsl(30,15%,88%);border-radius:.5rem;font-size:1rem;font-family:'Inter',sans-serif;transition:border-color .3s;line-height:1.5;}
-input[type="text"]:focus,input[type="number"]:focus,select:focus{border-color:hsl(32,95%,52%);outline:none;}
+input[type="text"],input[type="number"],select{
+    padding:.6rem .75rem;
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.5rem;
+    font-size:1rem;
+    font-family:'Inter',sans-serif;
+    transition:border-color .3s;
+    line-height:1.5;
+    width:100%;
+}
+input[type="text"]:focus,input[type="number"]:focus,select:focus{
+    border-color:hsl(32,95%,52%);
+    outline:none;
+}
 
 button{background:hsl(32,95%,52%);color:white;font-weight:600;font-size:1rem;padding:.75rem;border:none;border-radius:.5rem;cursor:pointer;transition:background .3s;}
 button:hover{background:hsl(32,85%,45%);}
@@ -56,6 +68,24 @@ button:hover{background:hsl(32,85%,45%);}
     margin-bottom:.25rem;
 }
 
+.section{
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.75rem;
+    padding:1rem;
+    background:hsl(30,25%,99%);
+}
+.section h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:1.05rem;
+    margin-bottom:.85rem;
+}
+.section p.helper{
+    font-size:.85rem;
+    color:hsl(220,10%,46%);
+    margin-top:-.35rem;
+    margin-bottom:.85rem;
+}
+
 .device-row{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;}
 .device-row-top,.device-row-bottom{display:flex;flex-direction:column;gap:.25rem;}
 .device-row-top input,.device-row-bottom input,.device-row-bottom select{width:100%;}
@@ -84,6 +114,41 @@ button:hover{background:hsl(32,85%,45%);}
 #scanBtn{background:hsl(215,70%,52%);}
 #scanBtn:hover{background:hsl(215,70%,45%);}
 #scanBtn:disabled{opacity:.7;cursor:wait;}
+
+.checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:.65rem;
+    flex-wrap:wrap;
+}
+.checkbox-row input[type="checkbox"]{
+    width:auto;
+    transform:scale(1.15);
+}
+.grid-2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:.75rem;
+}
+.grid-3{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:.75rem;
+}
+@media (max-width:640px){
+    .grid-2,.grid-3{
+        grid-template-columns:1fr;
+    }
+}
+.battery-fields.disabled{
+    opacity:.55;
+    pointer-events:none;
+}
+.small-note{
+    font-size:.82rem;
+    color:hsl(220,10%,46%);
+    margin-top:.25rem;
+}
 </style>
 </head>
 <body>
@@ -95,20 +160,87 @@ button:hover{background:hsl(32,85%,45%);}
 </div>
 
 <form id="configForm" method="POST" action="/wizard_forced">
-<label for="p1ip">IP-adres P1-meter</label>
-<input type="text" id="p1ip" name="p1ip" placeholder="Bijv. 192.168.178.21" required pattern="^(\d{1,3}\.){3}\d{1,3}$" />
+    <div class="section">
+        <h2>P1-meter</h2>
+        <label for="p1ip">IP-adres P1-meter</label>
+        <input type="text" id="p1ip" name="p1ip" placeholder="Bijv. 192.168.178.21" required pattern="^(\d{1,3}\.){3}\d{1,3}$" />
+    </div>
 
-<label>Shelly-apparaten</label>
-<div id="deviceContainer"></div>
+    <div class="section">
+        <h2>Shelly-apparaten</h2>
+        <p class="helper">Voeg maximaal 5 solarbuffer apparaten toe en geef elke een unieke prioriteit.</p>
 
-<button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
-<button type="button" id="scanBtn" onclick="scanDevices()">Autoscan netwerk</button>
+        <div id="deviceContainer"></div>
 
-<div class="scan-status" id="scanStatus" aria-live="polite"></div>
-<div class="scan-results" id="scanResults"></div>
+        <button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
+        <button type="button" id="scanBtn" onclick="scanDevices()">Autoscan netwerk</button>
 
-<button type="submit">Opslaan en verder</button>
-<div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
+        <div class="scan-status" id="scanStatus" aria-live="polite"></div>
+        <div class="scan-results" id="scanResults"></div>
+    </div>
+
+    <div class="section">
+        <h2>Batterij</h2>
+        <p class="helper">Configureer hier optioneel een HomeWizard accu of andere batterijbron voor battery-first, buffers-first of hybrid gedrag.</p>
+
+        <div class="checkbox-row" style="margin-bottom:.9rem;">
+            <input type="checkbox" id="battery_enabled" name="battery_enabled" value="1">
+            <label for="battery_enabled" style="margin:0;">Batterij inschakelen</label>
+        </div>
+
+        <div id="batteryFields" class="battery-fields">
+            <div style="margin-bottom:.85rem;">
+                <label for="battery_ip">IP-adres batterij</label>
+                <input type="text" id="battery_ip" name="battery_ip" placeholder="Bijv. 192.168.178.60" pattern="^(\d{1,3}\.){3}\d{1,3}$" />
+            </div>
+
+            <div style="margin-bottom:.85rem;">
+                <label for="battery_mode">Batterijmodus</label>
+                <select id="battery_mode" name="battery_mode">
+                    <option value="hybrid">Hybrid</option>
+                    <option value="battery_first">Battery first</option>
+                    <option value="buffers_first">Buffers first</option>
+                </select>
+                <div class="small-note">
+                    Hybrid = eerst laden tot target SoC, daarna buffers prioriteit, bij groot overschot kan accu verder laden.
+                </div>
+            </div>
+
+            <div class="grid-3" style="margin-bottom:.85rem;">
+                <div>
+                    <label for="battery_min_soc">Min SoC (%)</label>
+                    <input type="number" id="battery_min_soc" name="battery_min_soc" min="0" max="100" step="1">
+                </div>
+                <div>
+                    <label for="battery_target_soc">Target SoC (%)</label>
+                    <input type="number" id="battery_target_soc" name="battery_target_soc" min="0" max="100" step="1">
+                </div>
+                <div>
+                    <label for="battery_max_soc">Max SoC (%)</label>
+                    <input type="number" id="battery_max_soc" name="battery_max_soc" min="0" max="100" step="1">
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-bottom:.85rem;">
+                <div>
+                    <label for="battery_max_charge_w">Max laden (W)</label>
+                    <input type="number" id="battery_max_charge_w" name="battery_max_charge_w" min="0" step="1">
+                </div>
+                <div>
+                    <label for="battery_max_discharge_w">Max ontladen (W)</label>
+                    <input type="number" id="battery_max_discharge_w" name="battery_max_discharge_w" min="0" step="1">
+                </div>
+            </div>
+
+            <div class="checkbox-row">
+                <input type="checkbox" id="battery_allow_discharge" name="battery_allow_discharge" value="1">
+                <label for="battery_allow_discharge" style="margin:0;">Ontladen toestaan</label>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit">Opslaan en verder</button>
+    <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
 </form>
 </div>
 
@@ -298,6 +430,12 @@ function renderScanResults(data, addedCount, skippedCount){
     results.classList.add('visible');
 }
 
+function toggleBatteryFields(){
+    const enabled = document.getElementById('battery_enabled').checked;
+    const fields = document.getElementById('batteryFields');
+    fields.classList.toggle('disabled', !enabled);
+}
+
 async function scanDevices(){
     const scanBtn = document.getElementById('scanBtn');
     const scanStatus = document.getElementById('scanStatus');
@@ -423,12 +561,39 @@ document.getElementById('configForm').addEventListener('submit', function(e){
         return;
     }
 
+    const batteryEnabled = document.getElementById('battery_enabled').checked;
+    if(batteryEnabled){
+        const batteryIp = document.getElementById('battery_ip').value.trim();
+        const minSoc = parseInt(document.getElementById('battery_min_soc').value || '0', 10);
+        const targetSoc = parseInt(document.getElementById('battery_target_soc').value || '0', 10);
+        const maxSoc = parseInt(document.getElementById('battery_max_soc').value || '0', 10);
+
+        if(!batteryIp){
+            e.preventDefault();
+            status.textContent = "Vul een batterij IP-adres in.";
+            return;
+        }
+
+        if(targetSoc < minSoc){
+            e.preventDefault();
+            status.textContent = "Target SoC mag niet lager zijn dan Min SoC.";
+            return;
+        }
+
+        if(maxSoc < targetSoc){
+            e.preventDefault();
+            status.textContent = "Max SoC mag niet lager zijn dan Target SoC.";
+            return;
+        }
+    }
+
     status.textContent = "";
 });
 
 window.addEventListener('DOMContentLoaded', () => {
     const savedP1 = "{{ config.p1_ip or '' }}";
     const devices = {{ config.shelly_devices|tojson or [] }};
+    const battery = {{ config.battery|tojson or {} }};
 
     if(savedP1){
         document.getElementById('p1ip').value = savedP1;
@@ -439,6 +604,19 @@ window.addEventListener('DOMContentLoaded', () => {
     } else {
         addDevice();
     }
+
+    document.getElementById('battery_enabled').checked = !!battery.enabled;
+    document.getElementById('battery_ip').value = battery.ip || '';
+    document.getElementById('battery_mode').value = battery.mode || 'hybrid';
+    document.getElementById('battery_min_soc').value = battery.min_soc ?? 20;
+    document.getElementById('battery_target_soc').value = battery.target_soc ?? 50;
+    document.getElementById('battery_max_soc').value = battery.max_soc ?? 95;
+    document.getElementById('battery_max_charge_w').value = battery.max_charge_w ?? 1500;
+    document.getElementById('battery_max_discharge_w').value = battery.max_discharge_w ?? 1500;
+    document.getElementById('battery_allow_discharge').checked = !!battery.allow_discharge;
+
+    toggleBatteryFields();
+    document.getElementById('battery_enabled').addEventListener('change', toggleBatteryFields);
 });
 </script>
 </body>

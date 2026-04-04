@@ -1,0 +1,25 @@
+{
+    "username": "solarbuffer",
+    "password": "solarbuffer",
+    "p1_ip": "192.168.178.21",
+    "shelly_devices": [
+        {
+            "name": "Boiler",
+            "ip": "192.168.178.195",
+            "priority": 1,
+            "power_meter": "",
+            "power_ip": ""
+        }
+    ],
+    "battery": {
+        "enabled": false,
+        "ip": "192.168.178.21",
+        "mode": "battery_first",
+        "min_soc": 20,
+        "target_soc": 50,
+        "max_soc": 95,
+        "max_charge_w": 800,
+        "max_discharge_w": 800,
+        "allow_discharge": true
+    }
+}

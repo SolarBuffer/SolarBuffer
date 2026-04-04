@@ -18,26 +18,56 @@
       justify-content: center;
       padding: 1rem;
     }
-    h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
-    .container { width: 100%; max-width: 480px; }
 
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
-    .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+    h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .header .icon {
+      font-size: 2rem;
+      color: hsl(32, 95%, 52%);
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+
     .header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
 
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .header p {
+      color: hsl(220, 10%, 46%);
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
     .card {
       background: white;
       border: 1px solid hsl(30, 15%, 88%);
       border-radius: 0.75rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
     }
+
     .stat-card {
       padding: 1.25rem;
       display: flex;
@@ -45,21 +75,35 @@
       align-items: center;
       gap: 0.35rem;
     }
-    .stat-card .stat-icon { font-size: 1.5rem; }
+
+    .stat-card .stat-icon {
+      font-size: 1.5rem;
+    }
+
     .stat-card .label {
       font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: hsl(220, 10%, 46%);
+      text-align: center;
     }
+
     .stat-card .value {
       font-family: "Space Grotesk", sans-serif;
       font-size: 2rem;
       font-weight: 700;
     }
-    .stat-card .unit { font-size: 0.85rem; color: hsl(220, 10%, 46%); }
 
-    .card.control-card { padding: 1.25rem; margin-bottom: 1rem; }
+    .stat-card .unit {
+      font-size: 0.85rem;
+      color: hsl(220, 10%, 46%);
+    }
+
+    .card.control-card {
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
     .control-card h2 {
       font-size: 1.1rem;
       margin-bottom: 1rem;
@@ -67,7 +111,11 @@
       align-items: center;
       gap: 0.5rem;
     }
-    .control-card h2 .ctrl-icon { color: hsl(32, 95%, 52%); }
+
+    .control-card h2 .ctrl-icon {
+      color: hsl(32, 95%, 52%);
+    }
+
     .control-row {
       display: flex;
       align-items: center;
@@ -78,17 +126,55 @@
       margin-bottom: 0.75rem;
       cursor: pointer;
     }
-    .control-row:last-child { margin-bottom: 0; }
-    .control-label .name { font-weight: 500; font-size: 0.95rem; }
-    .control-label .sub { font-size: 0.8rem; color: hsl(220, 10%, 46%); }
-    .control-right { display: flex; align-items: center; gap: 0.75rem; }
 
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: hsl(220, 10%, 80%); }
-    .dot.active { background: #22c55e; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
 
-    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
-    .toggle input { display: none; }
+    .control-label .name {
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .control-label .sub {
+      font-size: 0.8rem;
+      color: hsl(220, 10%, 46%);
+    }
+
+    .control-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: hsl(220, 10%, 80%);
+    }
+
+    .dot.active {
+      background: #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .toggle input {
+      display: none;
+    }
+
     .toggle .slider {
       position: absolute;
       inset: 0;
@@ -96,7 +182,11 @@
       border-radius: 12px;
       transition: background 0.3s;
     }
-    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+
+    .toggle input:checked + .slider {
+      background: hsl(32, 95%, 52%);
+    }
+
     .toggle .slider::before {
       content: "";
       position: absolute;
@@ -109,36 +199,66 @@
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
       transition: transform 0.3s;
     }
-    .toggle input:checked + .slider::before { transform: translateX(20px); }
 
-    .footer { text-align: center; font-size: 0.75rem; color: hsl(220, 10%, 46%); margin-top: 1rem; }
+    .toggle input:checked + .slider::before {
+      transform: translateX(20px);
+    }
 
-    /* Device cards */
-    .device-card {
+    .footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: hsl(220, 10%, 46%);
+      margin-top: 1rem;
+    }
+
+    .device-card,
+    .battery-card {
       border: 1px solid hsl(30, 15%, 88%);
       border-radius: 0.6rem;
       padding: 0.85rem 1rem;
       margin-bottom: 0.75rem;
-      cursor: pointer;
       transition: opacity 0.2s;
     }
-    .device-card:last-child { margin-bottom: 0; }
-    .device-card.offline { opacity: 0.5; cursor: default; }
 
-    .device-top {
+    .device-card:last-child,
+    .battery-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .device-card.offline,
+    .battery-card.offline {
+      opacity: 0.6;
+    }
+
+    .device-top,
+    .battery-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 0.6rem;
+      gap: 0.75rem;
     }
 
-    .device-info .name { font-weight: 600; font-size: 0.92rem; }
-    .device-info .ip { font-size: 0.78rem; color: hsl(220, 10%, 46%); margin-top: 0.1rem; }
+    .device-info .name,
+    .battery-info .name {
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
 
-    .device-top-right {
+    .device-info .ip,
+    .battery-info .ip {
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 46%);
+      margin-top: 0.1rem;
+    }
+
+    .device-top-right,
+    .battery-top-right {
       display: flex;
       align-items: center;
       gap: 0.4rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .online-badge {
@@ -149,27 +269,147 @@
       letter-spacing: 0.03em;
       white-space: nowrap;
     }
-    .online-badge.online { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
-    .online-badge.offline { background: hsl(0, 60%, 93%); color: hsl(0, 65%, 42%); }
 
-    .power-badge {
+    .online-badge.online {
+      background: hsl(145, 55%, 90%);
+      color: hsl(145, 60%, 28%);
+    }
+
+    .online-badge.offline {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 42%);
+    }
+
+    .power-badge,
+    .mode-badge,
+    .state-badge {
       font-size: 0.68rem;
       font-weight: 600;
       padding: 0.2rem 0.55rem;
       border-radius: 999px;
       letter-spacing: 0.03em;
       white-space: nowrap;
+    }
+
+    .power-badge {
       background: hsl(32, 95%, 90%);
       color: hsl(32, 95%, 32%);
       display: none;
     }
+
     .power-badge.visible {
       display: inline-block;
     }
 
-    .device-bottom { display: flex; align-items: center; gap: 0.75rem; }
-    .bar { flex: 1; height: 6px; background: hsl(32, 95%, 88%); border-radius: 3px; overflow: hidden; }
-    .fill { height: 6px; background: hsl(32, 95%, 52%); border-radius: 3px; transition: width 0.4s ease; width: 0; }
+    .mode-badge {
+      background: hsl(215, 70%, 92%);
+      color: hsl(215, 60%, 32%);
+    }
+
+    .state-badge.idle {
+      background: hsl(220, 20%, 92%);
+      color: hsl(220, 18%, 38%);
+    }
+
+    .state-badge.charge {
+      background: hsl(145, 55%, 90%);
+      color: hsl(145, 60%, 28%);
+    }
+
+    .state-badge.discharge {
+      background: hsl(32, 95%, 90%);
+      color: hsl(32, 95%, 30%);
+    }
+
+    .device-bottom {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .bar {
+      flex: 1;
+      height: 6px;
+      background: hsl(32, 95%, 88%);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 6px;
+      background: hsl(32, 95%, 52%);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      width: 0;
+    }
+
+    .battery-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .meta-box {
+      background: hsl(30, 15%, 95%);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .meta-box .k {
+      display: block;
+      font-size: 0.72rem;
+      color: hsl(220, 10%, 46%);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.15rem;
+    }
+
+    .meta-box .v {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .soc-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .soc-label {
+      min-width: 52px;
+      font-size: 0.82rem;
+      color: hsl(220, 10%, 46%);
+      font-weight: 600;
+    }
+
+    .soc-bar {
+      flex: 1;
+      height: 10px;
+      background: hsl(30, 15%, 90%);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .soc-fill {
+      height: 10px;
+      background: hsl(145, 65%, 42%);
+      border-radius: 999px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    .empty-note {
+      font-size: 0.85rem;
+      color: hsl(220, 10%, 46%);
+    }
+
+    @media (max-width: 560px) {
+      .grid,
+      .battery-meta {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 
@@ -181,23 +421,8 @@
       <p>Niet terugleveren, Bufferen!</p>
     </div>
 
-    <!-- Stat cards -->
-    <div class="grid">
-      <div class="card stat-card">
-        <span class="stat-icon">⚡</span>
-        <span class="label">Vermogen</span>
-        <span class="value" id="current_power">0.0</span>
-        <span class="unit">W</span>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">🔥</span>
-        <span class="label">Sturing</span>
-        <span class="value" id="current_brightness">0.0</span>
-        <span class="unit">%</span>
-      </div>
-    </div>
+    <div class="grid" id="statsGrid"></div>
 
-    <!-- PID Controller -->
     <div class="card control-card">
       <h2><span class="ctrl-icon">🎛️</span> Besturing</h2>
       <div class="control-row">
@@ -215,13 +440,16 @@
       </div>
     </div>
 
-    <!-- Shelly apparaten -->
+    <div class="card control-card" id="batteryCardSection" style="display:none;">
+      <h2><span class="ctrl-icon">🔋</span> Batterij</h2>
+      <div id="batteryContainer"></div>
+    </div>
+
     <div class="card control-card">
       <h2><span class="ctrl-icon">💡</span> Shelly apparaten</h2>
       <div id="devicesContainer"></div>
     </div>
 
-    <!-- Wizard -->
     <div class="card control-card">
       <h2><span class="ctrl-icon">⚙️</span> Wizard</h2>
       <div class="control-row" onclick="goToWizard()">
@@ -236,17 +464,88 @@
   </div>
 
   <script>
+    function fmt1(v) {
+      const n = Number(v || 0);
+      return Number.isFinite(n) ? n.toFixed(1) : "0.0";
+    }
+
+    function fmtInt(v) {
+      const n = Number(v || 0);
+      return Number.isFinite(n) ? Math.round(n).toString() : "0";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function humanStrategy(strategy) {
+      if (strategy === "battery_first") return "battery first";
+      if (strategy === "buffers_first") return "buffers first";
+      if (strategy === "hybrid") return "hybrid";
+      return "-";
+    }
+
+    function humanBatteryMode(mode) {
+      if (mode === "charge") return "Laden";
+      if (mode === "discharge") return "Ontladen";
+      return "Idle";
+    }
+
+    function renderStats(data) {
+      const grid = document.getElementById("statsGrid");
+      const batteryEnabled = !!data?.battery?.enabled;
+
+      let html = `
+        <div class="card stat-card">
+          <span class="stat-icon">⚡</span>
+          <span class="label">Netvermogen</span>
+          <span class="value">${fmt1(data.power)}</span>
+          <span class="unit">W</span>
+        </div>
+        <div class="card stat-card">
+          <span class="stat-icon">🔥</span>
+          <span class="label">Sturing</span>
+          <span class="value">${fmt1(data.brightness)}</span>
+          <span class="unit">%</span>
+        </div>
+      `;
+
+      if (batteryEnabled) {
+        html += `
+          <div class="card stat-card">
+            <span class="stat-icon">🔋</span>
+            <span class="label">Virtueel vermogen</span>
+            <span class="value">${fmt1(data.virtual_power)}</span>
+            <span class="unit">W</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-icon">🧠</span>
+            <span class="label">Accu strategie</span>
+            <span class="value">${escapeHtml(humanStrategy(data?.battery?.strategy))}</span>
+            <span class="unit">modus</span>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = html;
+    }
+
     function updateStatus() {
       fetch("/status_json")
         .then(r => r.json())
         .then(data => {
-          document.getElementById("current_power").textContent = data.power.toFixed(1);
-          document.getElementById("current_brightness").textContent = data.brightness.toFixed(1);
+          renderStats(data);
 
-          document.getElementById("pid_toggle").checked = data.enabled;
+          document.getElementById("pid_toggle").checked = !!data.enabled;
           document.getElementById("pid_sub").textContent = data.enabled ? "Actief" : "Uitgeschakeld";
           document.getElementById("pid_dot").className = "dot" + (data.enabled ? " active" : "");
 
+          renderBattery(data.battery || {});
           renderDevices(data.devices || []);
         })
         .catch(err => console.error("Update error:", err));
@@ -264,8 +563,75 @@
       window.location.href = "/wizard_forced";
     }
 
+    function renderBattery(battery) {
+      const section = document.getElementById("batteryCardSection");
+      const cont = document.getElementById("batteryContainer");
+
+      if (!battery.enabled) {
+        section.style.display = "none";
+        cont.innerHTML = "";
+        return;
+      }
+
+      section.style.display = "block";
+
+      const online = !!battery.online;
+      const soc = Math.max(0, Math.min(100, Number(battery.soc || 0)));
+      const mode = battery.mode || "idle";
+      const strategy = battery.strategy || "hybrid";
+      const ip = battery.ip || "-";
+      const power = Number(battery.power || 0);
+      const lastCommand = Number(battery.last_command_w || 0);
+      const cfg = battery.config || {};
+
+      cont.innerHTML = `
+        <div class="battery-card ${online ? "" : "offline"}">
+          <div class="battery-top">
+            <div class="battery-info">
+              <div class="name">Home batterij</div>
+              <div class="ip">${escapeHtml(ip)}</div>
+            </div>
+            <div class="battery-top-right">
+              <span class="mode-badge">${escapeHtml(humanStrategy(strategy))}</span>
+              <span class="state-badge ${escapeHtml(mode)}">${escapeHtml(humanBatteryMode(mode))}</span>
+              <span class="online-badge ${online ? "online" : "offline"}">
+                ${online ? "● Online" : "● Offline"}
+              </span>
+            </div>
+          </div>
+
+          <div class="battery-meta">
+            <div class="meta-box">
+              <span class="k">Accu vermogen</span>
+              <span class="v">${fmt1(power)} W</span>
+            </div>
+            <div class="meta-box">
+              <span class="k">Laatste commando</span>
+              <span class="v">${fmtInt(lastCommand)} W</span>
+            </div>
+            <div class="meta-box">
+              <span class="k">Min / Target / Max SoC</span>
+              <span class="v">${fmtInt(cfg.min_soc)} / ${fmtInt(cfg.target_soc)} / ${fmtInt(cfg.max_soc)}%</span>
+            </div>
+            <div class="meta-box">
+              <span class="k">Max laad / ontlaad</span>
+              <span class="v">${fmtInt(cfg.max_charge_w)} / ${fmtInt(cfg.max_discharge_w)} W</span>
+            </div>
+          </div>
+
+          <div class="soc-wrap">
+            <div class="soc-label">${fmtInt(soc)}%</div>
+            <div class="soc-bar">
+              <div class="soc-fill" style="width:${soc}%"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderDevices(devices) {
       const cont = document.getElementById("devicesContainer");
+
       if (devices.length === 0) {
         cont.innerHTML = '<div class="control-label"><div class="sub">Geen apparaten ingesteld.</div></div>';
         return;
@@ -275,12 +641,12 @@
         <div class="device-card ${d.online ? '' : 'offline'}">
           <div class="device-top">
             <div class="device-info">
-              <div class="name">${d.name}</div>
-              <div class="ip">${d.ip}</div>
+              <div class="name">${escapeHtml(d.name)}</div>
+              <div class="ip">${escapeHtml(d.ip)}</div>
             </div>
             <div class="device-top-right">
               <span class="power-badge ${d.power_meter ? 'visible' : ''}">
-                ${d.power_meter ? `${Number(d.power || 0).toFixed(1)} W` : ''}
+                ${d.power_meter ? `${fmt1(d.power)} W` : ''}
               </span>
               <span class="online-badge ${d.online ? 'online' : 'offline'}">
                 ${d.online ? '● Online' : '● Offline'}
@@ -291,11 +657,11 @@
             <div class="dot ${d.online && d.on ? 'active' : ''}"></div>
             <label class="toggle">
               <input type="checkbox" ${d.online && d.on ? 'checked' : ''} ${d.online ? '' : 'disabled'}
-                     onchange="toggleDevice('${d.ip}')">
+                     onchange="toggleDevice('${String(d.ip).replace(/'/g, "\\'")}')">
               <span class="slider"></span>
             </label>
             <div class="bar">
-              <div class="fill" style="width: ${d.online ? d.brightness : 0}%"></div>
+              <div class="fill" style="width: ${d.online ? Number(d.brightness || 0) : 0}%"></div>
             </div>
           </div>
         </div>
