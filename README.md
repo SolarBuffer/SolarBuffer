@@ -113,7 +113,7 @@ crontab -e
 ### 2. Auto update command
 Elke 24 uur wordt er gecontroleerd of er nieuwe updates beschikbaar zijn via de command
 ```bash
-0 3 * * * * cd /home/pi/SolarBuffer && git pull && sudo systemctl restart solarbuffer
+0 3 * * * cd /home/solarbuffer/SolarBuffer && git pull && sudo systemctl restart solarbuffer
 ```
 Nu wordt er elke nacht om 03:00 uur 's nachts controleert voor nieuwe updates en uitgevoerd indien er een update heeft plaats gevonden.
 
