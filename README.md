@@ -60,8 +60,8 @@ pip install simple-pid flask requests zeroconf
 ### 5. Config.json aanmaken
 Handmatig moet er een config.json file komen om configuratie in op te slaan.
 ```bash
-cd /home/{jouw_pi}/SolarBuffer
-cp config.voorbeeld.json config.json
+cd /home/solarbuffer/SolarBuffer
+cp solarbuffer/config.voorbeeld.json solarbuffer/config.json
 ```
 ---
 
@@ -80,9 +80,9 @@ Description=SolarBuffer Service
 After=network.target
 
 [Service]
-User={jouw_pi}
-WorkingDirectory=/home/{jouw_pi}/SolarBuffer/solarbuffer
-ExecStart=/home/{jouw_pi}/venv/bin/python3 app.py
+User=solarbuffer
+WorkingDirectory=/home/solarbuffer/SolarBuffer/solarbuffer
+ExecStart=/home/solarbuffer/venv/bin/python3 app.py
 Restart=always
 
 [Install]
