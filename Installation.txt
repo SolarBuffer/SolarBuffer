@@ -21,6 +21,7 @@ Stap 4 – Controleren of de hub verbonden is
 Open opnieuw een webbrowser en ga naar:
 http://solarbuffer.local:5001
 Verschijnt er een loginpagina? Dan is de hub correct verbonden met je netwerk ✅
+(Als er geen login pagina verschijnt, herstart de hub en doe de configuratie opnieuw. Mogelijk is er een spelfout geweest in het configureren van de WiFi)
 Log in met:
 Gebruikersnaam: solarbuffer
 Wachtwoord: solarbuffer
