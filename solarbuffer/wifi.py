@@ -129,6 +129,7 @@ button:active {
     min-height: 1.2rem;
     white-space: pre-wrap;
     word-break: break-word;
+    margin-bottom: 1rem;
 }
 
 .success {
@@ -245,7 +246,87 @@ p {
     <div class="icon">✅</div>
     <h1><span class="solar">Solar</span>Buffer</h1>
     <h3>WiFi opgeslagen</h3>
-    <p>SolarBuffer herstart over enkele seconden...</p>
+    <p>SolarBuffer start opnieuw op en probeert automatisch verbinding te maken.</p>
+</div>
+</body>
+</html>
+"""
+
+ERROR_HTML = """
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarBuffer</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: hsl(30, 25%, 97%);
+    color: hsl(220, 20%, 14%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.container {
+    width: 100%;
+    max-width: 420px;
+    background: white;
+    border: 1px solid hsl(30, 15%, 88%);
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+    padding: 2rem;
+    text-align: center;
+}
+
+.icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+}
+
+h1 .solar {
+    background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h3 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: hsl(0, 75%, 60%);
+}
+
+p {
+    color: hsl(220, 10%, 46%);
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <div class="icon">⚠️</div>
+    <h1><span class="solar">Solar</span>Buffer</h1>
+    <h3>WiFi opgeslagen, verbinden mislukt</h3>
+    <p>{{ error_message }}</p>
+    <p style="margin-top: 1rem;">SolarBuffer start opnieuw op en probeert later automatisch verbinding te maken.</p>
 </div>
 </body>
 </html>
@@ -281,25 +362,36 @@ def index():
                 check=True
             )
 
-            subprocess.run(
-                [
-                    "nmcli", "connection", "modify",
-                    "customer-wifi",
-                    "wifi-sec.key-mgmt",
-                    "wpa-psk"
-                ],
-                check=True
-            )
+            if password:
+                subprocess.run(
+                    [
+                        "nmcli", "connection", "modify",
+                        "customer-wifi",
+                        "wifi-sec.key-mgmt",
+                        "wpa-psk"
+                    ],
+                    check=True
+                )
 
-            subprocess.run(
-                [
-                    "nmcli", "connection", "modify",
-                    "customer-wifi",
-                    "wifi-sec.psk",
-                    password
-                ],
-                check=True
-            )
+                subprocess.run(
+                    [
+                        "nmcli", "connection", "modify",
+                        "customer-wifi",
+                        "wifi-sec.psk",
+                        password
+                    ],
+                    check=True
+                )
+            else:
+                subprocess.run(
+                    [
+                        "nmcli", "connection", "modify",
+                        "customer-wifi",
+                        "wifi-sec.key-mgmt",
+                        ""
+                    ],
+                    check=False
+                )
 
             subprocess.run(
                 [
@@ -363,21 +455,22 @@ def index():
                 text=True
             )
 
+            delayed_reboot(3)
+
             if result.returncode == 0:
-                delayed_reboot(3)
                 return SUCCESS_HTML
 
+            error_text = result.stderr.strip() or result.stdout.strip() or "Onbekende fout bij verbinden."
             return render_template_string(
-                HTML,
-                message=f"WiFi opgeslagen, maar verbinden mislukte:\n{result.stderr}",
-                status_class="error"
+                ERROR_HTML,
+                error_message=error_text
             )
 
         except Exception as e:
+            delayed_reboot(3)
             return render_template_string(
-                HTML,
-                message=f"Fout:\n{e}",
-                status_class="error"
+                ERROR_HTML,
+                error_message=str(e)
             )
 
     return render_template_string(HTML, message="", status_class="")
