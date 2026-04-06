@@ -1,0 +1,27 @@
+{
+    "username": "solarbuffer",
+    "password": "solarbuffer",
+    "p1_ip": "192.168.178.21",
+    "shelly_devices": [
+        {
+            "name": "Shelly Dimmer Gen3",
+            "ip": "192.168.178.195",
+            "priority": 1,
+            "power_meter": "shelly",
+            "power_ip": "192.168.178.32"
+        }
+    ],
+    "expert_mode": true,
+    "expert_settings": {
+        "EXPORT_THRESHOLD": -60,
+        "EXPORT_DELAY": 15,
+        "FREEZE_AT": 95,
+        "FREEZE_CONFIRM": 2,
+        "IMPORT_UNFREEZE_THRESHOLD": 200,
+        "UNFREEZE_DELAY": 5,
+        "IMPORT_OFF_THRESHOLD": 250,
+        "OFF_DELAY": 120,
+        "PID_NEUTRAL_LOW": -5,
+        "PID_NEUTRAL_HIGH": 45
+    }
+}

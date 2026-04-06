@@ -513,7 +513,8 @@ function updatePowerIpState(row){
 
     const enabled = powerMeterField.value !== "";
 
-    powerIpField.disabled = !enabled;
+    powerIpField.disabled = false;   // altijd meesturen
+    powerIpField.readOnly = !enabled;
     powerIpField.required = enabled;
 
     if(!enabled){
