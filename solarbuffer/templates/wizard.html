@@ -142,12 +142,15 @@ button:hover { background:hsl(32,85%,45%); }
     margin-bottom:.25rem;
 }
 
-/* Shelly-apparaten layout */
 .device-row {
     display:flex;
     flex-direction:column;
     gap:.5rem;
     margin-bottom:1rem;
+    padding:1rem;
+    border:1px solid hsl(30,15%,90%);
+    border-radius:.7rem;
+    background:hsl(30,25%,99%);
 }
 
 .device-row-top,
@@ -196,23 +199,49 @@ button:hover { background:hsl(32,85%,45%); }
     flex:1;
 }
 
+.remove-slot {
+    flex:0 0 46px;
+    width:46px;
+    min-width:46px;
+    height:46px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+}
+
 .remove-btn {
-    background:hsl(0,70%,55%);
-    border:none;
-    color:white;
-    font-size:1.1rem;
-    border-radius:.4rem;
-    padding:.6rem .75rem;
-    cursor:pointer;
-    font-weight:bold;
-    flex:0 0 auto;
+    all: unset;
+    width:42px;
     height:42px;
     display:flex;
     align-items:center;
     justify-content:center;
+    border-radius:999px;
+    background:linear-gradient(135deg,hsl(0,80%,58%),hsl(0,72%,50%));
+    color:white;
+    font-size:1.15rem;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+    box-shadow:0 8px 18px -10px hsla(0,65%,35%,0.55);
+    border:1px solid hsla(0,70%,35%,0.25);
+    transition:transform .16s ease, box-shadow .16s ease, filter .16s ease;
 }
 
-.remove-btn:hover { background:hsl(0,70%,45%); }
+.remove-btn:hover {
+    transform:translateY(-1px) scale(1.03);
+    box-shadow:0 12px 20px -10px hsla(0,65%,30%,0.6);
+    filter:brightness(.97);
+}
+
+.remove-btn:active {
+    transform:translateY(0) scale(.98);
+}
+
+.remove-placeholder {
+    width:42px;
+    height:42px;
+}
 
 #addDeviceBtn { background:hsl(145,65%,40%); }
 #addDeviceBtn:hover { background:hsl(145,65%,32%); }
@@ -304,6 +333,44 @@ button:hover { background:hsl(32,85%,45%); }
     min-height:1rem;
 }
 
+.input-with-unit {
+    display:flex;
+    align-items:center;
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.5rem;
+    background:white;
+    overflow:hidden;
+}
+
+.input-with-unit input {
+    width:100%;
+    border:none;
+    border-radius:0;
+    flex:1;
+    min-width:0;
+    padding:.6rem .75rem;
+    font-size:1rem;
+    font-family:'Inter',sans-serif;
+    background:white;
+}
+
+.input-with-unit input:focus {
+    outline:none;
+}
+
+.input-with-unit:focus-within {
+    border-color:hsl(32,95%,52%);
+}
+
+.input-with-unit .unit {
+    padding:0 .75rem;
+    border-left:1px solid hsl(30,15%,88%);
+    background:hsl(30,25%,98%);
+    color:hsl(220,10%,46%);
+    font-weight:600;
+    white-space:nowrap;
+}
+
 @media (max-width: 640px) {
     .container {
         max-width:100%;
@@ -323,10 +390,17 @@ button:hover { background:hsl(32,85%,45%); }
         align-items:stretch;
     }
 
-    .remove-btn {
+    .remove-slot {
         width:100%;
+        min-width:100%;
         height:auto;
-        padding:.65rem;
+    }
+
+    .remove-btn,
+    .remove-placeholder {
+        width:100%;
+        height:44px;
+        border-radius:.65rem;
     }
 }
 </style>
@@ -360,63 +434,93 @@ button:hover { background:hsl(32,85%,45%); }
 
                 <div class="expert-grid">
                     <div class="field">
-                        <label class="field-label" for="EXPORT_THRESHOLD">Exportdrempel (W)</label>
+                        <label class="field-label" for="EXPORT_THRESHOLD">Exportdrempel</label>
                         <div class="field-help">Start bij teruglevering</div>
-                        <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD" value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD" value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
+                            <span class="unit">W</span>
+                        </div>
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="EXPORT_DELAY">Exportvertraging (s)</label>
+                        <label class="field-label" for="EXPORT_DELAY">Exportvertraging</label>
                         <div class="field-help">Wachttijd voor inschakelen</div>
-                        <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY" value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY" value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
+                            <span class="unit">s</span>
+                        </div>
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="FREEZE_AT">Bevriezen bij (%)</label>
+                        <label class="field-label" for="FREEZE_AT">Bevriezen bij</label>
                         <div class="field-help">Bevries op hoge stand</div>
-                        <input type="number" id="FREEZE_AT" name="FREEZE_AT" value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="FREEZE_AT" name="FREEZE_AT" value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
+                            <span class="unit">%</span>
+                        </div>
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen (s)</label>
+                        <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen</label>
                         <div class="field-help">Tijd vóór bevriezen</div>
-                        <input type="number" id="FREEZE_CONFIRM" name="FREEZE_CONFIRM" value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="FREEZE_CONFIRM" name="FREEZE_CONFIRM" value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
+                            <span class="unit">s</span>
+                        </div>
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave importdrempel (W)</label>
+                        <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave importdrempel</label>
                         <div class="field-help">Bevriezing loslaten bij netafname</div>
-                        <input type="number" id="IMPORT_UNFREEZE_THRESHOLD" name="IMPORT_UNFREEZE_THRESHOLD" value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="IMPORT_UNFREEZE_THRESHOLD" name="IMPORT_UNFREEZE_THRESHOLD" value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
+                            <span class="unit">W</span>
+                        </div>
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging (s)</label>
+                        <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging</label>
                         <div class="field-help">Wachttijd voor vrijgeven</div>
-                        <input type="number" id="UNFREEZE_DELAY" name="UNFREEZE_DELAY" value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="UNFREEZE_DELAY" name="UNFREEZE_DELAY" value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
+                            <span class="unit">s</span>
+                        </div>
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel import (W)</label>
+                        <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel import</label>
                         <div class="field-help">Schakel uit bij afname</div>
-                        <input type="number" id="IMPORT_OFF_THRESHOLD" name="IMPORT_OFF_THRESHOLD" value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="IMPORT_OFF_THRESHOLD" name="IMPORT_OFF_THRESHOLD" value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
+                            <span class="unit">W</span>
+                        </div>
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="OFF_DELAY">Uitschakelvertraging (s)</label>
+                        <label class="field-label" for="OFF_DELAY">Uitschakelvertraging</label>
                         <div class="field-help">Wachttijd voor uitschakelen</div>
-                        <input type="number" id="OFF_DELAY" name="OFF_DELAY" value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="OFF_DELAY" name="OFF_DELAY" value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
+                            <span class="unit">s</span>
+                        </div>
                     </div>
 
                     <div class="field">
                         <label class="field-label" for="PID_NEUTRAL_LOW">PID-neutraal laag</label>
                         <div class="field-help">Ondergrens neutrale zone</div>
-                        <input type="number" id="PID_NEUTRAL_LOW" name="PID_NEUTRAL_LOW" value="{{ config.expert_settings.PID_NEUTRAL_LOW if config.expert_settings else -5 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="PID_NEUTRAL_LOW" name="PID_NEUTRAL_LOW" value="{{ config.expert_settings.PID_NEUTRAL_LOW if config.expert_settings else -5 }}">
+                            <span class="unit">W</span>
+                        </div>
                     </div>
 
                     <div class="field">
                         <label class="field-label" for="PID_NEUTRAL_HIGH">PID-neutraal hoog</label>
                         <div class="field-help">Bovengrens neutrale zone</div>
-                        <input type="number" id="PID_NEUTRAL_HIGH" name="PID_NEUTRAL_HIGH" value="{{ config.expert_settings.PID_NEUTRAL_HIGH if config.expert_settings else 45 }}">
+                        <div class="input-with-unit">
+                            <input type="number" id="PID_NEUTRAL_HIGH" name="PID_NEUTRAL_HIGH" value="{{ config.expert_settings.PID_NEUTRAL_HIGH if config.expert_settings else 45 }}">
+                            <span class="unit">W</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -513,7 +617,7 @@ function updatePowerIpState(row){
 
     const enabled = powerMeterField.value !== "";
 
-    powerIpField.disabled = false;   // altijd meesturen
+    powerIpField.disabled = false;
     powerIpField.readOnly = !enabled;
     powerIpField.required = enabled;
 
@@ -531,6 +635,21 @@ function updateExpertModeVisibility(){
     expertBox.style.display = expertMode.checked ? 'block' : 'none';
 }
 
+function refreshRemoveButtons(){
+    const rows = Array.from(document.querySelectorAll('.device-row'));
+
+    rows.forEach((row, index) => {
+        const slot = row.querySelector('.remove-slot');
+        if(!slot) return;
+
+        if(index === 0){
+            slot.innerHTML = '<div class="remove-placeholder" aria-hidden="true"></div>';
+        } else {
+            slot.innerHTML = '<button type="button" class="remove-btn" onclick="removeDevice(this)" title="Apparaat verwijderen" aria-label="Apparaat verwijderen">×</button>';
+        }
+    });
+}
+
 function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
     const container = document.getElementById('deviceContainer');
     if(container.children.length >= 5){
@@ -539,8 +658,6 @@ function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
     }
 
     const finalPriority = priority || getNextPriority();
-    const powerIpDisabled = power_meter === "" ? "disabled" : "";
-    const powerIpRequired = power_meter !== "" ? "required" : "";
 
     const row = document.createElement('div');
     row.className = 'device-row';
@@ -549,17 +666,21 @@ function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
             <label>Naam</label>
             <input type="text" name="shelly_name[]" placeholder="Bijv. Woonkamer" value="${escapeHtml(name)}" required>
         </div>
+
         <div class="device-row-bottom">
             <div style="flex:2;display:flex;flex-direction:column;">
                 <label>IP-adres</label>
                 <input type="text" name="shelly_ip[]" placeholder="Bijv. 192.168.178.195" value="${escapeHtml(ip)}" required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
             </div>
+
             <div style="flex:1;display:flex;flex-direction:column;">
                 <label>Prioriteit</label>
                 <select name="priority[]" required>${createPriorityOptions(finalPriority)}</select>
             </div>
-            <button type="button" class="remove-btn" onclick="removeDevice(this)">✕</button>
+
+            <div class="remove-slot"></div>
         </div>
+
         <div class="device-row-bottom">
             <div style="flex:1;display:flex;flex-direction:column;">
                 <label>Power meter</label>
@@ -569,9 +690,10 @@ function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
                     <option value="homewizard" ${power_meter=="homewizard"?'selected':''}>HomeWizard</option>
                 </select>
             </div>
+
             <div style="flex:2;display:flex;flex-direction:column;">
                 <label>IP-adres</label>
-                <input type="text" name="power_ip[]" placeholder="Bijv. 192.168.178.50" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$" ${powerIpDisabled} ${powerIpRequired}>
+                <input type="text" name="power_ip[]" placeholder="Bijv. 192.168.178.50" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
             </div>
         </div>
     `;
@@ -583,15 +705,17 @@ function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
 
     updatePowerIpState(row);
     updatePriorities();
+    refreshRemoveButtons();
     return true;
 }
 
 function removeDevice(btn){
-    const c = document.getElementById('deviceContainer');
-    if(c.children.length > 1){
-        btn.closest('.device-row').remove();
-        normalizePriorities();
-    }
+    const row = btn.closest('.device-row');
+    if(!row) return;
+
+    row.remove();
+    normalizePriorities();
+    refreshRemoveButtons();
 }
 
 function normalizePriorities(){
@@ -702,9 +826,7 @@ async function scanDevices(){
             }
 
             const ip = (device.ip || '').trim();
-            if (!ip) {
-                continue;
-            }
+            if (!ip) continue;
 
             if (hasDeviceIp(ip)) {
                 skippedCount++;
@@ -740,20 +862,19 @@ async function scanDevices(){
 
             if (!filledExistingRow) {
                 const added = addDevice(
-                    device.name || `Shelly`,
+                    device.name || 'Shelly',
                     ip,
                     '',
                     '',
                     ''
                 );
 
-                if (added) {
-                    addedCount++;
-                }
+                if (added) addedCount++;
             }
         }
 
         normalizePriorities();
+        refreshRemoveButtons();
         renderScanResults(data, addedCount, skippedCount);
 
         if(p1List.length === 0 && shellyList.length === 0){
@@ -811,6 +932,8 @@ window.addEventListener('DOMContentLoaded', () => {
     } else {
         addDevice();
     }
+
+    refreshRemoveButtons();
 });
 </script>
 </body>
