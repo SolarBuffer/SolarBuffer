@@ -170,6 +170,38 @@
     .device-bottom { display: flex; align-items: center; gap: 0.75rem; }
     .bar { flex: 1; height: 6px; background: hsl(32, 95%, 88%); border-radius: 3px; overflow: hidden; }
     .fill { height: 6px; background: hsl(32, 95%, 52%); border-radius: 3px; transition: width 0.4s ease; width: 0; }
+
+    /* Updates tegel */
+    .updates-card {
+      background: hsl(220, 8%, 92%);
+      border: 1px solid hsl(220, 10%, 82%);
+      box-shadow: none;
+    }
+
+    .updates-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .update-item {
+      padding: 0.85rem 1rem;
+      background: rgba(255, 255, 255, 0.45);
+      border-radius: 0.6rem;
+    }
+
+    .update-date {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: hsl(220, 10%, 40%);
+      margin-bottom: 0.25rem;
+    }
+
+    .update-text {
+      font-size: 0.88rem;
+      color: hsl(220, 20%, 18%);
+      line-height: 1.45;
+    }
   </style>
 </head>
 
@@ -228,6 +260,22 @@
         <div class="control-label">
           <div class="name">Ga naar Wizard</div>
           <div class="sub">Herconfigureer IP-adressen</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Updates -->
+    <div class="card control-card updates-card">
+      <h2><span class="ctrl-icon">📝</span> Updates</h2>
+      <div class="updates-list">
+        <div class="update-item">
+          <div class="update-date">06-04-2026</div>
+          <div class="update-text">Expertmodus toegevoegd in de wizard configuratie. Hiermee kunnen parameters zelf gewijzigd worden.</div>
+        </div>
+
+        <div class="update-item">
+          <div class="update-date">05-04-2026</div>
+          <div class="update-text">Bug fixes en stabilisatie verbeteringen.</div>
         </div>
       </div>
     </div>

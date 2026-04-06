@@ -5,12 +5,15 @@ import json
 import os
 import socket
 import ipaddress
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session
 import threading
 
 # ================= CONFIG =================
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+BASE_DIR = os.path.dirname(__file__)
+CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+AUDIT_LOG_FILE = os.path.join(BASE_DIR, "audit.log")
 
 DEFAULT_EXPERT_SETTINGS = {
     "EXPORT_THRESHOLD": -50,
@@ -27,7 +30,7 @@ DEFAULT_EXPERT_SETTINGS = {
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE) as f:
+        with open(CONFIG_FILE, encoding="utf-8") as f:
             cfg = json.load(f)
     else:
         cfg = {}
@@ -50,7 +53,7 @@ def load_config():
     return cfg
 
 def save_config(data):
-    with open(CONFIG_FILE, "w") as f:
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
 def get_runtime_settings(cfg):
@@ -78,6 +81,95 @@ def parse_expert_settings_from_request(req):
 
     return expert_settings
 
+# ================= AUDIT =================
+audit_lock = threading.Lock()
+
+def safe_session_username():
+    try:
+        return session.get("username", "unknown")
+    except Exception:
+        return "system"
+
+def safe_request_ip():
+    try:
+        if request.headers.get("X-Forwarded-For"):
+            return request.headers.get("X-Forwarded-For").split(",")[0].strip()
+        return request.remote_addr or "unknown"
+    except Exception:
+        return "system"
+
+def write_audit_log(action, details=None):
+    entry = {
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "user": safe_session_username(),
+        "ip": safe_request_ip(),
+        "action": action,
+        "details": details or {}
+    }
+
+    try:
+        with audit_lock:
+            with open(AUDIT_LOG_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"Audit log fout: {e}")
+
+def compare_configs(old_cfg, new_cfg):
+    changes = {}
+
+    if old_cfg.get("p1_ip") != new_cfg.get("p1_ip"):
+        changes["p1_ip"] = {
+            "old": old_cfg.get("p1_ip"),
+            "new": new_cfg.get("p1_ip")
+        }
+
+    if old_cfg.get("expert_mode") != new_cfg.get("expert_mode"):
+        changes["expert_mode"] = {
+            "old": old_cfg.get("expert_mode"),
+            "new": new_cfg.get("expert_mode")
+        }
+
+    old_settings = old_cfg.get("expert_settings", {})
+    new_settings = new_cfg.get("expert_settings", {})
+    settings_changes = {}
+
+    for key in DEFAULT_EXPERT_SETTINGS.keys():
+        if old_settings.get(key) != new_settings.get(key):
+            settings_changes[key] = {
+                "old": old_settings.get(key),
+                "new": new_settings.get(key)
+            }
+
+    if settings_changes:
+        changes["expert_settings"] = settings_changes
+
+    old_devices = old_cfg.get("shelly_devices", [])
+    new_devices = new_cfg.get("shelly_devices", [])
+
+    old_by_ip = {d["ip"]: d for d in old_devices if d.get("ip")}
+    new_by_ip = {d["ip"]: d for d in new_devices if d.get("ip")}
+
+    added = [dev for ip, dev in new_by_ip.items() if ip not in old_by_ip]
+    removed = [dev for ip, dev in old_by_ip.items() if ip not in new_by_ip]
+
+    modified = []
+    for ip in set(old_by_ip.keys()) & set(new_by_ip.keys()):
+        if old_by_ip[ip] != new_by_ip[ip]:
+            modified.append({
+                "ip": ip,
+                "old": old_by_ip[ip],
+                "new": new_by_ip[ip]
+            })
+
+    if added:
+        changes["devices_added"] = added
+    if removed:
+        changes["devices_removed"] = removed
+    if modified:
+        changes["devices_modified"] = modified
+
+    return changes
+
 # ================= PID =================
 PID_KP = 0.02
 PID_KI = 0.0015
@@ -97,7 +189,7 @@ MAX_BRIGHTNESS = 100
 
 # ================= FLASK =================
 app = Flask(__name__)
-app.secret_key = "verander_dit_naar_iets_veiligs!"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "verander_dit_naar_iets_veiligs!")
 
 def require_login():
     return session.get("logged_in", False)
@@ -226,11 +318,24 @@ def login():
     password_cfg = cfg.get("password", "admin123")
 
     if request.method == "POST":
-        if request.form.get("username") == username_cfg and request.form.get("password") == password_cfg:
+        entered_username = request.form.get("username", "").strip()
+        entered_password = request.form.get("password", "")
+
+        if entered_username == username_cfg and entered_password == password_cfg:
             session["logged_in"] = True
+            session["username"] = entered_username
+
+            write_audit_log("login_success", {
+                "username": entered_username
+            })
+
             return redirect("/")
         else:
+            write_audit_log("login_failed", {
+                "username": entered_username
+            })
             return render_template("login.html", error="Ongeldige login")
+
     return render_template("login.html")
 
 @app.route("/", methods=["GET", "POST"])
@@ -243,6 +348,8 @@ def wizard():
         return redirect("/dashboard")
 
     if request.method == "POST":
+        old_cfg = load_config()
+
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
@@ -265,7 +372,15 @@ def wizard():
                 })
 
         cfg["shelly_devices"] = devices
+        changes = compare_configs(old_cfg, cfg)
+
         save_config(cfg)
+
+        if changes:
+            write_audit_log("config_updated", changes)
+        else:
+            write_audit_log("config_saved_no_changes", {})
+
         init_device_states(devices)
         init_device_pids(devices)
         sync_configured_devices_off(devices)
@@ -282,12 +397,13 @@ def wizard_forced():
     cfg = load_config()
 
     if request.method == "POST":
+        old_cfg = load_config()
+
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
 
         devices = []
-
         names = request.form.getlist("shelly_name[]")
         ips = request.form.getlist("shelly_ip[]")
         priorities = request.form.getlist("priority[]")
@@ -305,7 +421,15 @@ def wizard_forced():
                 })
 
         cfg["shelly_devices"] = devices
+        changes = compare_configs(old_cfg, cfg)
+
         save_config(cfg)
+
+        if changes:
+            write_audit_log("config_updated_forced", changes)
+        else:
+            write_audit_log("config_saved_forced_no_changes", {})
+
         init_device_states(devices)
         init_device_pids(devices)
         sync_configured_devices_off(devices)
@@ -361,7 +485,13 @@ def toggle_pid():
     global enabled
     if not require_login():
         return jsonify(success=False), 401
+
     enabled = not enabled
+
+    write_audit_log("pid_toggled", {
+        "enabled": enabled
+    })
+
     return jsonify(success=True)
 
 @app.route("/toggle_shelly/<path:ip>")
@@ -382,6 +512,13 @@ def toggle_shelly(ip):
             device_states[ip]["min_since"] = None
 
         set_shelly(device_states[ip]["brightness"], new_on, ip)
+
+        write_audit_log("device_toggled", {
+            "device_ip": ip,
+            "new_state": "on" if new_on else "off",
+            "brightness": device_states[ip]["brightness"]
+        })
+
         return jsonify(success=True, on=new_on)
 
     return jsonify(success=False), 404
@@ -393,6 +530,12 @@ def scan_devices():
 
     try:
         result = scan_network_for_devices()
+
+        write_audit_log("network_scan", {
+            "p1_found": len(result.get("p1_meters", [])),
+            "shelly_found": len(result.get("shelly_devices", []))
+        })
+
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
