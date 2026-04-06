@@ -8,39 +8,114 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Inter',sans-serif; background:hsl(30,25%,97%); color:hsl(220,20%,14%); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
 
-.container { width:100%; max-width:480px; background:white; border:1px solid hsl(30,15%,88%); border-radius:.75rem; box-shadow:0 10px 40px -10px hsla(32,95%,52%,0.15); padding:2rem; }
-.header{text-align:center;margin-bottom:2rem;}
-.header .icon{font-size:2rem;color:hsl(32,95%,52%);}
-.header h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.75rem;margin-top:.25rem;}
-.header h1 .solar{background:linear-gradient(135deg,hsl(32,95%,52%),hsl(40,100%,60%));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.header p{color:hsl(220,10%,46%);font-size:.85rem;margin-top:.25rem;}
+body {
+    font-family:'Inter',sans-serif;
+    background:hsl(30,25%,97%);
+    color:hsl(220,20%,14%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:1rem;
+}
 
-form{display:flex;flex-direction:column;gap:1.25rem;}
-label{font-weight:600;font-size:.95rem;color:hsl(220,20%,14%);}
-input[type="text"],input[type="number"],select{padding:.6rem .75rem;border:1px solid hsl(30,15%,88%);border-radius:.5rem;font-size:1rem;font-family:'Inter',sans-serif;transition:border-color .3s;line-height:1.5;}
-input[type="text"]:focus,input[type="number"]:focus,select:focus{border-color:hsl(32,95%,52%);outline:none;}
+.container {
+    width:100%;
+    max-width:720px;
+    background:white;
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.75rem;
+    box-shadow:0 10px 40px -10px hsla(32,95%,52%,0.15);
+    padding:2rem;
+}
+
+.header { text-align:center; margin-bottom:2rem; }
+.header .icon { font-size:2rem; color:hsl(32,95%,52%); }
+.header h1 {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.75rem;
+    margin-top:.25rem;
+}
+.header h1 .solar {
+    background:linear-gradient(135deg,hsl(32,95%,52%),hsl(40,100%,60%));
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+.header p {
+    color:hsl(220,10%,46%);
+    font-size:.85rem;
+    margin-top:.25rem;
+}
+
+form { display:flex; flex-direction:column; gap:1.25rem; }
+
+label {
+    font-weight:600;
+    font-size:.95rem;
+    color:hsl(220,20%,14%);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width:100%;
+    padding:.6rem .75rem;
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.5rem;
+    font-size:1rem;
+    font-family:'Inter',sans-serif;
+    transition:border-color .3s;
+    line-height:1.5;
+    background:white;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color:hsl(32,95%,52%);
+    outline:none;
+}
 
 input:disabled,
-select:disabled{
+select:disabled {
     background:hsl(220,10%,96%);
     color:hsl(220,10%,55%);
     cursor:not-allowed;
 }
 
-button{background:hsl(32,95%,52%);color:white;font-weight:600;font-size:1rem;padding:.75rem;border:none;border-radius:.5rem;cursor:pointer;transition:background .3s;}
-button:hover{background:hsl(32,85%,45%);}
+button {
+    background:hsl(32,95%,52%);
+    color:white;
+    font-weight:600;
+    font-size:1rem;
+    padding:.75rem;
+    border:none;
+    border-radius:.5rem;
+    cursor:pointer;
+    transition:background .3s;
+}
 
-.status{margin-top:1rem;font-size:.9rem;color:hsl(0,75%,60%);min-height:1.2rem;text-align:center;}
-.scan-status{
+button:hover { background:hsl(32,85%,45%); }
+
+.status {
+    margin-top:1rem;
+    font-size:.9rem;
+    color:hsl(0,75%,60%);
+    min-height:1.2rem;
+    text-align:center;
+}
+
+.scan-status {
     margin-top:.5rem;
     font-size:.9rem;
     color:hsl(220,10%,46%);
     min-height:1.2rem;
     text-align:center;
 }
-.scan-results{
+
+.scan-results {
     margin-top:.5rem;
     padding:.75rem;
     border:1px solid hsl(30,15%,88%);
@@ -50,26 +125,58 @@ button:hover{background:hsl(32,85%,45%);}
     color:hsl(220,20%,14%);
     display:none;
 }
-.scan-results.visible{display:block;}
-.scan-results h3{
+
+.scan-results.visible { display:block; }
+
+.scan-results h3 {
     font-size:.95rem;
     margin-bottom:.5rem;
     font-family:'Space Grotesk',sans-serif;
 }
-.scan-results ul{
+
+.scan-results ul {
     margin:.25rem 0 .75rem 1rem;
 }
-.scan-results li{
+
+.scan-results li {
     margin-bottom:.25rem;
 }
 
-.device-row{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;}
-.device-row-top,.device-row-bottom{display:flex;flex-direction:column;gap:.25rem;}
-.device-row-top input,.device-row-bottom input,.device-row-bottom select{width:100%;}
+/* Shelly-apparaten layout */
+.device-row {
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    margin-bottom:1rem;
+}
 
-.device-row-bottom{flex-direction:row;gap:.5rem;align-items:flex-end;}
-.device-row-bottom input[name="shelly_ip[]"],.device-row-bottom select[name="priority[]"], 
-.device-row-bottom select[name="power_meter[]"], .device-row-bottom input[name="power_ip[]"] {
+.device-row-top,
+.device-row-bottom {
+    display:flex;
+    flex-direction:column;
+    gap:.25rem;
+}
+
+.device-row-top input,
+.device-row-bottom input,
+.device-row-bottom select {
+    width:100%;
+}
+
+.device-row-bottom {
+    flex-direction:row;
+    gap:.5rem;
+    align-items:flex-end;
+}
+
+.device-row-bottom > div {
+    min-width:0;
+}
+
+.device-row-bottom input[name="shelly_ip[]"],
+.device-row-bottom select[name="priority[]"],
+.device-row-bottom select[name="power_meter[]"],
+.device-row-bottom input[name="power_ip[]"] {
     padding:.6rem .75rem;
     border:1px solid hsl(30,15%,88%);
     border-radius:.5rem;
@@ -79,65 +186,258 @@ button:hover{background:hsl(32,85%,45%);}
     appearance:none;
 }
 
-.device-row-bottom input[name="shelly_ip[]"], .device-row-bottom input[name="power_ip[]"]{flex:2;}
-.device-row-bottom select[name="priority[]"], .device-row-bottom select[name="power_meter[]"]{flex:1;}
+.device-row-bottom input[name="shelly_ip[]"],
+.device-row-bottom input[name="power_ip[]"] {
+    flex:2;
+}
 
-.remove-btn{background:hsl(0,70%,55%);border:none;color:white;font-size:1.1rem;border-radius:.4rem;padding:.3rem .6rem;cursor:pointer;font-weight:bold;}
-.remove-btn:hover{background:hsl(0,70%,45%);}
+.device-row-bottom select[name="priority[]"],
+.device-row-bottom select[name="power_meter[]"] {
+    flex:1;
+}
 
-#addDeviceBtn{background:hsl(145,65%,40%);}
-#addDeviceBtn:hover{background:hsl(145,65%,32%);}
+.remove-btn {
+    background:hsl(0,70%,55%);
+    border:none;
+    color:white;
+    font-size:1.1rem;
+    border-radius:.4rem;
+    padding:.6rem .75rem;
+    cursor:pointer;
+    font-weight:bold;
+    flex:0 0 auto;
+    height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
 
-#scanBtn{background:hsl(215,70%,52%);}
-#scanBtn:hover{background:hsl(215,70%,45%);}
-#scanBtn:disabled{opacity:.7;cursor:wait;}
+.remove-btn:hover { background:hsl(0,70%,45%); }
 
-.action-buttons{
+#addDeviceBtn { background:hsl(145,65%,40%); }
+#addDeviceBtn:hover { background:hsl(145,65%,32%); }
+
+#scanBtn { background:hsl(215,70%,52%); }
+#scanBtn:hover { background:hsl(215,70%,45%); }
+#scanBtn:disabled { opacity:.7; cursor:wait; }
+
+.action-buttons {
     display:flex;
     gap:.75rem;
     margin-top:.5rem;
 }
-.action-buttons button{
+
+.action-buttons button {
     flex:1;
 }
 
-.cancel-btn{
+.cancel-btn {
     background:hsl(220,10%,88%);
     color:hsl(220,20%,20%);
 }
-.cancel-btn:hover{
+
+.cancel-btn:hover {
     background:hsl(220,10%,80%);
+}
+
+.section-card {
+    border:1px solid hsl(30,15%,88%);
+    border-radius:.65rem;
+    padding:1rem;
+    background:hsl(30,25%,98%);
+}
+
+.section-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-size:1rem;
+    margin-bottom:.35rem;
+}
+
+.section-subtitle {
+    font-size:.85rem;
+    color:hsl(220,10%,46%);
+    margin-bottom:.9rem;
+}
+
+.expert-toggle {
+    display:flex;
+    align-items:center;
+    gap:.65rem;
+    font-weight:600;
+}
+
+.expert-toggle input[type="checkbox"] {
+    width:1rem;
+    height:1rem;
+    accent-color:hsl(32,95%,52%);
+}
+
+.expert-grid {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.85rem;
+}
+
+.expert-grid .field {
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+    min-width:0;
+    padding:.85rem;
+    border:1px solid hsl(30,15%,90%);
+    border-radius:.55rem;
+    background:white;
+}
+
+.field-label {
+    font-size:.88rem;
+    font-weight:600;
+    color:hsl(220,20%,14%);
+    line-height:1.2;
+    word-break:break-word;
+}
+
+.field-help {
+    font-size:.74rem;
+    color:hsl(220,10%,46%);
+    line-height:1.2;
+    min-height:1rem;
+}
+
+@media (max-width: 640px) {
+    .container {
+        max-width:100%;
+        padding:1.25rem;
+    }
+
+    .expert-grid {
+        grid-template-columns:1fr;
+    }
+
+    .action-buttons {
+        flex-direction:column;
+    }
+
+    .device-row-bottom {
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .remove-btn {
+        width:100%;
+        height:auto;
+        padding:.65rem;
+    }
 }
 </style>
 </head>
 <body>
 <div class="container" role="main">
-<div class="header" role="banner">
-<div class="icon" aria-hidden="true">☀️</div>
-<h1><span class="solar">Solar</span>Buffer Wizard</h1>
-<p>Voer de IP-adressen in van je apparaten en stel de prioriteit in.</p>
-</div>
+    <div class="header" role="banner">
+        <div class="icon" aria-hidden="true">☀️</div>
+        <h1><span class="solar">Solar</span>Buffer Wizard</h1>
+        <p>Voer de IP-adressen in van je apparaten en stel de prioriteit in.</p>
+    </div>
 
-<form id="configForm" method="POST" action="/wizard_forced">
-<label for="p1ip">IP-adres P1-meter</label>
-<input type="text" id="p1ip" name="p1ip" placeholder="Bijv. 192.168.178.21" required pattern="^(\d{1,3}\.){3}\d{1,3}$" />
+    <form id="configForm" method="POST" action="/wizard_forced">
+        <label for="p1ip">IP-adres P1-meter</label>
+        <input type="text" id="p1ip" name="p1ip" placeholder="Bijv. 192.168.178.21" required pattern="^(\d{1,3}\.){3}\d{1,3}$" />
 
-<label>Shelly-apparaten</label>
-<div id="deviceContainer"></div>
+        <div class="section-card">
+            <label class="expert-toggle" for="expertMode">
+                <input type="checkbox" id="expertMode" name="expert_mode" {% if config.expert_mode %}checked{% endif %}>
+                Expertmodus
+            </label>
+            <div class="section-subtitle" style="margin:.5rem 0 0 0;">
+                Stel geavanceerde regelwaarden handmatig in.
+            </div>
 
-<button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
-<button type="button" id="scanBtn" onclick="scanDevices()">Autoscan netwerk</button>
+            <div id="expertSettingsBox" style="display:none; margin-top:1rem;">
+                <div class="section-title">Expertinstellingen</div>
+                <div class="section-subtitle">
+                    Uitgeschakeld gebruikt automatisch standaardwaarden.
+                </div>
 
-<div class="scan-status" id="scanStatus" aria-live="polite"></div>
-<div class="scan-results" id="scanResults"></div>
+                <div class="expert-grid">
+                    <div class="field">
+                        <label class="field-label" for="EXPORT_THRESHOLD">Exportdrempel</label>
+                        <div class="field-help">Start bij teruglevering</div>
+                        <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD" value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
+                    </div>
 
-<div class="action-buttons">
-    <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
-    <button type="submit">Opslaan en verder</button>
-</div>
+                    <div class="field">
+                        <label class="field-label" for="EXPORT_DELAY">Exportvertraging</label>
+                        <div class="field-help">Wachttijd voor inschakelen</div>
+                        <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY" value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
+                    </div>
 
-<div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
-</form>
+                    <div class="field">
+                        <label class="field-label" for="FREEZE_AT">Bevriezen bij</label>
+                        <div class="field-help">Bevries op hoge stand</div>
+                        <input type="number" id="FREEZE_AT" name="FREEZE_AT" value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen</label>
+                        <div class="field-help">Tijd vóór bevriezen</div>
+                        <input type="number" id="FREEZE_CONFIRM" name="FREEZE_CONFIRM" value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave importdrempel</label>
+                        <div class="field-help">Vrijgeven bij netafname</div>
+                        <input type="number" id="IMPORT_UNFREEZE_THRESHOLD" name="IMPORT_UNFREEZE_THRESHOLD" value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging</label>
+                        <div class="field-help">Wachttijd voor vrijgeven</div>
+                        <input type="number" id="UNFREEZE_DELAY" name="UNFREEZE_DELAY" value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel import</label>
+                        <div class="field-help">Schakel uit bij afname</div>
+                        <input type="number" id="IMPORT_OFF_THRESHOLD" name="IMPORT_OFF_THRESHOLD" value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="OFF_DELAY">Uitschakelvertraging</label>
+                        <div class="field-help">Wachttijd voor uitschakelen</div>
+                        <input type="number" id="OFF_DELAY" name="OFF_DELAY" value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="PID_NEUTRAL_LOW">PID-neutraal laag</label>
+                        <div class="field-help">Ondergrens neutrale zone</div>
+                        <input type="number" id="PID_NEUTRAL_LOW" name="PID_NEUTRAL_LOW" value="{{ config.expert_settings.PID_NEUTRAL_LOW if config.expert_settings else -5 }}">
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="PID_NEUTRAL_HIGH">PID-neutraal hoog</label>
+                        <div class="field-help">Bovengrens neutrale zone</div>
+                        <input type="number" id="PID_NEUTRAL_HIGH" name="PID_NEUTRAL_HIGH" value="{{ config.expert_settings.PID_NEUTRAL_HIGH if config.expert_settings else 45 }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <label>Shelly-apparaten</label>
+        <div id="deviceContainer"></div>
+
+        <button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
+        <button type="button" id="scanBtn" onclick="scanDevices()">Autoscan netwerk</button>
+
+        <div class="scan-status" id="scanStatus" aria-live="polite"></div>
+        <div class="scan-results" id="scanResults"></div>
+
+        <div class="action-buttons">
+            <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
+            <button type="submit">Opslaan en verder</button>
+        </div>
+
+        <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
+    </form>
 </div>
 
 <script>
@@ -219,6 +519,15 @@ function updatePowerIpState(row){
     if(!enabled){
         powerIpField.value = "";
     }
+}
+
+function updateExpertModeVisibility(){
+    const expertMode = document.getElementById('expertMode');
+    const expertBox = document.getElementById('expertSettingsBox');
+
+    if(!expertMode || !expertBox) return;
+
+    expertBox.style.display = expertMode.checked ? 'block' : 'none';
 }
 
 function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
@@ -485,10 +794,16 @@ document.getElementById('configForm').addEventListener('submit', function(e){
 window.addEventListener('DOMContentLoaded', () => {
     const savedP1 = "{{ config.p1_ip or '' }}";
     const devices = {{ config.shelly_devices|tojson or [] }};
+    const expertMode = document.getElementById('expertMode');
 
     if(savedP1){
         document.getElementById('p1ip').value = savedP1;
     }
+
+    if(expertMode){
+        expertMode.addEventListener('change', updateExpertModeVisibility);
+    }
+    updateExpertModeVisibility();
 
     if(devices.length > 0){
         devices.forEach(d => addDevice(d.name, d.ip, d.priority, d.power_meter || "", d.power_ip || ""));

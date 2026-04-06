@@ -12,6 +12,19 @@ import threading
 # ================= CONFIG =================
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
+DEFAULT_EXPERT_SETTINGS = {
+    "EXPORT_THRESHOLD": -50,
+    "EXPORT_DELAY": 15,
+    "FREEZE_AT": 95,
+    "FREEZE_CONFIRM": 2,
+    "IMPORT_UNFREEZE_THRESHOLD": 200,
+    "UNFREEZE_DELAY": 5,
+    "IMPORT_OFF_THRESHOLD": 300,
+    "OFF_DELAY": 120,
+    "PID_NEUTRAL_LOW": -5,
+    "PID_NEUTRAL_HIGH": 45
+}
+
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE) as f:
@@ -24,11 +37,46 @@ def load_config():
     if "p1_ip" not in cfg:
         cfg["p1_ip"] = ""
 
+    if "expert_mode" not in cfg:
+        cfg["expert_mode"] = False
+
+    if "expert_settings" not in cfg or not isinstance(cfg["expert_settings"], dict):
+        cfg["expert_settings"] = {}
+
+    for key, value in DEFAULT_EXPERT_SETTINGS.items():
+        if key not in cfg["expert_settings"]:
+            cfg["expert_settings"][key] = value
+
     return cfg
 
 def save_config(data):
     with open(CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=4)
+
+def get_runtime_settings(cfg):
+    if cfg.get("expert_mode", False):
+        settings = cfg.get("expert_settings", {}).copy()
+        for key, value in DEFAULT_EXPERT_SETTINGS.items():
+            if key not in settings:
+                settings[key] = value
+        return settings
+
+    return DEFAULT_EXPERT_SETTINGS.copy()
+
+def parse_expert_settings_from_request(req):
+    expert_settings = {}
+
+    for key, default_value in DEFAULT_EXPERT_SETTINGS.items():
+        raw_value = req.form.get(key, str(default_value)).strip()
+        try:
+            if isinstance(default_value, int):
+                expert_settings[key] = int(raw_value)
+            else:
+                expert_settings[key] = float(raw_value)
+        except ValueError:
+            expert_settings[key] = default_value
+
+    return expert_settings
 
 # ================= PID =================
 PID_KP = 0.02
@@ -46,21 +94,6 @@ current_brightness = 0
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
 MAX_BRIGHTNESS = 100
-
-EXPORT_THRESHOLD = -50
-EXPORT_DELAY = 15
-
-FREEZE_AT = 95
-FREEZE_CONFIRM = 2
-
-IMPORT_UNFREEZE_THRESHOLD = 200
-UNFREEZE_DELAY = 5
-
-IMPORT_OFF_THRESHOLD = 300
-OFF_DELAY = 120
-
-PID_NEUTRAL_LOW = -5
-PID_NEUTRAL_HIGH = 45
 
 # ================= FLASK =================
 app = Flask(__name__)
@@ -210,7 +243,9 @@ def wizard():
         return redirect("/dashboard")
 
     if request.method == "POST":
-        cfg["p1_ip"] = request.form["p1ip"]
+        cfg["p1_ip"] = request.form.get("p1ip", "").strip()
+        cfg["expert_mode"] = request.form.get("expert_mode") == "on"
+        cfg["expert_settings"] = parse_expert_settings_from_request(request)
 
         devices = []
         names = request.form.getlist("shelly_name[]")
@@ -248,6 +283,9 @@ def wizard_forced():
 
     if request.method == "POST":
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
+        cfg["expert_mode"] = request.form.get("expert_mode") == "on"
+        cfg["expert_settings"] = parse_expert_settings_from_request(request)
+
         devices = []
 
         names = request.form.getlist("shelly_name[]")
@@ -313,7 +351,9 @@ def status_json():
         power=current_power,
         brightness=current_brightness,
         enabled=enabled,
-        devices=devices
+        devices=devices,
+        expert_mode=cfg.get("expert_mode", False),
+        expert_settings=get_runtime_settings(cfg)
     )
 
 @app.route("/toggle_pid")
@@ -592,6 +632,18 @@ def control_loop():
             cfg = load_config()
             p1_ip = cfg.get("p1_ip")
             devices = cfg.get("shelly_devices", [])
+            settings = get_runtime_settings(cfg)
+
+            EXPORT_THRESHOLD = settings["EXPORT_THRESHOLD"]
+            EXPORT_DELAY = settings["EXPORT_DELAY"]
+            FREEZE_AT = settings["FREEZE_AT"]
+            FREEZE_CONFIRM = settings["FREEZE_CONFIRM"]
+            IMPORT_UNFREEZE_THRESHOLD = settings["IMPORT_UNFREEZE_THRESHOLD"]
+            UNFREEZE_DELAY = settings["UNFREEZE_DELAY"]
+            IMPORT_OFF_THRESHOLD = settings["IMPORT_OFF_THRESHOLD"]
+            OFF_DELAY = settings["OFF_DELAY"]
+            PID_NEUTRAL_LOW = settings["PID_NEUTRAL_LOW"]
+            PID_NEUTRAL_HIGH = settings["PID_NEUTRAL_HIGH"]
 
             if not p1_ip or not devices:
                 time.sleep(2)
