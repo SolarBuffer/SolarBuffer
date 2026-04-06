@@ -297,6 +297,7 @@ Als je verbonden bent met de PI-SETUP hotspot kan je de WiFi instellingen doen v
 
 ## 🧙‍♂️ Beginnen met SolarBuffer
 Installatiehandleiding SolarBuffer Hub
+
 Volg onderstaande stappen om de SolarBuffer Hub correct te installeren en te configureren.
 
 ### Stap 1 – Hub aansluiten op voeding
