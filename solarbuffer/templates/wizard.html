@@ -360,49 +360,49 @@ button:hover { background:hsl(32,85%,45%); }
 
                 <div class="expert-grid">
                     <div class="field">
-                        <label class="field-label" for="EXPORT_THRESHOLD">Exportdrempel</label>
+                        <label class="field-label" for="EXPORT_THRESHOLD">Exportdrempel (W)</label>
                         <div class="field-help">Start bij teruglevering</div>
                         <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD" value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="EXPORT_DELAY">Exportvertraging</label>
+                        <label class="field-label" for="EXPORT_DELAY">Exportvertraging (s)</label>
                         <div class="field-help">Wachttijd voor inschakelen</div>
                         <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY" value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="FREEZE_AT">Bevriezen bij</label>
+                        <label class="field-label" for="FREEZE_AT">Bevriezen bij (%)</label>
                         <div class="field-help">Bevries op hoge stand</div>
                         <input type="number" id="FREEZE_AT" name="FREEZE_AT" value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen</label>
+                        <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen (s)</label>
                         <div class="field-help">Tijd vóór bevriezen</div>
                         <input type="number" id="FREEZE_CONFIRM" name="FREEZE_CONFIRM" value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave importdrempel</label>
-                        <div class="field-help">Vrijgeven bij netafname</div>
+                        <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave importdrempel (W)</label>
+                        <div class="field-help">Bevriezing loslaten bij netafname</div>
                         <input type="number" id="IMPORT_UNFREEZE_THRESHOLD" name="IMPORT_UNFREEZE_THRESHOLD" value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging</label>
+                        <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging (s)</label>
                         <div class="field-help">Wachttijd voor vrijgeven</div>
                         <input type="number" id="UNFREEZE_DELAY" name="UNFREEZE_DELAY" value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel import</label>
+                        <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel import (W)</label>
                         <div class="field-help">Schakel uit bij afname</div>
                         <input type="number" id="IMPORT_OFF_THRESHOLD" name="IMPORT_OFF_THRESHOLD" value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="OFF_DELAY">Uitschakelvertraging</label>
+                        <label class="field-label" for="OFF_DELAY">Uitschakelvertraging (s)</label>
                         <div class="field-help">Wachttijd voor uitschakelen</div>
                         <input type="number" id="OFF_DELAY" name="OFF_DELAY" value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
                     </div>
@@ -422,11 +422,11 @@ button:hover { background:hsl(32,85%,45%); }
             </div>
         </div>
 
-        <label>Shelly-apparaten</label>
+        <label>SolarBuffers</label>
         <div id="deviceContainer"></div>
 
-        <button type="button" id="addDeviceBtn" onclick="addDevice()">+ Apparaat toevoegen</button>
-        <button type="button" id="scanBtn" onclick="scanDevices()">Autoscan netwerk</button>
+        <button type="button" id="addDeviceBtn" onclick="addDevice()">+ SolarBuffer toevoegen</button>
+        <button type="button" id="scanBtn" onclick="scanDevices()">Zoek SolarBuffers</button>
 
         <div class="scan-status" id="scanStatus" aria-live="polite"></div>
         <div class="scan-results" id="scanResults"></div>
