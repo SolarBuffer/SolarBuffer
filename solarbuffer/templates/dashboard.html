@@ -280,7 +280,13 @@
             </div>
             <div class="device-top-right">
               <span class="power-badge ${d.power_meter ? 'visible' : ''}">
-                ${d.power_meter ? `${Number(d.power || 0).toFixed(1)} W` : ''}
+                ${
+                  d.power_meter
+                    ? (d.power_meter_online
+                        ? `${Number(d.power || 0).toFixed(1)} W`
+                        : 'meter offline')
+                    : ''
+                }
               </span>
               <span class="online-badge ${d.online ? 'online' : 'offline'}">
                 ${d.online ? '● Online' : '● Offline'}

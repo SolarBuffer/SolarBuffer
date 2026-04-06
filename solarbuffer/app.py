@@ -47,17 +47,17 @@ current_brightness = 0
 MIN_BRIGHTNESS = 34
 MAX_BRIGHTNESS = 100
 
-EXPORT_THRESHOLD = -50               # bij <= -50W export
-EXPORT_DELAY = 15                    # 15s voordat volgende prio start
+EXPORT_THRESHOLD = -50
+EXPORT_DELAY = 15
 
-FREEZE_AT = 95                       # freeze vanaf 95%
-FREEZE_CONFIRM = 2                   # 2s bevestigd op >=95%
+FREEZE_AT = 95
+FREEZE_CONFIRM = 2
 
-IMPORT_UNFREEZE_THRESHOLD = 200      # bij >=200W import mag hogere prio terug regelen
-UNFREEZE_DELAY = 5                   # 5s
+IMPORT_UNFREEZE_THRESHOLD = 200
+UNFREEZE_DELAY = 5
 
-IMPORT_OFF_THRESHOLD = 300           # bij >=300W import mag laagste actieve prio uit
-OFF_DELAY = 120                      # 2 minuten
+IMPORT_OFF_THRESHOLD = 300
+OFF_DELAY = 120
 
 PID_NEUTRAL_LOW = -5
 PID_NEUTRAL_HIGH = 45
@@ -95,7 +95,6 @@ def detect_homewizard_p1(ip):
         if not isinstance(data, dict):
             return None
 
-        # Soepele check: als de HomeWizard API JSON geeft en power-achtige keys bevat
         possible_keys = [
             "active_power_w",
             "total_power_import_t1_kwh",
@@ -120,42 +119,26 @@ def detect_shelly(ip):
             return None
 
         data = r.json()
+        if not isinstance(data, dict):
+            return None
+
         model = (data.get("model") or "").strip()
 
-        # Alleen Gen3 0/1-10V dimmer toelaten
-        if model not in ("S3DM-0010WW", "0010WW"):
+        # Alleen Shelly Dimmer Gen3 0/1-10V toelaten
+        allowed_models = {"S3DM-0010WW", "0010WW"}
+        if model not in allowed_models:
             return None
 
         return {
             "type": "shelly",
-            "name": data.get("name") or f"Shelly Dimmer Gen3",
+            "name": data.get("name") or "Shelly Dimmer Gen3",
             "ip": ip,
             "model": model,
             "gen": data.get("gen", 3)
         }
 
     except Exception:
-        pass
-
-    return None
-
-    # Fallback voor Gen2 / Plus / Pro
-    try:
-        r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.2)
-        if r.status_code == 200:
-            data = r.json()
-            if isinstance(data, dict):
-                return {
-                    "type": "shelly",
-                    "name": data.get("name") or data.get("app") or f"Shelly {ip}",
-                    "ip": ip,
-                    "model": data.get("model", ""),
-                    "gen": data.get("gen", "")
-                }
-    except Exception:
-        pass
-
-    return None
+        return None
 
 def scan_network_for_devices():
     ips = get_subnet_ips()
@@ -183,7 +166,6 @@ def scan_network_for_devices():
             except Exception as e:
                 print(f"Scan error ({ip}): {e}")
 
-    # Dubbele entries eruit halen
     unique_p1 = []
     seen_p1 = set()
     for d in found_p1:
@@ -204,31 +186,33 @@ def scan_network_for_devices():
     }
 
 # ================= ROUTES =================
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     cfg = load_config()
-    username_cfg = cfg.get("username","admin")
-    password_cfg = cfg.get("password","admin123")
-    if request.method=="POST":
-        if request.form.get("username")==username_cfg and request.form.get("password")==password_cfg:
-            session["logged_in"]=True
+    username_cfg = cfg.get("username", "admin")
+    password_cfg = cfg.get("password", "admin123")
+
+    if request.method == "POST":
+        if request.form.get("username") == username_cfg and request.form.get("password") == password_cfg:
+            session["logged_in"] = True
             return redirect("/")
         else:
             return render_template("login.html", error="Ongeldige login")
     return render_template("login.html")
 
-@app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET", "POST"])
 def wizard():
     if not require_login():
         return redirect("/login")
+
     cfg = load_config()
     if cfg.get("p1_ip") and cfg.get("shelly_devices"):
         return redirect("/dashboard")
 
-    if request.method=="POST":
+    if request.method == "POST":
         cfg["p1_ip"] = request.form["p1ip"]
 
-        devices=[]
+        devices = []
         names = request.form.getlist("shelly_name[]")
         ips = request.form.getlist("shelly_ip[]")
         priorities = request.form.getlist("priority[]")
@@ -241,19 +225,21 @@ def wizard():
                     "name": name.strip(),
                     "ip": ip.strip(),
                     "priority": int(prio),
-                    "power_meter": pm,
-                    "power_ip": pip.strip()
+                    "power_meter": pm.strip() if pm else "",
+                    "power_ip": pip.strip() if pip else ""
                 })
 
         cfg["shelly_devices"] = devices
         save_config(cfg)
         init_device_states(devices)
         init_device_pids(devices)
+        sync_configured_devices_off(devices)
+
         return redirect("/dashboard")
 
     return render_template("wizard.html", config=cfg)
 
-@app.route("/wizard_forced", methods=["GET","POST"])
+@app.route("/wizard_forced", methods=["GET", "POST"])
 def wizard_forced():
     if not require_login():
         return redirect("/login")
@@ -284,6 +270,7 @@ def wizard_forced():
         save_config(cfg)
         init_device_states(devices)
         init_device_pids(devices)
+        sync_configured_devices_off(devices)
 
         return redirect("/dashboard")
 
@@ -301,19 +288,20 @@ def dashboard():
 @app.route("/status_json")
 def status_json():
     if not require_login():
-        return jsonify({"error":"unauthorized"}),401
+        return jsonify({"error": "unauthorized"}), 401
 
     cfg = load_config()
-    devices=[]
+    devices = []
 
-    for d in cfg.get("shelly_devices",[]):
-        s=device_states.get(d["ip"],{})
+    for d in cfg.get("shelly_devices", []):
+        s = device_states.get(d["ip"], {})
         devices.append({
             "name": d["name"],
             "ip": d["ip"],
             "on": s.get("on", False),
             "brightness": s.get("brightness", 0),
             "online": s.get("online", False),
+            "power_meter_online": s.get("power_meter_online", False),
             "freeze": s.get("freeze", False),
             "started": s.get("started", False),
             "power": s.get("power", 0),
@@ -321,29 +309,42 @@ def status_json():
             "power_ip": d.get("power_ip")
         })
 
-    return jsonify(power=current_power, brightness=current_brightness, enabled=enabled, devices=devices)
+    return jsonify(
+        power=current_power,
+        brightness=current_brightness,
+        enabled=enabled,
+        devices=devices
+    )
 
 @app.route("/toggle_pid")
 def toggle_pid():
     global enabled
     if not require_login():
-        return jsonify(success=False),401
-    enabled=not enabled
+        return jsonify(success=False), 401
+    enabled = not enabled
     return jsonify(success=True)
 
 @app.route("/toggle_shelly/<path:ip>")
 def toggle_shelly(ip):
     if not require_login():
-        return jsonify(success=False),401
+        return jsonify(success=False), 401
 
     if ip in device_states:
-        device_states[ip]["on"]=not device_states[ip]["on"]
-        device_states[ip]["manual_override"]=True
-        device_states[ip]["brightness"]=100 if device_states[ip]["on"] else 0
-        set_shelly(device_states[ip]["brightness"],device_states[ip]["on"],ip)
-        return jsonify(success=True, on=device_states[ip]["on"])
+        new_on = not device_states[ip]["on"]
+        device_states[ip]["on"] = new_on
+        device_states[ip]["manual_override"] = True
+        device_states[ip]["started"] = new_on
+        device_states[ip]["brightness"] = 100 if new_on else 0
 
-    return jsonify(success=False),404
+        if not new_on:
+            device_states[ip]["freeze"] = False
+            device_states[ip]["saturated_since"] = None
+            device_states[ip]["min_since"] = None
+
+        set_shelly(device_states[ip]["brightness"], new_on, ip)
+        return jsonify(success=True, on=new_on)
+
+    return jsonify(success=False), 404
 
 @app.route("/scan_devices", methods=["GET"])
 def scan_devices():
@@ -356,56 +357,88 @@ def scan_devices():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ================= SHELLY =================
+# ================= SHELLY / POWER =================
 def set_shelly(brightness, on, ip):
     try:
         requests.post(
             f"http://{ip}/rpc/Light.Set",
-            json={"id":0,"on":on,"brightness":round(brightness)},
+            json={"id": 0, "on": on, "brightness": round(brightness)},
             timeout=2
         )
     except Exception as e:
-        print(f"Shelly error ({ip}):",e)
+        print(f"Shelly error ({ip}): {e}")
 
 def check_shelly_online(ip):
     try:
-        r=requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
-        return r.status_code==200
+        r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+def check_http_device_online(ip, path):
+    try:
+        r = requests.get(f"http://{ip}{path}", timeout=2)
+        return r.status_code == 200
     except Exception:
         return False
 
 def get_homewizard_power(ip):
     try:
-        r = requests.get(f"http://{ip}/api/v1/data", timeout=2).json()
-        return r.get("active_power_w", 0)
+        r = requests.get(f"http://{ip}/api/v1/data", timeout=2)
+        if r.status_code != 200:
+            return 0
+        data = r.json()
+        return float(data.get("active_power_w", 0) or 0)
     except Exception as e:
-        print(f"HomeWizard power error ({ip}):", e)
+        print(f"HomeWizard power error ({ip}): {e}")
         return 0
 
 def get_shelly_device_power(ip):
-    try:
-        r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2).json()
-        return r.get("apower", 0)
-    except Exception as e:
-        print(f"Power read error ({ip}):", e)
-        return 0
+    endpoints = [
+        f"http://{ip}/rpc/Switch.GetStatus?id=0",
+        f"http://{ip}/rpc/PM1.GetStatus?id=0",
+        f"http://{ip}/rpc/EM.GetStatus?id=0",
+        f"http://{ip}/rpc/Shelly.GetStatus",
+    ]
+
+    for url in endpoints:
+        try:
+            r = requests.get(url, timeout=2)
+            if r.status_code != 200:
+                continue
+
+            data = r.json()
+
+            if isinstance(data, dict):
+                if "apower" in data:
+                    return float(data.get("apower", 0) or 0)
+
+                for _, value in data.items():
+                    if isinstance(value, dict) and "apower" in value:
+                        return float(value.get("apower", 0) or 0)
+
+        except Exception:
+            pass
+
+    return 0
 
 def init_device_states(devices):
     global device_states
     for d in devices:
-        ip=d["ip"]
+        ip = d["ip"]
         if ip not in device_states:
-            device_states[ip]={
-                "on":False,
-                "brightness":0,
-                "online":False,
-                "manual_override":False,
-                "freeze":False,
-                "started":False,
-                "saturated_since":None,
-                "min_since":None,
-                "last_active_time":time.time(),
-                "power":0
+            device_states[ip] = {
+                "on": False,
+                "brightness": 0,
+                "online": False,
+                "power_meter_online": False,
+                "manual_override": False,
+                "freeze": False,
+                "started": False,
+                "saturated_since": None,
+                "min_since": None,
+                "last_active_time": time.time(),
+                "power": 0
             }
 
 def init_device_pids(devices):
@@ -416,6 +449,47 @@ def init_device_pids(devices):
             p = PID(PID_KP, PID_KI, PID_KD, setpoint=0)
             p.output_limits = (MIN_BRIGHTNESS, MAX_BRIGHTNESS)
             device_pids[ip] = p
+
+def sync_configured_devices_off(devices):
+    if not devices:
+        return
+
+    print("Sync: geconfigureerde Shelly apparaten naar UIT zetten...")
+
+    for d in devices:
+        ip = d["ip"]
+
+        if ip not in device_states:
+            continue
+
+        state = device_states[ip]
+        state["on"] = False
+        state["brightness"] = 0
+        state["freeze"] = False
+        state["started"] = False
+        state["manual_override"] = False
+        state["saturated_since"] = None
+        state["min_since"] = None
+
+        for _ in range(3):
+            try:
+                set_shelly(0, False, ip)
+                time.sleep(0.35)
+            except Exception as e:
+                print(f"Sync error ({ip}): {e}")
+
+    print("Sync voltooid.")
+
+def startup_sync_devices():
+    cfg = load_config()
+    devices = cfg.get("shelly_devices", [])
+
+    if not devices:
+        return
+
+    init_device_states(devices)
+    init_device_pids(devices)
+    sync_configured_devices_off(devices)
 
 # ================= CONTROL HELPERS =================
 def get_sorted_devices(devices):
@@ -528,23 +602,31 @@ def control_loop():
 
             now = time.time()
 
-            # ONLINE CHECK
+            # ONLINE CHECKS
             for d in devices:
                 ip = d["ip"]
+                pm_type = (d.get("power_meter") or "").lower()
+                pm_ip = (d.get("power_ip") or "").strip() or ip
+
                 if now - last_online_check.get(ip, 0) > online_check_interval:
                     device_states[ip]["online"] = check_shelly_online(ip)
+
+                    if pm_type == "shelly":
+                        device_states[ip]["power_meter_online"] = check_http_device_online(pm_ip, "/rpc/Shelly.GetStatus")
+                    elif pm_type == "homewizard":
+                        device_states[ip]["power_meter_online"] = check_http_device_online(pm_ip, "/api/v1/data")
+                    else:
+                        device_states[ip]["power_meter_online"] = False
+
                     last_online_check[ip] = now
 
             # DEVICE POWER
             for d in devices:
                 ip = d["ip"]
                 state = device_states[ip]
-                if not state.get("online"):
-                    state["power"] = 0
-                    continue
 
                 pm_type = (d.get("power_meter") or "").lower()
-                pm_ip = d.get("power_ip") or ip
+                pm_ip = (d.get("power_ip") or "").strip() or ip
 
                 if pm_type == "shelly":
                     state["power"] = get_shelly_device_power(pm_ip)
@@ -635,7 +717,6 @@ def control_loop():
                     set_shelly(b, True, ip)
                     active_brightness = b
 
-                    # freeze logica
                     if b >= FREEZE_AT and not is_last_possible_priority(devices_sorted, d):
                         if st["saturated_since"] is None:
                             st["saturated_since"] = now
@@ -645,7 +726,6 @@ def control_loop():
                     else:
                         st["saturated_since"] = None
 
-                    # minimum logica
                     if b <= MIN_BRIGHTNESS:
                         if st["min_since"] is None:
                             st["min_since"] = now
@@ -653,8 +733,6 @@ def control_loop():
                         st["min_since"] = None
 
                 else:
-                    # veiligheid: actieve niet-frozen devices buiten de regelende prio
-                    # hun huidige stand gewoon vasthouden
                     if st["brightness"] < MIN_BRIGHTNESS:
                         st["brightness"] = MIN_BRIGHTNESS
                     st["on"] = True
@@ -662,9 +740,7 @@ def control_loop():
 
             current_brightness = active_brightness
 
-            # 4. Laagste actieve prio uitschakelen als:
-            #    - hij op minimum staat
-            #    - EN 2 minuten >= 300W import
+            # 4. Laagste actieve prio uitschakelen
             lowest_running = get_lowest_priority_running(devices_sorted)
 
             if lowest_running:
@@ -712,5 +788,7 @@ def control_loop():
             time.sleep(2)
 
 # ================= START =================
-threading.Thread(target=control_loop, daemon=True).start()
-app.run(host="0.0.0.0", port=5001)
+if __name__ == "__main__":
+    startup_sync_devices()
+    threading.Thread(target=control_loop, daemon=True).start()
+    app.run(host="0.0.0.0", port=5001)

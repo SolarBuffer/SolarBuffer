@@ -84,6 +84,23 @@ button:hover{background:hsl(32,85%,45%);}
 #scanBtn{background:hsl(215,70%,52%);}
 #scanBtn:hover{background:hsl(215,70%,45%);}
 #scanBtn:disabled{opacity:.7;cursor:wait;}
+
+.action-buttons{
+    display:flex;
+    gap:.75rem;
+    margin-top:.5rem;
+}
+.action-buttons button{
+    flex:1;
+}
+
+.cancel-btn{
+    background:hsl(220,10%,88%);
+    color:hsl(220,20%,20%);
+}
+.cancel-btn:hover{
+    background:hsl(220,10%,80%);
+}
 </style>
 </head>
 <body>
@@ -107,7 +124,11 @@ button:hover{background:hsl(32,85%,45%);}
 <div class="scan-status" id="scanStatus" aria-live="polite"></div>
 <div class="scan-results" id="scanResults"></div>
 
-<button type="submit">Opslaan en verder</button>
+<div class="action-buttons">
+    <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
+    <button type="submit">Opslaan en verder</button>
+</div>
+
 <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
 </form>
 </div>
@@ -405,6 +426,10 @@ async function scanDevices(){
     } finally {
         scanBtn.disabled = false;
     }
+}
+
+function cancelWizard(){
+    window.location.href = "/dashboard";
 }
 
 document.getElementById('configForm').addEventListener('submit', function(e){
