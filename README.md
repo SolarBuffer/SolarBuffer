@@ -339,9 +339,9 @@ Indien nodig kun je apparaten ook handmatig toevoegen via het IP-adres.
 
 ### Stap 6 – Optioneel: Power Module koppelen
 Je kunt optioneel een Power Module koppelen aan een apparaat, bijvoorbeeld:
-HomeWizard Energy Socket
-Shelly Smart Plug
-Shelly PM Mini Gen3
+- HomeWizard Energy Socket
+- Shelly Smart Plug
+- Shelly PM Mini Gen3
 
 ### Stap 7 – Prioriteiten instellen
 Wanneer meerdere apparaten worden gevonden:
