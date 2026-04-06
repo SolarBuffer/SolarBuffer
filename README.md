@@ -352,10 +352,5 @@ Dit bepaalt de volgorde van inschakelen en uitschakelen.
 ### Stap 8 – Configuratie opslaan
 Sla de configuratie op.
 De installatie is nu voltooid en je kunt direct starten met het gebruik van de SolarBuffer Hub 🚀
-```bash
-Username: solarbuffer
-Password: solarbuffer
-```
-Na het inloggen kom je in het configuratiescherm, hierin worden de IP-adressen van de HomeWizard P1-meter ingevuld en de IP-adressen van de Shelly-devices (5 max). Later kan de configuratie altijd nog gewijzigd worden.
 
 
