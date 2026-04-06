@@ -384,7 +384,7 @@ def get_homewizard_power(ip):
 
 def get_shelly_device_power(ip):
     try:
-        r = requests.get(f"http://{ip}/rpc/Switch.GetStatus?id=0", timeout=2).json()
+        r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2).json()
         return r.get("apower", 0)
     except Exception as e:
         print(f"Power read error ({ip}):", e)
