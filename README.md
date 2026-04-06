@@ -295,14 +295,62 @@ Als je verbonden bent met de PI-SETUP hotspot kan je de WiFi instellingen doen v
 
 ---
 
-## 🧙‍♂️ Wizard
-Als de SolarBuffer service draait dienen de parameters via de webbrowser geconfigureerd te worden.
+## 🧙‍♂️ Beginnen met SolarBuffer
+Installatiehandleiding SolarBuffer Hub
+Volg onderstaande stappen om de SolarBuffer Hub correct te installeren en te configureren.
+
+### Stap 1 – Hub aansluiten op voeding
+Sluit de SolarBuffer Hub aan op de stroomvoorziening.
+Wacht vervolgens ongeveer 2 minuten totdat de hub volledig is opgestart.
+
+### Stap 2 – Verbinden met het setup-wifi netwerk
+Maak verbinding met het wifi-netwerk:
 ```bash
-solarbuffer.local:5001
-of
-IP-ADRESS:5001
+Netwerknaam: PI-SETUP
+Wachtwoord: SolarBuffer
 ```
-Login op de webbrowser
+
+### Stap 3 – Thuisnetwerk instellen
+Open een willekeurige webbrowser en ga naar:
+```bash
+http://10.4.0.1:80
+```
+Vul hier de wifi-gegevens van je thuisnetwerk in.
+Na het opslaan start de hub automatisch opnieuw op.
+Wacht opnieuw ongeveer 2 minuten tot de hub weer online is.
+
+### Stap 4 – Controleren of de hub verbonden is
+Open opnieuw een webbrowser en ga naar:
+http://solarbuffer.local:5001
+Verschijnt er een loginpagina? Dan is de hub correct verbonden met je netwerk ✅
+(Als er geen login pagina verschijnt, controleer op de hotspot weer beschikbaar is, dit kan betekenen dat er een fout 
+is gemaakt bij het instellen van de WiFi)
+Log in met:
+```bash
+Gebruikersnaam: solarbuffer
+Wachtwoord: solarbuffer
+```
+### Stap 5 – Configuratie via de wizard
+Na het inloggen kom je in de configuratiewizard.
+De hub voert automatisch een autoscan uit om compatibele apparaten te vinden.
+Indien nodig kun je apparaten ook handmatig toevoegen via het IP-adres.
+
+### Stap 6 – Optioneel: Power Module koppelen
+Je kunt optioneel een Power Module koppelen aan een apparaat, bijvoorbeeld:
+HomeWizard Energy Socket
+Shelly Smart Plug
+Shelly PM Mini Gen3
+
+### Stap 7 – Prioriteiten instellen
+Wanneer meerdere apparaten worden gevonden:
+Stel de prioriteit correct in.
+Apparaten met prioriteit 1 start als eerste
+Daarna volgen prioriteit 2, 3, enz.
+Dit bepaalt de volgorde van inschakelen en uitschakelen.
+
+### Stap 8 – Configuratie opslaan
+Sla de configuratie op.
+De installatie is nu voltooid en je kunt direct starten met het gebruik van de SolarBuffer Hub 🚀
 ```bash
 Username: solarbuffer
 Password: solarbuffer
