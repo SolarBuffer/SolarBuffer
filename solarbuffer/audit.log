@@ -1,10 +1,1 @@
-{"timestamp": "2026-04-07T00:06:59", "user": "unknown", "ip": "127.0.0.1", "action": "network_scan", "details": {"p1_found": 1, "shelly_found": 1}}
-{"timestamp": "2026-04-07T00:07:06", "user": "unknown", "ip": "127.0.0.1", "action": "config_updated_forced", "details": {"p1_ip": {"old": "", "new": "192.168.178.21"}, "expert_mode": {"old": false, "new": true}, "devices_added": [{"name": "Shelly Dimmer Gen3", "ip": "192.168.178.195", "priority": 1, "power_meter": "", "power_ip": ""}]}}
-{"timestamp": "2026-04-07T00:08:14", "user": "unknown", "ip": "127.0.0.1", "action": "config_updated_forced", "details": {"expert_mode": {"old": true, "new": false}}}
-{"timestamp": "2026-04-07T00:24:57", "user": "unknown", "ip": "127.0.0.1", "action": "config_updated_forced", "details": {"devices_added": [{"name": "Test", "ip": "192.168.178.21", "priority": 2, "power_meter": "", "power_ip": ""}]}}
-{"timestamp": "2026-04-07T00:25:19", "user": "unknown", "ip": "127.0.0.1", "action": "config_updated_forced", "details": {"expert_mode": {"old": false, "new": true}, "expert_settings": {"EXPORT_THRESHOLD": {"old": -50, "new": 500}, "FREEZE_AT": {"old": 95, "new": 40}, "IMPORT_OFF_THRESHOLD": {"old": 300, "new": 1000}}}}
-{"timestamp": "2026-04-07T00:26:01", "user": "unknown", "ip": "127.0.0.1", "action": "config_updated_forced", "details": {"expert_settings": {"EXPORT_THRESHOLD": {"old": 500, "new": 600}}}}
-{"timestamp": "2026-04-07T00:26:38", "user": "unknown", "ip": "127.0.0.1", "action": "config_saved_forced_no_changes", "details": {}}
-{"timestamp": "2026-04-07T00:26:47", "user": "unknown", "ip": "127.0.0.1", "action": "pid_toggled", "details": {"enabled": false}}
-{"timestamp": "2026-04-07T00:26:49", "user": "unknown", "ip": "127.0.0.1", "action": "pid_toggled", "details": {"enabled": true}}
-{"timestamp": "2026-04-07T00:27:11", "user": "unknown", "ip": "127.0.0.1", "action": "config_updated_forced", "details": {"expert_settings": {"EXPORT_THRESHOLD": {"old": 600, "new": -50}, "IMPORT_OFF_THRESHOLD": {"old": 1000, "new": 250}}}}
+
