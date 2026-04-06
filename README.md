@@ -326,6 +326,7 @@ http://solarbuffer.local:5001
 Verschijnt er een loginpagina? Dan is de hub correct verbonden met je netwerk ✅
 (Als er geen login pagina verschijnt, controleer op de hotspot weer beschikbaar is, dit kan betekenen dat er een fout 
 is gemaakt bij het instellen van de WiFi)
+
 Log in met:
 ```bash
 Gebruikersnaam: solarbuffer
