@@ -60,8 +60,8 @@ pip install simple-pid flask requests zeroconf
 Handmatig moet er een config.json en audit.log file komen om configuratie in op te slaan.
 ```bash
 cd /home/solarbuffer/SolarBuffer
-cp solarbuffer/config.voorbeeld.json solarbuffer/config.json
-cp solarbuffer/audit.voorbeeld.log solarbuffer/audit.log
+cp solarbuffer/tempfiles/config.voorbeeld.json solarbuffer/config.json
+cp solarbuffer/tempfiles/audit.voorbeeld.log solarbuffer/audit.log
 ```
 ---
 
