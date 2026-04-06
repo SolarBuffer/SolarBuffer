@@ -21,7 +21,8 @@ Stap 4 – Controleren of de hub verbonden is
 Open opnieuw een webbrowser en ga naar:
 http://solarbuffer.local:5001
 Verschijnt er een loginpagina? Dan is de hub correct verbonden met je netwerk ✅
-(Als er geen login pagina verschijnt, herstart de hub en doe de configuratie opnieuw. Mogelijk is er een spelfout geweest in het configureren van de WiFi)
+(Als er geen login pagina verschijnt, controleer op de hotspot weer beschikbaar is, dit kan betekenen dat er een fout 
+is gemaakt bij het instellen van de WiFi)
 Log in met:
 Gebruikersnaam: solarbuffer
 Wachtwoord: solarbuffer
@@ -40,9 +41,9 @@ Shelly PM Mini Gen3
 Stap 7 – Prioriteiten instellen
 Wanneer meerdere apparaten worden gevonden:
 Stel de prioriteit correct in.
-Apparaten met prioriteit 1 starten als eerste
+Apparaten met prioriteit 1 start als eerste
 Daarna volgen prioriteit 2, 3, enz.
-Dit bepaalt de volgorde van inschakelen.
+Dit bepaalt de volgorde van inschakelen en uitschakelen.
 
 Stap 8 – Configuratie opslaan
 Sla de configuratie op.
