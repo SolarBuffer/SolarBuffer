@@ -229,7 +229,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 ```
 
-### 5. Maak het hotsportprofiel aan PI-SETUP
+### 5. Maak het hotspotprofiel aan PI-SETUP
 ```bash
 sudo nmcli connection add type wifi ifname wlan0 con-name PI-SETUP ssid PI-SETUP
 sudo nmcli connection modify PI-SETUP 802-11-wireless.mode ap
