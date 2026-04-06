@@ -121,14 +121,14 @@ Nu wordt er elke nacht om 03:00 uur 's nachts controleert voor nieuwe updates en
 
 ## Hotspot voor WiFi 
 Om zonder beeldscherm automatisch WiFi in te stellen word tijdens de eerste boot een Hotspot gestart om de WiFi te configureren via een browser op adres 10.4.0.1
-## 1. Controleer of deze paden aanwezig zijn.
+### 1. Controleer of deze paden aanwezig zijn.
 ```bash
 whoami
 ls -l /home/solarbuffer/SolarBuffer/solarbufferwifi.py
 ls -l /home/solarbuffer/venv/bin/python3
 ```
 
-## 2. Maak een portal service aan in de system files
+### 2. Maak een portal service aan in de system files
 ```bash
 sudo nano /etc/systemd/system/solarbuffer-portal.service
 ```
@@ -153,7 +153,7 @@ WantedBy=multi-user.target
 ```
 Opslaan met Cntrl + O, Enter, Cntrl + X, Enter
 
-## 3. Maak de provisioning manager
+### 3. Maak de provisioning manager
 Creeer een nieuw bestand
 ```bash
 sudo nano /usr/local/bin/provisioning-manager.sh
@@ -208,7 +208,7 @@ Daarna exectutable maken:
 ``` bash
 sudo chmod +x /usr/local/bin/provisioning-manager.sh
 ```
-## 4. Maak provisioning service
+### 4. Maak provisioning service
 ``` bash
 sudo nano /etc/systemd/system/solarbuffer-provisioning.service
 ```
@@ -229,7 +229,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 ```
 
-## 5. Maak het hotsportprofiel aan PI-SETUP
+### 5. Maak het hotsportprofiel aan PI-SETUP
 ```bash
 sudo nmcli connection add type wifi ifname wlan0 con-name PI-SETUP ssid PI-SETUP
 sudo nmcli connection modify PI-SETUP 802-11-wireless.mode ap
@@ -242,12 +242,12 @@ sudo nmcli connection modify PI-SETUP connection.autoconnect no
 sudo nmcli connection modify PI-SETUP connection.autoconnect-priority -100
 ```
 
-## 6. Services laden en provisioning aanzetten
+### 6. Services laden en provisioning aanzetten
 ``` bash
 sudo systemctl daemon-reload
 sudo systemctl enable solarbuffer-provisioning.service
 ```
-## 7. Handmatig testen
+### 7. Handmatig testen
 ```bash
 sudo systemctl start solarbuffer-portal.service
 sudo systemctl status solarbuffer-portal.service
@@ -257,7 +257,7 @@ Als dit faalt check de logs
 sudo journalctl -u solarbuffer-portal.service -n 50 --no-pager
 ```
 
-## 8. Provisioning testen
+### 8. Provisioning testen
 Zorg dat de ''customer-wifi nog niet bestaat
 ```bash
 sudo nmcli connection delete customer-wifi
@@ -275,7 +275,7 @@ sudo systemctl status solarbuffer-portal.service
 ```
 Nu moet te zien zijn dat PI-SETUP en solarbuffer-portal.service actief zijn
 
-## 9. Reboot test
+### 9. Reboot test
 Als alles goed doorlopen is kan de PI een reboot krijgen
 ```bash
 sudo reboot
@@ -287,7 +287,7 @@ systemctl status solarbuffer-provisioning.service
 systemctl status solarbuffer-portal.service
 ```
 
-## 10. Setup
+### 10. Setup
 Als je verbonden bent met de PI-SETUP hotspot kan je de WiFi instellingen doen via het voglende adres
 ```bash
 10.4.0.1:80
