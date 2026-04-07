@@ -25,8 +25,14 @@ DEFAULT_EXPERT_SETTINGS = {
     "IMPORT_OFF_THRESHOLD": 300,
     "OFF_DELAY": 120,
     "PID_NEUTRAL_LOW": -5,
-    "PID_NEUTRAL_HIGH": 45
+    "PID_NEUTRAL_HIGH": 45,
+    "POWER_SOCKET_DELAY": 5,
+    "POWER_SOCKET_HOLD_SECONDS": 3600
 }
+
+DEFAULT_POWER_SOCKET_DELAY = 5
+DEFAULT_POWER_SOCKET_HOLD_SECONDS = 3600
+
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -50,11 +56,28 @@ def load_config():
         if key not in cfg["expert_settings"]:
             cfg["expert_settings"][key] = value
 
+    normalized_devices = []
+    for d in cfg.get("shelly_devices", []):
+        dev = dict(d)
+        if "power_socket_type" not in dev:
+            dev["power_socket_type"] = ""
+        if "power_socket_ip" not in dev:
+            dev["power_socket_ip"] = ""
+        if "power_socket_delay" not in dev:
+            dev["power_socket_delay"] = DEFAULT_POWER_SOCKET_DELAY
+        if "power_socket_hold_seconds" not in dev:
+            dev["power_socket_hold_seconds"] = DEFAULT_POWER_SOCKET_HOLD_SECONDS
+        normalized_devices.append(dev)
+
+    cfg["shelly_devices"] = normalized_devices
+
     return cfg
+
 
 def save_config(data):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
+
 
 def get_runtime_settings(cfg):
     if cfg.get("expert_mode", False):
@@ -65,6 +88,7 @@ def get_runtime_settings(cfg):
         return settings
 
     return DEFAULT_EXPERT_SETTINGS.copy()
+
 
 def parse_expert_settings_from_request(req):
     expert_settings = {}
@@ -81,14 +105,24 @@ def parse_expert_settings_from_request(req):
 
     return expert_settings
 
+
+def safe_int(value, default):
+    try:
+        return int(str(value).strip())
+    except Exception:
+        return default
+
+
 # ================= AUDIT =================
 audit_lock = threading.Lock()
+
 
 def safe_session_username():
     try:
         return session.get("username", "unknown")
     except Exception:
         return "system"
+
 
 def safe_request_ip():
     try:
@@ -97,6 +131,7 @@ def safe_request_ip():
         return request.remote_addr or "unknown"
     except Exception:
         return "system"
+
 
 def write_audit_log(action, details=None):
     entry = {
@@ -113,6 +148,7 @@ def write_audit_log(action, details=None):
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     except Exception as e:
         print(f"Audit log fout: {e}")
+
 
 def compare_configs(old_cfg, new_cfg):
     changes = {}
@@ -170,6 +206,7 @@ def compare_configs(old_cfg, new_cfg):
 
     return changes
 
+
 # ================= PID =================
 PID_KP = 0.02
 PID_KI = 0.0015
@@ -191,8 +228,10 @@ MAX_BRIGHTNESS = 100
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "verander_dit_naar_iets_veiligs!")
 
+
 def require_login():
     return session.get("logged_in", False)
+
 
 # ================= NETWORK SCAN HELPERS =================
 def get_local_ip():
@@ -205,10 +244,12 @@ def get_local_ip():
     finally:
         s.close()
 
+
 def get_subnet_ips():
     local_ip = get_local_ip()
     network = ipaddress.ip_network(f"{local_ip}/24", strict=False)
     return [str(ip) for ip in network.hosts()]
+
 
 def detect_homewizard_p1(ip):
     try:
@@ -237,6 +278,7 @@ def detect_homewizard_p1(ip):
         pass
     return None
 
+
 def detect_shelly(ip):
     try:
         r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.2)
@@ -249,7 +291,6 @@ def detect_shelly(ip):
 
         model = (data.get("model") or "").strip()
 
-        # Alleen Shelly Dimmer Gen3 0/1-10V toelaten
         allowed_models = {"S3DM-0010WW", "0010WW"}
         if model not in allowed_models:
             return None
@@ -264,6 +305,7 @@ def detect_shelly(ip):
 
     except Exception:
         return None
+
 
 def scan_network_for_devices():
     ips = get_subnet_ips()
@@ -310,6 +352,7 @@ def scan_network_for_devices():
         "shelly_devices": unique_shelly
     }
 
+
 # ================= ROUTES =================
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -338,6 +381,59 @@ def login():
 
     return render_template("login.html")
 
+
+def parse_devices_from_request(req):
+    devices = []
+
+    names = req.form.getlist("shelly_name[]")
+    ips = req.form.getlist("shelly_ip[]")
+    priorities = req.form.getlist("priority[]")
+    power_meters = req.form.getlist("power_meter[]")
+    power_ips = req.form.getlist("power_ip[]")
+
+    power_socket_types = req.form.getlist("power_socket_type[]")
+    power_socket_ips = req.form.getlist("power_socket_ip[]")
+
+    row_count = max(
+        len(names),
+        len(ips),
+        len(priorities),
+        len(power_meters),
+        len(power_ips),
+        len(power_socket_types),
+        len(power_socket_ips),
+    )
+
+    def get_val(lst, idx, default=""):
+        return lst[idx] if idx < len(lst) else default
+
+    for i in range(row_count):
+        name = get_val(names, i).strip()
+        ip = get_val(ips, i).strip()
+
+        if not name or not ip:
+            continue
+
+        prio = safe_int(get_val(priorities, i, "1"), 1)
+        pm = get_val(power_meters, i).strip()
+        pip = get_val(power_ips, i).strip()
+
+        ps_type = get_val(power_socket_types, i).strip().lower()
+        ps_ip = get_val(power_socket_ips, i).strip()
+
+        devices.append({
+            "name": name,
+            "ip": ip,
+            "priority": prio,
+            "power_meter": pm if pm else "",
+            "power_ip": pip if pip else "",
+            "power_socket_type": ps_type if ps_type else "",
+            "power_socket_ip": ps_ip if ps_ip else ""
+        })
+
+    return devices
+
+
 @app.route("/", methods=["GET", "POST"])
 def wizard():
     if not require_login():
@@ -353,25 +449,8 @@ def wizard():
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
+        cfg["shelly_devices"] = parse_devices_from_request(request)
 
-        devices = []
-        names = request.form.getlist("shelly_name[]")
-        ips = request.form.getlist("shelly_ip[]")
-        priorities = request.form.getlist("priority[]")
-        power_meters = request.form.getlist("power_meter[]")
-        power_ips = request.form.getlist("power_ip[]")
-
-        for name, ip, prio, pm, pip in zip(names, ips, priorities, power_meters, power_ips):
-            if name.strip() and ip.strip():
-                devices.append({
-                    "name": name.strip(),
-                    "ip": ip.strip(),
-                    "priority": int(prio),
-                    "power_meter": pm.strip() if pm else "",
-                    "power_ip": pip.strip() if pip else ""
-                })
-
-        cfg["shelly_devices"] = devices
         changes = compare_configs(old_cfg, cfg)
 
         save_config(cfg)
@@ -381,13 +460,14 @@ def wizard():
         else:
             write_audit_log("config_saved_no_changes", {})
 
-        init_device_states(devices)
-        init_device_pids(devices)
-        sync_configured_devices_off(devices)
+        init_device_states(cfg["shelly_devices"])
+        init_device_pids(cfg["shelly_devices"])
+        sync_configured_devices_off(cfg["shelly_devices"])
 
         return redirect("/dashboard")
 
     return render_template("wizard.html", config=cfg)
+
 
 @app.route("/wizard_forced", methods=["GET", "POST"])
 def wizard_forced():
@@ -402,25 +482,8 @@ def wizard_forced():
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
+        cfg["shelly_devices"] = parse_devices_from_request(request)
 
-        devices = []
-        names = request.form.getlist("shelly_name[]")
-        ips = request.form.getlist("shelly_ip[]")
-        priorities = request.form.getlist("priority[]")
-        power_meters = request.form.getlist("power_meter[]")
-        power_ips = request.form.getlist("power_ip[]")
-
-        for name, ip, prio, pm, pip in zip(names, ips, priorities, power_meters, power_ips):
-            if name.strip() and ip.strip():
-                devices.append({
-                    "name": name.strip(),
-                    "ip": ip.strip(),
-                    "priority": int(prio),
-                    "power_meter": pm.strip() if pm else "",
-                    "power_ip": pip.strip() if pip else ""
-                })
-
-        cfg["shelly_devices"] = devices
         changes = compare_configs(old_cfg, cfg)
 
         save_config(cfg)
@@ -430,13 +493,14 @@ def wizard_forced():
         else:
             write_audit_log("config_saved_forced_no_changes", {})
 
-        init_device_states(devices)
-        init_device_pids(devices)
-        sync_configured_devices_off(devices)
+        init_device_states(cfg["shelly_devices"])
+        init_device_pids(cfg["shelly_devices"])
+        sync_configured_devices_off(cfg["shelly_devices"])
 
         return redirect("/dashboard")
 
     return render_template("wizard.html", config=cfg)
+
 
 @app.route("/dashboard")
 def dashboard():
@@ -446,6 +510,7 @@ def dashboard():
     if not cfg.get("p1_ip") or not cfg.get("shelly_devices"):
         return redirect("/")
     return render_template("dashboard.html", config=cfg)
+
 
 @app.route("/status_json")
 def status_json():
@@ -466,9 +531,14 @@ def status_json():
             "power_meter_online": s.get("power_meter_online", False),
             "freeze": s.get("freeze", False),
             "started": s.get("started", False),
+            "pending_start": s.get("pending_start", False),
             "power": s.get("power", 0),
             "power_meter": d.get("power_meter"),
-            "power_ip": d.get("power_ip")
+            "power_ip": d.get("power_ip"),
+            "power_socket_type": d.get("power_socket_type", ""),
+            "power_socket_ip": d.get("power_socket_ip", ""),
+            "power_socket_on": s.get("power_socket_on", False),
+            "waiting_for_power_socket": s.get("waiting_for_power_socket", False),
         })
 
     return jsonify(
@@ -479,6 +549,7 @@ def status_json():
         expert_mode=cfg.get("expert_mode", False),
         expert_settings=get_runtime_settings(cfg)
     )
+
 
 @app.route("/toggle_pid")
 def toggle_pid():
@@ -494,34 +565,62 @@ def toggle_pid():
 
     return jsonify(success=True)
 
+
 @app.route("/toggle_shelly/<path:ip>")
 def toggle_shelly(ip):
     if not require_login():
         return jsonify(success=False), 401
 
-    if ip in device_states:
-        new_on = not device_states[ip]["on"]
-        device_states[ip]["on"] = new_on
-        device_states[ip]["manual_override"] = True
-        device_states[ip]["started"] = new_on
-        device_states[ip]["brightness"] = 100 if new_on else 0
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
 
-        if not new_on:
-            device_states[ip]["freeze"] = False
-            device_states[ip]["saturated_since"] = None
-            device_states[ip]["min_since"] = None
+    if not device or ip not in device_states:
+        return jsonify(success=False), 404
 
-        set_shelly(device_states[ip]["brightness"], new_on, ip)
+    st = device_states[ip]
+    new_on = not st["on"]
 
-        write_audit_log("device_toggled", {
-            "device_ip": ip,
-            "new_state": "on" if new_on else "off",
-            "brightness": device_states[ip]["brightness"]
-        })
+    if new_on:
+        ready = ensure_power_socket_on(device)
+        if not ready:
+            write_audit_log("device_toggle_waiting_for_power_socket", {
+                "device_ip": ip
+            })
+            return jsonify(success=False, waiting_for_power_socket=True)
 
-        return jsonify(success=True, on=new_on)
+        st["on"] = True
+        st["manual_override"] = True
+        st["started"] = True
+        st["pending_start"] = False
+        st["freeze"] = False
+        st["saturated_since"] = None
+        st["min_since"] = None
+        st["brightness"] = 100
 
-    return jsonify(success=False), 404
+        set_shelly(st["brightness"], True, ip)
+        mark_device_activity(device)
+
+    else:
+        st["on"] = False
+        st["manual_override"] = True
+        st["started"] = False
+        st["pending_start"] = False
+        st["brightness"] = 0
+        st["freeze"] = False
+        st["saturated_since"] = None
+        st["min_since"] = None
+        st["waiting_for_power_socket"] = False
+        st["power_socket_ready_at"] = None
+        set_shelly(0, False, ip)
+
+    write_audit_log("device_toggled", {
+        "device_ip": ip,
+        "new_state": "on" if new_on else "off",
+        "brightness": st["brightness"]
+    })
+
+    return jsonify(success=True, on=new_on)
+
 
 @app.route("/scan_devices", methods=["GET"])
 def scan_devices():
@@ -540,6 +639,7 @@ def scan_devices():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # ================= SHELLY / POWER =================
 def set_shelly(brightness, on, ip):
     try:
@@ -551,6 +651,7 @@ def set_shelly(brightness, on, ip):
     except Exception as e:
         print(f"Shelly error ({ip}): {e}")
 
+
 def check_shelly_online(ip):
     try:
         r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
@@ -558,12 +659,14 @@ def check_shelly_online(ip):
     except Exception:
         return False
 
+
 def check_http_device_online(ip, path):
     try:
         r = requests.get(f"http://{ip}{path}", timeout=2)
         return r.status_code == 200
     except Exception:
         return False
+
 
 def get_homewizard_power(ip):
     try:
@@ -575,6 +678,7 @@ def get_homewizard_power(ip):
     except Exception as e:
         print(f"HomeWizard power error ({ip}): {e}")
         return 0
+
 
 def get_shelly_device_power(ip):
     endpoints = [
@@ -605,6 +709,137 @@ def get_shelly_device_power(ip):
 
     return 0
 
+
+# ================= POWER SOCKET HELPERS =================
+def has_power_socket(device):
+    return bool((device.get("power_socket_type") or "").strip() and (device.get("power_socket_ip") or "").strip())
+
+
+def set_power_socket(power_socket_type, ip, on):
+    try:
+        pst = (power_socket_type or "").lower().strip()
+        if not pst or not ip:
+            return False
+
+        if pst == "shelly":
+            r = requests.post(
+                f"http://{ip}/rpc/Switch.Set",
+                json={"id": 0, "on": on},
+                timeout=2
+            )
+            return r.status_code == 200
+
+        elif pst == "homewizard":
+            r = requests.put(
+                f"http://{ip}/api/v1/state",
+                json={"power_on": on},
+                timeout=2
+            )
+            return r.status_code == 200
+
+    except Exception as e:
+        print(f"Power socket error ({power_socket_type} {ip}): {e}")
+
+    return False
+
+
+def check_power_socket_online(power_socket_type, ip):
+    try:
+        pst = (power_socket_type or "").lower().strip()
+        if not pst or not ip:
+            return False
+
+        if pst == "shelly":
+            r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
+            return r.status_code == 200
+
+        elif pst == "homewizard":
+            r = requests.get(f"http://{ip}/api", timeout=2)
+            return r.status_code == 200
+
+    except Exception:
+        pass
+
+    return False
+
+
+def mark_device_activity(device):
+    st = get_device_state(device)
+    now = time.time()
+    st["last_active_time"] = now
+    if has_power_socket(device):
+        st["power_socket_last_on_command"] = now
+
+
+def ensure_power_socket_on(device):
+    st = get_device_state(device)
+
+    if not has_power_socket(device):
+        return True
+
+    pstype = device.get("power_socket_type")
+    psip = device.get("power_socket_ip")
+    cfg = load_config()
+    settings = get_runtime_settings(cfg)
+    delay = int(settings.get("POWER_SOCKET_DELAY", 5) or 5)
+
+    # socket al aan en wachttijd klaar
+    if st["power_socket_on"] and not st["waiting_for_power_socket"]:
+        st["power_socket_last_on_command"] = time.time()
+        return True
+
+    # eerste inschakeling
+    if not st["power_socket_on"] and not st["waiting_for_power_socket"]:
+        ok = set_power_socket(pstype, psip, True)
+        if ok:
+            now = time.time()
+            st["power_socket_on"] = True
+            st["power_socket_last_on_command"] = now
+            st["waiting_for_power_socket"] = True
+            st["power_socket_ready_at"] = now + delay
+            st["pending_start"] = True
+        return False
+
+    # wachten tot de opstart-delay verstreken is
+    if st["waiting_for_power_socket"]:
+        if time.time() >= (st["power_socket_ready_at"] or 0):
+            st["waiting_for_power_socket"] = False
+            st["power_socket_ready_at"] = None
+            st["power_socket_last_on_command"] = time.time()
+            return True
+        return False
+
+    return False
+
+
+def maybe_turn_off_power_socket(device):
+    st = get_device_state(device)
+
+    if not has_power_socket(device):
+        return
+
+    cfg = load_config()
+    settings = get_runtime_settings(cfg)
+    hold_seconds = int(settings.get("POWER_SOCKET_HOLD_SECONDS", 3600) or 3600)
+
+    if st["started"] or st["on"] or st["brightness"] > 0 or st["waiting_for_power_socket"] or st.get("pending_start"):
+        return
+
+    last_cmd = st.get("power_socket_last_on_command", 0)
+    if not st["power_socket_on"]:
+        return
+
+    if last_cmd and (time.time() - last_cmd) >= hold_seconds:
+        pstype = device.get("power_socket_type")
+        psip = device.get("power_socket_ip")
+        ok = set_power_socket(pstype, psip, False)
+        if ok:
+            st["power_socket_on"] = False
+            st["power_socket_ready_at"] = None
+            st["waiting_for_power_socket"] = False
+
+
+# ================= STATE INIT =================
 def init_device_states(devices):
     global device_states
     for d in devices:
@@ -618,11 +853,17 @@ def init_device_states(devices):
                 "manual_override": False,
                 "freeze": False,
                 "started": False,
+                "pending_start": False,
                 "saturated_since": None,
                 "min_since": None,
-                "last_active_time": time.time(),
-                "power": 0
+                "last_active_time": 0,
+                "power": 0,
+                "power_socket_on": False,
+                "power_socket_last_on_command": 0,
+                "waiting_for_power_socket": False,
+                "power_socket_ready_at": None
             }
+
 
 def init_device_pids(devices):
     global device_pids
@@ -632,6 +873,7 @@ def init_device_pids(devices):
             p = PID(PID_KP, PID_KI, PID_KD, setpoint=0)
             p.output_limits = (MIN_BRIGHTNESS, MAX_BRIGHTNESS)
             device_pids[ip] = p
+
 
 def sync_configured_devices_off(devices):
     if not devices:
@@ -650,9 +892,14 @@ def sync_configured_devices_off(devices):
         state["brightness"] = 0
         state["freeze"] = False
         state["started"] = False
+        state["pending_start"] = False
         state["manual_override"] = False
         state["saturated_since"] = None
         state["min_since"] = None
+        state["waiting_for_power_socket"] = False
+        state["power_socket_ready_at"] = None
+        state["power_socket_on"] = False
+        state["power_socket_last_on_command"] = 0
 
         for _ in range(3):
             try:
@@ -661,7 +908,15 @@ def sync_configured_devices_off(devices):
             except Exception as e:
                 print(f"Sync error ({ip}): {e}")
 
+        if has_power_socket(d):
+            try:
+                set_power_socket(d.get("power_socket_type"), d.get("power_socket_ip"), False)
+                time.sleep(0.2)
+            except Exception as e:
+                print(f"Power socket sync error ({d.get('power_socket_ip')}): {e}")
+
     print("Sync voltooid.")
+
 
 def startup_sync_devices():
     cfg = load_config()
@@ -674,22 +929,28 @@ def startup_sync_devices():
     init_device_pids(devices)
     sync_configured_devices_off(devices)
 
+
 # ================= CONTROL HELPERS =================
 def get_sorted_devices(devices):
     return sorted(devices, key=lambda x: x["priority"])
 
+
 def get_device_state(device):
     return device_states[device["ip"]]
+
 
 def is_started(device):
     return get_device_state(device)["started"]
 
+
 def is_frozen(device):
     return get_device_state(device)["freeze"]
+
 
 def is_running(device):
     st = get_device_state(device)
     return st["started"] and not st["freeze"] and st["on"]
+
 
 def higher_priorities_started_and_frozen(devices_sorted, priority):
     for d in devices_sorted:
@@ -699,20 +960,22 @@ def higher_priorities_started_and_frozen(devices_sorted, priority):
                 return False
     return True
 
+
 def lower_priorities_off(devices_sorted, priority):
     for d in devices_sorted:
         if d["priority"] > priority:
             st = get_device_state(d)
-            if st["started"] or st["on"] or st["brightness"] > 0:
+            if st["started"] or st["on"] or st["brightness"] > 0 or st.get("pending_start"):
                 return False
     return True
+
 
 def get_next_startable_device(devices_sorted):
     for d in devices_sorted:
         st = get_device_state(d)
         prio = d["priority"]
 
-        if st["started"]:
+        if st["started"] or st.get("pending_start"):
             continue
 
         if prio == 1:
@@ -723,11 +986,13 @@ def get_next_startable_device(devices_sorted):
 
     return None
 
+
 def get_lowest_priority_running(devices_sorted):
     for d in reversed(devices_sorted):
         if is_running(d):
             return d
     return None
+
 
 def get_highest_frozen_allowed_to_unfreeze(devices_sorted):
     for d in reversed(devices_sorted):
@@ -736,11 +1001,13 @@ def get_highest_frozen_allowed_to_unfreeze(devices_sorted):
             return d
     return None
 
+
 def is_last_possible_priority(devices_sorted, device):
     if not devices_sorted:
         return False
     last_priority = max(d["priority"] for d in devices_sorted)
     return device["priority"] == last_priority
+
 
 def reset_device_to_off(ip):
     state = device_states[ip]
@@ -748,9 +1015,13 @@ def reset_device_to_off(ip):
     state["brightness"] = 0
     state["freeze"] = False
     state["started"] = False
+    state["pending_start"] = False
     state["saturated_since"] = None
     state["min_since"] = None
+    state["waiting_for_power_socket"] = False
+    state["power_socket_ready_at"] = None
     set_shelly(0, False, ip)
+
 
 def hold_frozen_output(ip):
     state = device_states[ip]
@@ -758,6 +1029,7 @@ def hold_frozen_output(ip):
         state["brightness"] = MIN_BRIGHTNESS
     state["on"] = True
     set_shelly(state["brightness"], True, ip)
+
 
 # ================= CONTROL LOOP =================
 def control_loop():
@@ -846,17 +1118,59 @@ def control_loop():
                     ip = d["ip"]
                     st = device_states[ip]
 
+                    if st.get("pending_start"):
+                        ready = ensure_power_socket_on(d)
+                        if ready:
+                            st["started"] = True
+                            st["pending_start"] = False
+                            st["on"] = True
+                            st["freeze"] = False
+                            st["saturated_since"] = None
+                            st["min_since"] = None
+                            if st["brightness"] < MIN_BRIGHTNESS:
+                                st["brightness"] = MIN_BRIGHTNESS
+                            set_shelly(st["brightness"], True, ip)
+                            mark_device_activity(d)
+                        continue
+
                     if not st["started"]:
                         continue
 
                     if st["freeze"]:
                         hold_frozen_output(ip)
+                        mark_device_activity(d)
                     elif st["on"] and st["brightness"] >= MIN_BRIGHTNESS:
                         set_shelly(st["brightness"], True, ip)
+                        mark_device_activity(d)
 
                 current_brightness = 0
+
+                for d in devices_sorted:
+                    maybe_turn_off_power_socket(d)
+
                 time.sleep(1)
                 continue
+
+            # 0. Rond pending starts altijd eerst af
+            for d in devices_sorted:
+                ip = d["ip"]
+                st = device_states[ip]
+
+                if st.get("pending_start"):
+                    ready = ensure_power_socket_on(d)
+                    if ready:
+                        st["started"] = True
+                        st["pending_start"] = False
+                        st["on"] = True
+                        st["freeze"] = False
+                        st["saturated_since"] = None
+                        st["min_since"] = None
+
+                        if st["brightness"] < MIN_BRIGHTNESS:
+                            st["brightness"] = MIN_BRIGHTNESS
+
+                        set_shelly(st["brightness"], True, ip)
+                        mark_device_activity(d)
 
             # 1. Start timer voor export
             if measured_power <= EXPORT_THRESHOLD:
@@ -872,17 +1186,40 @@ def control_loop():
                     ip = next_dev["ip"]
                     st = device_states[ip]
 
-                    st["started"] = True
-                    st["on"] = True
-                    st["freeze"] = False
-                    st["saturated_since"] = None
-                    st["min_since"] = None
+                    if has_power_socket(next_dev):
+                        if not st.get("pending_start"):
+                            ready = ensure_power_socket_on(next_dev)
 
-                    if st["brightness"] < MIN_BRIGHTNESS:
-                        st["brightness"] = MIN_BRIGHTNESS
+                            if ready:
+                                st["started"] = True
+                                st["pending_start"] = False
+                                st["on"] = True
+                                st["freeze"] = False
+                                st["saturated_since"] = None
+                                st["min_since"] = None
 
-                    set_shelly(st["brightness"], True, ip)
-                    export_start = None
+                                if st["brightness"] < MIN_BRIGHTNESS:
+                                    st["brightness"] = MIN_BRIGHTNESS
+
+                                set_shelly(st["brightness"], True, ip)
+                                mark_device_activity(next_dev)
+
+                        export_start = None
+
+                    else:
+                        st["started"] = True
+                        st["pending_start"] = False
+                        st["on"] = True
+                        st["freeze"] = False
+                        st["saturated_since"] = None
+                        st["min_since"] = None
+
+                        if st["brightness"] < MIN_BRIGHTNESS:
+                            st["brightness"] = MIN_BRIGHTNESS
+
+                        set_shelly(st["brightness"], True, ip)
+                        mark_device_activity(next_dev)
+                        export_start = None
 
             # 3. Bepaal welke prio actief mag regelen
             regulating_device = get_lowest_priority_running(devices_sorted)
@@ -892,15 +1229,24 @@ def control_loop():
                 st = device_states[ip]
 
                 if not st["started"]:
+                    if st.get("pending_start"):
+                        continue
+
                     if st["on"] or st["brightness"] != 0 or st["freeze"]:
                         reset_device_to_off(ip)
                     continue
+
+                if has_power_socket(d) and st["waiting_for_power_socket"]:
+                    ready = ensure_power_socket_on(d)
+                    if not ready:
+                        continue
 
                 if not st["online"]:
                     continue
 
                 if st["freeze"]:
                     hold_frozen_output(ip)
+                    mark_device_activity(d)
                     continue
 
                 if regulating_device and ip == regulating_device["ip"]:
@@ -911,6 +1257,7 @@ def control_loop():
                     st["on"] = True
                     set_shelly(b, True, ip)
                     active_brightness = b
+                    mark_device_activity(d)
 
                     if b >= FREEZE_AT and not is_last_possible_priority(devices_sorted, d):
                         if st["saturated_since"] is None:
@@ -932,6 +1279,7 @@ def control_loop():
                         st["brightness"] = MIN_BRIGHTNESS
                     st["on"] = True
                     set_shelly(st["brightness"], True, ip)
+                    mark_device_activity(d)
 
             current_brightness = active_brightness
 
@@ -970,17 +1318,23 @@ def control_loop():
                         if st["brightness"] < MIN_BRIGHTNESS:
                             st["brightness"] = MIN_BRIGHTNESS
                         set_shelly(st["brightness"], True, candidate_unfreeze["ip"])
+                        mark_device_activity(candidate_unfreeze)
                         import_unfreeze_start = None
                 else:
                     import_unfreeze_start = None
             else:
                 import_unfreeze_start = None
 
+            # 6. Powersockets eventueel uitschakelen na hold-time
+            for d in devices_sorted:
+                maybe_turn_off_power_socket(d)
+
             time.sleep(1)
 
         except Exception as e:
             print("Fout control_loop:", e)
             time.sleep(2)
+
 
 # ================= START =================
 if __name__ == "__main__":

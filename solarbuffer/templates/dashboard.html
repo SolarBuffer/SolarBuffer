@@ -19,7 +19,7 @@
       padding: 1rem;
     }
     h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
-    .container { width: 100%; max-width: 480px; }
+    .container { width: 100%; max-width: 560px; }
 
     .header { text-align: center; margin-bottom: 1.5rem; }
     .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
@@ -85,6 +85,8 @@
 
     .dot { width: 10px; height: 10px; border-radius: 50%; background: hsl(220, 10%, 80%); }
     .dot.active { background: #22c55e; animation: pulse 2s infinite; }
+    .dot.pending { background: hsl(32, 95%, 52%); animation: pulse 1.2s infinite; }
+    .dot.freeze { background: hsl(215, 80%, 58%); }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
@@ -113,35 +115,41 @@
 
     .footer { text-align: center; font-size: 0.75rem; color: hsl(220, 10%, 46%); margin-top: 1rem; }
 
-    /* Device cards */
     .device-card {
       border: 1px solid hsl(30, 15%, 88%);
       border-radius: 0.6rem;
-      padding: 0.85rem 1rem;
+      padding: 0.9rem 1rem;
       margin-bottom: 0.75rem;
       cursor: pointer;
       transition: opacity 0.2s;
+      background: white;
     }
     .device-card:last-child { margin-bottom: 0; }
-    .device-card.offline { opacity: 0.5; cursor: default; }
+    .device-card.offline { opacity: 0.6; cursor: default; }
 
     .device-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 0.6rem;
+      gap: 0.75rem;
+      margin-bottom: 0.65rem;
     }
 
-    .device-info .name { font-weight: 600; font-size: 0.92rem; }
+    .device-info .name { font-weight: 600; font-size: 0.95rem; }
     .device-info .ip { font-size: 0.78rem; color: hsl(220, 10%, 46%); margin-top: 0.1rem; }
 
     .device-top-right {
       display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
       align-items: center;
       gap: 0.4rem;
     }
 
-    .online-badge {
+    .online-badge,
+    .power-badge,
+    .state-badge,
+    .socket-badge {
       font-size: 0.68rem;
       font-weight: 600;
       padding: 0.2rem 0.55rem;
@@ -149,29 +157,77 @@
       letter-spacing: 0.03em;
       white-space: nowrap;
     }
+
     .online-badge.online { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
     .online-badge.offline { background: hsl(0, 60%, 93%); color: hsl(0, 65%, 42%); }
 
     .power-badge {
-      font-size: 0.68rem;
-      font-weight: 600;
-      padding: 0.2rem 0.55rem;
-      border-radius: 999px;
-      letter-spacing: 0.03em;
-      white-space: nowrap;
       background: hsl(32, 95%, 90%);
       color: hsl(32, 95%, 32%);
       display: none;
     }
-    .power-badge.visible {
-      display: inline-block;
+    .power-badge.visible { display: inline-block; }
+
+    .state-badge.off { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
+    .state-badge.pending { background: hsl(32, 95%, 90%); color: hsl(32, 95%, 32%); }
+    .state-badge.running { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .state-badge.freeze { background: hsl(215, 80%, 91%); color: hsl(215, 70%, 36%); }
+    .state-badge.offline { background: hsl(0, 60%, 93%); color: hsl(0, 65%, 42%); }
+
+    .socket-badge.none { background: hsl(220, 10%, 94%); color: hsl(220, 10%, 42%); }
+    .socket-badge.off { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
+    .socket-badge.pending { background: hsl(32, 95%, 90%); color: hsl(32, 95%, 32%); }
+    .socket-badge.on { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+
+    .device-middle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 0.7rem;
     }
 
-    .device-bottom { display: flex; align-items: center; gap: 0.75rem; }
-    .bar { flex: 1; height: 6px; background: hsl(32, 95%, 88%); border-radius: 3px; overflow: hidden; }
-    .fill { height: 6px; background: hsl(32, 95%, 52%); border-radius: 3px; transition: width 0.4s ease; width: 0; }
+    .mini-info {
+      background: hsl(30, 20%, 96%);
+      border-radius: 0.5rem;
+      padding: 0.55rem 0.7rem;
+    }
 
-    /* Updates tegel */
+    .mini-info .mini-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: hsl(220, 10%, 46%);
+      margin-bottom: 0.15rem;
+    }
+
+    .mini-info .mini-value {
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 16%);
+    }
+
+    .device-bottom {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .bar {
+      flex: 1;
+      height: 6px;
+      background: hsl(32, 95%, 88%);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 6px;
+      background: hsl(32, 95%, 52%);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      width: 0;
+    }
+
     .updates-card {
       background: hsl(220, 8%, 92%);
       border: 1px solid hsl(220, 10%, 82%);
@@ -202,6 +258,12 @@
       color: hsl(220, 20%, 18%);
       line-height: 1.45;
     }
+
+    @media (max-width: 520px) {
+      .container { max-width: 100%; }
+      .grid { grid-template-columns: 1fr; }
+      .device-middle { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 
@@ -213,7 +275,6 @@
       <p>Niet terugleveren, Bufferen!</p>
     </div>
 
-    <!-- Stat cards -->
     <div class="grid">
       <div class="card stat-card">
         <span class="stat-icon">⚡</span>
@@ -229,7 +290,6 @@
       </div>
     </div>
 
-    <!-- PID Controller -->
     <div class="card control-card">
       <h2><span class="ctrl-icon">🎛️</span> Besturing</h2>
       <div class="control-row">
@@ -247,13 +307,11 @@
       </div>
     </div>
 
-    <!-- Shelly apparaten -->
     <div class="card control-card">
       <h2><span class="ctrl-icon">☀️</span> SolarBuffers</h2>
       <div id="devicesContainer"></div>
     </div>
 
-    <!-- Wizard -->
     <div class="card control-card">
       <h2><span class="ctrl-icon">⚙️</span> Wizard</h2>
       <div class="control-row" onclick="goToWizard()">
@@ -264,7 +322,6 @@
       </div>
     </div>
 
-    <!-- Updates -->
     <div class="card control-card updates-card">
       <h2><span class="ctrl-icon">📝</span> Updates</h2>
       <div class="updates-list">
@@ -288,10 +345,10 @@
       fetch("/status_json")
         .then(r => r.json())
         .then(data => {
-          document.getElementById("current_power").textContent = data.power.toFixed(1);
-          document.getElementById("current_brightness").textContent = data.brightness.toFixed(1);
+          document.getElementById("current_power").textContent = Number(data.power || 0).toFixed(1);
+          document.getElementById("current_brightness").textContent = Number(data.brightness || 0).toFixed(1);
 
-          document.getElementById("pid_toggle").checked = data.enabled;
+          document.getElementById("pid_toggle").checked = !!data.enabled;
           document.getElementById("pid_sub").textContent = data.enabled ? "Actief" : "Uitgeschakeld";
           document.getElementById("pid_dot").className = "dot" + (data.enabled ? " active" : "");
 
@@ -312,48 +369,116 @@
       window.location.href = "/wizard_forced";
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function getDeviceState(d) {
+      if (!d.online) {
+        return { label: "Offline", cls: "offline", dot: "" };
+      }
+      if (d.pending_start || d.waiting_for_power_socket) {
+        return { label: "Opstarten", cls: "pending", dot: "pending" };
+      }
+      if (d.freeze) {
+        return { label: "Bevroren", cls: "freeze", dot: "freeze" };
+      }
+      if (d.started && d.on) {
+        return { label: "Actief", cls: "running", dot: "active" };
+      }
+      return { label: "Uit", cls: "off", dot: "" };
+    }
+
+    function getSocketState(d) {
+      const hasSocket = !!(d.power_socket_type && d.power_socket_ip);
+
+      if (!hasSocket) {
+        return { label: "Geen socket", cls: "none" };
+      }
+      if (d.waiting_for_power_socket) {
+        return { label: "Socket opstarten", cls: "pending" };
+      }
+      if (d.power_socket_on) {
+        return { label: "Socket aan", cls: "on" };
+      }
+      return { label: "Socket uit", cls: "off" };
+    }
+
+    function getPowerMeterText(d) {
+      if (!d.power_meter) return "Geen meter";
+      if (!d.power_meter_online) return "Meter offline";
+      return `${Number(d.power || 0).toFixed(1)} W`;
+    }
+
+    function getToggleChecked(d) {
+      return !!(d.on || d.started || d.pending_start);
+    }
+
     function renderDevices(devices) {
       const cont = document.getElementById("devicesContainer");
+
       if (devices.length === 0) {
         cont.innerHTML = '<div class="control-label"><div class="sub">Geen apparaten ingesteld.</div></div>';
         return;
       }
 
-      cont.innerHTML = devices.map(d => `
-        <div class="device-card ${d.online ? '' : 'offline'}">
-          <div class="device-top">
-            <div class="device-info">
-              <div class="name">${d.name}</div>
-              <div class="ip">${d.ip}</div>
+      cont.innerHTML = devices.map(d => {
+        const state = getDeviceState(d);
+        const socket = getSocketState(d);
+        const powerMeterText = getPowerMeterText(d);
+        const fillWidth = d.online ? Number(d.brightness || 0) : 0;
+
+        return `
+          <div class="device-card ${d.online ? '' : 'offline'}">
+            <div class="device-top">
+              <div class="device-info">
+                <div class="name">${escapeHtml(d.name)}</div>
+                <div class="ip">${escapeHtml(d.ip)}</div>
+              </div>
+
+              <div class="device-top-right">
+                <span class="state-badge ${state.cls}">${state.label}</span>
+                <span class="online-badge ${d.online ? 'online' : 'offline'}">
+                  ${d.online ? '● Online' : '● Offline'}
+                </span>
+              </div>
             </div>
-            <div class="device-top-right">
-              <span class="power-badge ${d.power_meter ? 'visible' : ''}">
-                ${
-                  d.power_meter
-                    ? (d.power_meter_online
-                        ? `${Number(d.power || 0).toFixed(1)} W`
-                        : 'meter offline')
-                    : ''
-                }
-              </span>
-              <span class="online-badge ${d.online ? 'online' : 'offline'}">
-                ${d.online ? '● Online' : '● Offline'}
-              </span>
+
+            <div class="device-middle">
+              <div class="mini-info">
+                <div class="mini-label">Socket</div>
+                <div class="mini-value">
+                  <span class="socket-badge ${socket.cls}">${socket.label}</span>
+                </div>
+              </div>
+
+              <div class="mini-info">
+                <div class="mini-label">Vermogensmeter</div>
+                <div class="mini-value">${escapeHtml(powerMeterText)}</div>
+              </div>
+            </div>
+
+            <div class="device-bottom">
+              <div class="dot ${state.dot}"></div>
+              <label class="toggle">
+                <input type="checkbox"
+                       ${getToggleChecked(d) ? 'checked' : ''}
+                       ${d.online ? '' : 'disabled'}
+                       onchange="toggleDevice('${escapeHtml(d.ip)}')">
+                <span class="slider"></span>
+              </label>
+              <div class="bar">
+                <div class="fill" style="width: ${fillWidth}%"></div>
+              </div>
             </div>
           </div>
-          <div class="device-bottom">
-            <div class="dot ${d.online && d.on ? 'active' : ''}"></div>
-            <label class="toggle">
-              <input type="checkbox" ${d.online && d.on ? 'checked' : ''} ${d.online ? '' : 'disabled'}
-                     onchange="toggleDevice('${d.ip}')">
-              <span class="slider"></span>
-            </label>
-            <div class="bar">
-              <div class="fill" style="width: ${d.online ? d.brightness : 0}%"></div>
-            </div>
-          </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
 
     setInterval(updateStatus, 1000);

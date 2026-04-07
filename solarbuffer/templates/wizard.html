@@ -22,7 +22,7 @@ body {
 
 .container {
     width:100%;
-    max-width:720px;
+    max-width:920px;
     background:white;
     border:1px solid hsl(30,15%,88%);
     border-radius:.75rem;
@@ -145,7 +145,7 @@ button:hover { background:hsl(32,85%,45%); }
 .device-row {
     display:flex;
     flex-direction:column;
-    gap:.5rem;
+    gap:.9rem;
     margin-bottom:1rem;
     padding:1rem;
     border:1px solid hsl(30,15%,90%);
@@ -176,10 +176,8 @@ button:hover { background:hsl(32,85%,45%); }
     min-width:0;
 }
 
-.device-row-bottom input[name="shelly_ip[]"],
-.device-row-bottom select[name="priority[]"],
-.device-row-bottom select[name="power_meter[]"],
-.device-row-bottom input[name="power_ip[]"] {
+.device-row-bottom input,
+.device-row-bottom select {
     padding:.6rem .75rem;
     border:1px solid hsl(30,15%,88%);
     border-radius:.5rem;
@@ -187,16 +185,6 @@ button:hover { background:hsl(32,85%,45%); }
     font-family:'Inter',sans-serif;
     line-height:1.5;
     appearance:none;
-}
-
-.device-row-bottom input[name="shelly_ip[]"],
-.device-row-bottom input[name="power_ip[]"] {
-    flex:2;
-}
-
-.device-row-bottom select[name="priority[]"],
-.device-row-bottom select[name="power_meter[]"] {
-    flex:1;
 }
 
 .remove-slot {
@@ -371,6 +359,20 @@ button:hover { background:hsl(32,85%,45%); }
     white-space:nowrap;
 }
 
+.device-subsection {
+    border:1px dashed hsl(30,15%,86%);
+    border-radius:.6rem;
+    padding:.85rem;
+    background:white;
+}
+
+.device-subsection-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-size:.92rem;
+    margin-bottom:.6rem;
+    color:hsl(220,20%,14%);
+}
+
 @media (max-width: 640px) {
     .container {
         max-width:100%;
@@ -522,6 +524,24 @@ button:hover { background:hsl(32,85%,45%); }
                             <span class="unit">W</span>
                         </div>
                     </div>
+
+                    <div class="field">
+                        <label class="field-label" for="POWER_SOCKET_DELAY">Power socket startvertraging</label>
+                        <div class="field-help">Wachttijd na inschakelen socket</div>
+                        <div class="input-with-unit">
+                            <input type="number" id="POWER_SOCKET_DELAY" name="POWER_SOCKET_DELAY" value="{{ config.expert_settings.POWER_SOCKET_DELAY if config.expert_settings else 5 }}">
+                            <span class="unit">s</span>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label" for="POWER_SOCKET_HOLD_SECONDS">Power socket nalooptijd</label>
+                        <div class="field-help">Uitschakelen na laatste activatie</div>
+                        <div class="input-with-unit">
+                            <input type="number" id="POWER_SOCKET_HOLD_SECONDS" name="POWER_SOCKET_HOLD_SECONDS" value="{{ config.expert_settings.POWER_SOCKET_HOLD_SECONDS if config.expert_settings else 3600 }}">
+                            <span class="unit">s</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -560,6 +580,22 @@ function createPriorityOptions(selected="") {
         options += `<option value="${i}" ${String(selected) == String(i) ? 'selected' : ''}>${i}</option>`;
     }
     return options;
+}
+
+function createPowerMeterOptions(selected=""){
+    return `
+        <option value="" ${selected===""?'selected':''}>Geen</option>
+        <option value="shelly" ${selected==="shelly"?'selected':''}>Shelly</option>
+        <option value="homewizard" ${selected==="homewizard"?'selected':''}>HomeWizard</option>
+    `;
+}
+
+function createPowerSocketOptions(selected=""){
+    return `
+        <option value="" ${selected===""?'selected':''}>Geen</option>
+        <option value="shelly" ${selected==="shelly"?'selected':''}>Shelly Plug</option>
+        <option value="homewizard" ${selected==="homewizard"?'selected':''}>HomeWizard Energy Socket</option>
+    `;
 }
 
 function getUsedPriorities(){
@@ -626,6 +662,23 @@ function updatePowerIpState(row){
     }
 }
 
+function updatePowerSocketState(row){
+    const socketTypeField = row.querySelector('select[name="power_socket_type[]"]');
+    const socketIpField = row.querySelector('input[name="power_socket_ip[]"]');
+
+    if(!socketTypeField || !socketIpField) return;
+
+    const enabled = socketTypeField.value !== "";
+
+    socketIpField.disabled = false;
+    socketIpField.readOnly = !enabled;
+    socketIpField.required = enabled;
+
+    if(!enabled){
+        socketIpField.value = "";
+    }
+}
+
 function updateExpertModeVisibility(){
     const expertMode = document.getElementById('expertMode');
     const expertBox = document.getElementById('expertSettingsBox');
@@ -650,7 +703,15 @@ function refreshRemoveButtons(){
     });
 }
 
-function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
+function addDevice(
+    name='',
+    ip='',
+    priority='',
+    power_meter='',
+    power_ip='',
+    power_socket_type='',
+    power_socket_ip=''
+){
     const container = document.getElementById('deviceContainer');
     if(container.children.length >= 5){
         alert("Je kunt maximaal 5 apparaten toevoegen.");
@@ -681,19 +742,37 @@ function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
             <div class="remove-slot"></div>
         </div>
 
-        <div class="device-row-bottom">
-            <div style="flex:1;display:flex;flex-direction:column;">
-                <label>Power meter</label>
-                <select name="power_meter[]">
-                    <option value="" ${power_meter==""?'selected':''}>Geen</option>
-                    <option value="shelly" ${power_meter=="shelly"?'selected':''}>Shelly</option>
-                    <option value="homewizard" ${power_meter=="homewizard"?'selected':''}>HomeWizard</option>
-                </select>
-            </div>
+        <div class="device-subsection">
+            <div class="device-subsection-title">Power meter</div>
+            <div class="device-row-bottom">
+                <div style="flex:1;display:flex;flex-direction:column;">
+                    <label>Type</label>
+                    <select name="power_meter[]">
+                        ${createPowerMeterOptions(power_meter)}
+                    </select>
+                </div>
 
-            <div style="flex:2;display:flex;flex-direction:column;">
-                <label>IP-adres</label>
-                <input type="text" name="power_ip[]" placeholder="Bijv. 192.168.178.50" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                <div style="flex:2;display:flex;flex-direction:column;">
+                    <label>IP-adres</label>
+                    <input type="text" name="power_ip[]" placeholder="Bijv. 192.168.178.50" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                </div>
+            </div>
+        </div>
+
+        <div class="device-subsection">
+            <div class="device-subsection-title">Optionele power socket</div>
+            <div class="device-row-bottom">
+                <div style="flex:1.2;display:flex;flex-direction:column;">
+                    <label>Type</label>
+                    <select name="power_socket_type[]">
+                        ${createPowerSocketOptions(power_socket_type)}
+                    </select>
+                </div>
+
+                <div style="flex:1.8;display:flex;flex-direction:column;">
+                    <label>IP-adres</label>
+                    <input type="text" name="power_socket_ip[]" placeholder="Bijv. 192.168.178.60" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                </div>
             </div>
         </div>
     `;
@@ -701,9 +780,13 @@ function addDevice(name='', ip='', priority='', power_meter='', power_ip=''){
     container.appendChild(row);
 
     const powerMeterSelect = row.querySelector('select[name="power_meter[]"]');
+    const powerSocketSelect = row.querySelector('select[name="power_socket_type[]"]');
+
     powerMeterSelect.addEventListener('change', () => updatePowerIpState(row));
+    powerSocketSelect.addEventListener('change', () => updatePowerSocketState(row));
 
     updatePowerIpState(row);
+    updatePowerSocketState(row);
     updatePriorities();
     refreshRemoveButtons();
     return true;
@@ -842,6 +925,8 @@ async function scanDevices(){
                 const priorityField = row.querySelector('select[name="priority[]"]');
                 const powerMeterField = row.querySelector('select[name="power_meter[]"]');
                 const powerIpField = row.querySelector('input[name="power_ip[]"]');
+                const powerSocketTypeField = row.querySelector('select[name="power_socket_type[]"]');
+                const powerSocketIpField = row.querySelector('input[name="power_socket_ip[]"]');
 
                 const rowIp = (ipField?.value || '').trim();
                 const rowName = (nameField?.value || '').trim();
@@ -852,7 +937,11 @@ async function scanDevices(){
                     priorityField.value = "";
                     powerMeterField.value = "";
                     powerIpField.value = "";
+                    powerSocketTypeField.value = "";
+                    powerSocketIpField.value = "";
+
                     updatePowerIpState(row);
+                    updatePowerSocketState(row);
 
                     filledExistingRow = true;
                     addedCount++;
@@ -864,6 +953,8 @@ async function scanDevices(){
                 const added = addDevice(
                     device.name || 'Shelly',
                     ip,
+                    '',
+                    '',
                     '',
                     '',
                     ''
@@ -928,7 +1019,15 @@ window.addEventListener('DOMContentLoaded', () => {
     updateExpertModeVisibility();
 
     if(devices.length > 0){
-        devices.forEach(d => addDevice(d.name, d.ip, d.priority, d.power_meter || "", d.power_ip || ""));
+        devices.forEach(d => addDevice(
+            d.name,
+            d.ip,
+            d.priority,
+            d.power_meter || "",
+            d.power_ip || "",
+            d.power_socket_type || "",
+            d.power_socket_ip || ""
+        ));
     } else {
         addDevice();
     }
