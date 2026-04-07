@@ -8,6 +8,7 @@
     @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: "Inter", sans-serif;
       background: hsl(30, 25%, 97%);
@@ -18,48 +19,140 @@
       justify-content: center;
       padding: 1rem;
     }
-    h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
-    .container { width: 100%; max-width: 560px; }
 
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
-    .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+    h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .header .icon {
+      font-size: 2rem;
+      color: hsl(32, 95%, 52%);
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+
     .header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
 
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .header p {
+      color: hsl(220, 10%, 46%);
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
     .card {
       background: white;
       border: 1px solid hsl(30, 15%, 88%);
       border-radius: 0.75rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
     }
+
     .stat-card {
       padding: 1.25rem;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 0.35rem;
+      transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
     }
-    .stat-card .stat-icon { font-size: 1.5rem; }
+
+    .stat-card .stat-icon {
+      font-size: 1.5rem;
+    }
+
     .stat-card .label {
       font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: hsl(220, 10%, 46%);
     }
+
     .stat-card .value {
       font-family: "Space Grotesk", sans-serif;
       font-size: 2rem;
       font-weight: 700;
+      text-align: center;
+      line-height: 1.1;
     }
-    .stat-card .unit { font-size: 0.85rem; color: hsl(220, 10%, 46%); }
 
-    .card.control-card { padding: 1.25rem; margin-bottom: 1rem; }
+    .stat-card .unit {
+      font-size: 0.85rem;
+      color: hsl(220, 10%, 46%);
+      min-height: 1rem;
+    }
+
+    .status-card.neutral {
+      background: white;
+      border-color: hsl(30, 15%, 88%);
+    }
+
+    .status-card.off {
+      background: hsl(220, 14%, 96%);
+      border-color: hsl(220, 12%, 85%);
+    }
+
+    .status-card.pending {
+      background: hsl(37, 100%, 95%);
+      border-color: hsl(35, 90%, 78%);
+    }
+
+    .status-card.running {
+      background: hsl(145, 45%, 94%);
+      border-color: hsl(145, 35%, 80%);
+    }
+
+    .status-card.freeze {
+      background: hsl(215, 70%, 95%);
+      border-color: hsl(215, 55%, 82%);
+    }
+
+    .status-card.cascade {
+      background: linear-gradient(135deg, hsl(208, 85%, 95%), hsl(40, 100%, 94%));
+      border-color: hsl(208, 60%, 80%);
+    }
+
+    .status-card.import {
+      background: hsl(0, 70%, 96%);
+      border-color: hsl(0, 55%, 84%);
+    }
+
+    .status-card.waiting {
+      background: hsl(48, 100%, 95%);
+      border-color: hsl(47, 85%, 80%);
+    }
+
+    .status-card.standby {
+      background: hsl(145, 28%, 96%);
+      border-color: hsl(145, 18%, 84%);
+    }
+
+    .card.control-card {
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
     .control-card h2 {
       font-size: 1.1rem;
       margin-bottom: 1rem;
@@ -67,7 +160,11 @@
       align-items: center;
       gap: 0.5rem;
     }
-    .control-card h2 .ctrl-icon { color: hsl(32, 95%, 52%); }
+
+    .control-card h2 .ctrl-icon {
+      color: hsl(32, 95%, 52%);
+    }
+
     .control-row {
       display: flex;
       align-items: center;
@@ -78,19 +175,64 @@
       margin-bottom: 0.75rem;
       cursor: pointer;
     }
-    .control-row:last-child { margin-bottom: 0; }
-    .control-label .name { font-weight: 500; font-size: 0.95rem; }
-    .control-label .sub { font-size: 0.8rem; color: hsl(220, 10%, 46%); }
-    .control-right { display: flex; align-items: center; gap: 0.75rem; }
 
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: hsl(220, 10%, 80%); }
-    .dot.active { background: #22c55e; animation: pulse 2s infinite; }
-    .dot.pending { background: hsl(32, 95%, 52%); animation: pulse 1.2s infinite; }
-    .dot.freeze { background: hsl(215, 80%, 58%); }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
 
-    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
-    .toggle input { display: none; }
+    .control-label .name {
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .control-label .sub {
+      font-size: 0.8rem;
+      color: hsl(220, 10%, 46%);
+    }
+
+    .control-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: hsl(220, 10%, 80%);
+    }
+
+    .dot.active {
+      background: #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    .dot.pending {
+      background: hsl(32, 95%, 52%);
+      animation: pulse 1.2s infinite;
+    }
+
+    .dot.freeze {
+      background: hsl(215, 80%, 58%);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .toggle input {
+      display: none;
+    }
+
     .toggle .slider {
       position: absolute;
       inset: 0;
@@ -98,7 +240,11 @@
       border-radius: 12px;
       transition: background 0.3s;
     }
-    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+
+    .toggle input:checked + .slider {
+      background: hsl(32, 95%, 52%);
+    }
+
     .toggle .slider::before {
       content: "";
       position: absolute;
@@ -111,9 +257,17 @@
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
       transition: transform 0.3s;
     }
-    .toggle input:checked + .slider::before { transform: translateX(20px); }
 
-    .footer { text-align: center; font-size: 0.75rem; color: hsl(220, 10%, 46%); margin-top: 1rem; }
+    .toggle input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: hsl(220, 10%, 46%);
+      margin-top: 1rem;
+    }
 
     .device-card {
       border: 1px solid hsl(30, 15%, 88%);
@@ -124,8 +278,15 @@
       transition: opacity 0.2s;
       background: white;
     }
-    .device-card:last-child { margin-bottom: 0; }
-    .device-card.offline { opacity: 0.6; cursor: default; }
+
+    .device-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .device-card.offline {
+      opacity: 0.6;
+      cursor: default;
+    }
 
     .device-top {
       display: flex;
@@ -135,8 +296,16 @@
       margin-bottom: 0.65rem;
     }
 
-    .device-info .name { font-weight: 600; font-size: 0.95rem; }
-    .device-info .ip { font-size: 0.78rem; color: hsl(220, 10%, 46%); margin-top: 0.1rem; }
+    .device-info .name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .device-info .ip {
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 46%);
+      margin-top: 0.1rem;
+    }
 
     .device-top-right {
       display: flex;
@@ -147,7 +316,6 @@
     }
 
     .online-badge,
-    .power-badge,
     .state-badge,
     .socket-badge {
       font-size: 0.68rem;
@@ -158,26 +326,60 @@
       white-space: nowrap;
     }
 
-    .online-badge.online { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
-    .online-badge.offline { background: hsl(0, 60%, 93%); color: hsl(0, 65%, 42%); }
+    .online-badge.online {
+      background: hsl(145, 55%, 90%);
+      color: hsl(145, 60%, 28%);
+    }
 
-    .power-badge {
+    .online-badge.offline {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 42%);
+    }
+
+    .state-badge.off {
+      background: hsl(220, 10%, 92%);
+      color: hsl(220, 12%, 36%);
+    }
+
+    .state-badge.pending {
       background: hsl(32, 95%, 90%);
       color: hsl(32, 95%, 32%);
-      display: none;
     }
-    .power-badge.visible { display: inline-block; }
 
-    .state-badge.off { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
-    .state-badge.pending { background: hsl(32, 95%, 90%); color: hsl(32, 95%, 32%); }
-    .state-badge.running { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
-    .state-badge.freeze { background: hsl(215, 80%, 91%); color: hsl(215, 70%, 36%); }
-    .state-badge.offline { background: hsl(0, 60%, 93%); color: hsl(0, 65%, 42%); }
+    .state-badge.running {
+      background: hsl(145, 55%, 90%);
+      color: hsl(145, 60%, 28%);
+    }
 
-    .socket-badge.none { background: hsl(220, 10%, 94%); color: hsl(220, 10%, 42%); }
-    .socket-badge.off { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
-    .socket-badge.pending { background: hsl(32, 95%, 90%); color: hsl(32, 95%, 32%); }
-    .socket-badge.on { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .state-badge.freeze {
+      background: hsl(215, 80%, 91%);
+      color: hsl(215, 70%, 36%);
+    }
+
+    .state-badge.offline {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 42%);
+    }
+
+    .socket-badge.none {
+      background: hsl(220, 10%, 94%);
+      color: hsl(220, 10%, 42%);
+    }
+
+    .socket-badge.off {
+      background: hsl(220, 10%, 92%);
+      color: hsl(220, 12%, 36%);
+    }
+
+    .socket-badge.pending {
+      background: hsl(32, 95%, 90%);
+      color: hsl(32, 95%, 32%);
+    }
+
+    .socket-badge.on {
+      background: hsl(145, 55%, 90%);
+      color: hsl(145, 60%, 28%);
+    }
 
     .device-middle {
       display: grid;
@@ -282,11 +484,12 @@
         <span class="value" id="current_power">0.0</span>
         <span class="unit">W</span>
       </div>
-      <div class="card stat-card">
-        <span class="stat-icon">🔥</span>
-        <span class="label">Sturing</span>
-        <span class="value" id="current_brightness">0.0</span>
-        <span class="unit">%</span>
+
+      <div class="card stat-card status-card neutral" id="buffer_status_card">
+        <span class="stat-icon" id="buffer_status_icon">☀️</span>
+        <span class="label">Bufferstatus</span>
+        <span class="value" id="buffer_status_value">Standby</span>
+        <span class="unit" id="buffer_status_sub">Geen actieve regeling</span>
       </div>
     </div>
 
@@ -346,7 +549,12 @@
         .then(r => r.json())
         .then(data => {
           document.getElementById("current_power").textContent = Number(data.power || 0).toFixed(1);
-          document.getElementById("current_brightness").textContent = Number(data.brightness || 0).toFixed(1);
+
+          const bufferStatus = getBufferStatus(data);
+          document.getElementById("buffer_status_value").textContent = bufferStatus.label;
+          document.getElementById("buffer_status_sub").textContent = bufferStatus.sub;
+          document.getElementById("buffer_status_icon").textContent = bufferStatus.icon;
+          document.getElementById("buffer_status_card").className = `card stat-card status-card ${bufferStatus.cls}`;
 
           document.getElementById("pid_toggle").checked = !!data.enabled;
           document.getElementById("pid_sub").textContent = data.enabled ? "Actief" : "Uitgeschakeld";
@@ -376,6 +584,87 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    function getBufferStatus(data) {
+      const devices = Array.isArray(data.devices) ? data.devices : [];
+      const enabled = !!data.enabled;
+      const power = Number(data.power || 0);
+
+      const pending = devices.filter(d => d.pending_start || d.waiting_for_power_socket);
+      const frozen = devices.filter(d => d.freeze);
+      const running = devices.filter(d => d.started && !d.freeze);
+      const started = devices.filter(d => d.started || d.pending_start);
+
+      if (!enabled) {
+        return {
+          label: "Uitgeschakeld",
+          sub: "Automatische regeling staat uit",
+          cls: "off",
+          icon: "⏸️"
+        };
+      }
+
+      if (pending.length > 0) {
+        return {
+          label: "Opstarten",
+          sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`,
+          cls: "pending",
+          icon: "🚀"
+        };
+      }
+
+      if (frozen.length > 0 && running.length > 0) {
+        return {
+          label: "Cascade actief",
+          sub: `${frozen.length} bevroren · ${running.length} regelend`,
+          cls: "cascade",
+          icon: "🌤️"
+        };
+      }
+
+      if (frozen.length > 0) {
+        return {
+          label: "Bevroren",
+          sub: `${frozen.length} buffer${frozen.length > 1 ? "s" : ""} op vast niveau`,
+          cls: "freeze",
+          icon: "🧊"
+        };
+      }
+
+      if (running.length > 0) {
+        return {
+          label: "Regelen",
+          sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`,
+          cls: "running",
+          icon: "🔥"
+        };
+      }
+
+      if (power >= 300) {
+        return {
+          label: "Import begrensd",
+          sub: "Netafname te hoog voor inschakelen",
+          cls: "import",
+          icon: "📥"
+        };
+      }
+
+      if (power <= -50 && started.length === 0) {
+        return {
+          label: "Wachten op export",
+          sub: "Export gedetecteerd, wachttimer loopt",
+          cls: "waiting",
+          icon: "⏳"
+        };
+      }
+
+      return {
+        label: "Standby",
+        sub: "Geen actieve buffer nodig",
+        cls: "standby",
+        icon: "☀️"
+      };
     }
 
     function getDeviceState(d) {
