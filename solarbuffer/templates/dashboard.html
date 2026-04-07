@@ -616,7 +616,7 @@
 
       if (frozen.length > 0 && running.length > 0) {
         return {
-          label: "Cascade actief",
+          label: "Overcapaciteit",
           sub: `${frozen.length} bevroren · ${running.length} regelend`,
           cls: "cascade",
           icon: "🌤️"
@@ -634,7 +634,7 @@
 
       if (running.length > 0) {
         return {
-          label: "Regelen",
+          label: "Actief",
           sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`,
           cls: "running",
           icon: "🔥"
@@ -646,8 +646,8 @@
       
       if (power >= importThreshold) {
         return {
-          label: "Geen vrijgave",
-          sub: `Import > ${importThreshold} W`,
+          label: "Geen teruglevering",
+          sub: `Verbruik > ${importThreshold} W`,
           cls: "import",
           icon: "📥"
         };
@@ -659,7 +659,7 @@
       if (power <= exportThreshold && started.length === 0) {
         return {
           label: "Wachten op teruglevering",
-          sub: "Export gedetecteerd, wachttimer loopt",
+          sub: "Teruglevering gedetecteerd, wachttimer loopt",
           cls: "waiting",
           icon: "⏳"
         };
