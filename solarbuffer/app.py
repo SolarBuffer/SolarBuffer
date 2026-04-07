@@ -107,6 +107,7 @@ def safe_int(value, default):
 
 # ================= AUDIT =================
 audit_lock = threading.Lock()
+MAX_AUDIT_LINES = 100
 
 
 def safe_session_username():
@@ -125,6 +126,24 @@ def safe_request_ip():
         return "system"
 
 
+def trim_audit_log(max_lines=MAX_AUDIT_LINES):
+    try:
+        if not os.path.exists(AUDIT_LOG_FILE):
+            return
+
+        with open(AUDIT_LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        if len(lines) > max_lines:
+            lines = lines[-max_lines:]
+
+            with open(AUDIT_LOG_FILE, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+
+    except Exception as e:
+        print(f"Audit log trim fout: {e}")
+
+
 def write_audit_log(action, details=None):
     entry = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
@@ -138,9 +157,11 @@ def write_audit_log(action, details=None):
         with audit_lock:
             with open(AUDIT_LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+            trim_audit_log()
+
     except Exception as e:
         print(f"Audit log fout: {e}")
-
 
 def compare_configs(old_cfg, new_cfg):
     changes = {}
