@@ -641,18 +641,24 @@
         };
       }
 
-      if (power >= 300) {
+      const importThreshold =
+        Number(data.expert_settings?.IMPORT_OFF_THRESHOLD ?? 300);
+      
+      if (power >= importThreshold) {
         return {
-          label: "Import begrensd",
-          sub: "Netafname te hoog voor inschakelen",
+          label: "Geen vrijgave",
+          sub: `Import > ${importThreshold} W`,
           cls: "import",
           icon: "📥"
         };
       }
 
-      if (power <= -50 && started.length === 0) {
+      const exportThreshold =
+        Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
+
+      if (power <= exportThreshold && started.length === 0) {
         return {
-          label: "Wachten op export",
+          label: "Wachten op teruglevering",
           sub: "Export gedetecteerd, wachttimer loopt",
           cls: "waiting",
           icon: "⏳"
