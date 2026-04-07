@@ -434,7 +434,7 @@ button:hover { background:hsl(32,85%,45%); }
 
                 <div class="expert-grid">
                     <div class="field">
-                        <label class="field-label" for="EXPORT_THRESHOLD">Exportdrempel</label>
+                        <label class="field-label" for="EXPORT_THRESHOLD">Inschakeldrempel</label>
                         <div class="field-help">Start bij teruglevering</div>
                         <div class="input-with-unit">
                             <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD" value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
@@ -443,7 +443,7 @@ button:hover { background:hsl(32,85%,45%); }
                     </div>
 
                     <div class="field">
-                        <label class="field-label" for="EXPORT_DELAY">Exportvertraging</label>
+                        <label class="field-label" for="EXPORT_DELAY">Inschakelvertraging</label>
                         <div class="field-help">Wachttijd voor inschakelen</div>
                         <div class="input-with-unit">
                             <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY" value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
