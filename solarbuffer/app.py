@@ -59,10 +59,6 @@ def load_config():
             dev["power_socket_type"] = ""
         if "power_socket_ip" not in dev:
             dev["power_socket_ip"] = ""
-        if "power_socket_delay" not in dev:
-            dev["power_socket_delay"] = DEFAULT_POWER_SOCKET_DELAY
-        if "power_socket_hold_seconds" not in dev:
-            dev["power_socket_hold_seconds"] = DEFAULT_POWER_SOCKET_HOLD_SECONDS
         normalized_devices.append(dev)
 
     cfg["shelly_devices"] = normalized_devices
