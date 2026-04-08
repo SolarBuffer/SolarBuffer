@@ -586,6 +586,18 @@
         .replace(/'/g, "&#039;");
     }
 
+    function getVisualBrightness(brightness) {
+      const minTechnicalBrightness = 34;
+      const maxTechnicalBrightness = 100;
+    
+      const value = Number(brightness || 0);
+    
+      if (value <= minTechnicalBrightness) return 0;
+      if (value >= maxTechnicalBrightness) return 100;
+    
+      return ((value - minTechnicalBrightness) / (maxTechnicalBrightness - minTechnicalBrightness)) * 100;
+    }
+    
     function getBufferStatus(data) {
       const devices = Array.isArray(data.devices) ? data.devices : [];
       const enabled = !!data.enabled;
@@ -726,7 +738,7 @@
         const state = getDeviceState(d);
         const socket = getSocketState(d);
         const powerMeterText = getPowerMeterText(d);
-        const fillWidth = d.online ? Number(d.brightness || 0) : 0;
+        const fillWidth = d.online ? getVisualBrightness(d.brightness) : 0;
 
         return `
           <div class="device-card ${d.online ? '' : 'offline'}">
