@@ -275,10 +275,10 @@ def detect_homewizard_p1(ip):
             return None
 
         possible_keys = [
-            "active_power_w",
-            "total_power_import_t1_kwh",
-            "total_power_export_t1_kwh",
-            "wifi_ssid"
+            "meter_model",
+            "smr_version",
+            "active_tariff",
+            "total_gas_m3"
         ]
 
         if any(k in data for k in possible_keys):
