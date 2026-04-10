@@ -120,7 +120,7 @@ Nu wordt er elke nacht om 03:00 uur 's nachts controleert voor nieuwe updates en
 ---
 
 ## Hotspot voor WiFi 
-Om zonder beeldscherm automatisch WiFi in te stellen word tijdens de eerste boot een Hotspot gestart om de WiFi te configureren via een browser op adres 10.4.0.1
+Om zonder beeldscherm automatisch WiFi in te stellen word tijdens de eerste boot een Hotspot gestart om de WiFi te configureren via een browser op adres 10.42.0.1
 ### 1. Controleer of deze paden aanwezig zijn.
 ```bash
 whoami
@@ -144,7 +144,7 @@ Wants=NetworkManager.service
 Type=simple
 User=root
 WorkingDirectory=/home/solarbuffer
-ExecStart=/home/solarbuffer/venv/bin/python3 /home/solarbuffer/SolarBuffer/solarbufferwifi.py
+ExecStart=/home/solarbuffer/venv/bin/python3 /home/solarbuffer/SolarBuffer/solarbuffer/wifi.py
 Restart=always
 RestartSec=2
 
@@ -235,7 +235,7 @@ sudo nmcli connection add type wifi ifname wlan0 con-name PI-SETUP ssid PI-SETUP
 sudo nmcli connection modify PI-SETUP 802-11-wireless.mode ap
 sudo nmcli connection modify PI-SETUP 802-11-wireless.band bg
 sudo nmcli connection modify PI-SETUP wifi-sec.key-mgmt wpa-psk
-sudo nmcli connection modify PI-SETUP wifi-sec.psk "SolarBufferSetup123"
+sudo nmcli connection modify PI-SETUP wifi-sec.psk "SolarBuffer"
 sudo nmcli connection modify PI-SETUP ipv4.method shared
 sudo nmcli connection modify PI-SETUP ipv6.method ignore
 sudo nmcli connection modify PI-SETUP connection.autoconnect no
