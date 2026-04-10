@@ -124,7 +124,7 @@ Om zonder beeldscherm automatisch WiFi in te stellen word tijdens de eerste boot
 ### 1. Controleer of deze paden aanwezig zijn.
 ```bash
 whoami
-ls -l /home/solarbuffer/SolarBuffer/solarbufferwifi.py
+ls -l /home/solarbuffer/SolarBuffer/solarbuffer/wifi.py
 ls -l /home/solarbuffer/venv/bin/python3
 ```
 
