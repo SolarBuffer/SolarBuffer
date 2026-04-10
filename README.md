@@ -291,6 +291,8 @@ systemctl status solarbuffer-portal.service
 Als je verbonden bent met de PI-SETUP hotspot kan je de WiFi instellingen doen via het voglende adres
 ```bash
 10.42.0.1:80
+of
+solarbuffer.local:80
 ```
 
 ---
