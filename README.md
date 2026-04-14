@@ -322,9 +322,7 @@ Wachtwoord: SolarBuffer
 ### Stap 4 – Thuisnetwerk instellen
 Open een willekeurige webbrowser en ga naar:
 ```bash
-http://10.42.0.1:80
-of
-10.42.0.1:80
+solarbuffer.local:80
 ```
 Vul hier de wifi-gegevens van je thuisnetwerk in.
 Na het opslaan start de hub automatisch opnieuw op.
