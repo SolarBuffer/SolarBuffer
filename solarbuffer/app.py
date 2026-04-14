@@ -551,6 +551,7 @@ def status_json():
             "power_socket_type": d.get("power_socket_type", ""),
             "power_socket_ip": d.get("power_socket_ip", ""),
             "power_socket_on": s.get("power_socket_on", False),
+            "power_socket_online": s.get("power_socket_online", False),
             "waiting_for_power_socket": s.get("waiting_for_power_socket", False),
         })
 
@@ -872,6 +873,7 @@ def init_device_states(devices):
                 "last_active_time": 0,
                 "power": 0,
                 "power_socket_on": False,
+                "power_socket_online": False,
                 "power_socket_last_on_command": 0,
                 "waiting_for_power_socket": False,
                 "power_socket_ready_at": None
@@ -1088,6 +1090,9 @@ def control_loop():
                 pm_type = (d.get("power_meter") or "").lower()
                 pm_ip = (d.get("power_ip") or "").strip() or ip
 
+                ps_type = (d.get("power_socket_type") or "").lower().strip()
+                ps_ip = (d.get("power_socket_ip") or "").strip()
+
                 if now - last_online_check.get(ip, 0) > online_check_interval:
                     device_states[ip]["online"] = check_shelly_online(ip)
 
@@ -1097,6 +1102,11 @@ def control_loop():
                         device_states[ip]["power_meter_online"] = check_http_device_online(pm_ip, "/api/v1/data")
                     else:
                         device_states[ip]["power_meter_online"] = False
+
+                    if ps_type and ps_ip:
+                        device_states[ip]["power_socket_online"] = check_power_socket_online(ps_type, ps_ip)
+                    else:
+                        device_states[ip]["power_socket_online"] = False
 
                     last_online_check[ip] = now
 
