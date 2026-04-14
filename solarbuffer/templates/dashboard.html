@@ -201,6 +201,7 @@
       height: 10px;
       border-radius: 50%;
       background: hsl(220, 10%, 80%);
+      flex-shrink: 0;
     }
 
     .dot.active {
@@ -227,6 +228,7 @@
       width: 44px;
       height: 24px;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
     .toggle input {
@@ -362,13 +364,13 @@
     }
 
     .socket-badge.none {
-      background: hsl(220, 10%, 94%);
-      color: hsl(220, 10%, 42%);
+      background: hsl(37, 100%, 95%);
+      color: hsl(32, 95%, 32%);
     }
 
     .socket-badge.off {
-      background: hsl(220, 10%, 92%);
-      color: hsl(220, 12%, 36%);
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 42%);
     }
 
     .socket-badge.pending {
@@ -589,15 +591,15 @@
     function getVisualBrightness(brightness) {
       const minTechnicalBrightness = 34;
       const maxTechnicalBrightness = 100;
-    
+
       const value = Number(brightness || 0);
-    
+
       if (value <= minTechnicalBrightness) return 0;
       if (value >= maxTechnicalBrightness) return 100;
-    
+
       return ((value - minTechnicalBrightness) / (maxTechnicalBrightness - minTechnicalBrightness)) * 100;
     }
-    
+
     function getBufferStatus(data) {
       const devices = Array.isArray(data.devices) ? data.devices : [];
       const enabled = !!data.enabled;
@@ -653,9 +655,8 @@
         };
       }
 
-      const importThreshold =
-        Number(data.expert_settings?.IMPORT_OFF_THRESHOLD ?? 300);
-      
+      const importThreshold = Number(data.expert_settings?.IMPORT_OFF_THRESHOLD ?? 300);
+
       if (power >= importThreshold) {
         return {
           label: "Geen teruglevering",
@@ -665,8 +666,7 @@
         };
       }
 
-      const exportThreshold =
-        Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
+      const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
 
       if (power <= exportThreshold && started.length === 0) {
         return {
@@ -687,7 +687,7 @@
 
     function getDeviceState(d) {
       if (!d.online) {
-        return { label: "Offline", cls: "offline", dot: "" };
+        return { label: "", cls: "", dot: "", visible: false };
       }
       if (d.pending_start || d.waiting_for_power_socket) {
         return { label: "Opstarten", cls: "pending", dot: "pending" };
@@ -701,19 +701,30 @@
       return { label: "Uit", cls: "off", dot: "" };
     }
 
+    function isDeviceAvailable(d) {
+      return !!(d.online || d.power_socket_online);
+    }
+
     function getSocketState(d) {
       const hasSocket = !!(d.power_socket_type && d.power_socket_ip);
 
       if (!hasSocket) {
         return { label: "Geen socket", cls: "none" };
       }
+
+      if (d.power_socket_online === false) {
+        return { label: "Socket offline", cls: "off" };
+      }
+
       if (d.waiting_for_power_socket) {
         return { label: "Socket opstarten", cls: "pending" };
       }
+
       if (d.power_socket_on) {
         return { label: "Socket aan", cls: "on" };
       }
-      return { label: "Socket uit", cls: "off" };
+
+      return { label: "Standby", cls: "none" };
     }
 
     function getPowerMeterText(d) {
@@ -738,10 +749,11 @@
         const state = getDeviceState(d);
         const socket = getSocketState(d);
         const powerMeterText = getPowerMeterText(d);
-        const fillWidth = d.online ? getVisualBrightness(d.brightness) : 0;
+        const available = isDeviceAvailable(d);
+        const fillWidth = available ? getVisualBrightness(d.brightness) : 0;
 
         return `
-          <div class="device-card ${d.online ? '' : 'offline'}">
+          <div class="device-card ${available ? '' : 'offline'}">
             <div class="device-top">
               <div class="device-info">
                 <div class="name">${escapeHtml(d.name)}</div>
@@ -751,7 +763,7 @@
               <div class="device-top-right">
                 <span class="state-badge ${state.cls}">${state.label}</span>
                 <span class="online-badge ${d.online ? 'online' : 'offline'}">
-                  ${d.online ? '● Online' : '● Offline'}
+                  ${d.online ? '● Apparaat online' : '● Apparaat offline'}
                 </span>
               </div>
             </div>
@@ -775,7 +787,7 @@
               <label class="toggle">
                 <input type="checkbox"
                        ${getToggleChecked(d) ? 'checked' : ''}
-                       ${d.online ? '' : 'disabled'}
+                       ${available ? '' : 'disabled'}
                        onchange="toggleDevice('${escapeHtml(d.ip)}')">
                 <span class="slider"></span>
               </label>
