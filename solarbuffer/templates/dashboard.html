@@ -416,8 +416,17 @@
       gap: 0.75rem;
     }
 
+    .device-bottom .dot {
+      flex: 0 0 10px;
+    }
+
+    .device-bottom .toggle {
+      flex: 0 0 44px;
+    }
+
     .bar {
       flex: 1;
+      min-width: 0;
       height: 6px;
       background: hsl(32, 95%, 88%);
       border-radius: 3px;
@@ -686,23 +695,40 @@
     }
 
     function getDeviceState(d) {
-      if (!d.online) {
-        return { label: "", cls: "", dot: "", visible: false };
-      }
+
       if (d.pending_start || d.waiting_for_power_socket) {
         return { label: "Opstarten", cls: "pending", dot: "pending" };
       }
+
+      if (!d.online) {
+        return { label: "", cls: "", dot: "" };
+      }
+
       if (d.freeze) {
         return { label: "Bevroren", cls: "freeze", dot: "freeze" };
       }
+
       if (d.started && d.on) {
         return { label: "Actief", cls: "running", dot: "active" };
       }
+
       return { label: "Uit", cls: "off", dot: "" };
     }
 
     function isDeviceAvailable(d) {
       return !!(d.online || d.power_socket_online);
+    }
+
+    function getPowerMeterState(d) {
+      if (!d.power_meter) {
+        return { label: "Geen meter", cls: "none" };
+      }
+
+      if (d.power_meter_online === false) {
+        return { label: "Meter offline", cls: "off" };
+      }
+
+      return { label: `${Number(d.power || 0).toFixed(1)} W`, cls: "on" };
     }
 
     function getSocketState(d) {
@@ -748,7 +774,7 @@
       cont.innerHTML = devices.map(d => {
         const state = getDeviceState(d);
         const socket = getSocketState(d);
-        const powerMeterText = getPowerMeterText(d);
+        const powerMeter = getPowerMeterState(d);
         const available = isDeviceAvailable(d);
         const fillWidth = available ? getVisualBrightness(d.brightness) : 0;
 
@@ -763,7 +789,7 @@
               <div class="device-top-right">
                 <span class="state-badge ${state.cls}">${state.label}</span>
                 <span class="online-badge ${d.online ? 'online' : 'offline'}">
-                  ${d.online ? '● Apparaat online' : '● Apparaat offline'}
+                  ${d.online ? '● Online' : '● Offline - Ready to start'}
                 </span>
               </div>
             </div>
@@ -778,7 +804,9 @@
 
               <div class="mini-info">
                 <div class="mini-label">Vermogensmeter</div>
-                <div class="mini-value">${escapeHtml(powerMeterText)}</div>
+                <div class="mini-value">
+                  <span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span>
+                </div>
               </div>
             </div>
 
@@ -786,9 +814,9 @@
               <div class="dot ${state.dot}"></div>
               <label class="toggle">
                 <input type="checkbox"
-                       ${getToggleChecked(d) ? 'checked' : ''}
-                       ${available ? '' : 'disabled'}
-                       onchange="toggleDevice('${escapeHtml(d.ip)}')">
+                      ${getToggleChecked(d) ? 'checked' : ''}
+                      ${available ? '' : 'disabled'}
+                      onchange="toggleDevice('${escapeHtml(d.ip)}')">
                 <span class="slider"></span>
               </label>
               <div class="bar">
