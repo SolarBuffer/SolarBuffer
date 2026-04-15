@@ -370,14 +370,17 @@ def scan_network_for_devices():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     cfg = load_config()
-    username_cfg = cfg.get("username", "admin")
-    password_cfg = cfg.get("password", "admin123")
+    username_cfg = cfg.get("username", "solarbuffer")
+    password_hash_cfg = cfg.get("password_hash", "")
 
     if request.method == "POST":
         entered_username = request.form.get("username", "").strip()
         entered_password = request.form.get("password", "")
 
-        if entered_username == username_cfg and entered_password == password_cfg:
+        from werkzeug.security import check_password_hash
+        password_hash_cfg = cfg.get("password_hash", "")
+
+        if entered_username == username_cfg and check_password_hash(password_hash_cfg, entered_password):
             session["logged_in"] = True
             session["username"] = entered_username
 
