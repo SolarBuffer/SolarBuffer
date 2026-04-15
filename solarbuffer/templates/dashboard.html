@@ -536,6 +536,24 @@
       </div>
     </div>
 
+    <div class="card control-card">
+      <h2><span class="ctrl-icon">🔐</span> Account</h2>
+
+      <div class="control-row" onclick="goToChangeCredentials()">
+        <div class="control-label">
+          <div class="name">Wijzig inloggegevens</div>
+          <div class="sub">Gebruikersnaam en wachtwoord aanpassen</div>
+        </div>
+      </div>
+
+      <div class="control-row" onclick="logoutNow()">
+        <div class="control-label">
+          <div class="name">Uitloggen</div>
+          <div class="sub">Verlaat deze sessie</div>
+        </div>
+      </div>
+    </div>
+
     <div class="card control-card updates-card">
       <h2><span class="ctrl-icon">📝</span> Updates</h2>
       <div class="updates-list">
@@ -586,6 +604,14 @@
 
     function goToWizard() {
       window.location.href = "/wizard_forced";
+    }
+
+    function goToChangeCredentials() {
+      window.location.href = "/change_credentials";
+    }
+
+    function logoutNow() {
+      window.location.href = "/logout";
     }
 
     function escapeHtml(value) {
@@ -695,7 +721,6 @@
     }
 
     function getDeviceState(d) {
-
       if (d.pending_start || d.waiting_for_power_socket) {
         return { label: "Opstarten", cls: "pending", dot: "pending" };
       }
@@ -751,12 +776,6 @@
       }
 
       return { label: "Standby", cls: "none" };
-    }
-
-    function getPowerMeterText(d) {
-      if (!d.power_meter) return "Geen meter";
-      if (!d.power_meter_online) return "Meter offline";
-      return `${Number(d.power || 0).toFixed(1)} W`;
     }
 
     function getToggleChecked(d) {

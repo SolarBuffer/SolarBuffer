@@ -9,6 +9,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session
 import threading
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # ================= CONFIG =================
 BASE_DIR = os.path.dirname(__file__)
@@ -41,6 +42,12 @@ def load_config():
         cfg["shelly_devices"] = []
     if "p1_ip" not in cfg:
         cfg["p1_ip"] = ""
+
+    if "username" not in cfg:
+        cfg["username"] = "solarbuffer"
+
+    if "password_hash" not in cfg:
+        cfg["password_hash"] = ""
 
     if "expert_mode" not in cfg:
         cfg["expert_mode"] = False
@@ -377,9 +384,6 @@ def login():
         entered_username = request.form.get("username", "").strip()
         entered_password = request.form.get("password", "")
 
-        from werkzeug.security import check_password_hash
-        password_hash_cfg = cfg.get("password_hash", "")
-
         if entered_username == username_cfg and check_password_hash(password_hash_cfg, entered_password):
             session["logged_in"] = True
             session["username"] = entered_username
@@ -396,6 +400,65 @@ def login():
             return render_template("login.html", error="Ongeldige login")
 
     return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    old_username = session.get("username", "unknown")
+    session.clear()
+
+    write_audit_log("logout", {
+        "username": old_username
+    })
+
+    return redirect("/login")
+
+
+@app.route("/change_credentials", methods=["GET", "POST"])
+def change_credentials():
+    if not require_login():
+        return redirect("/login")
+
+    cfg = load_config()
+
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_username = request.form.get("new_username", "").strip()
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        stored_hash = cfg.get("password_hash", "")
+        old_username = cfg.get("username", "solarbuffer")
+
+        if not new_username:
+            return render_template("change_credentials.html", error="Gebruikersnaam mag niet leeg zijn")
+
+        if not check_password_hash(stored_hash, current_password):
+            return render_template("change_credentials.html", error="Huidig wachtwoord is onjuist")
+
+        if not new_password:
+            return render_template("change_credentials.html", error="Nieuw wachtwoord mag niet leeg zijn")
+
+        if len(new_password) < 6:
+            return render_template("change_credentials.html", error="Nieuw wachtwoord moet minimaal 6 tekens bevatten")
+
+        if new_password != confirm_password:
+            return render_template("change_credentials.html", error="Wachtwoorden komen niet overeen")
+
+        cfg["username"] = new_username
+        cfg["password_hash"] = generate_password_hash(new_password)
+        save_config(cfg)
+
+        session["username"] = new_username
+
+        write_audit_log("credentials_changed", {
+            "old_username": old_username,
+            "new_username": new_username
+        })
+
+        return redirect("/dashboard")
+
+    return render_template("change_credentials.html")
 
 
 def parse_devices_from_request(req):
@@ -800,12 +863,10 @@ def ensure_power_socket_on(device):
     settings = get_runtime_settings(cfg)
     delay = int(settings.get("POWER_SOCKET_DELAY", 5) or 5)
 
-    # socket al aan en wachttijd klaar
     if st["power_socket_on"] and not st["waiting_for_power_socket"]:
         st["power_socket_last_on_command"] = time.time()
         return True
 
-    # eerste inschakeling
     if not st["power_socket_on"] and not st["waiting_for_power_socket"]:
         ok = set_power_socket(pstype, psip, True)
         if ok:
@@ -817,7 +878,6 @@ def ensure_power_socket_on(device):
             st["pending_start"] = True
         return False
 
-    # wachten tot de opstart-delay verstreken is
     if st["waiting_for_power_socket"]:
         if time.time() >= (st["power_socket_ready_at"] or 0):
             st["waiting_for_power_socket"] = False
@@ -1087,7 +1147,6 @@ def control_loop():
 
             now = time.time()
 
-            # ONLINE CHECKS
             for d in devices:
                 ip = d["ip"]
                 pm_type = (d.get("power_meter") or "").lower()
@@ -1113,7 +1172,6 @@ def control_loop():
 
                     last_online_check[ip] = now
 
-            # DEVICE POWER
             for d in devices:
                 ip = d["ip"]
                 state = device_states[ip]
@@ -1128,7 +1186,6 @@ def control_loop():
                 else:
                     state["power"] = 0
 
-            # P1 POWER
             data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
             measured_power = data.get("active_power_w", 0)
             current_power = measured_power
@@ -1138,7 +1195,6 @@ def control_loop():
             devices_sorted = get_sorted_devices(devices)
             active_brightness = 0
 
-            # PID uitgeschakeld -> huidige standen vasthouden
             if not enabled:
                 for d in devices_sorted:
                     ip = d["ip"]
@@ -1177,7 +1233,6 @@ def control_loop():
                 time.sleep(1)
                 continue
 
-            # 0. Rond pending starts altijd eerst af
             for d in devices_sorted:
                 ip = d["ip"]
                 st = device_states[ip]
@@ -1198,14 +1253,12 @@ def control_loop():
                         set_shelly(st["brightness"], True, ip)
                         mark_device_activity(d)
 
-            # 1. Start timer voor export
             if measured_power <= EXPORT_THRESHOLD:
                 if export_start is None:
                     export_start = now
             else:
                 export_start = None
 
-            # 2. Start volgende prio bij export
             if export_start is not None and (now - export_start) >= EXPORT_DELAY:
                 next_dev = get_next_startable_device(devices_sorted)
                 if next_dev:
@@ -1247,7 +1300,6 @@ def control_loop():
                         mark_device_activity(next_dev)
                         export_start = None
 
-            # 3. Bepaal welke prio actief mag regelen
             regulating_device = get_lowest_priority_running(devices_sorted)
 
             for d in devices_sorted:
@@ -1309,7 +1361,6 @@ def control_loop():
 
             current_brightness = active_brightness
 
-            # 4. Laagste actieve prio uitschakelen
             lowest_running = get_lowest_priority_running(devices_sorted)
 
             if lowest_running:
@@ -1328,7 +1379,6 @@ def control_loop():
             else:
                 import_off_start = None
 
-            # 5. Hogere frozen prio pas unfreeze als alle lagere prio's uit staan
             candidate_unfreeze = get_highest_frozen_allowed_to_unfreeze(devices_sorted)
 
             if candidate_unfreeze and get_lowest_priority_running(devices_sorted) is None:
@@ -1351,7 +1401,6 @@ def control_loop():
             else:
                 import_unfreeze_start = None
 
-            # 6. Powersockets eventueel uitschakelen na hold-time
             for d in devices_sorted:
                 maybe_turn_off_power_socket(d)
 
