@@ -134,14 +134,6 @@ button:active {
     margin-bottom: 1rem;
 }
 
-.success {
-    color: hsl(140, 60%, 40%);
-}
-
-.error {
-    color: hsl(0, 75%, 60%);
-}
-
 .password-wrapper {
     position: relative;
 }
@@ -177,9 +169,7 @@ button:active {
         <p>Configureer uw WiFi netwerk</p>
     </div>
 
-    <div class="message {{ status_class }}">
-        {{ message or "" }}
-    </div>
+    <div class="message"></div>
 
     <form method="POST">
         <div>
@@ -219,7 +209,7 @@ function togglePassword(fieldId, icon) {
 </html>
 """
 
-SUCCESS_HTML = """
+PROCESSING_HTML = """
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -276,7 +266,7 @@ h1 .solar {
 h3 {
     margin-top: 1rem;
     margin-bottom: 0.5rem;
-    color: hsl(140, 60%, 40%);
+    color: hsl(32, 95%, 52%);
 }
 
 p {
@@ -288,100 +278,131 @@ p {
 
 <body>
 <div class="container">
-    <div class="icon">✅</div>
+    <div class="icon">⏳</div>
     <h1><span class="solar">Solar</span>Buffer</h1>
-    <h3>WiFi opgeslagen</h3>
-    <p>SolarBuffer start opnieuw op en probeert automatisch verbinding te maken.</p>
+    <h3>WiFi wordt opgeslagen</h3>
+    <p>De instellingen zijn ontvangen. SolarBuffer probeert nu verbinding te maken en start daarna opnieuw op.</p>
 </div>
 </body>
 </html>
 """
 
-ERROR_HTML = """
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SolarBuffer</title>
+def configure_wifi_and_reboot(ssid, password):
+    try:
+        subprocess.run(
+            ["nmcli", "connection", "delete", "customer-wifi"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+        subprocess.run(
+            [
+                "nmcli", "connection", "add",
+                "type", "wifi",
+                "ifname", "wlan0",
+                "con-name", "customer-wifi",
+                "ssid", ssid
+            ],
+            check=True
+        )
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+        if password:
+            subprocess.run(
+                [
+                    "nmcli", "connection", "modify",
+                    "customer-wifi",
+                    "wifi-sec.key-mgmt",
+                    "wpa-psk"
+                ],
+                check=True
+            )
 
-body {
-    font-family: 'Inter', sans-serif;
-    background: hsl(30, 25%, 97%);
-    color: hsl(220, 20%, 14%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-}
+            subprocess.run(
+                [
+                    "nmcli", "connection", "modify",
+                    "customer-wifi",
+                    "wifi-sec.psk",
+                    password
+                ],
+                check=True
+            )
+        else:
+            subprocess.run(
+                [
+                    "nmcli", "connection", "modify",
+                    "customer-wifi",
+                    "wifi-sec.key-mgmt",
+                    ""
+                ],
+                check=False
+            )
 
-.container {
-    width: 100%;
-    max-width: 420px;
-    background: white;
-    border: 1px solid hsl(30, 15%, 88%);
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
-    padding: 2rem;
-    text-align: center;
-}
+        subprocess.run(
+            [
+                "nmcli", "connection", "modify",
+                "customer-wifi",
+                "connection.autoconnect",
+                "yes"
+            ],
+            check=True
+        )
 
-.icon {
-    font-size: 2rem;
-    margin-bottom: 0.75rem;
-}
+        subprocess.run(
+            [
+                "nmcli", "connection", "modify",
+                "customer-wifi",
+                "connection.autoconnect-priority",
+                "100"
+            ],
+            check=True
+        )
 
-h1 {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 1.6rem;
-    margin-bottom: 0.5rem;
-}
+        subprocess.run(
+            [
+                "nmcli", "connection", "modify",
+                "customer-wifi",
+                "connection.autoconnect-retries",
+                "0"
+            ],
+            check=True
+        )
 
-h1 .solar {
-    background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+        subprocess.run(
+            [
+                "nmcli", "connection", "modify",
+                "PI-SETUP",
+                "connection.autoconnect",
+                "no"
+            ],
+            check=False
+        )
 
-h3 {
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-    color: hsl(0, 75%, 60%);
-}
+        subprocess.run(
+            [
+                "nmcli", "connection", "modify",
+                "PI-SETUP",
+                "connection.autoconnect-priority",
+                "-100"
+            ],
+            check=False
+        )
 
-p {
-    color: hsl(220, 10%, 46%);
-    font-size: 0.95rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-</style>
-</head>
+        time.sleep(2)
 
-<body>
-<div class="container">
-    <div class="icon">⚠️</div>
-    <h1><span class="solar">Solar</span>Buffer</h1>
-    <h3>WiFi opgeslagen, verbinden mislukt</h3>
-    <p>{{ error_message }}</p>
-    <p style="margin-top: 1rem;">SolarBuffer start opnieuw op en probeert later automatisch verbinding te maken.</p>
-</div>
-</body>
-</html>
-"""
+        subprocess.run(
+            ["nmcli", "connection", "up", "customer-wifi"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False
+        )
 
-def delayed_reboot(delay=8):
-    def _reboot():
-        time.sleep(delay)
+        time.sleep(5)
+
         subprocess.Popen(["systemctl", "reboot"])
-    threading.Thread(target=_reboot, daemon=True).start()
+
+    except Exception:
+        time.sleep(8)
+        subprocess.Popen(["systemctl", "reboot"])
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -389,129 +410,14 @@ def index():
         ssid = request.form["ssid"].strip()
         password = request.form["password"]
 
-        try:
-            subprocess.run(
-                ["nmcli", "connection", "delete", "customer-wifi"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+        threading.Thread(
+            target=configure_wifi_and_reboot,
+            args=(ssid, password),
+            daemon=True
+        ).start()
 
-            subprocess.run(
-                [
-                    "nmcli", "connection", "add",
-                    "type", "wifi",
-                    "ifname", "wlan0",
-                    "con-name", "customer-wifi",
-                    "ssid", ssid
-                ],
-                check=True
-            )
+        return render_template_string(PROCESSING_HTML)
 
-            if password:
-                subprocess.run(
-                    [
-                        "nmcli", "connection", "modify",
-                        "customer-wifi",
-                        "wifi-sec.key-mgmt",
-                        "wpa-psk"
-                    ],
-                    check=True
-                )
-
-                subprocess.run(
-                    [
-                        "nmcli", "connection", "modify",
-                        "customer-wifi",
-                        "wifi-sec.psk",
-                        password
-                    ],
-                    check=True
-                )
-            else:
-                subprocess.run(
-                    [
-                        "nmcli", "connection", "modify",
-                        "customer-wifi",
-                        "wifi-sec.key-mgmt",
-                        ""
-                    ],
-                    check=False
-                )
-
-            subprocess.run(
-                [
-                    "nmcli", "connection", "modify",
-                    "customer-wifi",
-                    "connection.autoconnect",
-                    "yes"
-                ],
-                check=True
-            )
-
-            subprocess.run(
-                [
-                    "nmcli", "connection", "modify",
-                    "customer-wifi",
-                    "connection.autoconnect-priority",
-                    "100"
-                ],
-                check=True
-            )
-
-            subprocess.run(
-                [
-                    "nmcli", "connection", "modify",
-                    "customer-wifi",
-                    "connection.autoconnect-retries",
-                    "0"
-                ],
-                check=True
-            )
-
-            subprocess.run(
-                [
-                    "nmcli", "connection", "modify",
-                    "PI-SETUP",
-                    "connection.autoconnect",
-                    "no"
-                ],
-                check=False
-            )
-
-            subprocess.run(
-                [
-                    "nmcli", "connection", "modify",
-                    "PI-SETUP",
-                    "connection.autoconnect-priority",
-                    "-100"
-                ],
-                check=False
-            )
-
-            result = subprocess.run(
-                ["nmcli", "connection", "up", "customer-wifi"],
-                capture_output=True,
-                text=True
-            )
-
-            delayed_reboot(8)
-
-            if result.returncode == 0:
-                return render_template_string(SUCCESS_HTML)
-
-            error_text = result.stderr.strip() or result.stdout.strip() or "Onbekende fout bij verbinden."
-            return render_template_string(
-                ERROR_HTML,
-                error_message=error_text
-            )
-
-        except Exception as e:
-            delayed_reboot(8)
-            return render_template_string(
-                ERROR_HTML,
-                error_message=str(e)
-            )
-
-    return render_template_string(HTML, message="", status_class="")
+    return render_template_string(HTML)
 
 app.run(host="0.0.0.0", port=80)
