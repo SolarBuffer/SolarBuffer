@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SolarBuffer</title>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -93,7 +95,49 @@
             outline: none;
         }
 
-        button {
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-wrapper input {
+            padding-right: 2.8rem;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+            width: auto;
+            color: hsl(220, 10%, 46%);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+
+        .toggle-password:hover {
+            background: transparent;
+            color: hsl(32, 95%, 52%);
+            transform: translateY(-50%);
+        }
+
+        .toggle-password:active {
+            transform: translateY(-50%);
+        }
+
+        .toggle-password i {
+            font-size: 1.2rem;
+        }
+
+        button[type="submit"] {
             width: 100%;
             background: hsl(32, 95%, 52%);
             color: white;
@@ -106,12 +150,12 @@
             transition: all 0.2s ease;
         }
 
-        button:hover {
+        button[type="submit"]:hover {
             background: hsl(32, 85%, 45%);
             transform: translateY(-1px);
         }
 
-        button:active {
+        button[type="submit"]:active {
             transform: translateY(0);
         }
 
@@ -144,12 +188,32 @@
 
             <div>
                 <label for="password">Wachtwoord</label>
-                <input type="password" id="password" name="password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" required>
+                    <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toon wachtwoord">
+                        <i id="passwordIcon" class="mdi mdi-eye-off"></i>
+                    </button>
+                </div>
             </div>
 
             <button type="submit">Inloggen</button>
         </form>
     </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById("password");
+            const passwordIcon = document.getElementById("passwordIcon");
+
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                passwordIcon.className = "mdi mdi-eye";
+            } else {
+                passwordInput.type = "password";
+                passwordIcon.className = "mdi mdi-eye-off";
+            }
+        }
+    </script>
 
 </body>
 </html>
