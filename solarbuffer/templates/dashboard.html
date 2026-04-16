@@ -11,7 +11,9 @@
 
     body {
       font-family: "Inter", sans-serif;
-      background: hsl(30, 25%, 97%);
+      background:
+        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.12), transparent 28%),
+        hsl(30, 25%, 97%);
       color: hsl(220, 20%, 14%);
       min-height: 100vh;
       display: flex;
@@ -65,66 +67,143 @@
     .card {
       background: white;
       border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.75rem;
+      border-radius: 0.9rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
     }
 
     .stat-card {
-      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      padding: 1rem 1rem 1.05rem;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 0.35rem;
-      transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      gap: 0.75rem;
+      transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+      min-height: 150px;
     }
 
-    .stat-card .stat-icon {
-      font-size: 1.5rem;
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -24px -24px auto;
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: radial-gradient(circle, hsla(32, 100%, 65%, 0.14), transparent 70%);
+      pointer-events: none;
+    }
+
+    .stat-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat-card-head {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
     }
 
     .stat-card .label {
-      font-size: 0.65rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       color: hsl(220, 10%, 46%);
+      font-weight: 600;
+    }
+
+    .stat-card .stat-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, hsla(32, 100%, 60%, 0.16), hsla(40, 100%, 65%, 0.08));
+      border: 1px solid hsla(32, 95%, 52%, 0.14);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+      flex-shrink: 0;
+    }
+
+    .stat-card .stat-icon {
+      font-size: 1.3rem;
+      line-height: 1;
+    }
+
+    .stat-card-main {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0.35rem;
+      position: relative;
+      z-index: 1;
+      min-height: 70px;
     }
 
     .stat-card .value {
       font-family: "Space Grotesk", sans-serif;
       font-size: 2rem;
       font-weight: 700;
-      text-align: center;
-      line-height: 1.1;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: hsl(220, 24%, 14%);
+      text-wrap: balance;
     }
 
     .stat-card .unit {
-      font-size: 0.85rem;
-      color: hsl(220, 10%, 46%);
+      font-size: 0.84rem;
+      color: hsl(220, 10%, 42%);
+      line-height: 1.35;
       min-height: 1rem;
     }
 
+    .power-reading {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .power-reading .value {
+      font-size: 2.2rem;
+    }
+
+    .power-reading .power-unit {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: hsl(220, 12%, 42%);
+      letter-spacing: 0.02em;
+    }
+
     .status-card.neutral {
-      background: white;
+      background: linear-gradient(180deg, white 0%, hsl(35, 40%, 98%) 100%);
       border-color: hsl(30, 15%, 88%);
     }
 
     .status-card.off {
-      background: hsl(220, 14%, 96%);
+      background: linear-gradient(180deg, hsl(220, 20%, 98%) 0%, hsl(220, 14%, 95%) 100%);
       border-color: hsl(220, 12%, 85%);
     }
 
     .status-card.pending {
-      background: hsl(37, 100%, 95%);
+      background: linear-gradient(180deg, hsl(37, 100%, 97%) 0%, hsl(37, 100%, 93%) 100%);
       border-color: hsl(35, 90%, 78%);
     }
 
     .status-card.running {
-      background: hsl(145, 45%, 94%);
+      background: linear-gradient(180deg, hsl(145, 48%, 97%) 0%, hsl(145, 45%, 93%) 100%);
       border-color: hsl(145, 35%, 80%);
     }
 
     .status-card.freeze {
-      background: hsl(215, 70%, 95%);
+      background: linear-gradient(180deg, hsl(215, 85%, 97%) 0%, hsl(215, 70%, 94%) 100%);
       border-color: hsl(215, 55%, 82%);
     }
 
@@ -134,18 +213,28 @@
     }
 
     .status-card.import {
-      background: hsl(0, 70%, 96%);
+      background: linear-gradient(180deg, hsl(0, 75%, 98%) 0%, hsl(0, 70%, 95%) 100%);
       border-color: hsl(0, 55%, 84%);
     }
 
     .status-card.waiting {
-      background: hsl(48, 100%, 95%);
+      background: linear-gradient(180deg, hsl(48, 100%, 97%) 0%, hsl(48, 100%, 94%) 100%);
       border-color: hsl(47, 85%, 80%);
     }
 
     .status-card.standby {
-      background: hsl(145, 28%, 96%);
+      background: linear-gradient(180deg, hsl(145, 30%, 98%) 0%, hsl(145, 28%, 95%) 100%);
       border-color: hsl(145, 18%, 84%);
+    }
+
+    .power-card {
+      background: linear-gradient(180deg, white 0%, hsl(34, 55%, 98%) 100%);
+      border-color: hsl(34, 35%, 86%);
+    }
+
+    .power-card .stat-icon-wrap {
+      background: linear-gradient(135deg, hsla(32, 100%, 60%, 0.18), hsla(18, 100%, 60%, 0.10));
+      border-color: hsla(32, 95%, 52%, 0.18);
     }
 
     .card.control-card {
@@ -473,9 +562,62 @@
     }
 
     @media (max-width: 520px) {
-      .container { max-width: 100%; }
-      .grid { grid-template-columns: 1fr; }
-      .device-middle { grid-template-columns: 1fr; }
+      body {
+        padding: 0.75rem;
+      }
+
+      .container {
+        max-width: 100%;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+
+      .stat-card {
+        min-height: unset;
+        padding: 0.95rem;
+        border-radius: 1rem;
+      }
+
+      .stat-card-top {
+        align-items: flex-start;
+      }
+
+      .stat-card .stat-icon-wrap {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+      }
+
+      .stat-card .stat-icon {
+        font-size: 1.15rem;
+      }
+
+      .stat-card .label {
+        font-size: 0.64rem;
+      }
+
+      .stat-card .value {
+        font-size: 1.7rem;
+      }
+
+      .power-reading .value {
+        font-size: 1.95rem;
+      }
+
+      .power-reading .power-unit {
+        font-size: 0.9rem;
+      }
+
+      .stat-card .unit {
+        font-size: 0.8rem;
+      }
+
+      .device-middle {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -490,17 +632,38 @@
 
     <div class="grid">
       <div class="card stat-card status-card neutral" id="buffer_status_card">
-        <span class="stat-icon" id="buffer_status_icon">☀️</span>
-        <span class="label">Bufferstatus</span>
-        <span class="value" id="buffer_status_value">Standby</span>
-        <span class="unit" id="buffer_status_sub">Geen actieve regeling</span>
+        <div class="stat-card-top">
+          <div class="stat-card-head">
+            <span class="label">Bufferstatus</span>
+          </div>
+          <div class="stat-icon-wrap">
+            <span class="stat-icon" id="buffer_status_icon">☀️</span>
+          </div>
+        </div>
+
+        <div class="stat-card-main">
+          <span class="value" id="buffer_status_value">Standby</span>
+          <span class="unit" id="buffer_status_sub">Geen actieve regeling</span>
+        </div>
       </div>
 
-      <div class="card stat-card">
-        <span class="stat-icon">⚡</span>
-        <span class="label">Vermogen</span>
-        <span class="value" id="current_power">0.0</span>
-        <span class="unit">W</span>
+      <div class="card stat-card power-card">
+        <div class="stat-card-top">
+          <div class="stat-card-head">
+            <span class="label">Vermogen</span>
+          </div>
+          <div class="stat-icon-wrap">
+            <span class="stat-icon">⚡</span>
+          </div>
+        </div>
+
+        <div class="stat-card-main">
+          <div class="power-reading">
+            <span class="value" id="current_power">0.0</span>
+            <span class="power-unit">W</span>
+          </div>
+          <span class="unit">Live netvermogen</span>
+        </div>
       </div>
     </div>
 
