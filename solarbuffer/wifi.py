@@ -76,7 +76,7 @@ form {
     gap: 1.25rem;
 }
 
-form div {
+form > div {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -377,7 +377,7 @@ p {
 </html>
 """
 
-def delayed_reboot(delay=3):
+def delayed_reboot(delay=8):
     def _reboot():
         time.sleep(delay)
         subprocess.Popen(["systemctl", "reboot"])
@@ -475,7 +475,7 @@ def index():
                     "connection.autoconnect",
                     "no"
                 ],
-                check=True
+                check=False
             )
 
             subprocess.run(
@@ -485,13 +485,7 @@ def index():
                     "connection.autoconnect-priority",
                     "-100"
                 ],
-                check=True
-            )
-
-            subprocess.run(
-                ["nmcli", "connection", "down", "PI-SETUP"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                check=False
             )
 
             result = subprocess.run(
@@ -500,10 +494,10 @@ def index():
                 text=True
             )
 
-            delayed_reboot(3)
+            delayed_reboot(8)
 
             if result.returncode == 0:
-                return SUCCESS_HTML
+                return render_template_string(SUCCESS_HTML)
 
             error_text = result.stderr.strip() or result.stdout.strip() or "Onbekende fout bij verbinden."
             return render_template_string(
@@ -512,7 +506,7 @@ def index():
             )
 
         except Exception as e:
-            delayed_reboot(3)
+            delayed_reboot(8)
             return render_template_string(
                 ERROR_HTML,
                 error_message=str(e)
