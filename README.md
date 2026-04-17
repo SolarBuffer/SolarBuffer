@@ -108,7 +108,7 @@ sudo systemctl status solarbuffer.service
 ## Auto Git Pull
 ### 1. Open cron
 ```bash
-crontab -e
+sudo crontab -e
 ```
 ### 2. Auto update command
 Elke 24 uur wordt er gecontroleerd of er nieuwe updates beschikbaar zijn via de command
