@@ -10,11 +10,20 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session
 import threading
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 # ================= CONFIG =================
 BASE_DIR = os.path.dirname(__file__)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 AUDIT_LOG_FILE = os.path.join(BASE_DIR, "audit.log")
+LOGIN_GUARD_FILE = os.path.join(BASE_DIR, "login_guard.json")
+
+TRUSTED_UNLIMITED_SUBNETS = [
+    "192.168.0.0/16"
+]
+
+MAX_FAILED_LOGINS = 5
+BAN_DURATION_SECONDS = 0  # 0 = permanent, anders bijv. 3600 voor 1 uur
 
 DEFAULT_EXPERT_SETTINGS = {
     "EXPORT_THRESHOLD": -50,
@@ -30,6 +39,7 @@ DEFAULT_EXPERT_SETTINGS = {
     "POWER_SOCKET_DELAY": 5,
     "POWER_SOCKET_HOLD_SECONDS": 600
 }
+
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -124,11 +134,20 @@ def safe_session_username():
         return "system"
 
 
+def get_client_ip():
+    """
+    Gebruik bij voorkeur request.remote_addr.
+    Gebruik X-Forwarded-For alleen als je ZEKER weet dat er een vertrouwde reverse proxy voor zit.
+    """
+    try:
+        return request.remote_addr or "unknown"
+    except Exception:
+        return "unknown"
+
+
 def safe_request_ip():
     try:
-        if request.headers.get("X-Forwarded-For"):
-            return request.headers.get("X-Forwarded-For").split(",")[0].strip()
-        return request.remote_addr or "unknown"
+        return get_client_ip()
     except Exception:
         return "system"
 
@@ -169,6 +188,7 @@ def write_audit_log(action, details=None):
 
     except Exception as e:
         print(f"Audit log fout: {e}")
+
 
 def compare_configs(old_cfg, new_cfg):
     changes = {}
@@ -227,6 +247,109 @@ def compare_configs(old_cfg, new_cfg):
     return changes
 
 
+# ================= LOGIN GUARD =================
+login_guard_lock = threading.Lock()
+
+
+def load_login_guard():
+    if os.path.exists(LOGIN_GUARD_FILE):
+        try:
+            with open(LOGIN_GUARD_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    data.setdefault("failed_attempts", {})
+                    data.setdefault("banned_ips", {})
+                    return data
+        except Exception as e:
+            print(f"Login guard load fout: {e}")
+
+    return {
+        "failed_attempts": {},
+        "banned_ips": {}
+    }
+
+
+def save_login_guard(data):
+    try:
+        with open(LOGIN_GUARD_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Login guard save fout: {e}")
+
+
+def ip_in_trusted_unlimited_range(ip):
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        for subnet in TRUSTED_UNLIMITED_SUBNETS:
+            if ip_obj in ipaddress.ip_network(subnet, strict=False):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def cleanup_expired_bans(data):
+    if BAN_DURATION_SECONDS <= 0:
+        return data
+
+    now = time.time()
+    expired = []
+
+    for ip, ban_info in data.get("banned_ips", {}).items():
+        banned_at = float(ban_info.get("banned_at", 0))
+        if banned_at and (now - banned_at) >= BAN_DURATION_SECONDS:
+            expired.append(ip)
+
+    for ip in expired:
+        data["banned_ips"].pop(ip, None)
+        data["failed_attempts"].pop(ip, None)
+
+    return data
+
+
+def is_ip_banned(ip):
+    if ip_in_trusted_unlimited_range(ip):
+        return False
+
+    with login_guard_lock:
+        data = load_login_guard()
+        data = cleanup_expired_bans(data)
+        save_login_guard(data)
+        return ip in data.get("banned_ips", {})
+
+
+def register_failed_login(ip, username=""):
+    if ip_in_trusted_unlimited_range(ip):
+        return False, 0
+
+    with login_guard_lock:
+        data = load_login_guard()
+        data = cleanup_expired_bans(data)
+
+        current = int(data["failed_attempts"].get(ip, 0)) + 1
+        data["failed_attempts"][ip] = current
+
+        banned_now = False
+        if current >= MAX_FAILED_LOGINS:
+            data["banned_ips"][ip] = {
+                "banned_at": time.time(),
+                "reason": "too_many_failed_logins",
+                "username": username
+            }
+            banned_now = True
+
+        save_login_guard(data)
+        return banned_now, current
+
+
+def clear_failed_logins(ip):
+    with login_guard_lock:
+        data = load_login_guard()
+        if ip in data.get("failed_attempts", {}):
+            data["failed_attempts"].pop(ip, None)
+            save_login_guard(data)
+
+
 # ================= PID =================
 PID_KP = 0.02
 PID_KI = 0.0013
@@ -247,6 +370,11 @@ MAX_BRIGHTNESS = 100
 # ================= FLASK =================
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "verander_dit_naar_iets_veiligs!")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=False  # Zet op True als je HTTPS gebruikt
+)
 
 
 def require_login():
@@ -379,14 +507,26 @@ def login():
     cfg = load_config()
     username_cfg = cfg.get("username", "solarbuffer")
     password_hash_cfg = cfg.get("password_hash", "")
+    client_ip = get_client_ip()
 
     if request.method == "POST":
         entered_username = request.form.get("username", "").strip()
         entered_password = request.form.get("password", "")
 
+        # Eerst blokkade checken
+        if is_ip_banned(client_ip):
+            write_audit_log("login_blocked_banned_ip", {
+                "username": entered_username,
+                "ip": client_ip
+            })
+            return render_template("login.html", error="Dit IP-adres is geblokkeerd"), 403
+
         if entered_username == username_cfg and check_password_hash(password_hash_cfg, entered_password):
             session["logged_in"] = True
             session["username"] = entered_username
+
+            # mislukte teller resetten bij succesvolle login
+            clear_failed_logins(client_ip)
 
             write_audit_log("login_success", {
                 "username": entered_username
@@ -394,10 +534,25 @@ def login():
 
             return redirect("/")
         else:
+            banned_now, failed_count = register_failed_login(client_ip, entered_username)
+
             write_audit_log("login_failed", {
-                "username": entered_username
+                "username": entered_username,
+                "failed_count": failed_count,
+                "banned_now": banned_now
             })
-            return render_template("login.html", error="Ongeldige login")
+
+            if banned_now:
+                return render_template(
+                    "login.html",
+                    error="Te veel mislukte pogingen. Dit IP-adres is geblokkeerd."
+                ), 403
+
+            remaining = max(0, MAX_FAILED_LOGINS - failed_count)
+            return render_template(
+                "login.html",
+                error=f"Ongeldige login. Nog {remaining} poging(en) voordat dit IP wordt geblokkeerd."
+            )
 
     return render_template("login.html")
 
