@@ -1402,14 +1402,29 @@
       fetch("/run_update_check")
         .then(r => r.json())
         .then(data => {
-          result.className = "update-check-result " + (data.success ? "success" : "error");
-          result.textContent = data.output || data.error || (data.success ? "Klaar" : "Onbekende fout");
+          if (data.restarting) {
+            result.className = "update-check-result success";
+            const hasChanges = data.returncode === 0 && data.output && !data.output.includes("Already up to date");
+            result.textContent = hasChanges
+              ? "Updates worden uitgevoerd, hub zal herstarten."
+              : (data.output || "Klaar") + "\n\n⏳ Server herstart… pagina wordt opnieuw geladen zodra de server terug is.";
+            function pollUntilBack() {
+              fetch("/status_json").then(r => {
+                if (r.ok) location.reload(true);
+                else setTimeout(pollUntilBack, 1500);
+              }).catch(() => setTimeout(pollUntilBack, 1500));
+            }
+            setTimeout(pollUntilBack, 3000);
+          } else {
+            result.className = "update-check-result " + (data.success ? "success" : "error");
+            result.textContent = data.output || data.error || (data.success ? "Klaar" : "Onbekende fout");
+            btn.disabled = false;
+            btn.textContent = "Controleer";
+          }
         })
         .catch(() => {
           result.className = "update-check-result error";
           result.textContent = "Verbindingsfout";
-        })
-        .finally(() => {
           btn.disabled = false;
           btn.textContent = "Controleer";
         });
