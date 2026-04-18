@@ -5,6 +5,7 @@ import json
 import os
 import socket
 import ipaddress
+import subprocess
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session
@@ -205,7 +206,7 @@ def compare_configs(old_cfg, new_cfg):
 # ================= PID =================
 PID_KP = 0.02
 PID_KI = 0.001
-PID_KD = 0.005
+PID_KD = 0.002
 
 device_pids = {}
 enabled = True
@@ -642,6 +643,27 @@ def set_brightness_manual(ip):
         "on": on
     })
     return jsonify(success=True, brightness=brightness, on=on)
+
+
+@app.route("/run_update_check")
+def run_update_check():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        cron_lines = subprocess.check_output(["crontab", "-l"], text=True, timeout=5)
+        first_line = cron_lines.strip().splitlines()[0]
+        parts = first_line.split(None, 5)
+        if len(parts) < 6:
+            return jsonify(success=False, error="Geen commando gevonden in eerste crontab-regel"), 400
+        command = parts[5]
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120)
+        write_audit_log("update_check_run", {"command": command, "returncode": result.returncode})
+        return jsonify(success=True, returncode=result.returncode,
+                       output=(result.stdout + result.stderr).strip())
+    except subprocess.CalledProcessError:
+        return jsonify(success=False, error="Geen crontab gevonden"), 400
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
 
 
 @app.route("/scan_devices", methods=["GET"])
