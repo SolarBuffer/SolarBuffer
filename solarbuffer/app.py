@@ -647,6 +647,24 @@ def set_brightness_manual(ip):
 
 UPDATE_DIR = "/home/solarbuffer/SolarBuffer"
 
+@app.route("/check_updates_available")
+def check_updates_available():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        subprocess.run(["git", "fetch"], cwd=UPDATE_DIR, capture_output=True, timeout=15)
+        local = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=UPDATE_DIR, capture_output=True, text=True
+        ).stdout.strip()
+        remote = subprocess.run(
+            ["git", "rev-parse", "@{u}"], cwd=UPDATE_DIR, capture_output=True, text=True
+        ).stdout.strip()
+        available = bool(local and remote and local != remote)
+        return jsonify(success=True, available=available)
+    except Exception as e:
+        return jsonify(success=False, available=False, error=str(e))
+
+
 @app.route("/run_update_check")
 def run_update_check():
     if not require_login():
