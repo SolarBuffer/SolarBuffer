@@ -359,4 +359,7 @@ Dit bepaalt de volgorde van inschakelen en uitschakelen.
 Sla de configuratie op.
 De installatie is nu voltooid en je kunt direct starten met het gebruik van de SolarBuffer Hub 🚀
 
+## Expert Settings
+
+
 
