@@ -61,7 +61,6 @@ Handmatig moet er een config.json en audit.log file komen om configuratie in op 
 ```bash
 cd /home/solarbuffer/SolarBuffer
 cp solarbuffer/tempfiles/config.voorbeeld.json solarbuffer/config.json
-cp solarbuffer/tempfiles/audit.voorbeeld.log solarbuffer/audit.log
 ```
 ---
 
