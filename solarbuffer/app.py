@@ -650,18 +650,34 @@ def run_update_check():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
     try:
-        cron_lines = subprocess.check_output(["crontab", "-l"], text=True, timeout=5)
-        first_line = cron_lines.strip().splitlines()[0]
-        parts = first_line.split(None, 5)
-        if len(parts) < 6:
-            return jsonify(success=False, error="Geen commando gevonden in eerste crontab-regel"), 400
-        command = parts[5]
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120)
+        cron_output = subprocess.run(
+            ["crontab", "-l"], capture_output=True, text=True, timeout=5
+        )
+        if cron_output.returncode != 0 or not cron_output.stdout.strip():
+            return jsonify(success=False, error="Geen crontab gevonden voor deze gebruiker"), 400
+
+        # Eerste niet-lege, niet-commentaar regel pakken
+        command = None
+        for line in cron_output.stdout.splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                parts = stripped.split(None, 5)
+                if len(parts) >= 6:
+                    command = parts[5]
+                    break
+
+        if not command:
+            return jsonify(success=False, error="Geen uitvoerbaar commando gevonden in crontab"), 400
+
+        result = subprocess.run(
+            command, shell=True, capture_output=True, text=True, timeout=60
+        )
+        output = (result.stdout + result.stderr).strip() or "Klaar (geen uitvoer)"
         write_audit_log("update_check_run", {"command": command, "returncode": result.returncode})
-        return jsonify(success=True, returncode=result.returncode,
-                       output=(result.stdout + result.stderr).strip())
-    except subprocess.CalledProcessError:
-        return jsonify(success=False, error="Geen crontab gevonden"), 400
+        return jsonify(success=True, returncode=result.returncode, output=output)
+
+    except subprocess.TimeoutExpired:
+        return jsonify(success=False, error="Commando duurde te lang (timeout)"), 500
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
 
