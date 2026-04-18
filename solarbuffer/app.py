@@ -585,6 +585,51 @@ def toggle_shelly(ip):
     return jsonify(success=True, on=new_on)
 
 
+@app.route("/set_brightness/<path:ip>", methods=["POST"])
+def set_brightness_manual(ip):
+    if not require_login():
+        return jsonify(success=False), 401
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+    if not device or ip not in device_states:
+        return jsonify(success=False), 404
+
+    try:
+        brightness = int(request.json.get("brightness", 50))
+        brightness = max(0, min(100, brightness))
+    except (ValueError, TypeError):
+        return jsonify(success=False, error="Ongeldige waarde"), 400
+
+    st = device_states[ip]
+    on = brightness > 0
+
+    st["brightness"] = brightness
+    st["on"] = on
+    st["manual_override"] = True
+    st["freeze"] = False
+    st["saturated_since"] = None
+    st["min_since"] = None
+
+    if on:
+        st["started"] = True
+        st["pending_start"] = False
+        mark_device_activity(device)
+    else:
+        st["started"] = False
+        st["pending_start"] = False
+        st["waiting_for_power_socket"] = False
+        st["power_socket_ready_at"] = None
+
+    set_shelly(brightness, on, ip)
+
+    write_audit_log("brightness_manual_set", {
+        "device_ip": ip,
+        "brightness": brightness,
+        "on": on
+    })
+    return jsonify(success=True, brightness=brightness, on=on)
+
+
 @app.route("/scan_devices", methods=["GET"])
 def scan_devices():
     if not require_login():

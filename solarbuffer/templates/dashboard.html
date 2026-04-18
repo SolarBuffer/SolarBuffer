@@ -705,6 +705,90 @@
       width: 0;
     }
 
+    /* ===== HANDMATIGE HELDERHEID ===== */
+    .manual-brightness {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.7rem;
+      padding-top: 0.65rem;
+      border-top: 1px dashed hsl(30, 15%, 88%);
+    }
+
+    .manual-brightness-label {
+      font-size: 0.75rem;
+      color: hsl(220, 10%, 46%);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .manual-brightness-input {
+      width: 64px;
+      padding: 0.3rem 0.45rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-align: center;
+      border: 1px solid hsl(30, 15%, 82%);
+      border-radius: 0.4rem;
+      background: hsl(30, 20%, 97%);
+      color: hsl(220, 20%, 14%);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -moz-appearance: textfield;
+    }
+
+    .manual-brightness-input::-webkit-outer-spin-button,
+    .manual-brightness-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .manual-brightness-input:focus {
+      border-color: hsl(32, 95%, 52%);
+      box-shadow: 0 0 0 2px hsla(32, 95%, 52%, 0.15);
+    }
+
+    .manual-brightness-unit {
+      font-size: 0.8rem;
+      color: hsl(220, 10%, 46%);
+      flex-shrink: 0;
+    }
+
+    .manual-brightness-btn {
+      padding: 0.3rem 0.7rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid hsl(32, 95%, 60%);
+      border-radius: 0.4rem;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .manual-brightness-btn:hover {
+      background: hsl(32, 95%, 46%);
+    }
+
+    .manual-brightness-btn:active {
+      transform: scale(0.96);
+    }
+
+    .manual-brightness-feedback {
+      font-size: 0.72rem;
+      color: hsl(145, 60%, 34%);
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+
+    .manual-brightness-feedback.show {
+      opacity: 1;
+    }
+
     .updates-card {
       background: white;
       border: 1px solid hsl(30, 15%, 88%);
@@ -835,6 +919,7 @@
       .power-reading .power-unit { font-size: 0.9rem; }
       .stat-card .unit { font-size: 0.8rem; }
       .device-middle { grid-template-columns: 1fr; }
+      .manual-brightness { flex-wrap: wrap; }
     }
   </style>
 </head>
@@ -1018,7 +1103,6 @@
       document.getElementById("menuBackdrop").classList.remove("open");
     }
 
-    // Sluit met Escape
     document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
 
     // ===== NAVIGATIE =====
@@ -1026,11 +1110,16 @@
     function goToChangeCredentials() { closeMenu(); window.location.href = "/change_credentials"; }
     function logoutNow() { closeMenu(); window.location.href = "/logout"; }
 
+    // ===== GLOBALE STATUS =====
+    let pidEnabled = true;
+
     // ===== STATUS =====
     function updateStatus() {
       fetch("/status_json")
         .then(r => r.json())
         .then(data => {
+          pidEnabled = !!data.enabled;
+
           document.getElementById("current_power").textContent = Number(data.power || 0).toFixed(1);
 
           const bufferStatus = getBufferStatus(data);
@@ -1039,9 +1128,9 @@
           document.getElementById("buffer_status_icon").textContent = bufferStatus.icon;
           document.getElementById("buffer_status_card").className = `card stat-card status-card ${bufferStatus.cls}`;
 
-          document.getElementById("pid_toggle").checked = !!data.enabled;
-          document.getElementById("pid_sub").textContent = data.enabled ? "Actief" : "Uitgeschakeld";
-          document.getElementById("pid_dot").className = "dot" + (data.enabled ? " active" : "");
+          document.getElementById("pid_toggle").checked = pidEnabled;
+          document.getElementById("pid_sub").textContent = pidEnabled ? "Actief" : "Uitgeschakeld";
+          document.getElementById("pid_dot").className = "dot" + (pidEnabled ? " active" : "");
 
           renderDevices(data.devices || []);
         })
@@ -1054,6 +1143,35 @@
 
     function toggleDevice(ip) {
       fetch("/toggle_shelly/" + encodeURIComponent(ip)).then(() => setTimeout(updateStatus, 200));
+    }
+
+    function setManualBrightness(ip) {
+      const safeId = ip.replace(/\./g, "_").replace(/:/g, "_");
+      const input = document.getElementById("mb_input_" + safeId);
+      const feedback = document.getElementById("mb_feedback_" + safeId);
+      if (!input) return;
+
+      const val = parseInt(input.value, 10);
+      if (isNaN(val) || val < 0 || val > 100) {
+        input.style.borderColor = "hsl(0, 65%, 55%)";
+        setTimeout(() => { input.style.borderColor = ""; }, 1200);
+        return;
+      }
+
+      fetch("/set_brightness/" + encodeURIComponent(ip), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brightness: val })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          feedback.classList.add("show");
+          setTimeout(() => feedback.classList.remove("show"), 2000);
+          setTimeout(updateStatus, 200);
+        }
+      })
+      .catch(err => console.error("Brightness error:", err));
     }
 
     function escapeHtml(value) {
@@ -1142,6 +1260,30 @@
         const hasSocket = hasConfiguredSocket(d);
         const hasPowerMeter = hasConfiguredPowerMeter(d);
         const onlineLabel = d.online ? "● Online" : (hasSocket ? "● Offline - Ready to start" : "● Offline");
+        const safeId = d.ip.replace(/\./g, "_").replace(/:/g, "_");
+        const currentBrightness = Math.round(Number(d.brightness || 0));
+
+        // Handmatige helderheid alleen tonen als PID uitstaat
+        const manualBrightnessHtml = !pidEnabled ? `
+          <div class="manual-brightness">
+            <span class="manual-brightness-label">Handmatige helderheid:</span>
+            <input
+              type="number"
+              id="mb_input_${safeId}"
+              class="manual-brightness-input"
+              min="0"
+              max="100"
+              step="1"
+              value="${currentBrightness}"
+              placeholder="0-100"
+            />
+            <span class="manual-brightness-unit">%</span>
+            <button
+              class="manual-brightness-btn"
+              onclick="setManualBrightness('${escapeHtml(d.ip)}')"
+            >Instellen</button>
+            <span class="manual-brightness-feedback" id="mb_feedback_${safeId}">✓ Ingesteld</span>
+          </div>` : '';
 
         return `
           <div class="device-card ${available ? '' : 'offline'}">
@@ -1181,6 +1323,7 @@
                 <div class="fill" style="width: ${fillWidth}%"></div>
               </div>
             </div>
+            ${manualBrightnessHtml}
           </div>`;
       }).join("");
     }
