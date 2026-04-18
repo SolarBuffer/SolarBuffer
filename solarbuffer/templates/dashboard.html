@@ -820,6 +820,20 @@
     .update-check-btn:active { transform: scale(0.96); }
     .update-check-btn:disabled { opacity: 0.6; cursor: default; }
 
+    .update-available-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: hsl(32, 95%, 38%);
+      background: hsl(32, 95%, 92%);
+      border: 1px solid hsl(32, 95%, 78%);
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      white-space: nowrap;
+      display: none;
+    }
+
+    .update-available-badge.visible { display: inline-block; }
+
     .update-check-result {
       margin-top: 0.75rem;
       padding: 0.6rem 0.8rem;
@@ -1078,6 +1092,7 @@
           </svg>
         </div>
         Updates
+        <span class="update-available-badge" id="updateAvailableBadge">● Beschikbaar</span>
         <button class="update-check-btn" id="updateCheckBtn" onclick="runUpdateCheck()">Controleer</button>
       </h2>
       <div class="update-check-result" id="updateCheckResult"></div>
@@ -1431,6 +1446,18 @@
           btn.textContent = "Controleer";
         });
     }
+
+    function checkUpdatesAvailable() {
+      fetch("/check_updates_available")
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById("updateAvailableBadge").classList.toggle("visible", !!data.available);
+        })
+        .catch(() => {});
+    }
+
+    checkUpdatesAvailable();
+    setInterval(checkUpdatesAvailable, 5 * 60 * 1000);
 
     setInterval(updateStatus, 1000);
     updateStatus();
