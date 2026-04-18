@@ -310,6 +310,12 @@
       line-height: 1;
     }
 
+    .stat-card .stat-icon svg {
+      width: 26px;
+      height: 26px;
+      display: block;
+    }
+
     .stat-card-main {
       display: flex;
       flex-direction: column;
@@ -427,6 +433,14 @@
 
     .control-card h2 .ctrl-icon {
       color: hsl(32, 95%, 52%);
+    }
+
+    .control-card h2 .ctrl-icon svg {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-bottom: 2px;
     }
 
     .control-row {
@@ -983,6 +997,7 @@
       .stat-card-top { align-items: flex-start; }
       .stat-card .stat-icon-wrap { width: 40px; height: 40px; border-radius: 12px; }
       .stat-card .stat-icon { font-size: 1.15rem; }
+      .stat-card .stat-icon svg { width: 22px; height: 22px; }
       .stat-card .label { font-size: 0.64rem; }
       .stat-card .value { font-size: 1.7rem; }
       .power-reading .value { font-size: 1.95rem; }
@@ -1047,7 +1062,7 @@
             <span class="label">Bufferstatus</span>
           </div>
           <div class="stat-icon-wrap">
-            <span class="stat-icon" id="buffer_status_icon">☀️</span>
+            <span class="stat-icon" id="buffer_status_icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg></span>
           </div>
         </div>
         <div class="stat-card-main">
@@ -1062,7 +1077,7 @@
             <span class="label">Vermogen</span>
           </div>
           <div class="stat-icon-wrap">
-            <span class="stat-icon">⚡</span>
+            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span>
           </div>
         </div>
         <div class="stat-card-main">
@@ -1076,12 +1091,12 @@
     </div>
 
     <div class="card control-card">
-      <h2><span class="ctrl-icon">☀️</span> SolarBuffers</h2>
+      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
       <div id="devicesContainer"></div>
     </div>
 
     <div class="card control-card">
-      <h2><span class="ctrl-icon">🎛️</span> Besturing</h2>
+      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"/></svg></span> Besturing</h2>
       <div class="control-row">
         <div class="control-label">
           <div class="name">Besturing</div>
@@ -1199,7 +1214,7 @@
           const bufferStatus = getBufferStatus(data);
           document.getElementById("buffer_status_value").textContent = bufferStatus.label;
           document.getElementById("buffer_status_sub").textContent = bufferStatus.sub;
-          document.getElementById("buffer_status_icon").textContent = bufferStatus.icon;
+          document.getElementById("buffer_status_icon").innerHTML = bufferStatus.icon;
           document.getElementById("buffer_status_card").className = `card stat-card status-card ${bufferStatus.cls}`;
 
           document.getElementById("pid_toggle").checked = pidEnabled;
@@ -1279,19 +1294,28 @@
       const running = devices.filter(d => d.started && !d.freeze);
       const started = devices.filter(d => d.started || d.pending_start);
 
-      if (!enabled) return { label: "Uitgeschakeld", sub: "Automatische regeling staat uit", cls: "off", icon: "⏸️" };
-      if (pending.length > 0) return { label: "Opstarten", sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`, cls: "pending", icon: "🚀" };
-      if (frozen.length > 0 && running.length > 0) return { label: "Overcapaciteit", sub: `${frozen.length} bevroren · ${running.length} regelend`, cls: "cascade", icon: "🌤️" };
-      if (frozen.length > 0) return { label: "Bevroren", sub: `${frozen.length} buffer${frozen.length > 1 ? "s" : ""} op vast niveau`, cls: "freeze", icon: "🧊" };
-      if (running.length > 0) return { label: "Actief", sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`, cls: "running", icon: "🔥" };
+      const SVG_PAUSE    = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,16V8H15V16H13M9,16V8H11V16H9M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z"/></svg>';
+      const SVG_ROCKET   = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.81,14.12L5.64,11.29L8.17,10.79C9.78,7.83 10.47,4 14.5,2C16.28,2 18,2.59 19.41,4C20.82,5.41 21.41,7.13 21.41,9.41C19.41,13.42 15.58,14.12 12.62,15.72L12.12,18.25L9.29,21.08L8.58,16.54L2.81,14.12M14,6A2,2 0 0,0 12,8A2,2 0 0,0 14,10A2,2 0 0,0 16,8A2,2 0 0,0 14,6M5,20C4,20 3,20.5 2,22C3.5,21.5 5,21.5 7,22C6,20.5 5.5,20 5,20Z"/></svg>';
+      const SVG_PARTCLOUD= '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,6A6,6 0 0,1 18,12C18,14.22 16.79,16.16 15,17.2V19A1,1 0 0,1 14,20H10A1,1 0 0,1 9,19V17.2C7.21,16.16 6,14.22 6,12A6,6 0 0,1 12,6M14,21V22A1,1 0 0,1 13,23H11A1,1 0 0,1 10,22V21H14M20,11H23V13H20V11M1,11H4V13H1V11M13,1V4H11V1H13M4.92,2.5L7.05,5.64L5.63,6.55L3.5,3.41L4.92,2.5M16.95,5.64L19.07,2.5L20.5,3.41L18.37,6.55L16.95,5.64Z"/></svg>';
+      const SVG_SNOWFLAKE= '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,11H23V13H20V11M1,11H4V13H1V11M13,1V4H11V1H13M4.93,3.51L6.34,4.92L4.93,6.34L3.51,4.93L4.93,3.51M17.66,4.92L19.07,3.51L20.5,4.93L19.07,6.34L17.66,4.92M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19A7,7 0 0,1 5,12A7,7 0 0,1 12,5M12,9L10.5,11.5L7.5,12L10,14L9.5,17L12,15.5L14.5,17L14,14L16.5,12L13.5,11.5L12,9Z"/></svg>';
+      const SVG_FIRE     = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.66,11.2C17.43,10.9 17.15,10.64 16.89,10.38C16.22,9.78 15.46,9.35 14.82,8.72C13.33,7.26 13,4.85 13.95,3C13,3.23 12.17,3.75 11.46,4.32C8.87,6.4 7.85,10.07 9.07,13.22C9.11,13.32 9.15,13.42 9.15,13.55C9.15,13.77 9,13.97 8.8,14.05C8.57,14.15 8.33,14.09 8.14,13.93C8.08,13.88 8.04,13.83 8,13.76C6.87,12.33 6.69,10.28 7.45,8.64C5.78,10 4.87,12.3 5,14.47C5.06,14.97 5.12,15.47 5.29,15.97C5.43,16.57 5.7,17.17 6,17.7C7.08,19.43 8.95,20.67 10.96,20.92C13.1,21.19 15.39,20.8 17.03,19.32C18.86,17.66 19.5,15 18.56,12.72L18.43,12.46C18.22,12 17.66,11.2 17.66,11.2Z"/></svg>';
+      const SVG_IMPORT   = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z"/></svg>';
+      const SVG_TIMER    = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6,2V8H6V8L10,12L6,16V16H6V22H18V16H18V16L14,12L18,8V8H18V2H6M16,16.5V20H8V16.5L12,12.5L16,16.5M12,11.5L8,7.5V4H16V7.5L12,11.5Z"/></svg>';
+      const SVG_SUN      = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg>';
+
+      if (!enabled) return { label: "Uitgeschakeld", sub: "Automatische regeling staat uit", cls: "off", icon: SVG_PAUSE };
+      if (pending.length > 0) return { label: "Opstarten", sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`, cls: "pending", icon: SVG_ROCKET };
+      if (frozen.length > 0 && running.length > 0) return { label: "Overcapaciteit", sub: `${frozen.length} bevroren · ${running.length} regelend`, cls: "cascade", icon: SVG_PARTCLOUD };
+      if (frozen.length > 0) return { label: "Bevroren", sub: `${frozen.length} buffer${frozen.length > 1 ? "s" : ""} op vast niveau`, cls: "freeze", icon: SVG_SNOWFLAKE };
+      if (running.length > 0) return { label: "Actief", sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`, cls: "running", icon: SVG_FIRE };
 
       const importThreshold = Number(data.expert_settings?.IMPORT_OFF_THRESHOLD ?? 300);
-      if (power >= importThreshold) return { label: "Geen teruglevering", sub: `Verbruik > ${importThreshold} W`, cls: "import", icon: "📥" };
+      if (power >= importThreshold) return { label: "Geen teruglevering", sub: `Verbruik > ${importThreshold} W`, cls: "import", icon: SVG_IMPORT };
 
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
-      if (power <= exportThreshold && started.length === 0) return { label: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: "⏳" };
+      if (power <= exportThreshold && started.length === 0) return { label: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
 
-      return { label: "Standby", sub: "Geen actieve buffer nodig", cls: "standby", icon: "☀️" };
+      return { label: "Standby", sub: "Geen actieve buffer nodig", cls: "standby", icon: SVG_SUN };
     }
 
     function getDeviceState(d) {
