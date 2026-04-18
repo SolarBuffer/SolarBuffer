@@ -645,39 +645,31 @@ def set_brightness_manual(ip):
     return jsonify(success=True, brightness=brightness, on=on)
 
 
+UPDATE_DIR = "/home/solarbuffer/SolarBuffer"
+
 @app.route("/run_update_check")
 def run_update_check():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
     try:
-        cron_output = subprocess.run(
-            ["crontab", "-l"], capture_output=True, text=True, timeout=5
+        pull = subprocess.run(
+            ["git", "pull"],
+            cwd=UPDATE_DIR,
+            capture_output=True, text=True, timeout=60
         )
-        if cron_output.returncode != 0 or not cron_output.stdout.strip():
-            return jsonify(success=False, error="Geen crontab gevonden voor deze gebruiker"), 400
+        output = (pull.stdout + pull.stderr).strip() or "Geen uitvoer"
+        write_audit_log("update_check_run", {"returncode": pull.returncode, "output": output})
 
-        # Eerste niet-lege, niet-commentaar regel pakken
-        command = None
-        for line in cron_output.stdout.splitlines():
-            stripped = line.strip()
-            if stripped and not stripped.startswith("#"):
-                parts = stripped.split(None, 5)
-                if len(parts) >= 6:
-                    command = parts[5]
-                    break
+        def delayed_restart():
+            time.sleep(1.5)
+            subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
 
-        if not command:
-            return jsonify(success=False, error="Geen uitvoerbaar commando gevonden in crontab"), 400
+        threading.Thread(target=delayed_restart, daemon=True).start()
 
-        result = subprocess.run(
-            command, shell=True, capture_output=True, text=True, timeout=60
-        )
-        output = (result.stdout + result.stderr).strip() or "Klaar (geen uitvoer)"
-        write_audit_log("update_check_run", {"command": command, "returncode": result.returncode})
-        return jsonify(success=True, returncode=result.returncode, output=output)
-
+        return jsonify(success=True, returncode=pull.returncode, output=output,
+                       restarting=True)
     except subprocess.TimeoutExpired:
-        return jsonify(success=False, error="Commando duurde te lang (timeout)"), 500
+        return jsonify(success=False, error="git pull duurde te lang (timeout)"), 500
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
 
