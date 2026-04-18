@@ -79,8 +79,8 @@
     }
 
     .menu-btn {
-      width: 38px;
-      height: 38px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       background: white;
       border: 1px solid hsl(30, 15%, 88%);
@@ -937,7 +937,7 @@
       <!-- Menu knop rechtsboven -->
       <div class="menu-wrapper">
         <button class="menu-btn" id="menuBtn" onclick="toggleMenu()" aria-label="Menu openen">
-          <svg id="menuIcon" width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <svg id="menuIcon" width="22" height="22" viewBox="0 0 18 18" fill="none">
             <line x1="3" y1="5.5" x2="15" y2="5.5" stroke="hsl(220,20%,28%)" stroke-width="1.5" stroke-linecap="round"/>
             <line id="menuMidLine" x1="3" y1="9" x2="10" y2="9" stroke="hsl(32,95%,52%)" stroke-width="1.5" stroke-linecap="round"/>
             <line x1="3" y1="12.5" x2="15" y2="12.5" stroke="hsl(220,20%,28%)" stroke-width="1.5" stroke-linecap="round"/>
@@ -1030,9 +1030,8 @@
     <div class="card control-card updates-card">
       <h2>
         <div class="updates-header-icon">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M8 2v4l2.5 1.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.5"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+            <path d="M13,3A9,9 0 0,0 4,12H1L4.96,16.03L9,12H6A7,7 0 0,1 13,5A7,7 0 0,1 20,12A7,7 0 0,1 13,19C11.07,19 9.32,18.21 8.06,16.94L6.64,18.36C8.27,20 10.5,21 13,21A9,9 0 0,0 22,12A9,9 0 0,0 13,3M12,8V13L16.25,15.53L17,14.33L13.5,12.25V8H12Z"/>
           </svg>
         </div>
         Updates
@@ -1166,8 +1165,12 @@
       .then(r => r.json())
       .then(data => {
         if (data.success) {
+          feedback.textContent = data.waiting_for_socket ? "⏳ Socket wordt gestart…" : "✓ Ingesteld";
           feedback.classList.add("show");
-          setTimeout(() => feedback.classList.remove("show"), 2000);
+          setTimeout(() => {
+            feedback.classList.remove("show");
+            feedback.textContent = "✓ Ingesteld";
+          }, data.waiting_for_socket ? 4000 : 2000);
           setTimeout(updateStatus, 200);
         }
       })
@@ -1251,6 +1254,13 @@
         return;
       }
 
+      // Bewaar focus en waarden van handmatige invoervelden voor de re-render
+      const focusedId = document.activeElement && document.activeElement.id;
+      const savedValues = {};
+      cont.querySelectorAll('input[type="number"]').forEach(inp => {
+        savedValues[inp.id] = inp.value;
+      });
+
       cont.innerHTML = devices.map(d => {
         const state = getDeviceState(d);
         const socket = getSocketState(d);
@@ -1266,7 +1276,7 @@
         // Handmatige helderheid alleen tonen als PID uitstaat
         const manualBrightnessHtml = !pidEnabled ? `
           <div class="manual-brightness">
-            <span class="manual-brightness-label">Handmatige helderheid:</span>
+            <span class="manual-brightness-label">Handmatig instellen:</span>
             <input
               type="number"
               id="mb_input_${safeId}"
@@ -1326,6 +1336,16 @@
             ${manualBrightnessHtml}
           </div>`;
       }).join("");
+
+      // Herstel opgeslagen waarden en focus na re-render
+      Object.entries(savedValues).forEach(([id, val]) => {
+        const inp = document.getElementById(id);
+        if (inp) inp.value = val;
+      });
+      if (focusedId && focusedId.startsWith("mb_input_")) {
+        const restored = document.getElementById(focusedId);
+        if (restored) restored.focus();
+      }
     }
 
     setInterval(updateStatus, 1000);

@@ -204,8 +204,8 @@ def compare_configs(old_cfg, new_cfg):
 
 # ================= PID =================
 PID_KP = 0.02
-PID_KI = 0.0013
-PID_KD = 0.0
+PID_KI = 0.001
+PID_KD = 0.005
 
 device_pids = {}
 enabled = True
@@ -561,7 +561,7 @@ def toggle_shelly(ip):
         st["freeze"] = False
         st["saturated_since"] = None
         st["min_since"] = None
-        st["brightness"] = 100
+        st["brightness"] = 34
         set_shelly(st["brightness"], True, ip)
         mark_device_activity(device)
     else:
@@ -603,18 +603,32 @@ def set_brightness_manual(ip):
     st = device_states[ip]
     on = brightness > 0
 
-    st["brightness"] = brightness
-    st["on"] = on
     st["manual_override"] = True
     st["freeze"] = False
     st["saturated_since"] = None
     st["min_since"] = None
 
     if on:
+        if has_power_socket(device):
+            ready = ensure_power_socket_on(device)
+            if not ready:
+                st["started"] = True
+                st["pending_start"] = True
+                st["brightness"] = brightness
+                write_audit_log("brightness_manual_set_waiting_for_socket", {
+                    "device_ip": ip,
+                    "brightness": brightness
+                })
+                return jsonify(success=True, waiting_for_socket=True)
+
+        st["brightness"] = brightness
+        st["on"] = True
         st["started"] = True
         st["pending_start"] = False
         mark_device_activity(device)
     else:
+        st["brightness"] = 0
+        st["on"] = False
         st["started"] = False
         st["pending_start"] = False
         st["waiting_for_power_socket"] = False
@@ -1246,7 +1260,7 @@ def control_loop():
 
         except Exception as e:
             print("Fout control_loop:", e)
-            time.sleep(2)
+            time.sleep(1)
 
 
 # ================= START =================

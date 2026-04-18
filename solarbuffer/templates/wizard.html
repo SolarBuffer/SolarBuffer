@@ -1198,7 +1198,7 @@
             }
 
             if (shellys.length > 0) {
-                html += '<h3>Gevonden Shelly apparaten</h3><ul>';
+                html += '<h3>Gevonden SolarBuffers</h3><ul>';
                 shellys.forEach(d => {
                     const model = d.model ? ` (${escapeHtml(d.model)})` : '';
                     html += `<li>${escapeHtml(d.name || 'Shelly')} — ${escapeHtml(d.ip || '')}${model}</li>`;
