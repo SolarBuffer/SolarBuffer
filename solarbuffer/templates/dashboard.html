@@ -800,6 +800,49 @@
       gap: 10px;
     }
 
+    .update-check-btn {
+      margin-left: auto;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid hsl(32, 95%, 60%);
+      border-radius: 0.4rem;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .update-check-btn:hover { background: hsl(32, 95%, 46%); }
+    .update-check-btn:active { transform: scale(0.96); }
+    .update-check-btn:disabled { opacity: 0.6; cursor: default; }
+
+    .update-check-result {
+      margin-top: 0.75rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.5rem;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .update-check-result.success {
+      background: hsl(145, 55%, 92%);
+      color: hsl(145, 60%, 24%);
+      display: block;
+    }
+
+    .update-check-result.error {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 38%);
+      display: block;
+    }
+
     .updates-header-icon {
       width: 28px;
       height: 28px;
@@ -1035,7 +1078,9 @@
           </svg>
         </div>
         Updates
+        <button class="update-check-btn" id="updateCheckBtn" onclick="runUpdateCheck()">Controleer</button>
       </h2>
+      <div class="update-check-result" id="updateCheckResult"></div>
 
       <div class="update-card">
         <div class="update-left">
@@ -1346,6 +1391,28 @@
         const restored = document.getElementById(focusedId);
         if (restored) restored.focus();
       }
+    }
+
+    function runUpdateCheck() {
+      const btn = document.getElementById("updateCheckBtn");
+      const result = document.getElementById("updateCheckResult");
+      btn.disabled = true;
+      btn.textContent = "Bezig…";
+      result.className = "update-check-result";
+      fetch("/run_update_check")
+        .then(r => r.json())
+        .then(data => {
+          result.className = "update-check-result " + (data.success ? "success" : "error");
+          result.textContent = data.output || data.error || (data.success ? "Klaar" : "Onbekende fout");
+        })
+        .catch(() => {
+          result.className = "update-check-result error";
+          result.textContent = "Verbindingsfout";
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = "Controleer";
+        });
     }
 
     setInterval(updateStatus, 1000);
