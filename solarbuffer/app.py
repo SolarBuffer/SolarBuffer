@@ -658,16 +658,19 @@ def run_update_check():
             capture_output=True, text=True, timeout=60
         )
         output = (pull.stdout + pull.stderr).strip() or "Geen uitvoer"
-        write_audit_log("update_check_run", {"returncode": pull.returncode, "output": output})
+        already_up_to_date = "already up to date" in output.lower()
+        has_changes = pull.returncode == 0 and not already_up_to_date
 
-        def delayed_restart():
-            time.sleep(1.5)
-            subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
+        write_audit_log("update_check_run", {"returncode": pull.returncode, "has_changes": has_changes})
 
-        threading.Thread(target=delayed_restart, daemon=True).start()
+        if has_changes:
+            def delayed_restart():
+                time.sleep(1.5)
+                subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
+            threading.Thread(target=delayed_restart, daemon=True).start()
 
         return jsonify(success=True, returncode=pull.returncode, output=output,
-                       restarting=True)
+                       has_changes=has_changes, restarting=has_changes)
     except subprocess.TimeoutExpired:
         return jsonify(success=False, error="git pull duurde te lang (timeout)"), 500
     except Exception as e:
