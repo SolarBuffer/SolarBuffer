@@ -1404,10 +1404,7 @@
         .then(data => {
           if (data.restarting) {
             result.className = "update-check-result success";
-            const hasChanges = data.returncode === 0 && data.output && !data.output.includes("Already up to date");
-            result.textContent = hasChanges
-              ? "Updates worden uitgevoerd, hub zal herstarten."
-              : (data.output || "Klaar") + "\n\n⏳ Server herstart… pagina wordt opnieuw geladen zodra de server terug is.";
+            result.textContent = "Updates worden uitgevoerd, hub zal herstarten.";
             function pollUntilBack() {
               fetch("/status_json").then(r => {
                 if (r.ok) location.reload(true);
@@ -1415,9 +1412,14 @@
               }).catch(() => setTimeout(pollUntilBack, 1500));
             }
             setTimeout(pollUntilBack, 3000);
+          } else if (data.success) {
+            result.className = "update-check-result success";
+            result.textContent = "Geen updates beschikbaar, alles is up-to-date.";
+            btn.disabled = false;
+            btn.textContent = "Controleer";
           } else {
-            result.className = "update-check-result " + (data.success ? "success" : "error");
-            result.textContent = data.output || data.error || (data.success ? "Klaar" : "Onbekende fout");
+            result.className = "update-check-result error";
+            result.textContent = data.error || "Onbekende fout";
             btn.disabled = false;
             btn.textContent = "Controleer";
           }
