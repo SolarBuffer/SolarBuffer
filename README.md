@@ -11,7 +11,8 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 - Stuur SolarBuffer-apparaten aan (aan/uit en dimmen)  
 - PID-gestuurde automatische regeling voor verbruik  
 - Webgebaseerde configuratie wizard  
-- Real-time status dashboard  
+- Real-time status dashboard
+- FUTURE, batterij koppeling mogelijk
 
 ---
 > [!IMPORTANT]
