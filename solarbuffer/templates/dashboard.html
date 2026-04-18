@@ -40,9 +40,11 @@
       max-width: 560px;
     }
 
+    /* ===== HEADER MET MENU KNOP ===== */
     .header {
       text-align: center;
       margin-bottom: 1.5rem;
+      position: relative;
     }
 
     .header .icon {
@@ -68,6 +70,168 @@
       margin-top: 0.25rem;
     }
 
+    /* ===== MENU KNOP ===== */
+    .menu-wrapper {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .menu-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      box-shadow: 0 2px 12px hsla(220, 20%, 14%, 0.08);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: box-shadow 0.2s, transform 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .menu-btn:hover {
+      box-shadow: 0 4px 18px hsla(220, 20%, 14%, 0.13);
+    }
+
+    .menu-btn:active {
+      transform: scale(0.94);
+    }
+
+    .menu-btn svg {
+      transition: transform 0.2s ease;
+    }
+
+    .menu-btn.open svg {
+      transform: rotate(90deg);
+    }
+
+    /* ===== UITKLAP BUBBEL ===== */
+    .menu-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 1rem;
+      box-shadow:
+        0 8px 32px hsla(220, 20%, 14%, 0.12),
+        0 2px 8px hsla(220, 20%, 14%, 0.06);
+      min-width: 210px;
+      overflow: hidden;
+
+      /* Animatie */
+      opacity: 0;
+      transform: scale(0.92) translateY(-6px);
+      transform-origin: top right;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .menu-dropdown.open {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: all;
+    }
+
+    /* Pijltje naar boven */
+    .menu-dropdown::before {
+      content: "";
+      position: absolute;
+      top: -6px;
+      right: 14px;
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-left: 1px solid hsl(30, 15%, 88%);
+      border-top: 1px solid hsl(30, 15%, 88%);
+      transform: rotate(45deg);
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1.1rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid hsl(30, 15%, 94%);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .menu-item:last-child {
+      border-bottom: none;
+    }
+
+    .menu-item:hover {
+      background: hsl(30, 20%, 97%);
+    }
+
+    .menu-item:active {
+      background: hsl(30, 20%, 93%);
+    }
+
+    .menu-item.danger:hover {
+      background: hsl(0, 60%, 97%);
+    }
+
+    .menu-item.danger .menu-item-label {
+      color: hsl(0, 65%, 42%);
+    }
+
+    .menu-item.danger .menu-item-icon {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 42%);
+    }
+
+    .menu-item-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: hsl(30, 20%, 94%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+
+    .menu-item-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .menu-item-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: hsl(220, 20%, 14%);
+      line-height: 1.2;
+    }
+
+    .menu-item-sub {
+      font-size: 0.75rem;
+      color: hsl(220, 10%, 50%);
+    }
+
+    /* Backdrop om te sluiten */
+    .menu-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+    }
+
+    .menu-backdrop.open {
+      display: block;
+    }
+
+    /* ===== REST VAN DE STIJLEN ===== */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -542,103 +706,183 @@
     }
 
     .updates-card {
-      background: hsl(220, 8%, 92%);
-      border: 1px solid hsl(220, 10%, 82%);
-      box-shadow: none;
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
     }
 
-    .updates-list {
+    .updates-card h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .updates-header-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: hsl(32, 95%, 52%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .update-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+      transition: box-shadow 0.15s;
+    }
+
+    .update-card:last-child { margin-bottom: 0; }
+
+    .update-card:hover {
+      box-shadow: 0 4px 16px hsla(32, 95%, 52%, 0.10);
+    }
+
+    .update-left {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      padding-top: 2px;
     }
 
-    .update-item {
-      padding: 0.85rem 1rem;
-      background: rgba(255, 255, 255, 0.45);
-      border-radius: 0.6rem;
+    .version-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
     }
 
-    .update-date {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: hsl(220, 10%, 40%);
-      margin-bottom: 0.25rem;
+    .version-badge.new {
+      background: hsl(32, 95%, 90%);
+      color: hsl(32, 95%, 32%);
     }
 
-    .update-text {
+    .version-badge.mid {
+      background: hsl(215, 80%, 91%);
+      color: hsl(215, 70%, 36%);
+    }
+
+    .version-badge.old {
+      background: hsl(220, 10%, 92%);
+      color: hsl(220, 12%, 36%);
+    }
+
+    .update-date-small {
+      font-size: 0.67rem;
+      color: hsl(220, 10%, 54%);
+      white-space: nowrap;
+    }
+
+    .update-divider {
+      width: 1px;
+      flex-shrink: 0;
+      background: hsl(30, 15%, 90%);
+      align-self: stretch;
+    }
+
+    .update-right { flex: 1; min-width: 0; }
+
+    .update-title {
       font-size: 0.88rem;
-      color: hsl(220, 20%, 18%);
-      line-height: 1.45;
+      font-weight: 600;
+      color: hsl(220, 20%, 14%);
+      margin-bottom: 4px;
+      line-height: 1.3;
     }
+
+    .update-body {
+      font-size: 0.81rem;
+      color: hsl(220, 10%, 44%);
+      line-height: 1.5;
+    }
+
+    .update-tag {
+      display: inline-block;
+      font-size: 0.64rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      letter-spacing: 0.04em;
+    }
+
+    .tag-ui { background: hsl(280, 60%, 93%); color: hsl(280, 60%, 35%); }
+    .tag-feature { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .tag-fix { background: hsl(0, 60%, 93%); color: hsl(0, 65%, 38%); }
 
     @media (max-width: 520px) {
-      body {
-        padding: 0.75rem;
-      }
-
-      .container {
-        max-width: 100%;
-      }
-
-      .grid {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-      }
-
-      .stat-card {
-        min-height: unset;
-        padding: 0.95rem;
-        border-radius: 1rem;
-      }
-
-      .stat-card-top {
-        align-items: flex-start;
-      }
-
-      .stat-card .stat-icon-wrap {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-      }
-
-      .stat-card .stat-icon {
-        font-size: 1.15rem;
-      }
-
-      .stat-card .label {
-        font-size: 0.64rem;
-      }
-
-      .stat-card .value {
-        font-size: 1.7rem;
-      }
-
-      .power-reading .value {
-        font-size: 1.95rem;
-      }
-
-      .power-reading .power-unit {
-        font-size: 0.9rem;
-      }
-
-      .stat-card .unit {
-        font-size: 0.8rem;
-      }
-
-      .device-middle {
-        grid-template-columns: 1fr;
-      }
+      body { padding: 0.75rem; }
+      .container { max-width: 100%; }
+      .grid { grid-template-columns: 1fr; gap: 0.75rem; }
+      .stat-card { min-height: unset; padding: 0.95rem; border-radius: 1rem; }
+      .stat-card-top { align-items: flex-start; }
+      .stat-card .stat-icon-wrap { width: 40px; height: 40px; border-radius: 12px; }
+      .stat-card .stat-icon { font-size: 1.15rem; }
+      .stat-card .label { font-size: 0.64rem; }
+      .stat-card .value { font-size: 1.7rem; }
+      .power-reading .value { font-size: 1.95rem; }
+      .power-reading .power-unit { font-size: 0.9rem; }
+      .stat-card .unit { font-size: 0.8rem; }
+      .device-middle { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 
 <body>
+  <!-- Backdrop sluit menu als je erbuiten tikt -->
+  <div class="menu-backdrop" id="menuBackdrop" onclick="closeMenu()"></div>
+
   <div class="container">
     <div class="header">
       <div class="icon">☀️</div>
       <h1><span class="solar">Solar</span>Buffer Control</h1>
       <p>Niet terugleveren, Bufferen!</p>
+
+      <!-- Menu knop rechtsboven -->
+      <div class="menu-wrapper">
+        <button class="menu-btn" id="menuBtn" onclick="toggleMenu()" aria-label="Menu openen">
+          <svg id="menuIcon" width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <line x1="3" y1="5.5" x2="15" y2="5.5" stroke="hsl(220,20%,28%)" stroke-width="1.5" stroke-linecap="round"/>
+            <line id="menuMidLine" x1="3" y1="9" x2="10" y2="9" stroke="hsl(32,95%,52%)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="3" y1="12.5" x2="15" y2="12.5" stroke="hsl(220,20%,28%)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <div class="menu-dropdown" id="menuDropdown">
+          <div class="menu-item" onclick="goToWizard()">
+            <div class="menu-item-icon">⚙️</div>
+            <div class="menu-item-text">
+              <span class="menu-item-label">Wizard</span>
+              <span class="menu-item-sub">Herconfigureer IP-adressen</span>
+            </div>
+          </div>
+          <div class="menu-item" onclick="goToChangeCredentials()">
+            <div class="menu-item-icon">🔐</div>
+            <div class="menu-item-text">
+              <span class="menu-item-label">Inloggegevens</span>
+              <span class="menu-item-sub">Gebruikersnaam en wachtwoord</span>
+            </div>
+          </div>
+          <div class="menu-item danger" onclick="logoutNow()">
+            <div class="menu-item-icon">🚪</div>
+            <div class="menu-item-text">
+              <span class="menu-item-label">Uitloggen</span>
+              <span class="menu-item-sub">Verlaat deze sessie</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="grid">
@@ -651,7 +895,6 @@
             <span class="stat-icon" id="buffer_status_icon">☀️</span>
           </div>
         </div>
-
         <div class="stat-card-main">
           <span class="value" id="buffer_status_value">Standby</span>
           <span class="unit" id="buffer_status_sub">Geen actieve regeling</span>
@@ -667,7 +910,6 @@
             <span class="stat-icon">⚡</span>
           </div>
         </div>
-
         <div class="stat-card-main">
           <div class="power-reading">
             <span class="value" id="current_power">0.0</span>
@@ -700,50 +942,53 @@
       </div>
     </div>
 
-    <div class="card control-card">
-      <h2><span class="ctrl-icon">⚙️</span> Wizard</h2>
-      <div class="control-row" onclick="goToWizard()">
-        <div class="control-label">
-          <div class="name">Ga naar Wizard</div>
-          <div class="sub">Herconfigureer IP-adressen</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card control-card">
-      <h2><span class="ctrl-icon">🔐</span> Account</h2>
-
-      <div class="control-row" onclick="goToChangeCredentials()">
-        <div class="control-label">
-          <div class="name">Wijzig inloggegevens</div>
-          <div class="sub">Gebruikersnaam en wachtwoord aanpassen</div>
-        </div>
-      </div>
-
-      <div class="control-row" onclick="logoutNow()">
-        <div class="control-label">
-          <div class="name">Uitloggen</div>
-          <div class="sub">Verlaat deze sessie</div>
-        </div>
-      </div>
-    </div>
-
     <div class="card control-card updates-card">
-      <h2><span class="ctrl-icon">📝</span> Updates</h2>
-      <div class="updates-list">
-        <div class="update-item">
-          <div class="update-date">17-04-2026</div>
-          <div class="update-text">UI verbeteringen. App symbool toegevoegd, als via het dashboard de website op je beginscherm wordt gezet.</div>
+      <h2>
+        <div class="updates-header-icon">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2v4l2.5 1.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.5"/>
+          </svg>
         </div>
+        Updates
+      </h2>
 
-        <div class="update-item">
-          <div class="update-date">06-04-2026</div>
-          <div class="update-text">Expertmodus toegevoegd in de wizard configuratie. Hiermee kunnen parameters zelf gewijzigd worden.</div>
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge new">v0.1.3</span>
+          <span class="update-date-small">17 apr</span>
         </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-ui">UI</span>
+          <div class="update-title">App-icoontje &amp; beginscherm</div>
+          <div class="update-body">UI verbeteringen. App symbool toegevoegd, als via het dashboard de website op je beginscherm wordt gezet.</div>
+        </div>
+      </div>
 
-        <div class="update-item">
-          <div class="update-date">05-04-2026</div>
-          <div class="update-text">Bug fixes en stabilisatie verbeteringen.</div>
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.1.2</span>
+          <span class="update-date-small">6 apr</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Expertmodus</div>
+          <div class="update-body">Expertmodus toegevoegd in de wizard configuratie. Hiermee kunnen parameters zelf gewijzigd worden.</div>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge old">v0.1.1</span>
+          <span class="update-date-small">5 apr</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-fix">Fix</span>
+          <div class="update-title">Bug fixes &amp; stabilisatie</div>
+          <div class="update-body">Bug fixes en stabilisatie verbeteringen.</div>
         </div>
       </div>
     </div>
@@ -752,6 +997,36 @@
   </div>
 
   <script>
+    // ===== MENU =====
+    function toggleMenu() {
+      const btn = document.getElementById("menuBtn");
+      const dropdown = document.getElementById("menuDropdown");
+      const backdrop = document.getElementById("menuBackdrop");
+      const isOpen = dropdown.classList.contains("open");
+      if (isOpen) {
+        closeMenu();
+      } else {
+        btn.classList.add("open");
+        dropdown.classList.add("open");
+        backdrop.classList.add("open");
+      }
+    }
+
+    function closeMenu() {
+      document.getElementById("menuBtn").classList.remove("open");
+      document.getElementById("menuDropdown").classList.remove("open");
+      document.getElementById("menuBackdrop").classList.remove("open");
+    }
+
+    // Sluit met Escape
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+
+    // ===== NAVIGATIE =====
+    function goToWizard() { closeMenu(); window.location.href = "/wizard_forced"; }
+    function goToChangeCredentials() { closeMenu(); window.location.href = "/change_credentials"; }
+    function logoutNow() { closeMenu(); window.location.href = "/logout"; }
+
+    // ===== STATUS =====
     function updateStatus() {
       fetch("/status_json")
         .then(r => r.json())
@@ -781,18 +1056,6 @@
       fetch("/toggle_shelly/" + encodeURIComponent(ip)).then(() => setTimeout(updateStatus, 200));
     }
 
-    function goToWizard() {
-      window.location.href = "/wizard_forced";
-    }
-
-    function goToChangeCredentials() {
-      window.location.href = "/change_credentials";
-    }
-
-    function logoutNow() {
-      window.location.href = "/logout";
-    }
-
     function escapeHtml(value) {
       return String(value ?? "")
         .replace(/&/g, "&amp;")
@@ -803,15 +1066,11 @@
     }
 
     function getVisualBrightness(brightness) {
-      const minTechnicalBrightness = 34;
-      const maxTechnicalBrightness = 100;
-
-      const value = Number(brightness || 0);
-
-      if (value <= minTechnicalBrightness) return 0;
-      if (value >= maxTechnicalBrightness) return 100;
-
-      return ((value - minTechnicalBrightness) / (maxTechnicalBrightness - minTechnicalBrightness)) * 100;
+      const min = 34, max = 100;
+      const v = Number(brightness || 0);
+      if (v <= min) return 0;
+      if (v >= max) return 100;
+      return ((v - min) / (max - min)) * 100;
     }
 
     function getBufferStatus(data) {
@@ -824,152 +1083,51 @@
       const running = devices.filter(d => d.started && !d.freeze);
       const started = devices.filter(d => d.started || d.pending_start);
 
-      if (!enabled) {
-        return {
-          label: "Uitgeschakeld",
-          sub: "Automatische regeling staat uit",
-          cls: "off",
-          icon: "⏸️"
-        };
-      }
-
-      if (pending.length > 0) {
-        return {
-          label: "Opstarten",
-          sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`,
-          cls: "pending",
-          icon: "🚀"
-        };
-      }
-
-      if (frozen.length > 0 && running.length > 0) {
-        return {
-          label: "Overcapaciteit",
-          sub: `${frozen.length} bevroren · ${running.length} regelend`,
-          cls: "cascade",
-          icon: "🌤️"
-        };
-      }
-
-      if (frozen.length > 0) {
-        return {
-          label: "Bevroren",
-          sub: `${frozen.length} buffer${frozen.length > 1 ? "s" : ""} op vast niveau`,
-          cls: "freeze",
-          icon: "🧊"
-        };
-      }
-
-      if (running.length > 0) {
-        return {
-          label: "Actief",
-          sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`,
-          cls: "running",
-          icon: "🔥"
-        };
-      }
+      if (!enabled) return { label: "Uitgeschakeld", sub: "Automatische regeling staat uit", cls: "off", icon: "⏸️" };
+      if (pending.length > 0) return { label: "Opstarten", sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`, cls: "pending", icon: "🚀" };
+      if (frozen.length > 0 && running.length > 0) return { label: "Overcapaciteit", sub: `${frozen.length} bevroren · ${running.length} regelend`, cls: "cascade", icon: "🌤️" };
+      if (frozen.length > 0) return { label: "Bevroren", sub: `${frozen.length} buffer${frozen.length > 1 ? "s" : ""} op vast niveau`, cls: "freeze", icon: "🧊" };
+      if (running.length > 0) return { label: "Actief", sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`, cls: "running", icon: "🔥" };
 
       const importThreshold = Number(data.expert_settings?.IMPORT_OFF_THRESHOLD ?? 300);
-
-      if (power >= importThreshold) {
-        return {
-          label: "Geen teruglevering",
-          sub: `Verbruik > ${importThreshold} W`,
-          cls: "import",
-          icon: "📥"
-        };
-      }
+      if (power >= importThreshold) return { label: "Geen teruglevering", sub: `Verbruik > ${importThreshold} W`, cls: "import", icon: "📥" };
 
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
+      if (power <= exportThreshold && started.length === 0) return { label: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: "⏳" };
 
-      if (power <= exportThreshold && started.length === 0) {
-        return {
-          label: "Wachten op teruglevering",
-          sub: "Teruglevering gedetecteerd, wachttimer loopt",
-          cls: "waiting",
-          icon: "⏳"
-        };
-      }
-
-      return {
-        label: "Standby",
-        sub: "Geen actieve buffer nodig",
-        cls: "standby",
-        icon: "☀️"
-      };
+      return { label: "Standby", sub: "Geen actieve buffer nodig", cls: "standby", icon: "☀️" };
     }
 
     function getDeviceState(d) {
-      if (d.pending_start || d.waiting_for_power_socket) {
-        return { label: "Opstarten", cls: "pending", dot: "pending" };
-      }
-
-      if (!d.online) {
-        return { label: "", cls: "", dot: "" };
-      }
-
-      if (d.freeze) {
-        return { label: "Bevroren", cls: "freeze", dot: "freeze" };
-      }
-
-      if (d.started && d.on) {
-        return { label: "Actief", cls: "running", dot: "active" };
-      }
-
+      if (d.pending_start || d.waiting_for_power_socket) return { label: "Opstarten", cls: "pending", dot: "pending" };
+      if (!d.online) return { label: "", cls: "", dot: "" };
+      if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
+      if (d.started && d.on) return { label: "Actief", cls: "running", dot: "active" };
       return { label: "Uit", cls: "off", dot: "" };
     }
 
-    function hasConfiguredSocket(d) {
-      return !!(d.power_socket_type && d.power_socket_ip);
-    }
-
-    function hasConfiguredPowerMeter(d) {
-      return !!d.power_meter;
-    }
-
-    function isDeviceAvailable(d) {
-      return !!(d.online || d.power_socket_online);
-    }
+    function hasConfiguredSocket(d) { return !!(d.power_socket_type && d.power_socket_ip); }
+    function hasConfiguredPowerMeter(d) { return !!d.power_meter; }
+    function isDeviceAvailable(d) { return !!(d.online || d.power_socket_online); }
 
     function getPowerMeterState(d) {
-      if (!hasConfiguredPowerMeter(d)) {
-        return null;
-      }
-
-      if (d.power_meter_online === false) {
-        return { label: "Meter offline", cls: "off" };
-      }
-
+      if (!hasConfiguredPowerMeter(d)) return null;
+      if (d.power_meter_online === false) return { label: "Meter offline", cls: "off" };
       return { label: `${Number(d.power || 0).toFixed(1)} W`, cls: "on" };
     }
 
     function getSocketState(d) {
-      if (!hasConfiguredSocket(d)) {
-        return null;
-      }
-
-      if (d.power_socket_online === false) {
-        return { label: "Socket offline", cls: "off" };
-      }
-
-      if (d.waiting_for_power_socket) {
-        return { label: "Socket opstarten", cls: "pending" };
-      }
-
-      if (d.power_socket_on) {
-        return { label: "Socket aan", cls: "on" };
-      }
-
+      if (!hasConfiguredSocket(d)) return null;
+      if (d.power_socket_online === false) return { label: "Socket offline", cls: "off" };
+      if (d.waiting_for_power_socket) return { label: "Socket opstarten", cls: "pending" };
+      if (d.power_socket_on) return { label: "Socket aan", cls: "on" };
       return { label: "Standby", cls: "none" };
     }
 
-    function getToggleChecked(d) {
-      return !!(d.on || d.started || d.pending_start);
-    }
+    function getToggleChecked(d) { return !!(d.on || d.started || d.pending_start); }
 
     function renderDevices(devices) {
       const cont = document.getElementById("devicesContainer");
-
       if (devices.length === 0) {
         cont.innerHTML = '<div class="control-label"><div class="sub">Geen apparaten ingesteld.</div></div>';
         return;
@@ -983,10 +1141,7 @@
         const fillWidth = available ? getVisualBrightness(d.brightness) : 0;
         const hasSocket = hasConfiguredSocket(d);
         const hasPowerMeter = hasConfiguredPowerMeter(d);
-
-        const onlineLabel = d.online
-          ? "● Online"
-          : (hasSocket ? "● Offline - Ready to start" : "● Offline");
+        const onlineLabel = d.online ? "● Online" : (hasSocket ? "● Offline - Ready to start" : "● Offline");
 
         return `
           <div class="device-card ${available ? '' : 'offline'}">
@@ -995,64 +1150,38 @@
                 <div class="name">${escapeHtml(d.name)}</div>
                 <div class="ip">${escapeHtml(d.ip)}</div>
               </div>
-
               <div class="device-top-right">
                 <span class="state-badge ${state.cls}">${state.label}</span>
-                <span class="online-badge ${d.online ? 'online' : 'offline'}">
-                  ${onlineLabel}
-                </span>
+                <span class="online-badge ${d.online ? 'online' : 'offline'}">${onlineLabel}</span>
               </div>
             </div>
-
-            ${
-              (hasSocket || hasPowerMeter)
-                ? `
-                  <div class="device-middle">
-                    ${
-                      hasSocket
-                        ? `
-                          <div class="mini-info">
-                            <div class="mini-label">Socket</div>
-                            <div class="mini-value">
-                              <span class="socket-badge ${socket.cls}">${socket.label}</span>
-                            </div>
-                          </div>
-                        `
-                        : ''
-                    }
-
-                    ${
-                      hasPowerMeter
-                        ? `
-                          <div class="mini-info">
-                            <div class="mini-label">Vermogensmeter</div>
-                            <div class="mini-value">
-                              <span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span>
-                            </div>
-                          </div>
-                        `
-                        : ''
-                    }
-                  </div>
-                `
-                : ''
-            }
-
+            ${(hasSocket || hasPowerMeter) ? `
+              <div class="device-middle">
+                ${hasSocket ? `
+                  <div class="mini-info">
+                    <div class="mini-label">Socket</div>
+                    <div class="mini-value"><span class="socket-badge ${socket.cls}">${socket.label}</span></div>
+                  </div>` : ''}
+                ${hasPowerMeter ? `
+                  <div class="mini-info">
+                    <div class="mini-label">Vermogensmeter</div>
+                    <div class="mini-value"><span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span></div>
+                  </div>` : ''}
+              </div>` : ''}
             <div class="device-bottom">
               <div class="dot ${state.dot}"></div>
               <label class="toggle">
                 <input type="checkbox"
-                      ${getToggleChecked(d) ? 'checked' : ''}
-                      ${available ? '' : 'disabled'}
-                      onchange="toggleDevice('${escapeHtml(d.ip)}')">
+                  ${getToggleChecked(d) ? 'checked' : ''}
+                  ${available ? '' : 'disabled'}
+                  onchange="toggleDevice('${escapeHtml(d.ip)}')">
                 <span class="slider"></span>
               </label>
               <div class="bar">
                 <div class="fill" style="width: ${fillWidth}%"></div>
               </div>
             </div>
-          </div>
-        `;
+          </div>`;
       }).join("");
     }
 

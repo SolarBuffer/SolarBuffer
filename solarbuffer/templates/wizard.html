@@ -1,1016 +1,1081 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SolarBuffer Configuratie Wizard</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
-
-* { margin:0; padding:0; box-sizing:border-box; }
-
-body {
-    font-family:'Inter',sans-serif;
-    background:hsl(30,25%,97%);
-    color:hsl(220,20%,14%);
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:1rem;
-}
-
-.container {
-    width:100%;
-    max-width:920px;
-    background:white;
-    border:1px solid hsl(30,15%,88%);
-    border-radius:.75rem;
-    box-shadow:0 10px 40px -10px hsla(32,95%,52%,0.15);
-    padding:2rem;
-}
-
-.header { text-align:center; margin-bottom:1.5rem; }
-.header .icon { font-size:2rem; color:hsl(32,95%,52%); }
-.header h1 {
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:700;
-    font-size:1.75rem;
-    margin-top:.25rem;
-}
-.header h1 .solar {
-    background:linear-gradient(135deg,hsl(32,95%,52%),hsl(40,100%,60%));
-    -webkit-background-clip:text;
-    -webkit-text-fill-color:transparent;
-}
-.header p {
-    color:hsl(220,10%,46%);
-    font-size:.9rem;
-    margin-top:.25rem;
-}
-
-.wizard-progress {
-    margin-bottom:1.5rem;
-}
-
-.progress-bar {
-    height:10px;
-    background:hsl(30,15%,92%);
-    border-radius:999px;
-    overflow:hidden;
-    margin-bottom:1rem;
-}
-
-.progress-fill {
-    height:100%;
-    width:33.33%;
-    background:linear-gradient(135deg,hsl(32,95%,52%),hsl(40,100%,60%));
-    border-radius:999px;
-    transition:width .25s ease;
-}
-
-.progress-steps {
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:.75rem;
-}
-
-.progress-step {
-    text-align:center;
-    padding:.75rem;
-    border:1px solid hsl(30,15%,88%);
-    border-radius:.65rem;
-    background:hsl(30,25%,98%);
-    transition:.2s ease;
-}
-
-.progress-step.active {
-    border-color:hsl(32,95%,52%);
-    background:hsl(37,100%,96%);
-}
-
-.progress-step.done {
-    border-color:hsl(145,45%,50%);
-    background:hsl(145,45%,96%);
-}
-
-.progress-step .step-number {
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:700;
-    font-size:.95rem;
-    margin-bottom:.2rem;
-}
-
-.progress-step .step-label {
-    font-size:.82rem;
-    color:hsl(220,10%,46%);
-}
-
-form { display:flex; flex-direction:column; gap:1.25rem; }
-
-.wizard-step {
-    display:none;
-}
-
-.wizard-step.active {
-    display:block;
-}
-
-.step-card {
-    border:1px solid hsl(30,15%,88%);
-    border-radius:.75rem;
-    padding:1.25rem;
-    background:hsl(30,25%,98%);
-}
-
-.step-title {
-    font-family:'Space Grotesk',sans-serif;
-    font-size:1.15rem;
-    margin-bottom:.35rem;
-}
-
-.step-subtitle {
-    font-size:.9rem;
-    color:hsl(220,10%,46%);
-    margin-bottom:1rem;
-}
-
-label {
-    font-weight:600;
-    font-size:.95rem;
-    color:hsl(220,20%,14%);
-}
-
-input[type="text"],
-input[type="number"],
-select {
-    width:100%;
-    height:46px;
-    padding:0 .75rem;
-    border:1px solid hsl(30,15%,88%);
-    border-radius:.5rem;
-    font-size:1rem;
-    font-family:'Inter',sans-serif;
-    transition:border-color .3s;
-    line-height:46px;
-    background:white;
-}
-
-select {
-    appearance:none;
-    -webkit-appearance:none;
-    -moz-appearance:none;
-    padding-right:2.5rem;
-    background-image:
-        linear-gradient(45deg, transparent 50%, hsl(220,10%,40%) 50%),
-        linear-gradient(135deg, hsl(220,10%,40%) 50%, transparent 50%);
-    background-position:
-        calc(100% - 18px) calc(50% - 3px),
-        calc(100% - 12px) calc(50% - 3px);
-    background-size:6px 6px, 6px 6px;
-    background-repeat:no-repeat;
-}
-
-input[type="text"]:focus,
-input[type="number"]:focus,
-select:focus {
-    border-color:hsl(32,95%,52%);
-    outline:none;
-}
-
-input:disabled,
-select:disabled {
-    background:hsl(220,10%,96%);
-    color:hsl(220,10%,55%);
-    cursor:not-allowed;
-}
-
-button {
-    background:hsl(32,95%,52%);
-    color:white;
-    font-weight:600;
-    font-size:1rem;
-    padding:.75rem 1rem;
-    border:none;
-    border-radius:.5rem;
-    cursor:pointer;
-    transition:background .3s;
-}
-
-button:hover { background:hsl(32,85%,45%); }
-
-.status {
-    margin-top:.25rem;
-    font-size:.9rem;
-    color:hsl(0,75%,60%);
-    min-height:1.2rem;
-    text-align:center;
-}
-
-.scan-status {
-    margin-top:.75rem;
-    font-size:.9rem;
-    color:hsl(220,10%,46%);
-    min-height:1.2rem;
-    text-align:center;
-}
-
-.scan-results {
-    margin-top:.75rem;
-    padding:.75rem;
-    border:1px solid hsl(30,15%,88%);
-    border-radius:.5rem;
-    background:hsl(30,25%,98%);
-    font-size:.9rem;
-    color:hsl(220,20%,14%);
-    display:none;
-}
-
-.scan-results.visible { display:block; }
-
-.scan-results h3 {
-    font-size:.95rem;
-    margin-bottom:.5rem;
-    font-family:'Space Grotesk',sans-serif;
-}
-
-.scan-results ul {
-    margin:.25rem 0 .75rem 1rem;
-}
-
-.scan-results li {
-    margin-bottom:.25rem;
-}
-
-.device-row {
-    display:flex;
-    flex-direction:column;
-    gap:.9rem;
-    margin-bottom:1rem;
-    padding:1rem;
-    border:1px solid hsl(30,15%,90%);
-    border-radius:.7rem;
-    background:hsl(30,25%,99%);
-}
-
-.device-row-top,
-.device-row-bottom {
-    display:flex;
-    flex-direction:column;
-    gap:.25rem;
-}
-
-.device-row-bottom {
-    flex-direction:row;
-    gap:.5rem;
-    align-items:flex-end;
-}
-
-.device-row-bottom > div {
-    min-width:0;
-}
-
-.remove-slot {
-    flex:0 0 46px;
-    width:46px;
-    min-width:46px;
-    height:46px;
-    display:flex;
-    align-items:flex-end;
-    justify-content:center;
-}
-
-.remove-btn {
-    all: unset;
-    width:42px;
-    height:42px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:999px;
-    background:linear-gradient(135deg,hsl(0,80%,58%),hsl(0,72%,50%));
-    color:white;
-    font-size:1.15rem;
-    font-weight:700;
-    line-height:1;
-    cursor:pointer;
-    box-shadow:0 8px 18px -10px hsla(0,65%,35%,0.55);
-    border:1px solid hsla(0,70%,35%,0.25);
-}
-
-.remove-placeholder {
-    width:42px;
-    height:42px;
-}
-
-.section-card {
-    border:1px solid hsl(30,15%,88%);
-    border-radius:.65rem;
-    padding:1rem;
-    background:hsl(30,25%,98%);
-}
-
-.section-title {
-    font-family:'Space Grotesk',sans-serif;
-    font-size:1rem;
-    margin-bottom:.35rem;
-}
-
-.section-subtitle {
-    font-size:.85rem;
-    color:hsl(220,10%,46%);
-    margin-bottom:.9rem;
-}
-
-.expert-toggle {
-    display:flex;
-    align-items:center;
-    gap:.65rem;
-    font-weight:600;
-}
-
-.expert-toggle input[type="checkbox"] {
-    width:1rem;
-    height:1rem;
-    accent-color:hsl(32,95%,52%);
-}
-
-.expert-grid {
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:.85rem;
-}
-
-.expert-grid .field {
-    display:flex;
-    flex-direction:column;
-    gap:.35rem;
-    min-width:0;
-    padding:.85rem;
-    border:1px solid hsl(30,15%,90%);
-    border-radius:.55rem;
-    background:white;
-}
-
-.field-label {
-    font-size:.88rem;
-    font-weight:600;
-    color:hsl(220,20%,14%);
-    line-height:1.2;
-    word-break:break-word;
-}
-
-.field-help {
-    font-size:.74rem;
-    color:hsl(220,10%,46%);
-    line-height:1.2;
-    min-height:1rem;
-}
-
-.input-with-unit {
-    display:flex;
-    align-items:center;
-    border:1px solid hsl(30,15%,88%);
-    border-radius:.5rem;
-    background:white;
-    overflow:hidden;
-}
-
-.input-with-unit input {
-    width:100%;
-    border:none;
-    border-radius:0;
-    flex:1;
-    min-width:0;
-    padding:.6rem .75rem;
-    font-size:1rem;
-    font-family:'Inter',sans-serif;
-    background:white;
-}
-
-.input-with-unit input:focus {
-    outline:none;
-}
-
-.input-with-unit:focus-within {
-    border-color:hsl(32,95%,52%);
-}
-
-.input-with-unit .unit {
-    padding:0 .75rem;
-    border-left:1px solid hsl(30,15%,88%);
-    background:hsl(30,25%,98%);
-    color:hsl(220,10%,46%);
-    font-weight:600;
-    white-space:nowrap;
-}
-
-.device-subsection {
-    border:1px dashed hsl(30,15%,86%);
-    border-radius:.6rem;
-    padding:.85rem;
-    background:white;
-}
-
-.device-subsection-title {
-    font-family:'Space Grotesk',sans-serif;
-    font-size:.92rem;
-    margin-bottom:.6rem;
-    color:hsl(220,20%,14%);
-}
-
-.inline-actions {
-    display:flex;
-    gap:.75rem;
-    flex-wrap:wrap;
-}
-
-.inline-actions button {
-    flex:1;
-    min-width:220px;
-}
-
-#addDeviceBtn { background:hsl(145,65%,40%); }
-#addDeviceBtn:hover { background:hsl(145,65%,32%); }
-
-.scan-btn { background:hsl(215,70%,52%); }
-.scan-btn:hover { background:hsl(215,70%,45%); }
-.scan-btn:disabled { opacity:.7; cursor:wait; }
-
-.wizard-actions {
-    display:flex;
-    justify-content:space-between;
-    gap:.75rem;
-    margin-top:1rem;
-}
-
-.wizard-actions .left,
-.wizard-actions .right {
-    display:flex;
-    gap:.75rem;
-}
-
-.cancel-btn,
-.prev-btn {
-    background:hsl(220,10%,88%);
-    color:hsl(220,20%,20%);
-}
-
-.cancel-btn:hover,
-.prev-btn:hover {
-    background:hsl(220,10%,80%);
-}
-
-.hidden {
-    display:none !important;
-}
-
-@media (max-width: 640px) {
-    .container {
-        max-width:100%;
-        padding:1.25rem;
-    }
-
-    .expert-grid {
-        grid-template-columns:1fr;
-    }
-
-    .wizard-actions,
-    .wizard-actions .left,
-    .wizard-actions .right,
-    .inline-actions,
-    .progress-steps {
-        display:flex;
-        flex-direction:column;
-    }
-
-    .device-row-bottom {
-        flex-direction:column;
-        align-items:stretch;
-    }
-
-    .remove-slot {
-        width:100%;
-        min-width:100%;
-        height:auto;
-    }
-
-    .remove-btn,
-    .remove-placeholder,
-    .inline-actions button,
-    .wizard-actions button {
-        width:100%;
-        height:44px;
-        border-radius:.65rem;
-    }
-}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="SolarBuffer">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolarBuffer Configuratie Wizard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: hsl(30, 25%, 97%);
+            color: hsl(220, 20%, 14%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 920px;
+            background: white;
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .75rem;
+            box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .header .icon {
+            font-size: 2rem;
+            color: hsl(32, 95%, 52%);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.75rem;
+            margin-top: .25rem;
+        }
+
+        .header h1 .solar {
+            background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: hsl(220, 10%, 46%);
+            font-size: .9rem;
+            margin-top: .25rem;
+        }
+
+        .wizard-progress {
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: hsl(30, 15%, 92%);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 33.33%;
+            background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+            border-radius: 999px;
+            transition: width .25s ease;
+        }
+
+        .progress-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: .75rem;
+        }
+
+        .progress-step {
+            text-align: center;
+            padding: .75rem;
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .65rem;
+            background: hsl(30, 25%, 98%);
+            transition: .2s ease;
+        }
+
+        .progress-step.active {
+            border-color: hsl(32, 95%, 52%);
+            background: hsl(37, 100%, 96%);
+        }
+
+        .progress-step.done {
+            border-color: hsl(145, 45%, 50%);
+            background: hsl(145, 45%, 96%);
+        }
+
+        .progress-step .step-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: .95rem;
+            margin-bottom: .2rem;
+        }
+
+        .progress-step .step-label {
+            font-size: .82rem;
+            color: hsl(220, 10%, 46%);
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .wizard-step {
+            display: none;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        .step-card {
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .75rem;
+            padding: 1.25rem;
+            background: hsl(30, 25%, 98%);
+        }
+
+        .step-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.15rem;
+            margin-bottom: .35rem;
+        }
+
+        .step-subtitle {
+            font-size: .9rem;
+            color: hsl(220, 10%, 46%);
+            margin-bottom: 1rem;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: .95rem;
+            color: hsl(220, 20%, 14%);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            height: 46px;
+            padding: 0 .75rem;
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .5rem;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: border-color .3s;
+            line-height: 46px;
+            background: white;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            padding-right: 2.5rem;
+            background-image:
+                linear-gradient(45deg, transparent 50%, hsl(220, 10%, 40%) 50%),
+                linear-gradient(135deg, hsl(220, 10%, 40%) 50%, transparent 50%);
+            background-position:
+                calc(100% - 18px) calc(50% - 3px),
+                calc(100% - 12px) calc(50% - 3px);
+            background-size: 6px 6px, 6px 6px;
+            background-repeat: no-repeat;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            border-color: hsl(32, 95%, 52%);
+            outline: none;
+        }
+
+        input:disabled,
+        select:disabled {
+            background: hsl(220, 10%, 96%);
+            color: hsl(220, 10%, 55%);
+            cursor: not-allowed;
+        }
+
+        button {
+            background: hsl(32, 95%, 52%);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: .75rem 1rem;
+            border: none;
+            border-radius: .5rem;
+            cursor: pointer;
+            transition: background .3s;
+        }
+
+        button:hover {
+            background: hsl(32, 85%, 45%);
+        }
+
+        .status {
+            margin-top: .25rem;
+            font-size: .9rem;
+            color: hsl(0, 75%, 60%);
+            min-height: 1.2rem;
+            text-align: center;
+        }
+
+        .scan-status {
+            margin-top: .75rem;
+            font-size: .9rem;
+            color: hsl(220, 10%, 46%);
+            min-height: 1.2rem;
+            text-align: center;
+        }
+
+        .scan-results {
+            margin-top: .75rem;
+            padding: .75rem;
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .5rem;
+            background: hsl(30, 25%, 98%);
+            font-size: .9rem;
+            color: hsl(220, 20%, 14%);
+            display: none;
+        }
+
+        .scan-results.visible {
+            display: block;
+        }
+
+        .scan-results h3 {
+            font-size: .95rem;
+            margin-bottom: .5rem;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .scan-results ul {
+            margin: .25rem 0 .75rem 1rem;
+        }
+
+        .scan-results li {
+            margin-bottom: .25rem;
+        }
+
+        .device-row {
+            display: flex;
+            flex-direction: column;
+            gap: .9rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border: 1px solid hsl(30, 15%, 90%);
+            border-radius: .7rem;
+            background: hsl(30, 25%, 99%);
+        }
+
+        .device-row-top,
+        .device-row-bottom {
+            display: flex;
+            flex-direction: column;
+            gap: .25rem;
+        }
+
+        .device-row-bottom {
+            flex-direction: row;
+            gap: .5rem;
+            align-items: flex-end;
+        }
+
+        .device-row-bottom>div {
+            min-width: 0;
+        }
+
+        .remove-slot {
+            flex: 0 0 46px;
+            width: 46px;
+            min-width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .remove-btn {
+            all: unset;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: linear-gradient(135deg, hsl(0, 80%, 58%), hsl(0, 72%, 50%));
+            color: white;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 8px 18px -10px hsla(0, 65%, 35%, 0.55);
+            border: 1px solid hsla(0, 70%, 35%, 0.25);
+        }
+
+        .remove-placeholder {
+            width: 42px;
+            height: 42px;
+        }
+
+        .section-card {
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .65rem;
+            padding: 1rem;
+            background: hsl(30, 25%, 98%);
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            margin-bottom: .35rem;
+        }
+
+        .section-subtitle {
+            font-size: .85rem;
+            color: hsl(220, 10%, 46%);
+            margin-bottom: .9rem;
+        }
+
+        .expert-toggle {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            font-weight: 600;
+        }
+
+        .expert-toggle input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            accent-color: hsl(32, 95%, 52%);
+        }
+
+        .expert-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .85rem;
+        }
+
+        .expert-grid .field {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+            min-width: 0;
+            padding: .85rem;
+            border: 1px solid hsl(30, 15%, 90%);
+            border-radius: .55rem;
+            background: white;
+        }
+
+        .field-label {
+            font-size: .88rem;
+            font-weight: 600;
+            color: hsl(220, 20%, 14%);
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .field-help {
+            font-size: .74rem;
+            color: hsl(220, 10%, 46%);
+            line-height: 1.2;
+            min-height: 1rem;
+        }
+
+        .input-with-unit {
+            display: flex;
+            align-items: center;
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .5rem;
+            background: white;
+            overflow: hidden;
+        }
+
+        .input-with-unit input {
+            width: 100%;
+            border: none;
+            border-radius: 0;
+            flex: 1;
+            min-width: 0;
+            padding: .6rem .75rem;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            background: white;
+        }
+
+        .input-with-unit input:focus {
+            outline: none;
+        }
+
+        .input-with-unit:focus-within {
+            border-color: hsl(32, 95%, 52%);
+        }
+
+        .input-with-unit .unit {
+            padding: 0 .75rem;
+            border-left: 1px solid hsl(30, 15%, 88%);
+            background: hsl(30, 25%, 98%);
+            color: hsl(220, 10%, 46%);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .device-subsection {
+            border: 1px dashed hsl(30, 15%, 86%);
+            border-radius: .6rem;
+            padding: .85rem;
+            background: white;
+        }
+
+        .device-subsection-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: .92rem;
+            margin-bottom: .6rem;
+            color: hsl(220, 20%, 14%);
+        }
+
+        .inline-actions {
+            display: flex;
+            gap: .75rem;
+            flex-wrap: wrap;
+        }
+
+        .inline-actions button {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        #addDeviceBtn {
+            background: hsl(145, 65%, 40%);
+        }
+
+        #addDeviceBtn:hover {
+            background: hsl(145, 65%, 32%);
+        }
+
+        .scan-btn {
+            background: hsl(215, 70%, 52%);
+        }
+
+        .scan-btn:hover {
+            background: hsl(215, 70%, 45%);
+        }
+
+        .scan-btn:disabled {
+            opacity: .7;
+            cursor: wait;
+        }
+
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: .75rem;
+            margin-top: 1rem;
+        }
+
+        .wizard-actions .left,
+        .wizard-actions .right {
+            display: flex;
+            gap: .75rem;
+        }
+
+        .cancel-btn,
+        .prev-btn {
+            background: hsl(220, 10%, 88%);
+            color: hsl(220, 20%, 20%);
+        }
+
+        .cancel-btn:hover,
+        .prev-btn:hover {
+            background: hsl(220, 10%, 80%);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                max-width: 100%;
+                padding: 1.25rem;
+            }
+
+            .expert-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .wizard-actions,
+            .wizard-actions .left,
+            .wizard-actions .right,
+            .inline-actions,
+            .progress-steps {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .device-row-bottom {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .remove-slot {
+                width: 100%;
+                min-width: 100%;
+                height: auto;
+            }
+
+            .remove-btn,
+            .remove-placeholder,
+            .inline-actions button,
+            .wizard-actions button {
+                width: 100%;
+                height: 44px;
+                border-radius: .65rem;
+            }
+        }
+    </style>
 </head>
+
 <body>
-<div class="container" role="main">
-    <div class="header" role="banner">
-        <div class="icon" aria-hidden="true">☀️</div>
-        <h1><span class="solar">Solar</span>Buffer Wizard</h1>
-        <p>Configureer stap voor stap je P1-meter, SolarBuffers en optionele expertinstellingen.</p>
-    </div>
-
-    <div class="wizard-progress">
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
+    <div class="container" role="main">
+        <div class="header" role="banner">
+            <div class="icon" aria-hidden="true">☀️</div>
+            <h1><span class="solar">Solar</span>Buffer Wizard</h1>
+            <p>Configureer stap voor stap je P1-meter, SolarBuffers en optionele expertinstellingen.</p>
         </div>
 
-        <div class="progress-steps">
-            <div class="progress-step active" id="progressStep1">
-                <div class="step-number">Stap 1</div>
-                <div class="step-label">P1-meter</div>
+        <div class="wizard-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
             </div>
-            <div class="progress-step" id="progressStep2">
-                <div class="step-number">Stap 2</div>
-                <div class="step-label">SolarBuffers</div>
-            </div>
-            <div class="progress-step" id="progressStep3">
-                <div class="step-number">Stap 3</div>
-                <div class="step-label">Expertmodus</div>
-            </div>
-        </div>
-    </div>
 
-    <form id="configForm" method="POST" action="/wizard_forced">
-        <div class="wizard-step active" id="step1">
-            <div class="step-card">
-                <div class="step-title">Stap 1 · P1-meter koppelen</div>
-                <div class="step-subtitle">
-                    Vul het IP-adres van je P1-meter in of gebruik de scanfunctie om hem automatisch te vinden.
+            <div class="progress-steps">
+                <div class="progress-step active" id="progressStep1">
+                    <div class="step-number">Stap 1</div>
+                    <div class="step-label">P1-meter</div>
                 </div>
-
-                <label for="p1ip">IP-adres P1-meter</label>
-                <input
-                    type="text"
-                    id="p1ip"
-                    name="p1ip"
-                    placeholder="Bijv. 192.168.178.21"
-                    required
-                    pattern="^(\d{1,3}\.){3}\d{1,3}$"
-                >
-
-                <div class="inline-actions" style="margin-top:1rem;">
-                    <button type="button" class="scan-btn" id="scanP1Btn" onclick="scanDevices()">Scan netwerk</button>
+                <div class="progress-step" id="progressStep2">
+                    <div class="step-number">Stap 2</div>
+                    <div class="step-label">SolarBuffers</div>
                 </div>
-
-                <div class="scan-status" id="scanStatus" aria-live="polite"></div>
-                <div class="scan-results" id="scanResults"></div>
-            </div>
-
-            <div class="wizard-actions">
-                <div class="left">
-                    <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
-                </div>
-                <div class="right">
-                    <button type="button" onclick="goToStep(2)">Volgende</button>
+                <div class="progress-step" id="progressStep3">
+                    <div class="step-number">Stap 3</div>
+                    <div class="step-label">Expertmodus</div>
                 </div>
             </div>
         </div>
 
-        <div class="wizard-step" id="step2">
-            <div class="step-card">
-                <div class="step-title">Stap 2 · SolarBuffers koppelen</div>
-                <div class="step-subtitle">
-                    Voeg je SolarBuffers toe. Je kunt apparaten laten scannen of handmatig meerdere apparaten toevoegen.
-                </div>
-
-                <div id="deviceContainer"></div>
-
-                <div class="inline-actions">
-                    <button type="button" id="addDeviceBtn" onclick="addDevice()">+ SolarBuffer toevoegen</button>
-                    <button type="button" class="scan-btn" id="scanDevicesBtn" onclick="scanDevices()">Zoek SolarBuffers</button>
-                </div>
-
-                <div class="scan-status" id="deviceScanStatus"></div>
-            </div>
-
-            <div class="wizard-actions">
-                <div class="left">
-                    <button type="button" class="prev-btn" onclick="goToStep(1)">Vorige</button>
-                </div>
-                <div class="right">
-                    <button type="button" onclick="goToStep(3)">Volgende</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="wizard-step" id="step3">
-            <div class="step-card">
-                <div class="step-title">Stap 3 · Expertmodus</div>
-                <div class="step-subtitle">
-                    Expertmodus is optioneel. Zet deze alleen aan als je de regelwaarden handmatig wilt instellen.
-                </div>
-
-                <div class="section-card">
-                    <label class="expert-toggle" for="expertMode">
-                        <input type="checkbox" id="expertMode" name="expert_mode" {% if config.expert_mode %}checked{% endif %}>
-                        Expertmodus inschakelen
-                    </label>
-
-                    <div class="section-subtitle" style="margin:.5rem 0 0 0;">
-                        Uitgeschakeld gebruikt de standaardinstellingen.
+        <form id="configForm" method="POST" action="/wizard_forced">
+            <div class="wizard-step active" id="step1">
+                <div class="step-card">
+                    <div class="step-title">Stap 1 · P1-meter koppelen</div>
+                    <div class="step-subtitle">
+                        Vul het IP-adres van je P1-meter in of gebruik de scanfunctie om hem automatisch te vinden.
                     </div>
 
-                    <div id="expertSettingsBox" style="display:none; margin-top:1rem;">
-                        <button type="button" id="toggleExpertBtn" style="margin-bottom:.75rem;">
-                            Toon expertinstellingen
-                        </button>
+                    <label for="p1ip">IP-adres P1-meter</label>
+                    <input type="text" id="p1ip" name="p1ip" placeholder="Bijv. 192.168.178.21" required
+                        pattern="^(\d{1,3}\.){3}\d{1,3}$">
 
-                        <div class="expert-grid" id="expertGrid" style="display:none;">
-                            <div class="field">
-                                <label class="field-label" for="EXPORT_THRESHOLD">Inschakeldrempel</label>
-                                <div class="field-help">Start bij teruglevering</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD" value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
-                                    <span class="unit">W</span>
+                    <div class="inline-actions" style="margin-top:1rem;">
+                        <button type="button" class="scan-btn" id="scanP1Btn" onclick="scanDevices()">Scan
+                            netwerk</button>
+                    </div>
+
+                    <div class="scan-status" id="scanStatus" aria-live="polite"></div>
+                    <div class="scan-results" id="scanResults"></div>
+                </div>
+
+                <div class="wizard-actions">
+                    <div class="left">
+                        <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
+                    </div>
+                    <div class="right">
+                        <button type="button" onclick="goToStep(2)">Volgende</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wizard-step" id="step2">
+                <div class="step-card">
+                    <div class="step-title">Stap 2 · SolarBuffers koppelen</div>
+                    <div class="step-subtitle">
+                        Voeg je SolarBuffers toe. Je kunt apparaten laten scannen of handmatig meerdere apparaten
+                        toevoegen.
+                    </div>
+
+                    <div id="deviceContainer"></div>
+
+                    <div class="inline-actions">
+                        <button type="button" id="addDeviceBtn" onclick="addDevice()">+ SolarBuffer toevoegen</button>
+                        <button type="button" class="scan-btn" id="scanDevicesBtn" onclick="scanDevices()">Zoek
+                            SolarBuffers</button>
+                    </div>
+
+                    <div class="scan-status" id="deviceScanStatus"></div>
+                </div>
+
+                <div class="wizard-actions">
+                    <div class="left">
+                        <button type="button" class="prev-btn" onclick="goToStep(1)">Vorige</button>
+                    </div>
+                    <div class="right">
+                        <button type="button" onclick="goToStep(3)">Volgende</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wizard-step" id="step3">
+                <div class="step-card">
+                    <div class="step-title">Stap 3 · Expertmodus</div>
+                    <div class="step-subtitle">
+                        Expertmodus is optioneel. Zet deze alleen aan als je de regelwaarden handmatig wilt instellen.
+                    </div>
+
+                    <div class="section-card">
+                        <label class="expert-toggle" for="expertMode">
+                            <input type="checkbox" id="expertMode" name="expert_mode" {% if config.expert_mode
+                                %}checked{% endif %}>
+                            Expertmodus inschakelen
+                        </label>
+
+                        <div class="section-subtitle" style="margin:.5rem 0 0 0;">
+                            Uitgeschakeld gebruikt de standaardinstellingen.
+                        </div>
+
+                        <div id="expertSettingsBox" style="display:none; margin-top:1rem;">
+                            <button type="button" id="toggleExpertBtn" style="margin-bottom:.75rem;">
+                                Toon expertinstellingen
+                            </button>
+
+                            <div class="expert-grid" id="expertGrid" style="display:none;">
+                                <div class="field">
+                                    <label class="field-label" for="EXPORT_THRESHOLD">Inschakeldrempel</label>
+                                    <div class="field-help">Start bij teruglevering</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD"
+                                            value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
+                                        <span class="unit">W</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="EXPORT_DELAY">Inschakelvertraging</label>
-                                <div class="field-help">Wachttijd voor inschakelen</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY" value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
-                                    <span class="unit">s</span>
+                                <div class="field">
+                                    <label class="field-label" for="EXPORT_DELAY">Inschakelvertraging</label>
+                                    <div class="field-help">Wachttijd voor inschakelen</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY"
+                                            value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
+                                        <span class="unit">s</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="FREEZE_AT">Bevriezen bij</label>
-                                <div class="field-help">Bevries op hoge stand</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="FREEZE_AT" name="FREEZE_AT" value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
-                                    <span class="unit">%</span>
+                                <div class="field">
+                                    <label class="field-label" for="FREEZE_AT">Bevriezen bij</label>
+                                    <div class="field-help">Bevries op hoge stand</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="FREEZE_AT" name="FREEZE_AT"
+                                            value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
+                                        <span class="unit">%</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen</label>
-                                <div class="field-help">Tijd vóór bevriezen</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="FREEZE_CONFIRM" name="FREEZE_CONFIRM" value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
-                                    <span class="unit">s</span>
+                                <div class="field">
+                                    <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen</label>
+                                    <div class="field-help">Tijd vóór bevriezen</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="FREEZE_CONFIRM" name="FREEZE_CONFIRM"
+                                            value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
+                                        <span class="unit">s</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave importdrempel</label>
-                                <div class="field-help">Bevriezing loslaten bij netafname</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="IMPORT_UNFREEZE_THRESHOLD" name="IMPORT_UNFREEZE_THRESHOLD" value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
-                                    <span class="unit">W</span>
+                                <div class="field">
+                                    <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave
+                                        importdrempel</label>
+                                    <div class="field-help">Bevriezing loslaten bij netafname</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="IMPORT_UNFREEZE_THRESHOLD"
+                                            name="IMPORT_UNFREEZE_THRESHOLD"
+                                            value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
+                                        <span class="unit">W</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging</label>
-                                <div class="field-help">Wachttijd voor vrijgeven</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="UNFREEZE_DELAY" name="UNFREEZE_DELAY" value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
-                                    <span class="unit">s</span>
+                                <div class="field">
+                                    <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging</label>
+                                    <div class="field-help">Wachttijd voor vrijgeven</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="UNFREEZE_DELAY" name="UNFREEZE_DELAY"
+                                            value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
+                                        <span class="unit">s</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel import</label>
-                                <div class="field-help">Schakel uit bij afname</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="IMPORT_OFF_THRESHOLD" name="IMPORT_OFF_THRESHOLD" value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
-                                    <span class="unit">W</span>
+                                <div class="field">
+                                    <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel
+                                        import</label>
+                                    <div class="field-help">Schakel uit bij afname</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="IMPORT_OFF_THRESHOLD" name="IMPORT_OFF_THRESHOLD"
+                                            value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
+                                        <span class="unit">W</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="OFF_DELAY">Uitschakelvertraging</label>
-                                <div class="field-help">Wachttijd voor uitschakelen</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="OFF_DELAY" name="OFF_DELAY" value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
-                                    <span class="unit">s</span>
+                                <div class="field">
+                                    <label class="field-label" for="OFF_DELAY">Uitschakelvertraging</label>
+                                    <div class="field-help">Wachttijd voor uitschakelen</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="OFF_DELAY" name="OFF_DELAY"
+                                            value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
+                                        <span class="unit">s</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="PID_NEUTRAL_LOW">PID-neutraal laag</label>
-                                <div class="field-help">Ondergrens neutrale zone</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="PID_NEUTRAL_LOW" name="PID_NEUTRAL_LOW" value="{{ config.expert_settings.PID_NEUTRAL_LOW if config.expert_settings else -5 }}">
-                                    <span class="unit">W</span>
+                                <div class="field">
+                                    <label class="field-label" for="PID_NEUTRAL_LOW">PID-neutraal laag</label>
+                                    <div class="field-help">Ondergrens neutrale zone</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="PID_NEUTRAL_LOW" name="PID_NEUTRAL_LOW"
+                                            value="{{ config.expert_settings.PID_NEUTRAL_LOW if config.expert_settings else -5 }}">
+                                        <span class="unit">W</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="PID_NEUTRAL_HIGH">PID-neutraal hoog</label>
-                                <div class="field-help">Bovengrens neutrale zone</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="PID_NEUTRAL_HIGH" name="PID_NEUTRAL_HIGH" value="{{ config.expert_settings.PID_NEUTRAL_HIGH if config.expert_settings else 45 }}">
-                                    <span class="unit">W</span>
+                                <div class="field">
+                                    <label class="field-label" for="PID_NEUTRAL_HIGH">PID-neutraal hoog</label>
+                                    <div class="field-help">Bovengrens neutrale zone</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="PID_NEUTRAL_HIGH" name="PID_NEUTRAL_HIGH"
+                                            value="{{ config.expert_settings.PID_NEUTRAL_HIGH if config.expert_settings else 45 }}">
+                                        <span class="unit">W</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="POWER_SOCKET_DELAY">Power socket startvertraging</label>
-                                <div class="field-help">Wachttijd na inschakelen socket</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="POWER_SOCKET_DELAY" name="POWER_SOCKET_DELAY" value="{{ config.expert_settings.POWER_SOCKET_DELAY if config.expert_settings else 5 }}">
-                                    <span class="unit">s</span>
+                                <div class="field">
+                                    <label class="field-label" for="POWER_SOCKET_DELAY">Power socket
+                                        startvertraging</label>
+                                    <div class="field-help">Wachttijd na inschakelen socket</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="POWER_SOCKET_DELAY" name="POWER_SOCKET_DELAY"
+                                            value="{{ config.expert_settings.POWER_SOCKET_DELAY if config.expert_settings else 5 }}">
+                                        <span class="unit">s</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label class="field-label" for="POWER_SOCKET_HOLD_SECONDS">Power socket nalooptijd</label>
-                                <div class="field-help">Uitschakelen na laatste activatie</div>
-                                <div class="input-with-unit">
-                                    <input type="number" id="POWER_SOCKET_HOLD_SECONDS" name="POWER_SOCKET_HOLD_SECONDS" value="{{ config.expert_settings.POWER_SOCKET_HOLD_SECONDS if config.expert_settings else 3600 }}">
-                                    <span class="unit">s</span>
+                                <div class="field">
+                                    <label class="field-label" for="POWER_SOCKET_HOLD_SECONDS">Power socket
+                                        nalooptijd</label>
+                                    <div class="field-help">Uitschakelen na laatste activatie</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="POWER_SOCKET_HOLD_SECONDS"
+                                            name="POWER_SOCKET_HOLD_SECONDS"
+                                            value="{{ config.expert_settings.POWER_SOCKET_HOLD_SECONDS if config.expert_settings else 3600 }}">
+                                        <span class="unit">s</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
                 </div>
 
-                <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
+                <div class="wizard-actions">
+                    <div class="left">
+                        <button type="button" class="prev-btn" onclick="goToStep(2)">Vorige</button>
+                    </div>
+                    <div class="right">
+                        <button type="submit">Opslaan</button>
+                    </div>
+                </div>
             </div>
+        </form>
+    </div>
 
-            <div class="wizard-actions">
-                <div class="left">
-                    <button type="button" class="prev-btn" onclick="goToStep(2)">Vorige</button>
-                </div>
-                <div class="right">
-                    <button type="submit">Opslaan</button>
-                </div>
-            </div>
-        </div>
-    </form>
-</div>
+    <script>
+        let currentStep = 1;
 
-<script>
-let currentStep = 1;
-
-function escapeHtml(value){
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-function updateWizardUI() {
-    document.querySelectorAll('.wizard-step').forEach((step, index) => {
-        step.classList.toggle('active', index + 1 === currentStep);
-    });
-
-    for (let i = 1; i <= 3; i++) {
-        const el = document.getElementById(`progressStep${i}`);
-        el.classList.remove('active', 'done');
-
-        if (i < currentStep) {
-            el.classList.add('done');
-        } else if (i === currentStep) {
-            el.classList.add('active');
-        }
-    }
-
-    const fill = document.getElementById('progressFill');
-    fill.style.width = currentStep === 1 ? '33.33%' : currentStep === 2 ? '66.66%' : '100%';
-}
-
-function validateStep(step) {
-    const status = document.getElementById('statusMessage');
-    if (status) status.textContent = '';
-
-    if (step === 1) {
-        const p1 = document.getElementById('p1ip').value.trim();
-        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-
-        if (!p1) {
-            alert('Vul het IP-adres van de P1-meter in.');
-            return false;
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        if (!ipRegex.test(p1)) {
-            alert('Vul een geldig IP-adres in voor de P1-meter.');
-            return false;
-        }
-    }
+        function updateWizardUI() {
+            document.querySelectorAll('.wizard-step').forEach((step, index) => {
+                step.classList.toggle('active', index + 1 === currentStep);
+            });
 
-    if (step === 2) {
-        const rows = Array.from(document.querySelectorAll('.device-row'));
-        const filledRows = rows.filter(row => {
-            const name = row.querySelector('input[name="shelly_name[]"]').value.trim();
-            const ip = row.querySelector('input[name="shelly_ip[]"]').value.trim();
-            return name || ip;
-        });
+            for (let i = 1; i <= 3; i++) {
+                const el = document.getElementById(`progressStep${i}`);
+                el.classList.remove('active', 'done');
 
-        if (filledRows.length === 0) {
-            alert('Voeg minimaal één SolarBuffer toe.');
-            return false;
-        }
-
-        const vals = Array.from(document.querySelectorAll('select[name="priority[]"]'))
-            .map(s => s.value)
-            .filter(Boolean);
-
-        if (vals.length !== filledRows.length) {
-            alert('Vul alle prioriteiten in.');
-            return false;
-        }
-
-        if (new Set(vals).size !== vals.length) {
-            alert('Elke prioriteit mag maar één keer voorkomen.');
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function goToStep(step) {
-    if (step > currentStep) {
-        if (!validateStep(currentStep)) return;
-    }
-
-    currentStep = step;
-    updateWizardUI();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function createPriorityOptions(selected="") {
-    let options = '<option value="">Kies</option>';
-    for(let i = 1; i <= 5; i++){
-        options += `<option value="${i}" ${String(selected) == String(i) ? 'selected' : ''}>${i}</option>`;
-    }
-    return options;
-}
-
-function createPowerMeterOptions(selected=""){
-    return `
-        <option value="" ${selected===""?'selected':''}>Geen</option>
-        <option value="shelly" ${selected==="shelly"?'selected':''}>Shelly</option>
-        <option value="homewizard" ${selected==="homewizard"?'selected':''}>HomeWizard</option>
-    `;
-}
-
-function createPowerSocketOptions(selected=""){
-    return `
-        <option value="" ${selected===""?'selected':''}>Geen</option>
-        <option value="shelly" ${selected==="shelly"?'selected':''}>Shelly Plug</option>
-        <option value="homewizard" ${selected==="homewizard"?'selected':''}>HomeWizard Energy Socket</option>
-    `;
-}
-
-function getUsedPriorities(){
-    return Array.from(document.querySelectorAll('select[name="priority[]"]'))
-        .map(s => parseInt(s.value, 10))
-        .filter(v => !Number.isNaN(v));
-}
-
-function getNextPriority(){
-    const used = getUsedPriorities();
-    for(let i = 1; i <= 5; i++){
-        if(!used.includes(i)) return i;
-    }
-    return "";
-}
-
-function updatePriorities(){
-    const selects = document.querySelectorAll('select[name="priority[]"]');
-    const used = new Set();
-
-    selects.forEach(select => {
-        if(select.value){
-            used.add(parseInt(select.value, 10));
-        }
-    });
-
-    selects.forEach(select => {
-        if(!select.value){
-            for(let p = 1; p <= 5; p++){
-                if(!used.has(p)){
-                    select.value = p;
-                    used.add(p);
-                    break;
+                if (i < currentStep) {
+                    el.classList.add('done');
+                } else if (i === currentStep) {
+                    el.classList.add('active');
                 }
             }
+
+            const fill = document.getElementById('progressFill');
+            fill.style.width = currentStep === 1 ? '33.33%' : currentStep === 2 ? '66.66%' : '100%';
         }
-    });
-}
 
-function getExistingDeviceIps(){
-    return Array.from(document.querySelectorAll('input[name="shelly_ip[]"]'))
-        .map(i => (i.value || "").trim())
-        .filter(Boolean);
-}
+        function validateStep(step) {
+            const status = document.getElementById('statusMessage');
+            if (status) status.textContent = '';
 
-function hasDeviceIp(ip){
-    return getExistingDeviceIps().includes((ip || "").trim());
-}
+            if (step === 1) {
+                const p1 = document.getElementById('p1ip').value.trim();
+                const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
 
-function updatePowerIpState(row){
-    const powerMeterField = row.querySelector('select[name="power_meter[]"]');
-    const powerIpField = row.querySelector('input[name="power_ip[]"]');
+                if (!p1) {
+                    alert('Vul het IP-adres van de P1-meter in.');
+                    return false;
+                }
 
-    if(!powerMeterField || !powerIpField) return;
+                if (!ipRegex.test(p1)) {
+                    alert('Vul een geldig IP-adres in voor de P1-meter.');
+                    return false;
+                }
+            }
 
-    const enabled = powerMeterField.value !== "";
-    powerIpField.disabled = false;
-    powerIpField.readOnly = !enabled;
-    powerIpField.required = enabled;
+            if (step === 2) {
+                const rows = Array.from(document.querySelectorAll('.device-row'));
+                const filledRows = rows.filter(row => {
+                    const name = row.querySelector('input[name="shelly_name[]"]').value.trim();
+                    const ip = row.querySelector('input[name="shelly_ip[]"]').value.trim();
+                    return name || ip;
+                });
 
-    if(!enabled){
-        powerIpField.value = "";
-    }
-}
+                if (filledRows.length === 0) {
+                    alert('Voeg minimaal één SolarBuffer toe.');
+                    return false;
+                }
 
-function updatePowerSocketState(row){
-    const socketTypeField = row.querySelector('select[name="power_socket_type[]"]');
-    const socketIpField = row.querySelector('input[name="power_socket_ip[]"]');
+                const vals = Array.from(document.querySelectorAll('select[name="priority[]"]'))
+                    .map(s => s.value)
+                    .filter(Boolean);
 
-    if(!socketTypeField || !socketIpField) return;
+                if (vals.length !== filledRows.length) {
+                    alert('Vul alle prioriteiten in.');
+                    return false;
+                }
 
-    const enabled = socketTypeField.value !== "";
-    socketIpField.disabled = false;
-    socketIpField.readOnly = !enabled;
-    socketIpField.required = enabled;
+                if (new Set(vals).size !== vals.length) {
+                    alert('Elke prioriteit mag maar één keer voorkomen.');
+                    return false;
+                }
+            }
 
-    if(!enabled){
-        socketIpField.value = "";
-    }
-}
-
-function toggleExpertSettings(){
-    const grid = document.getElementById('expertGrid');
-    const btn = document.getElementById('toggleExpertBtn');
-
-    if(!grid || !btn) return;
-
-    const isVisible = grid.style.display === 'grid';
-
-    if(isVisible){
-        grid.style.display = 'none';
-        btn.textContent = 'Toon expertinstellingen';
-    } else {
-        grid.style.display = 'grid';
-        btn.textContent = 'Verberg expertinstellingen';
-    }
-}
-
-function updateExpertModeVisibility(){
-    const expertMode = document.getElementById('expertMode');
-    const expertBox = document.getElementById('expertSettingsBox');
-    const grid = document.getElementById('expertGrid');
-    const btn = document.getElementById('toggleExpertBtn');
-
-    if(!expertMode || !expertBox) return;
-
-    if(expertMode.checked){
-        expertBox.style.display = 'block';
-        if(grid) grid.style.display = 'none';
-        if(btn) btn.textContent = 'Toon expertinstellingen';
-    } else {
-        expertBox.style.display = 'none';
-    }
-}
-
-function refreshRemoveButtons(){
-    const rows = Array.from(document.querySelectorAll('.device-row'));
-
-    rows.forEach((row, index) => {
-        const slot = row.querySelector('.remove-slot');
-        if(!slot) return;
-
-        if(index === 0){
-            slot.innerHTML = '<div class="remove-placeholder" aria-hidden="true"></div>';
-        } else {
-            slot.innerHTML = '<button type="button" class="remove-btn" onclick="removeDevice(this)" title="Apparaat verwijderen" aria-label="Apparaat verwijderen">×</button>';
+            return true;
         }
-    });
-}
 
-function addDevice(
-    name='',
-    ip='',
-    priority='',
-    power_meter='',
-    power_ip='',
-    power_socket_type='',
-    power_socket_ip=''
-){
-    const container = document.getElementById('deviceContainer');
-    if(container.children.length >= 5){
-        alert("Je kunt maximaal 5 apparaten toevoegen.");
-        return false;
-    }
+        function goToStep(step) {
+            if (step > currentStep) {
+                if (!validateStep(currentStep)) return;
+            }
 
-    const finalPriority = priority || getNextPriority();
+            currentStep = step;
+            updateWizardUI();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-    const row = document.createElement('div');
-    row.className = 'device-row';
-    row.innerHTML = `
+        function createPriorityOptions(selected = "") {
+            let options = '<option value="">Kies</option>';
+            for (let i = 1; i <= 5; i++) {
+                options += `<option value="${i}" ${String(selected) == String(i) ? 'selected' : ''}>${i}</option>`;
+            }
+            return options;
+        }
+
+        function createPowerMeterOptions(selected = "") {
+            return `
+        <option value="" ${selected === "" ? 'selected' : ''}>Geen</option>
+        <option value="shelly" ${selected === "shelly" ? 'selected' : ''}>Shelly</option>
+        <option value="homewizard" ${selected === "homewizard" ? 'selected' : ''}>HomeWizard</option>
+    `;
+        }
+
+        function createPowerSocketOptions(selected = "") {
+            return `
+        <option value="" ${selected === "" ? 'selected' : ''}>Geen</option>
+        <option value="shelly" ${selected === "shelly" ? 'selected' : ''}>Shelly Plug</option>
+        <option value="homewizard" ${selected === "homewizard" ? 'selected' : ''}>HomeWizard Energy Socket</option>
+    `;
+        }
+
+        function getUsedPriorities() {
+            return Array.from(document.querySelectorAll('select[name="priority[]"]'))
+                .map(s => parseInt(s.value, 10))
+                .filter(v => !Number.isNaN(v));
+        }
+
+        function getNextPriority() {
+            const used = getUsedPriorities();
+            for (let i = 1; i <= 5; i++) {
+                if (!used.includes(i)) return i;
+            }
+            return "";
+        }
+
+        function updatePriorities() {
+            const selects = document.querySelectorAll('select[name="priority[]"]');
+            const used = new Set();
+
+            selects.forEach(select => {
+                if (select.value) {
+                    used.add(parseInt(select.value, 10));
+                }
+            });
+
+            selects.forEach(select => {
+                if (!select.value) {
+                    for (let p = 1; p <= 5; p++) {
+                        if (!used.has(p)) {
+                            select.value = p;
+                            used.add(p);
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+
+        function getExistingDeviceIps() {
+            return Array.from(document.querySelectorAll('input[name="shelly_ip[]"]'))
+                .map(i => (i.value || "").trim())
+                .filter(Boolean);
+        }
+
+        function hasDeviceIp(ip) {
+            return getExistingDeviceIps().includes((ip || "").trim());
+        }
+
+        function updatePowerIpState(row) {
+            const powerMeterField = row.querySelector('select[name="power_meter[]"]');
+            const powerIpField = row.querySelector('input[name="power_ip[]"]');
+
+            if (!powerMeterField || !powerIpField) return;
+
+            const enabled = powerMeterField.value !== "";
+            powerIpField.disabled = false;
+            powerIpField.readOnly = !enabled;
+            powerIpField.required = enabled;
+
+            if (!enabled) {
+                powerIpField.value = "";
+            }
+        }
+
+        function updatePowerSocketState(row) {
+            const socketTypeField = row.querySelector('select[name="power_socket_type[]"]');
+            const socketIpField = row.querySelector('input[name="power_socket_ip[]"]');
+
+            if (!socketTypeField || !socketIpField) return;
+
+            const enabled = socketTypeField.value !== "";
+            socketIpField.disabled = false;
+            socketIpField.readOnly = !enabled;
+            socketIpField.required = enabled;
+
+            if (!enabled) {
+                socketIpField.value = "";
+            }
+        }
+
+        function toggleExpertSettings() {
+            const grid = document.getElementById('expertGrid');
+            const btn = document.getElementById('toggleExpertBtn');
+
+            if (!grid || !btn) return;
+
+            const isVisible = grid.style.display === 'grid';
+
+            if (isVisible) {
+                grid.style.display = 'none';
+                btn.textContent = 'Toon expertinstellingen';
+            } else {
+                grid.style.display = 'grid';
+                btn.textContent = 'Verberg expertinstellingen';
+            }
+        }
+
+        function updateExpertModeVisibility() {
+            const expertMode = document.getElementById('expertMode');
+            const expertBox = document.getElementById('expertSettingsBox');
+            const grid = document.getElementById('expertGrid');
+            const btn = document.getElementById('toggleExpertBtn');
+
+            if (!expertMode || !expertBox) return;
+
+            if (expertMode.checked) {
+                expertBox.style.display = 'block';
+                if (grid) grid.style.display = 'none';
+                if (btn) btn.textContent = 'Toon expertinstellingen';
+            } else {
+                expertBox.style.display = 'none';
+            }
+        }
+
+        function refreshRemoveButtons() {
+            const rows = Array.from(document.querySelectorAll('.device-row'));
+
+            rows.forEach((row, index) => {
+                const slot = row.querySelector('.remove-slot');
+                if (!slot) return;
+
+                if (index === 0) {
+                    slot.innerHTML = '<div class="remove-placeholder" aria-hidden="true"></div>';
+                } else {
+                    slot.innerHTML = '<button type="button" class="remove-btn" onclick="removeDevice(this)" title="Apparaat verwijderen" aria-label="Apparaat verwijderen">×</button>';
+                }
+            });
+        }
+
+        function addDevice(
+            name = '',
+            ip = '',
+            priority = '',
+            power_meter = '',
+            power_ip = '',
+            power_socket_type = '',
+            power_socket_ip = ''
+        ) {
+            const container = document.getElementById('deviceContainer');
+            if (container.children.length >= 5) {
+                alert("Je kunt maximaal 5 apparaten toevoegen.");
+                return false;
+            }
+
+            const finalPriority = priority || getNextPriority();
+
+            const row = document.createElement('div');
+            row.className = 'device-row';
+            row.innerHTML = `
         <div class="device-row-top">
             <label>Naam</label>
             <input type="text" name="shelly_name[]" placeholder="Bijv. Woonkamer" value="${escapeHtml(name)}" required>
@@ -1065,271 +1130,273 @@ function addDevice(
         </div>
     `;
 
-    container.appendChild(row);
+            container.appendChild(row);
 
-    const powerMeterSelect = row.querySelector('select[name="power_meter[]"]');
-    const powerSocketSelect = row.querySelector('select[name="power_socket_type[]"]');
+            const powerMeterSelect = row.querySelector('select[name="power_meter[]"]');
+            const powerSocketSelect = row.querySelector('select[name="power_socket_type[]"]');
 
-    powerMeterSelect.addEventListener('change', () => updatePowerIpState(row));
-    powerSocketSelect.addEventListener('change', () => updatePowerSocketState(row));
+            powerMeterSelect.addEventListener('change', () => updatePowerIpState(row));
+            powerSocketSelect.addEventListener('change', () => updatePowerSocketState(row));
 
-    updatePowerIpState(row);
-    updatePowerSocketState(row);
-    updatePriorities();
-    refreshRemoveButtons();
-    return true;
-}
-
-function removeDevice(btn){
-    const row = btn.closest('.device-row');
-    if(!row) return;
-
-    row.remove();
-    normalizePriorities();
-    refreshRemoveButtons();
-}
-
-function normalizePriorities(){
-    const rows = Array.from(document.querySelectorAll('.device-row'));
-
-    const filledRows = rows.filter(row => {
-        const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
-        const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
-        return ip !== '' || name !== '';
-    });
-
-    filledRows.forEach((row, index) => {
-        const priorityField = row.querySelector('select[name="priority[]"]');
-        if (priorityField) {
-            priorityField.value = String(index + 1);
+            updatePowerIpState(row);
+            updatePowerSocketState(row);
+            updatePriorities();
+            refreshRemoveButtons();
+            return true;
         }
-    });
 
-    rows.forEach(row => {
-        const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
-        const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
-        if (ip === '' && name === '') {
-            const priorityField = row.querySelector('select[name="priority[]"]');
-            if (priorityField) {
-                priorityField.value = '';
+        function removeDevice(btn) {
+            const row = btn.closest('.device-row');
+            if (!row) return;
+
+            row.remove();
+            normalizePriorities();
+            refreshRemoveButtons();
+        }
+
+        function normalizePriorities() {
+            const rows = Array.from(document.querySelectorAll('.device-row'));
+
+            const filledRows = rows.filter(row => {
+                const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+                const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
+                return ip !== '' || name !== '';
+            });
+
+            filledRows.forEach((row, index) => {
+                const priorityField = row.querySelector('select[name="priority[]"]');
+                if (priorityField) {
+                    priorityField.value = String(index + 1);
+                }
+            });
+
+            rows.forEach(row => {
+                const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+                const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
+                if (ip === '' && name === '') {
+                    const priorityField = row.querySelector('select[name="priority[]"]');
+                    if (priorityField) {
+                        priorityField.value = '';
+                    }
+                }
+            });
+        }
+
+        function renderScanResults(data, addedCount, skippedCount) {
+            const results = document.getElementById('scanResults');
+            let html = '';
+
+            const p1 = Array.isArray(data.p1_meters) ? data.p1_meters : [];
+            const shellys = Array.isArray(data.shelly_devices) ? data.shelly_devices : [];
+
+            if (p1.length > 0) {
+                html += '<h3>Gevonden HomeWizard P1</h3><ul>';
+                p1.forEach(d => {
+                    html += `<li>${escapeHtml(d.name || 'HomeWizard P1')} — ${escapeHtml(d.ip || '')}</li>`;
+                });
+                html += '</ul>';
+            }
+
+            if (shellys.length > 0) {
+                html += '<h3>Gevonden Shelly apparaten</h3><ul>';
+                shellys.forEach(d => {
+                    const model = d.model ? ` (${escapeHtml(d.model)})` : '';
+                    html += `<li>${escapeHtml(d.name || 'Shelly')} — ${escapeHtml(d.ip || '')}${model}</li>`;
+                });
+                html += '</ul>';
+            }
+
+            if (p1.length === 0 && shellys.length === 0) {
+                html = '<p>Geen apparaten gevonden op het netwerk.</p>';
+            } else {
+                html += `<p><strong>Toegevoegd:</strong> ${addedCount} apparaat(en)</p>`;
+                if (skippedCount > 0) {
+                    html += `<p><strong>Overgeslagen:</strong> ${skippedCount} duplicaat/dubbele IP’s</p>`;
+                }
+            }
+
+            results.innerHTML = html;
+            results.classList.add('visible');
+        }
+
+        async function scanDevices() {
+            const scanButtons = [
+                document.getElementById('scanP1Btn'),
+                document.getElementById('scanDevicesBtn')
+            ].filter(Boolean);
+
+            const scanStatus = document.getElementById('scanStatus');
+            const deviceScanStatus = document.getElementById('deviceScanStatus');
+            const statusMessage = document.getElementById('statusMessage');
+            const results = document.getElementById('scanResults');
+
+            scanButtons.forEach(btn => btn.disabled = true);
+            scanStatus.textContent = 'Netwerk wordt gescand... dit kan enkele seconden duren.';
+            deviceScanStatus.textContent = 'Netwerk wordt gescand...';
+            if (statusMessage) statusMessage.textContent = '';
+            results.innerHTML = '';
+            results.classList.remove('visible');
+
+            try {
+                const response = await fetch('/scan_devices', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Onbekende fout tijdens scannen');
+                }
+
+                const p1List = Array.isArray(data.p1_meters) ? data.p1_meters : [];
+                const shellyList = Array.isArray(data.shelly_devices) ? data.shelly_devices : [];
+
+                if (p1List.length > 0) {
+                    const p1Input = document.getElementById('p1ip');
+                    if (p1Input && !p1Input.value.trim()) {
+                        p1Input.value = p1List[0].ip || '';
+                    }
+                }
+
+                let addedCount = 0;
+                let skippedCount = 0;
+
+                for (const device of shellyList) {
+                    const ip = (device.ip || '').trim();
+                    if (!ip) continue;
+
+                    if (hasDeviceIp(ip)) {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    let filledExistingRow = false;
+
+                    const rows = document.querySelectorAll('.device-row');
+                    for (const row of rows) {
+                        const nameField = row.querySelector('input[name="shelly_name[]"]');
+                        const ipField = row.querySelector('input[name="shelly_ip[]"]');
+                        const priorityField = row.querySelector('select[name="priority[]"]');
+                        const powerMeterField = row.querySelector('select[name="power_meter[]"]');
+                        const powerIpField = row.querySelector('input[name="power_ip[]"]');
+                        const powerSocketTypeField = row.querySelector('select[name="power_socket_type[]"]');
+                        const powerSocketIpField = row.querySelector('input[name="power_socket_ip[]"]');
+
+                        const rowIp = (ipField?.value || '').trim();
+                        const rowName = (nameField?.value || '').trim();
+
+                        if (!rowIp && !rowName) {
+                            nameField.value = device.name || `Shelly ${ip}`;
+                            ipField.value = ip;
+                            priorityField.value = "";
+                            powerMeterField.value = "";
+                            powerIpField.value = "";
+                            powerSocketTypeField.value = "";
+                            powerSocketIpField.value = "";
+
+                            updatePowerIpState(row);
+                            updatePowerSocketState(row);
+
+                            filledExistingRow = true;
+                            addedCount++;
+                            break;
+                        }
+                    }
+
+                    if (!filledExistingRow) {
+                        if (document.getElementById('deviceContainer').children.length >= 5) {
+                            break;
+                        }
+
+                        const added = addDevice(
+                            device.name || 'Shelly',
+                            ip,
+                            '',
+                            '',
+                            '',
+                            '',
+                            ''
+                        );
+
+                        if (added) addedCount++;
+                    }
+                }
+
+                normalizePriorities();
+                refreshRemoveButtons();
+                renderScanResults(data, addedCount, skippedCount);
+
+                if (p1List.length === 0 && shellyList.length === 0) {
+                    scanStatus.textContent = 'Scan voltooid. Geen apparaten gevonden.';
+                    deviceScanStatus.textContent = 'Scan voltooid. Geen apparaten gevonden.';
+                } else {
+                    scanStatus.textContent = 'Scan voltooid.';
+                    deviceScanStatus.textContent = `Scan voltooid. ${addedCount} SolarBuffer(s) toegevoegd.`;
+                }
+            } catch (err) {
+                scanStatus.textContent = 'Scannen mislukt.';
+                deviceScanStatus.textContent = 'Scannen mislukt.';
+                if (statusMessage) {
+                    statusMessage.textContent = err.message || 'Er ging iets mis tijdens het scannen.';
+                }
+            } finally {
+                scanButtons.forEach(btn => btn.disabled = false);
             }
         }
-    });
-}
 
-function renderScanResults(data, addedCount, skippedCount){
-    const results = document.getElementById('scanResults');
-    let html = '';
-
-    const p1 = Array.isArray(data.p1_meters) ? data.p1_meters : [];
-    const shellys = Array.isArray(data.shelly_devices) ? data.shelly_devices : [];
-
-    if(p1.length > 0){
-        html += '<h3>Gevonden HomeWizard P1</h3><ul>';
-        p1.forEach(d => {
-            html += `<li>${escapeHtml(d.name || 'HomeWizard P1')} — ${escapeHtml(d.ip || '')}</li>`;
-        });
-        html += '</ul>';
-    }
-
-    if(shellys.length > 0){
-        html += '<h3>Gevonden Shelly apparaten</h3><ul>';
-        shellys.forEach(d => {
-            const model = d.model ? ` (${escapeHtml(d.model)})` : '';
-            html += `<li>${escapeHtml(d.name || 'Shelly')} — ${escapeHtml(d.ip || '')}${model}</li>`;
-        });
-        html += '</ul>';
-    }
-
-    if(p1.length === 0 && shellys.length === 0){
-        html = '<p>Geen apparaten gevonden op het netwerk.</p>';
-    } else {
-        html += `<p><strong>Toegevoegd:</strong> ${addedCount} apparaat(en)</p>`;
-        if(skippedCount > 0){
-            html += `<p><strong>Overgeslagen:</strong> ${skippedCount} duplicaat/dubbele IP’s</p>`;
-        }
-    }
-
-    results.innerHTML = html;
-    results.classList.add('visible');
-}
-
-async function scanDevices(){
-    const scanButtons = [
-        document.getElementById('scanP1Btn'),
-        document.getElementById('scanDevicesBtn')
-    ].filter(Boolean);
-
-    const scanStatus = document.getElementById('scanStatus');
-    const deviceScanStatus = document.getElementById('deviceScanStatus');
-    const statusMessage = document.getElementById('statusMessage');
-    const results = document.getElementById('scanResults');
-
-    scanButtons.forEach(btn => btn.disabled = true);
-    scanStatus.textContent = 'Netwerk wordt gescand... dit kan enkele seconden duren.';
-    deviceScanStatus.textContent = 'Netwerk wordt gescand...';
-    if (statusMessage) statusMessage.textContent = '';
-    results.innerHTML = '';
-    results.classList.remove('visible');
-
-    try{
-        const response = await fetch('/scan_devices', {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-        });
-
-        const data = await response.json();
-
-        if(!response.ok){
-            throw new Error(data.error || 'Onbekende fout tijdens scannen');
+        function cancelWizard() {
+            window.location.href = "/dashboard";
         }
 
-        const p1List = Array.isArray(data.p1_meters) ? data.p1_meters : [];
-        const shellyList = Array.isArray(data.shelly_devices) ? data.shelly_devices : [];
-
-        if(p1List.length > 0){
-            const p1Input = document.getElementById('p1ip');
-            if(p1Input && !p1Input.value.trim()){
-                p1Input.value = p1List[0].ip || '';
+        document.getElementById('configForm').addEventListener('submit', function (e) {
+            if (!validateStep(2)) {
+                e.preventDefault();
+                return;
             }
+
+            const status = document.getElementById('statusMessage');
+            if (status) status.textContent = "";
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedP1 = "{{ config.p1_ip or '' }}";
+            const devices = {{ config.shelly_devices| tojson or[]
+        }};
+        const expertMode = document.getElementById('expertMode');
+
+        if (savedP1) {
+            document.getElementById('p1ip').value = savedP1;
         }
 
-        let addedCount = 0;
-        let skippedCount = 0;
+        if (expertMode) {
+            expertMode.addEventListener('change', updateExpertModeVisibility);
+        }
+        updateExpertModeVisibility();
 
-    for (const device of shellyList) {
-        const ip = (device.ip || '').trim();
-        if (!ip) continue;
-
-        if (hasDeviceIp(ip)) {
-            skippedCount++;
-            continue;
+        const toggleBtn = document.getElementById('toggleExpertBtn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleExpertSettings);
         }
 
-        let filledExistingRow = false;
-
-        const rows = document.querySelectorAll('.device-row');
-        for (const row of rows) {
-            const nameField = row.querySelector('input[name="shelly_name[]"]');
-            const ipField = row.querySelector('input[name="shelly_ip[]"]');
-            const priorityField = row.querySelector('select[name="priority[]"]');
-            const powerMeterField = row.querySelector('select[name="power_meter[]"]');
-            const powerIpField = row.querySelector('input[name="power_ip[]"]');
-            const powerSocketTypeField = row.querySelector('select[name="power_socket_type[]"]');
-            const powerSocketIpField = row.querySelector('input[name="power_socket_ip[]"]');
-
-            const rowIp = (ipField?.value || '').trim();
-            const rowName = (nameField?.value || '').trim();
-
-            if (!rowIp && !rowName) {
-                nameField.value = device.name || `Shelly ${ip}`;
-                ipField.value = ip;
-                priorityField.value = "";
-                powerMeterField.value = "";
-                powerIpField.value = "";
-                powerSocketTypeField.value = "";
-                powerSocketIpField.value = "";
-
-                updatePowerIpState(row);
-                updatePowerSocketState(row);
-
-                filledExistingRow = true;
-                addedCount++;
-                break;
-            }
-        }
-
-    if (!filledExistingRow) {
-        if (document.getElementById('deviceContainer').children.length >= 5) {
-            break;
-        }
-
-        const added = addDevice(
-            device.name || 'Shelly',
-            ip,
-            '',
-            '',
-            '',
-            '',
-            ''
-        );
-
-        if (added) addedCount++;
-    }
-}
-
-        normalizePriorities();
-        refreshRemoveButtons();
-        renderScanResults(data, addedCount, skippedCount);
-
-        if(p1List.length === 0 && shellyList.length === 0){
-            scanStatus.textContent = 'Scan voltooid. Geen apparaten gevonden.';
-            deviceScanStatus.textContent = 'Scan voltooid. Geen apparaten gevonden.';
+        if (devices.length > 0) {
+            devices.forEach(d => addDevice(
+                d.name,
+                d.ip,
+                d.priority,
+                d.power_meter || "",
+                d.power_ip || "",
+                d.power_socket_type || "",
+                d.power_socket_ip || ""
+            ));
         } else {
-            scanStatus.textContent = 'Scan voltooid.';
-            deviceScanStatus.textContent = `Scan voltooid. ${addedCount} SolarBuffer(s) toegevoegd.`;
+            addDevice();
         }
-    } catch(err){
-        scanStatus.textContent = 'Scannen mislukt.';
-        deviceScanStatus.textContent = 'Scannen mislukt.';
-        if (statusMessage) {
-            statusMessage.textContent = err.message || 'Er ging iets mis tijdens het scannen.';
-        }
-    } finally {
-        scanButtons.forEach(btn => btn.disabled = false);
-    }
-}
 
-function cancelWizard(){
-    window.location.href = "/dashboard";
-}
-
-document.getElementById('configForm').addEventListener('submit', function(e){
-    if (!validateStep(2)) {
-        e.preventDefault();
-        return;
-    }
-
-    const status = document.getElementById('statusMessage');
-    if (status) status.textContent = "";
+        refreshRemoveButtons();
+        updateWizardUI();
 });
-
-window.addEventListener('DOMContentLoaded', () => {
-    const savedP1 = "{{ config.p1_ip or '' }}";
-    const devices = {{ config.shelly_devices|tojson or [] }};
-    const expertMode = document.getElementById('expertMode');
-
-    if(savedP1){
-        document.getElementById('p1ip').value = savedP1;
-    }
-
-    if(expertMode){
-        expertMode.addEventListener('change', updateExpertModeVisibility);
-    }
-    updateExpertModeVisibility();
-
-    const toggleBtn = document.getElementById('toggleExpertBtn');
-    if(toggleBtn){
-        toggleBtn.addEventListener('click', toggleExpertSettings);
-    }
-
-    if(devices.length > 0){
-        devices.forEach(d => addDevice(
-            d.name,
-            d.ip,
-            d.priority,
-            d.power_meter || "",
-            d.power_ip || "",
-            d.power_socket_type || "",
-            d.power_socket_ip || ""
-        ));
-    } else {
-        addDevice();
-    }
-
-    refreshRemoveButtons();
-    updateWizardUI();
-});
-</script>
+    </script>
 </body>
+
 </html>

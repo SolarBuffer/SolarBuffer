@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="SolarBuffer">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SolarBuffer</title>
@@ -10,7 +22,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -167,6 +183,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
@@ -190,7 +207,8 @@
                 <label for="password">Wachtwoord</label>
                 <div class="password-wrapper">
                     <input type="password" id="password" name="password" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toon wachtwoord">
+                    <button type="button" class="toggle-password" onclick="togglePassword()"
+                        aria-label="Toon wachtwoord">
                         <i id="passwordIcon" class="mdi mdi-eye-off"></i>
                     </button>
                 </div>
@@ -216,4 +234,5 @@
     </script>
 
 </body>
+
 </html>
