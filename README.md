@@ -361,6 +361,7 @@ Sla de configuratie op.
 De installatie is nu voltooid en je kunt direct starten met het gebruik van de SolarBuffer Hub 🚀
 
 ## Expert Settings
-test
+Uitleg over alle beschikbare parameters in de Expert Settings:
+
 
 
