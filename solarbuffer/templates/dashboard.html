@@ -1294,7 +1294,7 @@
           <span class="update-tag tag-feature">Nieuw</span>
           <div class="update-title">Tijdschema's</div>
           <div class="update-body">Mogelijkheid om tijdschema's aan te maken. Hierdoor kan je zelf bepalen wanneer een SolarBuffer moet draaien.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/Update" target="_blank" rel="noopener">→ Release notes</a>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.1.4" target="_blank" rel="noopener">→ Release notes</a>
         </div>
       </div>
 
@@ -1644,7 +1644,7 @@
         const fillWidth = available ? getVisualBrightness(d.brightness) : 0;
         const hasSocket = hasConfiguredSocket(d);
         const hasPowerMeter = hasConfiguredPowerMeter(d);
-        const onlineLabel = d.online ? "● Online" : (hasSocket ? "● Offline - Ready to start" : "● Offline");
+        const onlineLabel = d.online ? "● Online" : (hasSocket && d.power_socket_online ? "● Offline - Ready to start" : "● Offline");
         const safeId = d.ip.replace(/\./g, "_").replace(/:/g, "_");
         const currentBrightness = Math.round(Number(d.brightness || 0));
 
