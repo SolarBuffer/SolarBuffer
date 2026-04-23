@@ -1267,10 +1267,12 @@ def control_loop():
                             set_shelly(sched_brightness, True, ip)
                             mark_device_activity(d)
                         continue
-                    if not st["online"]:
-                        continue
+                    # Socket eerst aanzetten vóór online-check — apparaat is
+                    # offline zolang de socket uit staat
                     if has_power_socket(d) and not st["power_socket_on"]:
                         ensure_power_socket_on(d)
+                        continue
+                    if not st["online"]:
                         continue
                     st["started"] = True
                     st["on"] = True
