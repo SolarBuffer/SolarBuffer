@@ -6,6 +6,8 @@ import os
 import socket
 import ipaddress
 import subprocess
+import uuid
+import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session
@@ -52,6 +54,8 @@ def load_config():
         cfg["expert_mode"] = False
     if "expert_settings" not in cfg or not isinstance(cfg["expert_settings"], dict):
         cfg["expert_settings"] = {}
+    if "schedules" not in cfg or not isinstance(cfg["schedules"], list):
+        cfg["schedules"] = []
 
     for key, value in DEFAULT_EXPERT_SETTINGS.items():
         if key not in cfg["expert_settings"]:
@@ -213,6 +217,7 @@ enabled = True
 device_states = {}
 current_power = 0
 current_brightness = 0
+active_schedule_info = None
 
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
@@ -524,7 +529,9 @@ def status_json():
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
         devices=devices, expert_mode=cfg.get("expert_mode", False),
-        expert_settings=get_runtime_settings(cfg)
+        expert_settings=get_runtime_settings(cfg),
+        schedules=cfg.get("schedules", []),
+        active_schedule=active_schedule_info
     )
 
 
@@ -693,6 +700,104 @@ def run_update_check():
         return jsonify(success=False, error="git pull duurde te lang (timeout)"), 500
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+
+# ================= TIJDSCHEMA ROUTES =================
+def _valid_time(t):
+    return bool(re.match(r"^\d{2}:\d{2}$", str(t)))
+
+
+@app.route("/schedules", methods=["GET"])
+def get_schedules():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    return jsonify(schedules=cfg.get("schedules", []))
+
+
+@app.route("/schedules", methods=["POST"])
+def create_schedule():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    days = data.get("days", [])
+    start_time = str(data.get("start_time", ""))
+    end_time = str(data.get("end_time", ""))
+    brightness = data.get("brightness", 50)
+    name = str(data.get("name", ""))[:50]
+    if not isinstance(days, list) or not days:
+        return jsonify(success=False, error="Geen dagen geselecteerd"), 400
+    if not _valid_time(start_time) or not _valid_time(end_time):
+        return jsonify(success=False, error="Ongeldige tijd (gebruik HH:MM)"), 400
+    try:
+        brightness = int(brightness)
+        if not (1 <= brightness <= 100):
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify(success=False, error="Helderheid moet tussen 1 en 100 zijn"), 400
+    cfg = load_config()
+    new_sched = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "days": sorted({int(d) for d in days if 0 <= int(d) <= 6}),
+        "start_time": start_time,
+        "end_time": end_time,
+        "brightness": brightness,
+        "enabled": True,
+    }
+    cfg["schedules"].append(new_sched)
+    save_config(cfg)
+    write_audit_log("schedule_created", {"id": new_sched["id"], "name": new_sched["name"]})
+    return jsonify(success=True, schedule=new_sched)
+
+
+@app.route("/schedules/<sched_id>", methods=["PUT"])
+def update_schedule(sched_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    cfg = load_config()
+    schedules = cfg.get("schedules", [])
+    idx = next((i for i, s in enumerate(schedules) if s.get("id") == sched_id), None)
+    if idx is None:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    sched = schedules[idx]
+    if "days" in data:
+        sched["days"] = sorted({int(d) for d in data["days"] if 0 <= int(d) <= 6})
+    if "start_time" in data and _valid_time(data["start_time"]):
+        sched["start_time"] = str(data["start_time"])
+    if "end_time" in data and _valid_time(data["end_time"]):
+        sched["end_time"] = str(data["end_time"])
+    if "brightness" in data:
+        try:
+            b = int(data["brightness"])
+            if 1 <= b <= 100:
+                sched["brightness"] = b
+        except (ValueError, TypeError):
+            pass
+    if "name" in data:
+        sched["name"] = str(data["name"])[:50]
+    if "enabled" in data:
+        sched["enabled"] = bool(data["enabled"])
+    cfg["schedules"] = schedules
+    save_config(cfg)
+    write_audit_log("schedule_updated", {"id": sched_id})
+    return jsonify(success=True, schedule=sched)
+
+
+@app.route("/schedules/<sched_id>", methods=["DELETE"])
+def delete_schedule(sched_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    schedules = cfg.get("schedules", [])
+    new_schedules = [s for s in schedules if s.get("id") != sched_id]
+    if len(new_schedules) == len(schedules):
+        return jsonify(success=False, error="Niet gevonden"), 404
+    cfg["schedules"] = new_schedules
+    save_config(cfg)
+    write_audit_log("schedule_deleted", {"id": sched_id})
+    return jsonify(success=True)
 
 
 @app.route("/scan_devices", methods=["GET"])
@@ -1045,9 +1150,29 @@ def hold_frozen_output(ip):
     set_shelly(state["brightness"], True, ip)
 
 
+# ================= TIJDSCHEMA =================
+def get_active_schedule(schedules):
+    now = datetime.now()
+    weekday = now.weekday()  # 0=maandag … 6=zondag
+    current_minutes = now.hour * 60 + now.minute
+    for sched in schedules:
+        if not sched.get("enabled", True):
+            continue
+        if weekday not in sched.get("days", []):
+            continue
+        try:
+            sh, sm = map(int, sched["start_time"].split(":"))
+            eh, em = map(int, sched["end_time"].split(":"))
+        except (KeyError, ValueError):
+            continue
+        if (sh * 60 + sm) <= current_minutes < (eh * 60 + em):
+            return sched
+    return None
+
+
 # ================= CONTROL LOOP =================
 def control_loop():
-    global current_power, current_brightness
+    global current_power, current_brightness, active_schedule_info
 
     online_check_interval = 10
     last_online_check = {}
@@ -1120,6 +1245,47 @@ def control_loop():
             pid_power = 0 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
             devices_sorted = get_sorted_devices(devices)
             active_brightness = 0
+
+            # --- Tijdschema override ---
+            active_sched = get_active_schedule(cfg.get("schedules", []))
+            if active_sched:
+                active_schedule_info = active_sched
+                sched_brightness = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, int(active_sched.get("brightness", MIN_BRIGHTNESS))))
+                for d in devices_sorted:
+                    ip = d["ip"]
+                    st = device_states[ip]
+                    if st.get("pending_start"):
+                        ready = ensure_power_socket_on(d)
+                        if ready:
+                            st["started"] = True
+                            st["pending_start"] = False
+                            st["on"] = True
+                            st["freeze"] = False
+                            st["saturated_since"] = None
+                            st["min_since"] = None
+                            st["brightness"] = sched_brightness
+                            set_shelly(sched_brightness, True, ip)
+                            mark_device_activity(d)
+                        continue
+                    if not st["online"]:
+                        continue
+                    if has_power_socket(d) and not st["power_socket_on"]:
+                        ensure_power_socket_on(d)
+                        continue
+                    st["started"] = True
+                    st["on"] = True
+                    st["freeze"] = False
+                    st["saturated_since"] = None
+                    st["min_since"] = None
+                    st["brightness"] = sched_brightness
+                    set_shelly(sched_brightness, True, ip)
+                    mark_device_activity(d)
+                current_brightness = sched_brightness
+                time.sleep(2)
+                continue
+            else:
+                active_schedule_info = None
+            # --- Einde tijdschema override ---
 
             if not enabled:
                 for d in devices_sorted:

@@ -1002,6 +1002,103 @@
       .device-middle { grid-template-columns: 1fr; }
       .manual-brightness { flex-wrap: wrap; }
     }
+
+    /* ===== TIJDSCHEMA ===== */
+    .sched-active-banner {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: hsl(145, 55%, 92%); color: hsl(145, 60%, 22%);
+      border-radius: 0.6rem; padding: 0.55rem 0.85rem;
+      font-size: 0.82rem; font-weight: 600; margin-top: 0.75rem;
+    }
+    .sched-active-banner svg { flex-shrink: 0; }
+
+    .sched-list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.75rem; }
+
+    .sched-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      background: hsl(30, 20%, 97%); border-radius: 0.75rem;
+      padding: 0.65rem 0.8rem; border: 1px solid hsl(30, 15%, 91%);
+    }
+    .sched-item.sched-disabled { opacity: 0.5; }
+    .sched-item-info { flex: 1; min-width: 0; }
+    .sched-item-name { font-size: 0.83rem; font-weight: 600; color: hsl(220, 20%, 14%); }
+    .sched-item-meta { font-size: 0.75rem; color: hsl(220, 10%, 46%); margin-top: 2px; }
+    .sched-item-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+    .sched-btn {
+      background: none; border: 1px solid hsl(30, 15%, 85%);
+      border-radius: 0.5rem; padding: 0.3rem 0.55rem;
+      font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      color: hsl(220, 12%, 36%); transition: background 0.15s;
+    }
+    .sched-btn:hover { background: hsl(30, 15%, 93%); }
+    .sched-btn.danger { color: hsl(0, 65%, 45%); border-color: hsl(0, 60%, 88%); }
+    .sched-btn.danger:hover { background: hsl(0, 60%, 95%); }
+
+    .sched-add-btn {
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      width: 100%; margin-top: 0.75rem;
+      background: none; border: 1.5px dashed hsl(30, 50%, 75%);
+      border-radius: 0.75rem; padding: 0.6rem; cursor: pointer;
+      font-size: 0.82rem; font-weight: 600; color: hsl(32, 95%, 42%);
+      transition: background 0.15s;
+    }
+    .sched-add-btn:hover { background: hsl(32, 95%, 97%); }
+
+    .sched-form {
+      display: none; flex-direction: column; gap: 0.75rem;
+      margin-top: 0.75rem; padding: 0.85rem;
+      background: hsl(30, 20%, 97%); border-radius: 0.75rem;
+      border: 1px solid hsl(30, 15%, 91%);
+    }
+    .sched-form.open { display: flex; }
+    .sched-form-title { font-size: 0.88rem; font-weight: 700; color: hsl(220, 20%, 14%); }
+    .sched-form label { font-size: 0.78rem; font-weight: 600; color: hsl(220, 12%, 36%); margin-bottom: 3px; display: block; }
+    .sched-form input[type="text"] {
+      width: 100%; border: 1px solid hsl(30, 15%, 85%); border-radius: 0.5rem;
+      padding: 0.45rem 0.6rem; font-size: 0.85rem; background: #fff;
+      color: hsl(220, 20%, 14%); outline: none;
+    }
+    .sched-form input[type="time"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; border: 1px solid hsl(30, 15%, 85%); border-radius: 0.5rem;
+      padding: 0.45rem 0.6rem; font-size: 0.85rem; background: #fff;
+      color: hsl(220, 20%, 14%); outline: none;
+    }
+    .sched-form input[type="time"]:focus, .sched-form input[type="text"]:focus {
+      border-color: hsl(32, 95%, 52%);
+    }
+    .sched-days { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .sched-day-btn {
+      padding: 0.3rem 0.55rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 600;
+      border: 1px solid hsl(30, 15%, 85%); background: #fff; cursor: pointer;
+      color: hsl(220, 12%, 36%); transition: background 0.12s, color 0.12s;
+    }
+    .sched-day-btn.active {
+      background: hsl(32, 95%, 52%); color: #fff; border-color: hsl(32, 95%, 52%);
+    }
+    .sched-time-row { display: flex; gap: 0.75rem; }
+    .sched-time-field { flex: 1; min-width: 0; }
+    @media (max-width: 520px) {
+      .sched-time-row { flex-direction: column; gap: 0.5rem; }
+      .sched-time-field { width: 100%; }
+    }
+    .sched-brightness-row { display: flex; align-items: center; gap: 0.75rem; }
+    .sched-brightness-row input[type="range"] { flex: 1; accent-color: hsl(32, 95%, 52%); }
+    .sched-brightness-val { font-size: 0.85rem; font-weight: 700; min-width: 40px; text-align: right; color: hsl(220, 20%, 14%); }
+    .sched-form-actions { display: flex; gap: 0.5rem; margin-top: 0.25rem; }
+    .sched-save-btn {
+      flex: 1; padding: 0.55rem; border: none; border-radius: 0.6rem;
+      background: hsl(32, 95%, 52%); color: #fff; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .sched-save-btn:hover { background: hsl(32, 95%, 42%); }
+    .sched-cancel-btn {
+      padding: 0.55rem 1rem; border: 1px solid hsl(30, 15%, 85%); border-radius: 0.6rem;
+      background: #fff; color: hsl(220, 12%, 36%); font-size: 0.85rem; font-weight: 600;
+      cursor: pointer;
+    }
+    .sched-error { font-size: 0.78rem; color: hsl(0, 65%, 45%); font-weight: 600; display: none; }
+    .sched-error.visible { display: block; }
   </style>
 </head>
 
@@ -1108,6 +1205,72 @@
       </div>
     </div>
 
+    <div class="card control-card" id="scheduleCard">
+      <h2>
+        <span class="ctrl-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg>
+        </span>
+        Tijdschema's
+      </h2>
+      <div id="schedActiveBanner" style="display:none" class="sched-active-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+        <span id="schedActiveName">Schema actief</span>
+      </div>
+      <div class="sched-list" id="schedList"></div>
+      <button class="sched-add-btn" onclick="openSchedForm()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+        Nieuw tijdschema
+      </button>
+
+      <div class="sched-form" id="schedForm">
+        <div class="sched-form-title" id="schedFormTitle">Nieuw tijdschema</div>
+
+        <div>
+          <label>Naam (optioneel)</label>
+          <input type="text" id="schedName" placeholder="Bijv. Middag" maxlength="50">
+        </div>
+
+        <div>
+          <label>Dag(en)</label>
+          <div class="sched-days" id="schedDays">
+            <button type="button" class="sched-day-btn" data-day="0">Ma</button>
+            <button type="button" class="sched-day-btn" data-day="1">Di</button>
+            <button type="button" class="sched-day-btn" data-day="2">Wo</button>
+            <button type="button" class="sched-day-btn" data-day="3">Do</button>
+            <button type="button" class="sched-day-btn" data-day="4">Vr</button>
+            <button type="button" class="sched-day-btn" data-day="5">Za</button>
+            <button type="button" class="sched-day-btn" data-day="6">Zo</button>
+          </div>
+        </div>
+
+        <div class="sched-time-row">
+          <div class="sched-time-field">
+            <label>Begintijd</label>
+            <input type="time" id="schedStart" value="08:00">
+          </div>
+          <div class="sched-time-field">
+            <label>Eindtijd</label>
+            <input type="time" id="schedEnd" value="17:00">
+          </div>
+        </div>
+
+        <div>
+          <label>Vermogen: <span id="schedBrightnessVal">50</span>%</label>
+          <div class="sched-brightness-row">
+            <input type="range" id="schedBrightness" min="34" max="100" value="50"
+              oninput="document.getElementById('schedBrightnessVal').textContent=this.value">
+          </div>
+        </div>
+
+        <div class="sched-error" id="schedError"></div>
+
+        <div class="sched-form-actions">
+          <button class="sched-save-btn" onclick="saveSchedule()">Opslaan</button>
+          <button class="sched-cancel-btn" onclick="closeSchedForm()">Annuleren</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card control-card updates-card">
       <h2>
         <div class="updates-header-icon">
@@ -1123,7 +1286,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.1.3</span>
+          <span class="version-badge new">v0.1.4</span>
+          <span class="update-date-small">23 apr</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Tijdschema's</div>
+          <div class="update-body">Mogelijkehijd om tijdschema's aan te maken. Hierdoor kan je zelf bepalen wanneer een SolarBuffer moet draaien.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/Update" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.1.3</span>
           <span class="update-date-small">17 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1137,7 +1314,7 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge mid">v0.1.2</span>
+          <span class="version-badge old">v0.1.2</span>
           <span class="update-date-small">6 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1147,23 +1324,10 @@
           <div class="update-body">Expertmodus toegevoegd in de wizard configuratie. Hiermee kunnen parameters zelf gewijzigd worden.</div>
         </div>
       </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge old">v0.1.1</span>
-          <span class="update-date-small">5 apr</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-fix">Fix</span>
-          <div class="update-title">Bug fixes &amp; stabilisatie</div>
-          <div class="update-body">Bug fixes en stabilisatie verbeteringen.</div>
-        </div>
-      </div>
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.1.3</div>
+    <div class="footer">Version 0.1.4</div>
   </div>
 
   <script>
@@ -1218,8 +1382,124 @@
           document.getElementById("pid_dot").className = "dot" + (pidEnabled ? " active" : "");
 
           renderDevices(data.devices || []);
+          renderSchedules(data.schedules || [], data.active_schedule || null);
         })
         .catch(err => console.error("Update error:", err));
+    }
+
+    // ===== TIJDSCHEMA =====
+    const DAY_NAMES = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+    const DAY_FULL  = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"];
+    let editingSchedId = null;
+
+    function renderSchedules(schedules, active) {
+      const banner = document.getElementById("schedActiveBanner");
+      const nameEl = document.getElementById("schedActiveName");
+      if (active) {
+        banner.style.display = "flex";
+        const nm = active.name ? active.name : `${active.start_time}–${active.end_time}`;
+        nameEl.textContent = `Schema actief: ${nm} — ${active.brightness}% vermogen`;
+      } else {
+        banner.style.display = "none";
+      }
+
+      const list = document.getElementById("schedList");
+      if (!schedules.length) {
+        list.innerHTML = `<div style="font-size:0.8rem;color:hsl(220,10%,54%);text-align:center;padding:0.5rem 0">Nog geen tijdschema's ingesteld</div>`;
+        return;
+      }
+      list.innerHTML = schedules.map(s => {
+        const dayStr = s.days.map(d => DAY_NAMES[d]).join(", ");
+        const activeNow = active && active.id === s.id;
+        return `<div class="sched-item${s.enabled ? '' : ' sched-disabled'}">
+          <div class="sched-item-info">
+            <div class="sched-item-name">${escapeHtml(s.name || (s.start_time + '–' + s.end_time))}${activeNow ? ' <span style="color:hsl(145,60%,32%);font-size:0.72rem">● actief</span>' : ''}</div>
+            <div class="sched-item-meta">${dayStr} · ${s.start_time}–${s.end_time} · ${s.brightness}%</div>
+          </div>
+          <div class="sched-item-actions">
+            <button class="sched-btn" onclick="editSchedule('${s.id}')">${s.enabled ? 'Bewerken' : 'Bewerken'}</button>
+            <button class="sched-btn" onclick="toggleSchedEnabled('${s.id}', ${!s.enabled})">${s.enabled ? 'Uit' : 'Aan'}</button>
+            <button class="sched-btn danger" onclick="deleteSchedule('${s.id}')">✕</button>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    function openSchedForm(prefill) {
+      editingSchedId = prefill ? prefill.id : null;
+      document.getElementById("schedFormTitle").textContent = prefill ? "Schema bewerken" : "Nieuw tijdschema";
+      document.getElementById("schedName").value = prefill ? (prefill.name || "") : "";
+      document.getElementById("schedStart").value = prefill ? prefill.start_time : "08:00";
+      document.getElementById("schedEnd").value = prefill ? prefill.end_time : "17:00";
+      document.getElementById("schedBrightness").value = prefill ? prefill.brightness : 50;
+      document.getElementById("schedBrightnessVal").textContent = prefill ? prefill.brightness : 50;
+      document.querySelectorAll(".sched-day-btn").forEach(btn => {
+        const day = parseInt(btn.dataset.day);
+        btn.classList.toggle("active", prefill ? prefill.days.includes(day) : false);
+      });
+      document.getElementById("schedError").classList.remove("visible");
+      document.getElementById("schedError").textContent = "";
+      document.getElementById("schedForm").classList.add("open");
+      document.getElementById("schedForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function closeSchedForm() {
+      document.getElementById("schedForm").classList.remove("open");
+      editingSchedId = null;
+    }
+
+    document.querySelectorAll(".sched-day-btn").forEach(btn => {
+      btn.addEventListener("click", () => btn.classList.toggle("active"));
+    });
+
+    function editSchedule(id) {
+      fetch("/schedules")
+        .then(r => r.json())
+        .then(data => {
+          const s = (data.schedules || []).find(x => x.id === id);
+          if (s) openSchedForm(s);
+        });
+    }
+
+    function toggleSchedEnabled(id, enabled) {
+      fetch("/schedules/" + encodeURIComponent(id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled })
+      }).then(() => updateStatus());
+    }
+
+    function saveSchedule() {
+      const days = [];
+      document.querySelectorAll(".sched-day-btn.active").forEach(btn => days.push(parseInt(btn.dataset.day)));
+      const name = document.getElementById("schedName").value.trim();
+      const start = document.getElementById("schedStart").value;
+      const end = document.getElementById("schedEnd").value;
+      const brightness = parseInt(document.getElementById("schedBrightness").value);
+      const errEl = document.getElementById("schedError");
+
+      if (!days.length) { errEl.textContent = "Selecteer minimaal één dag."; errEl.classList.add("visible"); return; }
+      if (!start || !end) { errEl.textContent = "Vul een begin- en eindtijd in."; errEl.classList.add("visible"); return; }
+      if (start >= end) { errEl.textContent = "Eindtijd moet na de begintijd liggen."; errEl.classList.add("visible"); return; }
+      errEl.classList.remove("visible");
+
+      const payload = { name, days, start_time: start, end_time: end, brightness };
+      const url = editingSchedId ? "/schedules/" + encodeURIComponent(editingSchedId) : "/schedules";
+      const method = editingSchedId ? "PUT" : "POST";
+
+      fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) { closeSchedForm(); updateStatus(); }
+          else { errEl.textContent = data.error || "Opslaan mislukt."; errEl.classList.add("visible"); }
+        })
+        .catch(() => { errEl.textContent = "Verbindingsfout."; errEl.classList.add("visible"); });
+    }
+
+    function deleteSchedule(id) {
+      if (!confirm("Tijdschema verwijderen?")) return;
+      fetch("/schedules/" + encodeURIComponent(id), { method: "DELETE" })
+        .then(() => updateStatus());
     }
 
     function togglePID() {
