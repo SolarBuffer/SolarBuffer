@@ -1139,6 +1139,13 @@
               <span class="menu-item-sub">Gebruikersnaam en wachtwoord</span>
             </div>
           </div>
+          <div class="menu-item" onclick="goToUsers()">
+            <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z"/></svg></div>
+            <div class="menu-item-text">
+              <span class="menu-item-label">Gebruikersbeheer</span>
+              <span class="menu-item-sub">Gebruikers toevoegen of verwijderen</span>
+            </div>
+          </div>
           <div class="menu-item danger" onclick="logoutNow()">
             <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17,17.25V14H10V10H17V6.75L22.25,12L17,17.25M13,2A2,2 0 0,1 15,4V8H13V4H4V20H13V16H15V20A2,2 0 0,1 13,22H4A2,2 0 0,1 2,20V4A2,2 0 0,1 4,2H13Z"/></svg></div>
             <div class="menu-item-text">
@@ -1201,6 +1208,19 @@
           <div class="dot" id="pid_dot"></div>
           <label class="toggle">
             <input type="checkbox" id="pid_toggle" onchange="togglePID()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <div class="name">Anti-Legionella</div>
+          <div class="sub" id="legionella_sub">Uitgeschakeld</div>
+        </div>
+        <div class="control-right">
+          <div class="dot" id="legionella_dot"></div>
+          <label class="toggle">
+            <input type="checkbox" id="legionella_toggle" onchange="toggleAntiLegionella()"/>
             <span class="slider"></span>
           </label>
         </div>
@@ -1288,7 +1308,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.1.4</span>
+          <span class="version-badge new">v0.1.5</span>
+          <span class="update-date-small">25 apr</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Anti-Legionella &amp; Gebruikersbeheer</div>
+          <div class="update-body">Modus toegevoegd om Legionella tegen te gaan en een nieuw sub menu om gebruikers aan te maken.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.1.5" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.1.4</span>
           <span class="update-date-small">23 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1302,7 +1336,7 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge mid">v0.1.3</span>
+          <span class="version-badge old">v0.1.3</span>
           <span class="update-date-small">17 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1313,23 +1347,10 @@
           <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.1.3" target="_blank" rel="noopener">→ Release notes</a>
         </div>
       </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge old">v0.1.2</span>
-          <span class="update-date-small">6 apr</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Expertmodus</div>
-          <div class="update-body">Expertmodus toegevoegd in de wizard configuratie. Hiermee kunnen parameters zelf gewijzigd worden.</div>
-        </div>
-      </div>
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.1.4</div>
+    <div class="footer">Version 0.1.5</div>
   </div>
 
   <script>
@@ -1359,6 +1380,7 @@
     // ===== NAVIGATIE =====
     function goToWizard() { closeMenu(); window.location.href = "/wizard_forced"; }
     function goToChangeCredentials() { closeMenu(); window.location.href = "/change_credentials"; }
+    function goToUsers() { closeMenu(); window.location.href = "/users"; }
     function logoutNow() { closeMenu(); window.location.href = "/logout"; }
 
     // ===== GLOBALE STATUS =====
@@ -1382,6 +1404,27 @@
           document.getElementById("pid_toggle").checked = pidEnabled;
           document.getElementById("pid_sub").textContent = pidEnabled ? "Actief" : "Uitgeschakeld";
           document.getElementById("pid_dot").className = "dot" + (pidEnabled ? " active" : "");
+
+          const alEnabled = !!data.anti_legionella_enabled;
+          document.getElementById("legionella_toggle").checked = alEnabled;
+          const alActive = (data.devices || []).filter(d => d.legionella_active);
+          let alSub = "Uitgeschakeld";
+          let alDotCls = "dot";
+          if (alEnabled) {
+            alDotCls = "dot active";
+            if (alActive.length > 0) {
+              const nowSec = Date.now() / 1000;
+              const elapsed = nowSec - (alActive[0].legionella_start || nowSec);
+              const remaining = Math.max(0, 3 * 3600 - elapsed);
+              const h = Math.floor(remaining / 3600);
+              const m = Math.floor((remaining % 3600) / 60);
+              alSub = `Cyclus actief — ${h}u ${m < 10 ? "0" + m : m}m resterend`;
+            } else {
+              alSub = "Monitoring actief";
+            }
+          }
+          document.getElementById("legionella_sub").textContent = alSub;
+          document.getElementById("legionella_dot").className = alDotCls;
 
           renderDevices(data.devices || []);
           renderSchedules(data.schedules || [], data.active_schedule || null);
@@ -1506,6 +1549,10 @@
 
     function togglePID() {
       fetch("/toggle_pid").then(() => setTimeout(updateStatus, 200));
+    }
+
+    function toggleAntiLegionella() {
+      fetch("/toggle_anti_legionella").then(() => setTimeout(updateStatus, 200));
     }
 
     function toggleDevice(ip) {

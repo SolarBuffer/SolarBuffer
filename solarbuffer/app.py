@@ -18,6 +18,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 BASE_DIR = os.path.dirname(__file__)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 AUDIT_LOG_FILE = os.path.join(BASE_DIR, "audit.log")
+STATE_FILE = os.path.join(BASE_DIR, "state.json")
+_last_state_save = 0
 
 DEFAULT_EXPERT_SETTINGS = {
     "EXPORT_THRESHOLD": -50,
@@ -56,6 +58,14 @@ def load_config():
         cfg["expert_settings"] = {}
     if "schedules" not in cfg or not isinstance(cfg["schedules"], list):
         cfg["schedules"] = []
+    if "anti_legionella_enabled" not in cfg:
+        cfg["anti_legionella_enabled"] = False
+
+    # Migreer oud formaat (enkele gebruiker) naar gebruikerslijst
+    if "users" not in cfg:
+        old_username = cfg.pop("username", "solarbuffer")
+        old_hash = cfg.pop("password_hash", "")
+        cfg["users"] = [{"username": old_username, "password_hash": old_hash}]
 
     for key, value in DEFAULT_EXPERT_SETTINGS.items():
         if key not in cfg["expert_settings"]:
@@ -77,6 +87,37 @@ def load_config():
 def save_config(data):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
+
+
+def load_state():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def save_state(force=False):
+    global _last_state_save
+    now = time.time()
+    if not force and now - _last_state_save < 300:
+        return
+    _last_state_save = now
+    state = {
+        ip: {
+            "last_active_time": st.get("last_active_time", 0),
+            "legionella_active": st.get("legionella_active", False),
+            "legionella_start": st.get("legionella_start"),
+        }
+        for ip, st in device_states.items()
+    }
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=4)
+    except Exception as e:
+        print(f"State save fout: {e}")
 
 
 def get_runtime_settings(cfg):
@@ -208,9 +249,9 @@ def compare_configs(old_cfg, new_cfg):
 
 
 # ================= PID =================
-PID_KP = 0.02
-PID_KI = 0.001
-PID_KD = 0.002
+PID_KP = 0.025
+PID_KI = 0.0012
+PID_KD = 0.000
 
 device_pids = {}
 enabled = True
@@ -222,6 +263,11 @@ active_schedule_info = None
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
 MAX_BRIGHTNESS = 100
+
+# ================= ANTI-LEGIONELLA =================
+LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
+LEGIONELLA_RUN_SECONDS = 3 * 3600     # 3 uur op maximaal vermogen draaien
+anti_legionella_enabled = False
 
 # ================= FLASK =================
 app = Flask(__name__)
@@ -339,15 +385,15 @@ def scan_network_for_devices():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     cfg = load_config()
-    username_cfg = cfg.get("username", "solarbuffer")
-    password_hash_cfg = cfg.get("password_hash", "")
     client_ip = get_client_ip()
 
     if request.method == "POST":
         entered_username = request.form.get("username", "").strip()
         entered_password = request.form.get("password", "")
 
-        if entered_username == username_cfg and check_password_hash(password_hash_cfg, entered_password):
+        users = cfg.get("users", [])
+        matched = next((u for u in users if u["username"] == entered_username), None)
+        if matched and check_password_hash(matched.get("password_hash", ""), entered_password):
             session["logged_in"] = True
             session["username"] = entered_username
             write_audit_log("login_success", {"username": entered_username})
@@ -380,12 +426,15 @@ def change_credentials():
         new_password = request.form.get("new_password", "")
         confirm_password = request.form.get("confirm_password", "")
 
-        stored_hash = cfg.get("password_hash", "")
-        old_username = cfg.get("username", "solarbuffer")
+        current_username = session.get("username", "")
+        users = cfg.get("users", [])
+        user = next((u for u in users if u["username"] == current_username), None)
 
+        if not user:
+            return render_template("change_credentials.html", error="Gebruiker niet gevonden")
         if not new_username:
             return render_template("change_credentials.html", error="Gebruikersnaam mag niet leeg zijn")
-        if not check_password_hash(stored_hash, current_password):
+        if not check_password_hash(user.get("password_hash", ""), current_password):
             return render_template("change_credentials.html", error="Huidig wachtwoord is onjuist")
         if not new_password:
             return render_template("change_credentials.html", error="Nieuw wachtwoord mag niet leeg zijn")
@@ -394,8 +443,10 @@ def change_credentials():
         if new_password != confirm_password:
             return render_template("change_credentials.html", error="Wachtwoorden komen niet overeen")
 
-        cfg["username"] = new_username
-        cfg["password_hash"] = generate_password_hash(new_password)
+        old_username = user["username"]
+        user["username"] = new_username
+        user["password_hash"] = generate_password_hash(new_password)
+        cfg["users"] = users
         save_config(cfg)
         session["username"] = new_username
         write_audit_log("credentials_changed", {"old_username": old_username, "new_username": new_username})
@@ -525,13 +576,16 @@ def status_json():
             "power_socket_on": s.get("power_socket_on", False),
             "power_socket_online": s.get("power_socket_online", False),
             "waiting_for_power_socket": s.get("waiting_for_power_socket", False),
+            "legionella_active": s.get("legionella_active", False),
+            "legionella_start": s.get("legionella_start"),
         })
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
         devices=devices, expert_mode=cfg.get("expert_mode", False),
         expert_settings=get_runtime_settings(cfg),
         schedules=cfg.get("schedules", []),
-        active_schedule=active_schedule_info
+        active_schedule=active_schedule_info,
+        anti_legionella_enabled=anti_legionella_enabled
     )
 
 
@@ -543,6 +597,19 @@ def toggle_pid():
     enabled = not enabled
     write_audit_log("pid_toggled", {"enabled": enabled})
     return jsonify(success=True)
+
+
+@app.route("/toggle_anti_legionella")
+def toggle_anti_legionella():
+    global anti_legionella_enabled
+    if not require_login():
+        return jsonify(success=False), 401
+    anti_legionella_enabled = not anti_legionella_enabled
+    cfg = load_config()
+    cfg["anti_legionella_enabled"] = anti_legionella_enabled
+    save_config(cfg)
+    write_audit_log("anti_legionella_toggled", {"enabled": anti_legionella_enabled})
+    return jsonify(success=True, enabled=anti_legionella_enabled)
 
 
 @app.route("/toggle_shelly/<path:ip>")
@@ -800,6 +867,54 @@ def delete_schedule(sched_id):
     return jsonify(success=True)
 
 
+@app.route("/users")
+def users_page():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    error = request.args.get("error", "")
+    return render_template("users.html", users=cfg.get("users", []), error=error)
+
+
+@app.route("/users/add", methods=["POST"])
+def users_add():
+    if not require_login():
+        return redirect("/login")
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    if not username or not password:
+        return redirect("/users?error=Vul alle velden in")
+    if len(password) < 6:
+        return redirect("/users?error=Wachtwoord moet minimaal 6 tekens bevatten")
+    cfg = load_config()
+    users = cfg.get("users", [])
+    if any(u["username"] == username for u in users):
+        return redirect("/users?error=Gebruikersnaam bestaat al")
+    users.append({"username": username, "password_hash": generate_password_hash(password)})
+    cfg["users"] = users
+    save_config(cfg)
+    write_audit_log("user_added", {"new_username": username})
+    return redirect("/users")
+
+
+@app.route("/users/delete", methods=["POST"])
+def users_delete():
+    if not require_login():
+        return redirect("/login")
+    username = request.form.get("username", "").strip()
+    current_user = session.get("username", "")
+    cfg = load_config()
+    users = cfg.get("users", [])
+    if username == current_user:
+        return redirect("/users?error=Je kunt je eigen account niet verwijderen")
+    if len(users) <= 1:
+        return redirect("/users?error=Laatste gebruiker kan niet worden verwijderd")
+    cfg["users"] = [u for u in users if u["username"] != username]
+    save_config(cfg)
+    write_audit_log("user_deleted", {"deleted_username": username})
+    return redirect("/users")
+
+
 @app.route("/scan_devices", methods=["GET"])
 def scan_devices():
     if not require_login():
@@ -922,6 +1037,7 @@ def mark_device_activity(device):
     st["last_active_time"] = now
     if has_power_socket(device):
         st["power_socket_last_on_command"] = now
+    save_state()
 
 
 def ensure_power_socket_on(device):
@@ -982,18 +1098,22 @@ def maybe_turn_off_power_socket(device):
 # ================= STATE INIT =================
 def init_device_states(devices):
     global device_states
+    saved = load_state()
     for d in devices:
         ip = d["ip"]
         if ip not in device_states:
+            s = saved.get(ip, {})
             device_states[ip] = {
                 "on": False, "brightness": 0, "online": False,
                 "power_meter_online": False, "manual_override": False,
                 "freeze": False, "started": False, "pending_start": False,
                 "saturated_since": None, "min_since": None,
-                "last_active_time": 0, "power": 0,
+                "last_active_time": s.get("last_active_time", time.time()), "power": 0,
                 "power_socket_on": False, "power_socket_online": False,
                 "power_socket_last_on_command": 0,
-                "waiting_for_power_socket": False, "power_socket_ready_at": None
+                "waiting_for_power_socket": False, "power_socket_ready_at": None,
+                "legionella_active": s.get("legionella_active", False),
+                "legionella_start": s.get("legionella_start"),
             }
 
 
@@ -1002,7 +1122,7 @@ def init_device_pids(devices):
     for d in devices:
         ip = d["ip"]
         if ip not in device_pids:
-            p = PID(PID_KP, PID_KI, PID_KD, setpoint=0, sample_time=2)
+            p = PID(PID_KP, PID_KI, PID_KD, setpoint=20, sample_time=2)
             p.output_limits = (MIN_BRIGHTNESS, MAX_BRIGHTNESS)
             device_pids[ip] = p
 
@@ -1172,7 +1292,7 @@ def get_active_schedule(schedules):
 
 # ================= CONTROL LOOP =================
 def control_loop():
-    global current_power, current_brightness, active_schedule_info
+    global current_power, current_brightness, active_schedule_info, anti_legionella_enabled
 
     online_check_interval = 10
     last_online_check = {}
@@ -1183,6 +1303,7 @@ def control_loop():
     while True:
         try:
             cfg = load_config()
+            anti_legionella_enabled = cfg.get("anti_legionella_enabled", False)
             p1_ip = cfg.get("p1_ip")
             devices = cfg.get("shelly_devices", [])
             settings = get_runtime_settings(cfg)
@@ -1246,6 +1367,68 @@ def control_loop():
             devices_sorted = get_sorted_devices(devices)
             active_brightness = 0
 
+            # --- Anti-Legionella ---
+            legionella_handled = set()
+            if anti_legionella_enabled:
+                for d in devices_sorted:
+                    ip = d["ip"]
+                    st = device_states[ip]
+                    last_active = st.get("last_active_time", 0)
+                    idle_too_long = (now - last_active) >= LEGIONELLA_IDLE_SECONDS
+
+                    if not st.get("legionella_active") and idle_too_long:
+                        st["legionella_active"] = True
+                        st["legionella_start"] = now
+                        save_state(force=True)
+                        print(f"Anti-Legionella: cyclus gestart voor {ip}")
+
+                    if st.get("legionella_active"):
+                        elapsed = now - (st.get("legionella_start") or now)
+                        if elapsed >= LEGIONELLA_RUN_SECONDS:
+                            st["legionella_active"] = False
+                            st["legionella_start"] = None
+                            st["last_active_time"] = now
+                            save_state(force=True)
+                            print(f"Anti-Legionella: cyclus voltooid voor {ip}")
+                            continue
+
+                        if st.get("pending_start"):
+                            ready = ensure_power_socket_on(d)
+                            if ready:
+                                st["started"] = True
+                                st["pending_start"] = False
+                                st["on"] = True
+                                st["freeze"] = False
+                                st["saturated_since"] = None
+                                st["min_since"] = None
+                                st["brightness"] = MAX_BRIGHTNESS
+                                set_shelly(MAX_BRIGHTNESS, True, ip)
+                                mark_device_activity(d)
+                            legionella_handled.add(ip)
+                            continue
+
+                        if has_power_socket(d) and not st["power_socket_on"]:
+                            ensure_power_socket_on(d)
+                            legionella_handled.add(ip)
+                            continue
+
+                        if st["online"]:
+                            st["on"] = True
+                            st["started"] = True
+                            st["freeze"] = False
+                            st["saturated_since"] = None
+                            st["min_since"] = None
+                            st["brightness"] = MAX_BRIGHTNESS
+                            set_shelly(MAX_BRIGHTNESS, True, ip)
+                            mark_device_activity(d)
+
+                        legionella_handled.add(ip)
+            else:
+                for d in devices_sorted:
+                    device_states[d["ip"]]["legionella_active"] = False
+                    device_states[d["ip"]]["legionella_start"] = None
+            # --- Einde Anti-Legionella ---
+
             # --- Tijdschema override ---
             active_sched = get_active_schedule(cfg.get("schedules", []))
             if active_sched:
@@ -1254,6 +1437,8 @@ def control_loop():
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
+                    if ip in legionella_handled:
+                        continue
                     if st.get("pending_start"):
                         ready = ensure_power_socket_on(d)
                         if ready:
@@ -1293,6 +1478,8 @@ def control_loop():
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
+                    if ip in legionella_handled:
+                        continue
                     if st.get("pending_start"):
                         ready = ensure_power_socket_on(d)
                         if ready:
@@ -1317,13 +1504,16 @@ def control_loop():
                         mark_device_activity(d)
                 current_brightness = 0
                 for d in devices_sorted:
-                    maybe_turn_off_power_socket(d)
+                    if d["ip"] not in legionella_handled:
+                        maybe_turn_off_power_socket(d)
                 time.sleep(2)
                 continue
 
             for d in devices_sorted:
                 ip = d["ip"]
                 st = device_states[ip]
+                if ip in legionella_handled:
+                    continue
                 if st.get("pending_start"):
                     ready = ensure_power_socket_on(d)
                     if ready:
@@ -1344,8 +1534,10 @@ def control_loop():
             else:
                 export_start = None
 
+            non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled]
+
             if export_start is not None and (now - export_start) >= EXPORT_DELAY:
-                next_dev = get_next_startable_device(devices_sorted)
+                next_dev = get_next_startable_device(non_legionella)
                 if next_dev:
                     ip = next_dev["ip"]
                     st = device_states[ip]
@@ -1377,9 +1569,9 @@ def control_loop():
                         mark_device_activity(next_dev)
                         export_start = None
 
-            regulating_device = get_lowest_priority_running(devices_sorted)
+            regulating_device = get_lowest_priority_running(non_legionella)
 
-            for d in devices_sorted:
+            for d in non_legionella:
                 ip = d["ip"]
                 st = device_states[ip]
 
@@ -1412,7 +1604,7 @@ def control_loop():
                     active_brightness = b
                     mark_device_activity(d)
 
-                    if b >= FREEZE_AT and not is_last_possible_priority(devices_sorted, d):
+                    if b >= FREEZE_AT and not is_last_possible_priority(non_legionella, d):
                         if st["saturated_since"] is None:
                             st["saturated_since"] = now
                         elif (now - st["saturated_since"]) >= FREEZE_CONFIRM:
@@ -1434,7 +1626,7 @@ def control_loop():
                     mark_device_activity(d)
 
             current_brightness = active_brightness
-            lowest_running = get_lowest_priority_running(devices_sorted)
+            lowest_running = get_lowest_priority_running(non_legionella)
 
             if lowest_running:
                 st = get_device_state(lowest_running)
@@ -1451,8 +1643,8 @@ def control_loop():
             else:
                 import_off_start = None
 
-            candidate_unfreeze = get_highest_frozen_allowed_to_unfreeze(devices_sorted)
-            if candidate_unfreeze and get_lowest_priority_running(devices_sorted) is None:
+            candidate_unfreeze = get_highest_frozen_allowed_to_unfreeze(non_legionella)
+            if candidate_unfreeze and get_lowest_priority_running(non_legionella) is None:
                 if measured_power >= IMPORT_UNFREEZE_THRESHOLD:
                     if import_unfreeze_start is None:
                         import_unfreeze_start = now
@@ -1473,7 +1665,8 @@ def control_loop():
                 import_unfreeze_start = None
 
             for d in devices_sorted:
-                maybe_turn_off_power_socket(d)
+                if d["ip"] not in legionella_handled:
+                    maybe_turn_off_power_socket(d)
 
             time.sleep(2)
 

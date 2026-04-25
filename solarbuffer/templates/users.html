@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gebruikersbeheer - SolarBuffer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
+    .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card h2 .ctrl-icon { color: hsl(32, 95%, 52%); }
+
+    .user-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      background: hsl(30, 15%, 95%);
+      margin-bottom: 0.5rem;
+    }
+    .user-row:last-child { margin-bottom: 0; }
+    .user-name { font-weight: 500; font-size: 0.95rem; }
+
+    .btn-delete {
+      background: hsl(0, 75%, 60%);
+      color: white;
+      border: none;
+      border-radius: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-delete:hover { background: hsl(0, 65%, 50%); }
+    .btn-delete:disabled { background: hsl(0, 0%, 75%); cursor: default; }
+
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
+    label { font-weight: 600; font-size: 0.9rem; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    input:focus {
+      border-color: hsl(32, 95%, 52%);
+      box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.15);
+      outline: none;
+    }
+    .btn-add {
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-add:hover { background: hsl(32, 85%, 45%); transform: translateY(-1px); }
+    .btn-add:active { transform: translateY(0); }
+
+    .back-link {
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+    .back-link a {
+      color: hsl(220, 10%, 46%);
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .back-link a:hover { color: hsl(32, 95%, 52%); }
+
+    .note {
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 55%);
+      margin-top: 0.4rem;
+    }
+
+    .error-banner {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 38%);
+      border: 1px solid hsl(0, 55%, 84%);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: hsl(220, 10%, 55%);
+      margin-top: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="icon">☀️</div>
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Gebruikersbeheer</p>
+    </div>
+
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
+    {% endif %}
+
+    <!-- Bestaande gebruikers -->
+    <div class="card">
+      <h2><span class="ctrl-icon">👤</span> Gebruikers</h2>
+      {% for user in users %}
+      <div class="user-row">
+        <span class="user-name">{{ user.username }}</span>
+        <form action="/users/delete" method="POST" style="margin:0">
+          <input type="hidden" name="username" value="{{ user.username }}">
+          <button type="submit" class="btn-delete" {% if users|length <= 1 %}disabled title="Laatste gebruiker kan niet worden verwijderd"{% endif %}>
+            Verwijderen
+          </button>
+        </form>
+      </div>
+      {% else %}
+      <p class="note">Geen gebruikers gevonden.</p>
+      {% endfor %}
+    </div>
+
+    <!-- Nieuwe gebruiker toevoegen -->
+    <div class="card">
+      <h2><span class="ctrl-icon">➕</span> Gebruiker toevoegen</h2>
+      <form action="/users/add" method="POST">
+        <div class="form-group">
+          <label for="username">Gebruikersnaam</label>
+          <input type="text" id="username" name="username" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="password">Wachtwoord</label>
+          <input type="password" id="password" name="password" required autocomplete="new-password" minlength="6">
+          <span class="hint">Minimaal 6 tekens</span>
+        </div>
+        <button type="submit" class="btn-add">Toevoegen</button>
+      </form>
+    </div>
+
+    <div class="back-link">
+      <a href="/dashboard">← Terug naar dashboard</a>
+    </div>
+
+  </div>
+</body>
+</html>
