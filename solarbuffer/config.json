@@ -1,0 +1,65 @@
+{
+    "expert_mode": false,
+    "expert_settings": {
+        "EXPORT_THRESHOLD": -50,
+        "EXPORT_DELAY": 15,
+        "FREEZE_AT": 95,
+        "FREEZE_CONFIRM": 5,
+        "IMPORT_UNFREEZE_THRESHOLD": 200,
+        "UNFREEZE_DELAY": 5,
+        "IMPORT_OFF_THRESHOLD": 250,
+        "OFF_DELAY": 120,
+        "PID_NEUTRAL_LOW": -5,
+        "PID_NEUTRAL_HIGH": 45,
+        "POWER_SOCKET_DELAY": 5,
+        "POWER_SOCKET_HOLD_SECONDS": 600
+    },
+    "p1_ip": "192.168.178.21",
+    "shelly_devices": [
+        {
+            "name": "Boiler",
+            "ip": "192.168.178.17",
+            "priority": 1,
+            "power_meter": "homewizard",
+            "power_ip": "192.168.178.223",
+            "power_socket_type": "homewizard",
+            "power_socket_ip": "192.168.178.223"
+        }
+    ],
+    "schedules": [
+        {
+            "id": "59d2be92-9626-472b-8505-7bc3646d5f4d",
+            "name": "",
+            "days": [
+                6
+            ],
+            "start_time": "08:00",
+            "end_time": "17:00",
+            "brightness": 95,
+            "enabled": true
+        }
+    ],
+    "anti_legionella_enabled": true,
+    "users": [
+        {
+            "username": "solarbuffer",
+            "password_hash": "scrypt:32768:8:1$qJu6rvlta0j8Pi8R$a7c3736d8ee5e701f10e39d01601de2a29006b686e32f69f645d508d2c93a020ad0d7a229d9c9539cbb7b0199ec37442ef2c6357f99cc6c5b6647a90e82e0c3f",
+            "dark_mode": true
+        },
+        {
+            "username": "Enis",
+            "password_hash": "scrypt:32768:8:1$bgNSQLrdBI25PLr4$1d1e466005d383c67a72a03c53003d6e7a0967f1d833766249d24c01eb0658426617dd1b6a6925df38a687c7daab94e11dc813ae2acf15997acc350bd547e6ba",
+            "dark_mode": true
+        }
+    ],
+    "username": "solarbuffer",
+    "password_hash": "",
+    "mqtt_enabled": false,
+    "mqtt_broker": "",
+    "mqtt_port": 1883,
+    "mqtt_username": "",
+    "mqtt_password": "",
+    "mqtt_topic_prefix": "solarbuffer",
+    "mqtt_ha_discovery": true,
+    "mqtt_publish_interval": 30
+}

@@ -14,6 +14,13 @@ from flask import Flask, render_template, jsonify, request, redirect, session
 import threading
 from werkzeug.security import generate_password_hash, check_password_hash
 
+try:
+    import paho.mqtt.client as _mqtt_lib
+    MQTT_AVAILABLE = True
+except ImportError:
+    _mqtt_lib = None
+    MQTT_AVAILABLE = False
+
 # ================= CONFIG =================
 BASE_DIR = os.path.dirname(__file__)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
@@ -61,11 +68,32 @@ def load_config():
     if "anti_legionella_enabled" not in cfg:
         cfg["anti_legionella_enabled"] = False
 
+    if "mqtt_enabled" not in cfg:
+        cfg["mqtt_enabled"] = False
+    if "mqtt_broker" not in cfg:
+        cfg["mqtt_broker"] = ""
+    if "mqtt_port" not in cfg:
+        cfg["mqtt_port"] = 1883
+    if "mqtt_username" not in cfg:
+        cfg["mqtt_username"] = ""
+    if "mqtt_password" not in cfg:
+        cfg["mqtt_password"] = ""
+    if "mqtt_topic_prefix" not in cfg:
+        cfg["mqtt_topic_prefix"] = "solarbuffer"
+    if "mqtt_ha_discovery" not in cfg:
+        cfg["mqtt_ha_discovery"] = True
+    if "mqtt_publish_interval" not in cfg:
+        cfg["mqtt_publish_interval"] = 30
+
     # Migreer oud formaat (enkele gebruiker) naar gebruikerslijst
     if "users" not in cfg:
         old_username = cfg.pop("username", "solarbuffer")
         old_hash = cfg.pop("password_hash", "")
         cfg["users"] = [{"username": old_username, "password_hash": old_hash}]
+
+    for user in cfg["users"]:
+        if "dark_mode" not in user:
+            user["dark_mode"] = False
 
     for key, value in DEFAULT_EXPERT_SETTINGS.items():
         if key not in cfg["expert_settings"]:
@@ -142,6 +170,19 @@ def parse_expert_settings_from_request(req):
         except ValueError:
             expert_settings[key] = default_value
     return expert_settings
+
+
+def parse_mqtt_settings_from_request(req):
+    return {
+        "mqtt_enabled": req.form.get("mqtt_enabled") == "on",
+        "mqtt_broker": req.form.get("mqtt_broker", "").strip(),
+        "mqtt_port": safe_int(req.form.get("mqtt_port", "1883"), 1883),
+        "mqtt_username": req.form.get("mqtt_username", "").strip(),
+        "mqtt_password": req.form.get("mqtt_password", ""),
+        "mqtt_topic_prefix": (req.form.get("mqtt_topic_prefix", "solarbuffer").strip() or "solarbuffer"),
+        "mqtt_ha_discovery": req.form.get("mqtt_ha_discovery") == "on",
+        "mqtt_publish_interval": safe_int(req.form.get("mqtt_publish_interval", "30"), 30),
+    }
 
 
 def safe_int(value, default):
@@ -245,6 +286,17 @@ def compare_configs(old_cfg, new_cfg):
     if modified:
         changes["devices_modified"] = modified
 
+    mqtt_fields = ["mqtt_enabled", "mqtt_broker", "mqtt_port", "mqtt_username",
+                   "mqtt_topic_prefix", "mqtt_ha_discovery", "mqtt_publish_interval"]
+    mqtt_changes = {}
+    for field in mqtt_fields:
+        if old_cfg.get(field) != new_cfg.get(field):
+            mqtt_changes[field] = {"old": old_cfg.get(field), "new": new_cfg.get(field)}
+    if old_cfg.get("mqtt_password") != new_cfg.get("mqtt_password"):
+        mqtt_changes["mqtt_password"] = {"changed": True}
+    if mqtt_changes:
+        changes["mqtt"] = mqtt_changes
+
     return changes
 
 
@@ -259,6 +311,8 @@ device_states = {}
 current_power = 0
 current_brightness = 0
 active_schedule_info = None
+_mqtt_client = None
+_mqtt_connected = False
 
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
@@ -281,6 +335,13 @@ app.config.update(
 
 def require_login():
     return session.get("logged_in", False)
+
+
+def get_user_dark_mode():
+    cfg = load_config()
+    username = session.get("username", "")
+    user = next((u for u in cfg.get("users", []) if u.get("username") == username), None)
+    return bool(user.get("dark_mode", False)) if user else False
 
 
 # ================= NETWORK SCAN HELPERS =================
@@ -431,17 +492,17 @@ def change_credentials():
         user = next((u for u in users if u["username"] == current_username), None)
 
         if not user:
-            return render_template("change_credentials.html", error="Gebruiker niet gevonden")
+            return render_template("change_credentials.html", error="Gebruiker niet gevonden", dark_mode=get_user_dark_mode())
         if not new_username:
-            return render_template("change_credentials.html", error="Gebruikersnaam mag niet leeg zijn")
+            return render_template("change_credentials.html", error="Gebruikersnaam mag niet leeg zijn", dark_mode=get_user_dark_mode())
         if not check_password_hash(user.get("password_hash", ""), current_password):
-            return render_template("change_credentials.html", error="Huidig wachtwoord is onjuist")
+            return render_template("change_credentials.html", error="Huidig wachtwoord is onjuist", dark_mode=get_user_dark_mode())
         if not new_password:
-            return render_template("change_credentials.html", error="Nieuw wachtwoord mag niet leeg zijn")
+            return render_template("change_credentials.html", error="Nieuw wachtwoord mag niet leeg zijn", dark_mode=get_user_dark_mode())
         if len(new_password) < 6:
-            return render_template("change_credentials.html", error="Nieuw wachtwoord moet minimaal 6 tekens bevatten")
+            return render_template("change_credentials.html", error="Nieuw wachtwoord moet minimaal 6 tekens bevatten", dark_mode=get_user_dark_mode())
         if new_password != confirm_password:
-            return render_template("change_credentials.html", error="Wachtwoorden komen niet overeen")
+            return render_template("change_credentials.html", error="Wachtwoorden komen niet overeen", dark_mode=get_user_dark_mode())
 
         old_username = user["username"]
         user["username"] = new_username
@@ -452,7 +513,7 @@ def change_credentials():
         write_audit_log("credentials_changed", {"old_username": old_username, "new_username": new_username})
         return redirect("/dashboard")
 
-    return render_template("change_credentials.html")
+    return render_template("change_credentials.html", dark_mode=get_user_dark_mode())
 
 
 def parse_devices_from_request(req):
@@ -504,6 +565,7 @@ def wizard():
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
         cfg["shelly_devices"] = parse_devices_from_request(request)
+        cfg.update(parse_mqtt_settings_from_request(request))
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
@@ -514,7 +576,7 @@ def wizard():
         init_device_pids(cfg["shelly_devices"])
         sync_configured_devices_off(cfg["shelly_devices"])
         return redirect("/dashboard")
-    return render_template("wizard.html", config=cfg)
+    return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
 
 
 @app.route("/wizard_forced", methods=["GET", "POST"])
@@ -528,6 +590,7 @@ def wizard_forced():
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
         cfg["shelly_devices"] = parse_devices_from_request(request)
+        cfg.update(parse_mqtt_settings_from_request(request))
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
@@ -538,7 +601,7 @@ def wizard_forced():
         init_device_pids(cfg["shelly_devices"])
         sync_configured_devices_off(cfg["shelly_devices"])
         return redirect("/dashboard")
-    return render_template("wizard.html", config=cfg)
+    return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
 
 
 @app.route("/dashboard")
@@ -548,7 +611,7 @@ def dashboard():
     cfg = load_config()
     if not cfg.get("p1_ip") or not cfg.get("shelly_devices"):
         return redirect("/")
-    return render_template("dashboard.html", config=cfg)
+    return render_template("dashboard.html", config=cfg, dark_mode=get_user_dark_mode())
 
 
 @app.route("/status_json")
@@ -610,6 +673,22 @@ def toggle_anti_legionella():
     save_config(cfg)
     write_audit_log("anti_legionella_toggled", {"enabled": anti_legionella_enabled})
     return jsonify(success=True, enabled=anti_legionella_enabled)
+
+
+@app.route("/set_theme", methods=["POST"])
+def set_theme():
+    if not require_login():
+        return jsonify(success=False), 401
+    data = request.get_json(silent=True) or {}
+    dark_mode = bool(data.get("dark_mode", False))
+    cfg = load_config()
+    username = session.get("username", "")
+    user = next((u for u in cfg.get("users", []) if u.get("username") == username), None)
+    if user is None:
+        return jsonify(success=False), 404
+    user["dark_mode"] = dark_mode
+    save_config(cfg)
+    return jsonify(success=True, dark_mode=dark_mode)
 
 
 @app.route("/toggle_shelly/<path:ip>")
@@ -873,7 +952,7 @@ def users_page():
         return redirect("/login")
     cfg = load_config()
     error = request.args.get("error", "")
-    return render_template("users.html", users=cfg.get("users", []), error=error)
+    return render_template("users.html", users=cfg.get("users", []), error=error, dark_mode=get_user_dark_mode())
 
 
 @app.route("/users/add", methods=["POST"])
@@ -1171,6 +1250,356 @@ def startup_sync_devices():
     init_device_states(devices)
     init_device_pids(devices)
     sync_configured_devices_off(devices)
+
+
+# ================= MQTT =================
+def _sanitize_ip(ip):
+    return (ip or "").replace(".", "_").replace(":", "_")
+
+
+def _device_status_label(st):
+    if not st.get("online", False):
+        return "Offline"
+    if st.get("pending_start") or st.get("waiting_for_power_socket"):
+        return "Opstarten"
+    if st.get("freeze"):
+        return "Bevroren"
+    if st.get("started") and st.get("on"):
+        return "Actief"
+    return "Uit"
+
+
+def _system_status_label(devices_data, cfg):
+    if not enabled:
+        return "Uitgeschakeld"
+    pending = [d for d in devices_data if d.get("pending_start") or d.get("waiting_for_power_socket")]
+    frozen = [d for d in devices_data if d.get("freeze")]
+    running = [d for d in devices_data if d.get("started") and not d.get("freeze")]
+    if pending:
+        return "Opstarten"
+    if frozen and running:
+        return "Overcapaciteit"
+    if frozen:
+        return "Bevroren"
+    if running:
+        return "Actief"
+    expert = cfg.get("expert_settings") or {}
+    import_threshold = int(expert.get("IMPORT_OFF_THRESHOLD", 300))
+    export_threshold = int(expert.get("EXPORT_THRESHOLD", -50))
+    started = [d for d in devices_data if d.get("started") or d.get("pending_start")]
+    if current_power >= import_threshold:
+        return "Geen teruglevering"
+    if current_power <= export_threshold and not started:
+        return "Wachten op teruglevering"
+    return "Standby"
+
+
+def _publish_ha_discovery(client, prefix, devices):
+    base_device = {"identifiers": ["solarbuffer"], "name": "SolarBuffer", "model": "SolarBuffer Controller"}
+
+    def pub(topic, payload):
+        client.publish(topic, json.dumps(payload), retain=True)
+
+    pub(f"homeassistant/switch/solarbuffer_enabled/config", {
+        "name": "SolarBuffer Regeling",
+        "unique_id": "solarbuffer_enabled_switch",
+        "state_topic": f"{prefix}/enabled",
+        "command_topic": f"{prefix}/set_enabled",
+        "payload_on": "ON",
+        "payload_off": "OFF",
+        "icon": "mdi:solar-power",
+        "availability_topic": f"{prefix}/availability",
+        "device": base_device,
+    })
+    pub(f"homeassistant/sensor/solarbuffer_status/config", {
+        "name": "SolarBuffer Status",
+        "unique_id": "solarbuffer_status",
+        "state_topic": f"{prefix}/status",
+        "icon": "mdi:information-outline",
+        "availability_topic": f"{prefix}/availability",
+        "device": base_device,
+    })
+    pub(f"homeassistant/sensor/solarbuffer_grid_power/config", {
+        "name": "SolarBuffer Netspanning",
+        "unique_id": "solarbuffer_grid_power",
+        "state_topic": f"{prefix}/grid_power",
+        "unit_of_measurement": "W",
+        "device_class": "power",
+        "state_class": "measurement",
+        "availability_topic": f"{prefix}/availability",
+        "device": base_device,
+    })
+    pub(f"homeassistant/sensor/solarbuffer_power/config", {
+        "name": "SolarBuffer Vermogen",
+        "unique_id": "solarbuffer_power",
+        "state_topic": f"{prefix}/power",
+        "unit_of_measurement": "%",
+        "icon": "mdi:flash",
+        "availability_topic": f"{prefix}/availability",
+        "device": base_device,
+    })
+    for d in devices:
+        uid = _sanitize_ip(d.get("ip", ""))
+        dname = d.get("name", "Apparaat")
+        pub(f"homeassistant/switch/solarbuffer_{uid}_switch/config", {
+            "name": f"{dname}",
+            "unique_id": f"solarbuffer_{uid}_switch",
+            "state_topic": f"{prefix}/device/{uid}/on",
+            "command_topic": f"{prefix}/device/{uid}/set_on",
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "icon": "mdi:water-boiler",
+            "availability_topic": f"{prefix}/availability",
+            "device": base_device,
+        })
+        pub(f"homeassistant/sensor/solarbuffer_{uid}_status/config", {
+            "name": f"{dname} Status",
+            "unique_id": f"solarbuffer_{uid}_status",
+            "state_topic": f"{prefix}/device/{uid}/status",
+            "icon": "mdi:information-outline",
+            "availability_topic": f"{prefix}/availability",
+            "device": base_device,
+        })
+        pub(f"homeassistant/sensor/solarbuffer_{uid}_power/config", {
+            "name": f"{dname} Vermogen",
+            "unique_id": f"solarbuffer_{uid}_power",
+            "state_topic": f"{prefix}/device/{uid}/power",
+            "unit_of_measurement": "%",
+            "icon": "mdi:flash",
+            "availability_topic": f"{prefix}/availability",
+            "device": base_device,
+        })
+
+
+def _publish_mqtt_state(client, prefix, cfg):
+    devices_data = []
+    for d in cfg.get("shelly_devices", []):
+        ip = d["ip"]
+        st = device_states.get(ip, {})
+        uid = _sanitize_ip(ip)
+        status_label = _device_status_label(st)
+        devices_data.append({
+            "name": d.get("name"),
+            "ip": ip,
+            "on": st.get("on", False),
+            "power": round(st.get("brightness", 0)),
+            "freeze": st.get("freeze", False),
+            "online": st.get("online", False),
+            "started": st.get("started", False),
+            "pending_start": st.get("pending_start", False),
+            "waiting_for_power_socket": st.get("waiting_for_power_socket", False),
+            "manual_override": st.get("manual_override", False),
+            "status": status_label,
+        })
+        client.publish(f"{prefix}/device/{uid}/on", "ON" if st.get("on", False) else "OFF", retain=True)
+        client.publish(f"{prefix}/device/{uid}/power", str(round(st.get("brightness", 0))), retain=True)
+        client.publish(f"{prefix}/device/{uid}/status", status_label, retain=True)
+
+    system_status = _system_status_label(devices_data, cfg)
+    client.publish(f"{prefix}/grid_power", str(round(current_power)), retain=True)
+    client.publish(f"{prefix}/power", str(round(current_brightness)), retain=True)
+    client.publish(f"{prefix}/enabled", "ON" if enabled else "OFF", retain=True)
+    client.publish(f"{prefix}/status", system_status, retain=True)
+    client.publish(f"{prefix}/state", json.dumps({
+        "active_power_w": round(current_power),
+        "power": round(current_brightness),
+        "enabled": enabled,
+        "status": system_status,
+        "devices": devices_data,
+    }), retain=True)
+
+
+def _handle_mqtt_command(prefix, topic, payload):
+    global enabled
+    if topic == f"{prefix}/set_enabled":
+        new_state = payload.strip().upper() == "ON"
+        enabled = new_state
+        write_audit_log("pid_toggled_via_mqtt", {"enabled": enabled})
+        return
+
+    device_set_on_prefix = f"{prefix}/device/"
+    if topic.startswith(device_set_on_prefix) and topic.endswith("/set_on"):
+        uid = topic[len(device_set_on_prefix):-len("/set_on")]
+        cfg = load_config()
+        device = next(
+            (d for d in cfg.get("shelly_devices", []) if _sanitize_ip(d["ip"]) == uid),
+            None
+        )
+        if device is None or device["ip"] not in device_states:
+            return
+        ip = device["ip"]
+        st = device_states[ip]
+        new_on = payload.strip().upper() == "ON"
+        if new_on:
+            ensure_power_socket_on(device)
+            st["on"] = True
+            st["manual_override"] = True
+            st["started"] = True
+            st["pending_start"] = False
+            st["freeze"] = False
+            st["saturated_since"] = None
+            st["min_since"] = None
+            if st["brightness"] == 0:
+                st["brightness"] = 34
+            set_shelly(st["brightness"], True, ip)
+            mark_device_activity(device)
+        else:
+            st["on"] = False
+            st["manual_override"] = True
+            st["started"] = False
+            st["pending_start"] = False
+            st["brightness"] = 0
+            st["freeze"] = False
+            st["saturated_since"] = None
+            st["min_since"] = None
+            st["waiting_for_power_socket"] = False
+            st["power_socket_ready_at"] = None
+            set_shelly(0, False, ip)
+        write_audit_log("device_toggled_via_mqtt", {"device_ip": ip, "new_state": "on" if new_on else "off"})
+
+
+def _get_mqtt_conn_key(cfg):
+    return (
+        cfg.get("mqtt_broker", ""),
+        int(cfg.get("mqtt_port", 1883)),
+        cfg.get("mqtt_username", ""),
+        cfg.get("mqtt_password", ""),
+        cfg.get("mqtt_topic_prefix", "solarbuffer"),
+    )
+
+
+def mqtt_loop():
+    global _mqtt_client, _mqtt_connected
+    if not MQTT_AVAILABLE:
+        return
+
+    current_key = None
+    client = None
+    last_publish = 0
+
+    while True:
+        try:
+            cfg = load_config()
+            mqtt_on = cfg.get("mqtt_enabled", False)
+            broker = cfg.get("mqtt_broker", "").strip()
+
+            if not mqtt_on or not broker:
+                if client is not None:
+                    prefix = cfg.get("mqtt_topic_prefix", "solarbuffer")
+                    try:
+                        client.publish(f"{prefix}/availability", "offline", retain=True)
+                    except Exception:
+                        pass
+                    client.loop_stop()
+                    client.disconnect()
+                    client = None
+                    _mqtt_client = None
+                    _mqtt_connected = False
+                    current_key = None
+                time.sleep(10)
+                continue
+
+            conn_key = _get_mqtt_conn_key(cfg)
+
+            if client is not None and conn_key != current_key:
+                prefix = cfg.get("mqtt_topic_prefix", "solarbuffer")
+                try:
+                    client.publish(f"{prefix}/availability", "offline", retain=True)
+                except Exception:
+                    pass
+                client.loop_stop()
+                client.disconnect()
+                client = None
+                _mqtt_client = None
+                _mqtt_connected = False
+                current_key = None
+                last_publish = 0
+
+            if client is None:
+                port = int(cfg.get("mqtt_port", 1883))
+                username = cfg.get("mqtt_username", "")
+                password = cfg.get("mqtt_password", "")
+                prefix = cfg.get("mqtt_topic_prefix", "solarbuffer")
+                ha_discovery = cfg.get("mqtt_ha_discovery", True)
+
+                try:
+                    try:
+                        client = _mqtt_lib.Client(
+                            _mqtt_lib.CallbackAPIVersion.VERSION1,
+                            client_id="solarbuffer", clean_session=True
+                        )
+                    except AttributeError:
+                        client = _mqtt_lib.Client(client_id="solarbuffer", clean_session=True)
+
+                    if username:
+                        client.username_pw_set(username, password or None)
+
+                    client.will_set(f"{prefix}/availability", "offline", retain=True)
+
+                    def on_connect(c, userdata, flags, rc, _prefix=prefix, _ha=ha_discovery):
+                        global _mqtt_connected
+                        if rc == 0:
+                            _mqtt_connected = True
+                            c.publish(f"{_prefix}/availability", "online", retain=True)
+                            c.subscribe(f"{_prefix}/set_enabled")
+                            c.subscribe(f"{_prefix}/device/+/set_on")
+                            if _ha:
+                                _publish_ha_discovery(c, _prefix, load_config().get("shelly_devices", []))
+                            print(f"MQTT verbonden met {broker}:{port}")
+                        else:
+                            _mqtt_connected = False
+                            print(f"MQTT verbindingsfout code {rc}")
+
+                    def on_disconnect(c, userdata, rc):
+                        global _mqtt_connected
+                        _mqtt_connected = False
+                        if rc != 0:
+                            print(f"MQTT verbroken (code {rc}), herverbinden...")
+
+                    def on_message(_c, _userdata, msg, _prefix=prefix):
+                        try:
+                            _handle_mqtt_command(_prefix, msg.topic, msg.payload.decode("utf-8", errors="replace"))
+                        except Exception as exc:
+                            print(f"MQTT command fout ({msg.topic}): {exc}")
+
+                    client.on_connect = on_connect
+                    client.on_disconnect = on_disconnect
+                    client.on_message = on_message
+                    client.connect(broker, port, keepalive=60)
+                    client.loop_start()
+                    _mqtt_client = client
+                    current_key = conn_key
+                    last_publish = 0
+                except Exception as e:
+                    print(f"MQTT verbinding mislukt ({broker}:{port}): {e}")
+                    client = None
+                    _mqtt_client = None
+                    _mqtt_connected = False
+                    time.sleep(30)
+                    continue
+
+            now = time.time()
+            interval = int(cfg.get("mqtt_publish_interval", 30))
+            if _mqtt_connected and now - last_publish >= interval:
+                prefix = cfg.get("mqtt_topic_prefix", "solarbuffer")
+                _publish_mqtt_state(client, prefix, cfg)
+                last_publish = now
+
+            time.sleep(5)
+
+        except Exception as e:
+            print(f"MQTT loop fout: {e}")
+            if client is not None:
+                try:
+                    client.loop_stop()
+                    client.disconnect()
+                except Exception:
+                    pass
+                client = None
+                _mqtt_client = None
+                _mqtt_connected = False
+                current_key = None
+            time.sleep(30)
 
 
 # ================= CONTROL HELPERS =================
@@ -1679,4 +2108,5 @@ def control_loop():
 if __name__ == "__main__":
     startup_sync_devices()
     threading.Thread(target=control_loop, daemon=True).start()
+    threading.Thread(target=mqtt_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=5001)

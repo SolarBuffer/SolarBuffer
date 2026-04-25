@@ -3,7 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
   <title>Gebruikersbeheer - SolarBuffer</title>
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -137,6 +148,34 @@
       font-size: 0.75rem;
       color: hsl(220, 10%, 55%);
       margin-top: 0.2rem;
+    }
+
+    /* ===== DARK MODE ===== */
+    html[data-theme="dark"] body {
+      background: hsl(220, 8%, 20%);
+      color: hsl(220, 10%, 88%);
+    }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 34%);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2);
+    }
+    html[data-theme="dark"] .user-row { background: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] input[type="text"],
+    html[data-theme="dark"] input[type="password"] {
+      background: hsl(220, 8%, 32%);
+      border-color: hsl(220, 8%, 39%);
+      color: hsl(220, 10%, 88%);
+    }
+    html[data-theme="dark"] label { color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .note  { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .hint  { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .back-link a { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .error-banner {
+      background: hsl(0, 20%, 28%);
+      color: hsl(0, 60%, 70%);
+      border-color: hsl(0, 20%, 36%);
     }
   </style>
 </head>

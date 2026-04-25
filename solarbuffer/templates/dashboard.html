@@ -1101,6 +1101,246 @@
     }
     .sched-error { font-size: 0.78rem; color: hsl(0, 65%, 45%); font-weight: 600; display: none; }
     .sched-error.visible { display: block; }
+
+    /* ===== DARK MODE ===== */
+    html[data-theme="dark"] {
+      background: hsl(220, 8%, 20%);
+    }
+
+    html[data-theme="dark"] body {
+      background:
+        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.07), transparent 28%),
+        hsl(220, 8%, 20%);
+      color: hsl(220, 10%, 88%);
+    }
+
+    html[data-theme="dark"] .card {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 34%);
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.08);
+    }
+
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+
+    html[data-theme="dark"] .menu-btn {
+      background: hsl(220, 8%, 30%);
+      border-color: hsl(220, 8%, 37%);
+      box-shadow: 0 2px 12px hsla(0, 0%, 0%, 0.2);
+    }
+
+    html[data-theme="dark"] #menuIcon line { stroke: hsl(220, 8%, 68%); }
+    html[data-theme="dark"] #menuMidLine  { stroke: hsl(32, 95%, 58%); }
+
+    html[data-theme="dark"] .menu-dropdown {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 34%);
+      box-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.25), 0 2px 8px hsla(0, 0%, 0%, 0.15);
+    }
+
+    html[data-theme="dark"] .menu-dropdown::before {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 34%);
+    }
+
+    html[data-theme="dark"] .menu-item { border-bottom-color: hsl(220, 8%, 32%); }
+    html[data-theme="dark"] .menu-item:hover  { background: hsl(220, 8%, 31%); }
+    html[data-theme="dark"] .menu-item:active { background: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .menu-item-label  { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .menu-item-sub    { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .menu-item-icon   { background: hsl(220, 8%, 32%); }
+
+    html[data-theme="dark"] .stat-card .label { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .stat-card .value { color: hsl(220, 10%, 90%); }
+    html[data-theme="dark"] .stat-card .unit  { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .power-reading .power-unit { color: hsl(220, 8%, 58%); }
+
+    html[data-theme="dark"] .status-card.neutral {
+      background: hsl(220, 8%, 28%);
+      border-color: hsl(220, 8%, 36%);
+    }
+    html[data-theme="dark"] .status-card.off {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 34%);
+    }
+    html[data-theme="dark"] .status-card.pending {
+      background: linear-gradient(180deg, hsl(37, 70%, 34%) 0%, hsl(37, 65%, 30%) 100%);
+      border-color: hsl(35, 80%, 52%);
+    }
+    html[data-theme="dark"] .status-card.running {
+      background: linear-gradient(180deg, hsl(145, 52%, 30%) 0%, hsl(145, 48%, 26%) 100%);
+      border-color: hsl(145, 60%, 44%);
+    }
+    html[data-theme="dark"] .status-card.freeze {
+      background: linear-gradient(180deg, hsl(215, 60%, 32%) 0%, hsl(215, 55%, 28%) 100%);
+      border-color: hsl(215, 70%, 50%);
+    }
+    html[data-theme="dark"] .status-card.cascade {
+      background: linear-gradient(135deg, hsl(208, 60%, 32%), hsl(40, 65%, 31%));
+      border-color: hsl(208, 65%, 50%);
+    }
+    html[data-theme="dark"] .status-card.import {
+      background: linear-gradient(180deg, hsl(0, 58%, 32%) 0%, hsl(0, 54%, 28%) 100%);
+      border-color: hsl(0, 65%, 48%);
+    }
+    html[data-theme="dark"] .status-card.waiting {
+      background: linear-gradient(180deg, hsl(48, 70%, 33%) 0%, hsl(48, 65%, 29%) 100%);
+      border-color: hsl(47, 78%, 50%);
+    }
+    html[data-theme="dark"] .status-card.standby {
+      background: linear-gradient(180deg, hsl(145, 38%, 28%) 0%, hsl(145, 34%, 25%) 100%);
+      border-color: hsl(145, 45%, 40%);
+    }
+    html[data-theme="dark"] .power-card {
+      background: linear-gradient(180deg, hsl(220, 8%, 27%) 0%, hsl(220, 8%, 25%) 100%);
+      border-color: hsl(220, 8%, 35%);
+    }
+
+    html[data-theme="dark"] .status-card.pending .label,
+    html[data-theme="dark"] .status-card.pending .unit  { color: hsl(37, 85%, 80%); }
+    html[data-theme="dark"] .status-card.pending .value { color: hsl(37, 50%, 96%); }
+
+    html[data-theme="dark"] .status-card.running .label,
+    html[data-theme="dark"] .status-card.running .unit  { color: hsl(145, 65%, 78%); }
+    html[data-theme="dark"] .status-card.running .value { color: hsl(145, 30%, 96%); }
+
+    html[data-theme="dark"] .status-card.freeze .label,
+    html[data-theme="dark"] .status-card.freeze .unit   { color: hsl(215, 70%, 82%); }
+    html[data-theme="dark"] .status-card.freeze .value  { color: hsl(215, 30%, 96%); }
+
+    html[data-theme="dark"] .status-card.cascade .label,
+    html[data-theme="dark"] .status-card.cascade .unit  { color: hsl(208, 68%, 82%); }
+    html[data-theme="dark"] .status-card.cascade .value { color: hsl(208, 25%, 96%); }
+
+    html[data-theme="dark"] .status-card.import .label,
+    html[data-theme="dark"] .status-card.import .unit   { color: hsl(0, 65%, 82%); }
+    html[data-theme="dark"] .status-card.import .value  { color: hsl(0, 25%, 96%); }
+
+    html[data-theme="dark"] .status-card.waiting .label,
+    html[data-theme="dark"] .status-card.waiting .unit  { color: hsl(48, 82%, 78%); }
+    html[data-theme="dark"] .status-card.waiting .value { color: hsl(48, 35%, 96%); }
+
+    html[data-theme="dark"] .status-card.standby .label,
+    html[data-theme="dark"] .status-card.standby .unit  { color: hsl(145, 52%, 76%); }
+    html[data-theme="dark"] .status-card.standby .value { color: hsl(145, 25%, 94%); }
+
+    html[data-theme="dark"] .online-badge.online  { background: hsl(145, 32%, 28%); color: hsl(145, 55%, 72%); }
+    html[data-theme="dark"] .online-badge.offline { background: hsl(0, 30%, 30%);   color: hsl(0, 60%, 72%); }
+
+    html[data-theme="dark"] .state-badge.off     { background: hsl(220, 8%, 32%);  color: hsl(220, 8%, 72%); }
+    html[data-theme="dark"] .state-badge.pending { background: hsl(32, 40%, 32%);  color: hsl(32, 80%, 72%); }
+    html[data-theme="dark"] .state-badge.running { background: hsl(145, 32%, 28%); color: hsl(145, 55%, 72%); }
+    html[data-theme="dark"] .state-badge.freeze  { background: hsl(215, 40%, 30%); color: hsl(215, 65%, 74%); }
+    html[data-theme="dark"] .state-badge.offline { background: hsl(0, 30%, 30%);   color: hsl(0, 60%, 72%); }
+
+    html[data-theme="dark"] .socket-badge.none    { background: hsl(37, 40%, 30%); color: hsl(37, 75%, 72%); }
+    html[data-theme="dark"] .socket-badge.off     { background: hsl(0, 30%, 30%);  color: hsl(0, 60%, 72%); }
+    html[data-theme="dark"] .socket-badge.pending { background: hsl(32, 40%, 32%); color: hsl(32, 80%, 72%); }
+    html[data-theme="dark"] .socket-badge.on      { background: hsl(145, 32%, 28%); color: hsl(145, 55%, 72%); }
+
+    html[data-theme="dark"] .control-row { background: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .control-label .sub { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(220, 8%, 42%); }
+
+    html[data-theme="dark"] .device-card {
+      background: hsl(220, 8%, 28%);
+      border-color: hsl(220, 8%, 35%);
+    }
+
+    html[data-theme="dark"] .device-info .ip { color: hsl(220, 8%, 58%); }
+
+    html[data-theme="dark"] .mini-info { background: hsl(220, 8%, 32%); }
+    html[data-theme="dark"] .mini-info .mini-label { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .mini-info .mini-value { color: hsl(220, 10%, 88%); }
+
+    html[data-theme="dark"] .bar { background: hsl(32, 25%, 34%); }
+
+    html[data-theme="dark"] .manual-brightness { border-top-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .manual-brightness-label { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .manual-brightness-unit  { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .manual-brightness-input {
+      background: hsl(220, 8%, 30%);
+      border-color: hsl(220, 8%, 38%);
+      color: hsl(220, 10%, 88%);
+    }
+
+    html[data-theme="dark"] .sched-active-banner {
+      background: hsl(145, 18%, 26%);
+      color: hsl(145, 50%, 72%);
+    }
+
+    html[data-theme="dark"] .sched-item {
+      background: hsl(220, 8%, 30%);
+      border-color: hsl(220, 8%, 37%);
+    }
+    html[data-theme="dark"] .sched-item-name { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .sched-item-meta { color: hsl(220, 8%, 58%); }
+
+    html[data-theme="dark"] .sched-add-btn {
+      color: hsl(32, 95%, 60%);
+      border-color: hsl(32, 40%, 42%);
+    }
+    html[data-theme="dark"] .sched-add-btn:hover { background: hsl(32, 18%, 28%); }
+
+    html[data-theme="dark"] .sched-form {
+      background: hsl(220, 8%, 30%);
+      border-color: hsl(220, 8%, 37%);
+    }
+    html[data-theme="dark"] .sched-form-title   { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .sched-form label   { color: hsl(220, 8%, 78%); }
+    html[data-theme="dark"] .sched-brightness-val { color: hsl(220, 10%, 88%); }
+
+    html[data-theme="dark"] .sched-form input[type="text"],
+    html[data-theme="dark"] .sched-form input[type="time"] {
+      background: hsl(220, 8%, 32%);
+      border-color: hsl(220, 8%, 39%);
+      color: hsl(220, 10%, 88%);
+    }
+
+    html[data-theme="dark"] .sched-day-btn {
+      background: hsl(220, 8%, 32%);
+      border-color: hsl(220, 8%, 39%);
+      color: hsl(220, 8%, 78%);
+    }
+    html[data-theme="dark"] .sched-day-btn.active {
+      background: hsl(32, 95%, 52%);
+      border-color: hsl(32, 95%, 52%);
+      color: white;
+    }
+
+    html[data-theme="dark"] .sched-btn {
+      color: hsl(220, 8%, 76%);
+      border-color: hsl(220, 8%, 38%);
+    }
+    html[data-theme="dark"] .sched-btn:hover { background: hsl(220, 8%, 34%); }
+
+    html[data-theme="dark"] .sched-cancel-btn {
+      background: hsl(220, 8%, 30%);
+      border-color: hsl(220, 8%, 38%);
+      color: hsl(220, 8%, 78%);
+    }
+
+    html[data-theme="dark"] .update-card {
+      background: hsl(220, 8%, 28%);
+      border-color: hsl(220, 8%, 35%);
+    }
+    html[data-theme="dark"] .update-card:hover {
+      box-shadow: 0 4px 16px hsla(32, 95%, 52%, 0.08);
+    }
+    html[data-theme="dark"] .update-divider { background: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .update-title   { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .update-body    { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .update-date-small { color: hsl(220, 8%, 58%); }
+
+    html[data-theme="dark"] .update-check-result.success {
+      background: hsl(145, 18%, 26%);
+      color: hsl(145, 50%, 72%);
+    }
+    html[data-theme="dark"] .update-check-result.error {
+      background: hsl(0, 20%, 27%);
+      color: hsl(0, 60%, 72%);
+    }
+
+    html[data-theme="dark"] .footer { color: hsl(220, 8%, 52%); }
   </style>
 </head>
 
@@ -1144,6 +1384,13 @@
             <div class="menu-item-text">
               <span class="menu-item-label">Gebruikersbeheer</span>
               <span class="menu-item-sub">Gebruikers toevoegen of verwijderen</span>
+            </div>
+          </div>
+          <div class="menu-item" onclick="toggleDarkMode()" id="darkModeMenuItem">
+            <div class="menu-item-icon" id="darkModeIcon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V5Z"/></svg></div>
+            <div class="menu-item-text">
+              <span class="menu-item-label" id="darkModeLabel">Donkere modus</span>
+              <span class="menu-item-sub" id="darkModeSub">Schakel over naar donker</span>
             </div>
           </div>
           <div class="menu-item danger" onclick="logoutNow()">
@@ -1306,6 +1553,20 @@
       </h2>
       <div class="update-check-result" id="updateCheckResult"></div>
 
+        <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge old">v0.2.0</span>
+          <span class="update-date-small">26 apr</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">DarkMode &amp; MQTT</div>
+          <div class="update-body">Nu mogelijk om de volledige UI in darkmode te zetten en via de Expertsettings kan nu MQTT geconfigureerd worden.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.0" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
       <div class="update-card">
         <div class="update-left">
           <span class="version-badge new">v0.1.5</span>
@@ -1354,6 +1615,41 @@
   </div>
 
   <script>
+    // ===== DARK MODE =====
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#2e3238");
+      }
+    })();
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const newDark = !isDark;
+      document.documentElement.setAttribute("data-theme", newDark ? "dark" : "light");
+      localStorage.setItem("theme", newDark ? "dark" : "light");
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", newDark ? "#2e3238" : "#f9f7f5");
+      updateDarkModeMenuItem();
+      fetch("/set_theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dark_mode: newDark })
+      });
+    }
+
+    function updateDarkModeMenuItem() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      document.getElementById("darkModeLabel").textContent = isDark ? "Lichte modus" : "Donkere modus";
+      document.getElementById("darkModeSub").textContent = isDark ? "Schakel over naar licht" : "Schakel over naar donker";
+      document.getElementById("darkModeIcon").innerHTML = isDark
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V5Z"/></svg>';
+    }
+
+    updateDarkModeMenuItem();
+
     // ===== MENU =====
     function toggleMenu() {
       const btn = document.getElementById("menuBtn");

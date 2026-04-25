@@ -54,7 +54,7 @@ source venv/bin/activate
 Upgrade pip en installeer de benodigde pakketten.
 ```bash
 pip install --upgrade pip
-pip install simple-pid flask requests zeroconf
+pip install simple-pid flask requests zeroconf paho-mqtt
 ```
 
 ### 5. Config.json & audit.log aanmaken

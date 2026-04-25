@@ -12,10 +12,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="SolarBuffer">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SolarBuffer Configuratie Wizard</title>
+    <script>
+      (function () {
+        var dark = {{ dark_mode | tojson }};
+        localStorage.setItem("theme", dark ? "dark" : "light");
+        if (dark) {
+          document.documentElement.setAttribute("data-theme", "dark");
+          document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+        }
+      })();
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -173,6 +183,7 @@
 
         input[type="text"],
         input[type="number"],
+        input[type="password"],
         select {
             width: 100%;
             height: 46px;
@@ -184,6 +195,8 @@
             transition: border-color .3s;
             line-height: 46px;
             background: white;
+            -webkit-appearance: none;
+            appearance: none;
         }
 
         select {
@@ -203,6 +216,7 @@
 
         input[type="text"]:focus,
         input[type="number"]:focus,
+        input[type="password"]:focus,
         select:focus {
             border-color: hsl(32, 95%, 52%);
             outline: none;
@@ -375,6 +389,10 @@
             gap: .85rem;
         }
 
+        .field-full {
+            grid-column: span 2;
+        }
+
         .expert-grid .field {
             display: flex;
             flex-direction: column;
@@ -509,8 +527,103 @@
             background: hsl(220, 10%, 80%);
         }
 
-        .hidden {
-            display: none !important;
+        .hidden { display: none !important; }
+
+        /* ===== DARK MODE ===== */
+        html[data-theme="dark"] body {
+            background: hsl(220, 8%, 20%);
+            color: hsl(220, 10%, 88%);
+        }
+        html[data-theme="dark"] .container {
+            background: hsl(220, 8%, 26%);
+            border-color: hsl(220, 8%, 34%);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.25);
+        }
+        html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .progress-bar { background: hsl(220, 8%, 34%); }
+        html[data-theme="dark"] .progress-step {
+            background: hsl(220, 8%, 30%);
+            border-color: hsl(220, 8%, 37%);
+        }
+        html[data-theme="dark"] .progress-step.active {
+            background: hsl(37, 65%, 32%);
+            border-color: hsl(35, 78%, 50%);
+        }
+        html[data-theme="dark"] .progress-step.done {
+            background: hsl(145, 48%, 27%);
+            border-color: hsl(145, 58%, 42%);
+        }
+        html[data-theme="dark"] .progress-step .step-label        { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .progress-step.active .step-label { color: hsl(37, 90%, 78%); }
+        html[data-theme="dark"] .progress-step.active .step-number { color: hsl(37, 95%, 82%); }
+        html[data-theme="dark"] .progress-step.done .step-label   { color: hsl(145, 60%, 72%); }
+        html[data-theme="dark"] .progress-step.done .step-number  { color: hsl(145, 65%, 76%); }
+        html[data-theme="dark"] .step-card {
+            background: hsl(220, 8%, 30%);
+            border-color: hsl(220, 8%, 37%);
+        }
+        html[data-theme="dark"] .step-subtitle { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] label { color: hsl(220, 8%, 82%); }
+        html[data-theme="dark"] input[type="text"],
+        html[data-theme="dark"] input[type="number"],
+        html[data-theme="dark"] input[type="password"],
+        html[data-theme="dark"] select {
+            background: hsl(220, 8%, 32%);
+            border-color: hsl(220, 8%, 39%);
+            color: hsl(220, 10%, 88%);
+        }
+        html[data-theme="dark"] input:disabled,
+        html[data-theme="dark"] select:disabled {
+            background: hsl(220, 8%, 28%);
+            color: hsl(220, 8%, 50%);
+        }
+        html[data-theme="dark"] .scan-results {
+            background: hsl(220, 8%, 30%);
+            border-color: hsl(220, 8%, 37%);
+            color: hsl(220, 10%, 88%);
+        }
+        html[data-theme="dark"] .scan-status { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .device-row {
+            background: hsl(220, 8%, 28%);
+            border-color: hsl(220, 8%, 35%);
+        }
+        html[data-theme="dark"] .section-card {
+            background: hsl(220, 8%, 30%);
+            border-color: hsl(220, 8%, 37%);
+        }
+        html[data-theme="dark"] .section-subtitle { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .expert-grid .field {
+            background: hsl(220, 8%, 32%);
+            border-color: hsl(220, 8%, 38%);
+        }
+        html[data-theme="dark"] .field-label { color: hsl(220, 10%, 88%); }
+        html[data-theme="dark"] .field-help  { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .input-with-unit {
+            background: hsl(220, 8%, 32%);
+            border-color: hsl(220, 8%, 39%);
+        }
+        html[data-theme="dark"] .input-with-unit input {
+            background: hsl(220, 8%, 32%);
+            color: hsl(220, 10%, 88%);
+        }
+        html[data-theme="dark"] .input-with-unit .unit {
+            background: hsl(220, 8%, 28%);
+            border-color: hsl(220, 8%, 38%);
+            color: hsl(220, 8%, 58%);
+        }
+        html[data-theme="dark"] .device-subsection {
+            background: hsl(220, 8%, 28%);
+            border-color: hsl(220, 8%, 36%);
+        }
+        html[data-theme="dark"] .device-subsection-title { color: hsl(220, 10%, 88%); }
+        html[data-theme="dark"] .cancel-btn,
+        html[data-theme="dark"] .prev-btn {
+            background: hsl(220, 8%, 34%);
+            color: hsl(220, 8%, 80%);
+        }
+        html[data-theme="dark"] .cancel-btn:hover,
+        html[data-theme="dark"] .prev-btn:hover {
+            background: hsl(220, 8%, 38%);
         }
 
         @media (max-width: 640px) {
@@ -521,6 +634,10 @@
 
             .expert-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .field-full {
+                grid-column: span 1;
             }
 
             .wizard-actions,
@@ -795,6 +912,77 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="section-card" style="margin-top:1rem;">
+                                <div class="section-title">MQTT / Home Assistant</div>
+                                <div class="section-subtitle">Koppel SolarBuffer met Home Assistant via MQTT. Standaard uitgeschakeld.</div>
+
+                                <label class="expert-toggle" for="mqttEnabled">
+                                    <input type="checkbox" id="mqttEnabled" name="mqtt_enabled"
+                                        {% if config.mqtt_enabled %}checked{% endif %}>
+                                    MQTT inschakelen
+                                </label>
+
+                                <div id="mqttFields" style="display:none; margin-top:1rem;">
+                                    <div class="expert-grid">
+                                        <div class="field field-full">
+                                            <label class="field-label" for="mqttBroker">MQTT Broker</label>
+                                            <div class="field-help">IP-adres of hostnaam van je MQTT broker (bijv. Home Assistant)</div>
+                                            <input type="text" id="mqttBroker" name="mqtt_broker"
+                                                placeholder="Bijv. 192.168.178.100"
+                                                value="{{ config.mqtt_broker or '' }}">
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label" for="mqttPort">Poort</label>
+                                            <div class="field-help">Standaard 1883 (tcp)</div>
+                                            <input type="number" id="mqttPort" name="mqtt_port"
+                                                value="{{ config.mqtt_port or 1883 }}" min="1" max="65535">
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label" for="mqttPublishInterval">Publiceer-interval (s)</label>
+                                            <div class="field-help">Status publiceren elke N seconden</div>
+                                            <input type="number" id="mqttPublishInterval" name="mqtt_publish_interval"
+                                                value="{{ config.mqtt_publish_interval or 30 }}" min="5" max="3600">
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label" for="mqttUsername">Gebruikersnaam</label>
+                                            <div class="field-help">Laat leeg als niet vereist</div>
+                                            <input type="text" id="mqttUsername" name="mqtt_username"
+                                                autocomplete="off" placeholder="mqtt_user"
+                                                value="{{ config.mqtt_username or '' }}">
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label" for="mqttPassword">Wachtwoord</label>
+                                            <div class="field-help">Laat leeg als niet vereist</div>
+                                            <input type="password" id="mqttPassword" name="mqtt_password"
+                                                autocomplete="new-password" placeholder="••••••••"
+                                                value="{{ config.mqtt_password or '' }}">
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label" for="mqttTopicPrefix">Topic prefix</label>
+                                            <div class="field-help">Basisnaam voor alle MQTT topics</div>
+                                            <input type="text" id="mqttTopicPrefix" name="mqtt_topic_prefix"
+                                                placeholder="solarbuffer"
+                                                value="{{ config.mqtt_topic_prefix or 'solarbuffer' }}">
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label">HA Auto-discovery</label>
+                                            <div class="field-help">Entiteiten automatisch registreren in Home Assistant</div>
+                                            <label class="expert-toggle" for="mqttHaDiscovery" style="margin-top:.5rem;">
+                                                <input type="checkbox" id="mqttHaDiscovery" name="mqtt_ha_discovery"
+                                                    {% if config.mqtt_ha_discovery is not defined or config.mqtt_ha_discovery %}checked{% endif %}>
+                                                HA Discovery inschakelen
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1041,6 +1229,13 @@
             } else {
                 expertBox.style.display = 'none';
             }
+        }
+
+        function updateMqttVisibility() {
+            const mqttEnabled = document.getElementById('mqttEnabled');
+            const mqttFields = document.getElementById('mqttFields');
+            if (!mqttEnabled || !mqttFields) return;
+            mqttFields.style.display = mqttEnabled.checked ? 'block' : 'none';
         }
 
         function refreshRemoveButtons() {
@@ -1375,6 +1570,12 @@
             expertMode.addEventListener('change', updateExpertModeVisibility);
         }
         updateExpertModeVisibility();
+
+        const mqttEnabled = document.getElementById('mqttEnabled');
+        if (mqttEnabled) {
+            mqttEnabled.addEventListener('change', updateMqttVisibility);
+        }
+        updateMqttVisibility();
 
         const toggleBtn = document.getElementById('toggleExpertBtn');
         if (toggleBtn) {
