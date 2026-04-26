@@ -106,6 +106,8 @@ def load_config():
             dev["power_socket_type"] = ""
         if "power_socket_ip" not in dev:
             dev["power_socket_ip"] = ""
+        if "boiler_volume" not in dev:
+            dev["boiler_volume"] = 100
         normalized_devices.append(dev)
 
     cfg["shelly_devices"] = normalized_devices
@@ -526,6 +528,7 @@ def parse_devices_from_request(req):
     power_ips = req.form.getlist("power_ip[]")
     power_socket_types = req.form.getlist("power_socket_type[]")
     power_socket_ips = req.form.getlist("power_socket_ip[]")
+    boiler_volumes = req.form.getlist("boiler_volume[]")
 
     row_count = max(len(names), len(ips), len(priorities), len(power_meters),
                     len(power_ips), len(power_socket_types), len(power_socket_ips))
@@ -543,12 +546,14 @@ def parse_devices_from_request(req):
         pip = get_val(power_ips, i).strip()
         ps_type = get_val(power_socket_types, i).strip().lower()
         ps_ip = get_val(power_socket_ips, i).strip()
+        bv = max(10, safe_int(get_val(boiler_volumes, i, "100"), 100))
         devices.append({
             "name": name, "ip": ip, "priority": prio,
             "power_meter": pm if pm else "",
             "power_ip": pip if pip else "",
             "power_socket_type": ps_type if ps_type else "",
-            "power_socket_ip": ps_ip if ps_ip else ""
+            "power_socket_ip": ps_ip if ps_ip else "",
+            "boiler_volume": bv,
         })
     return devices
 
@@ -1868,6 +1873,7 @@ def control_loop():
                     st = device_states[ip]
                     last_active = st.get("last_active_time", 0)
                     idle_too_long = (now - last_active) >= LEGIONELLA_IDLE_SECONDS
+                    legionella_run_seconds = int((d.get("boiler_volume", 100) / 100) * 3 * 3600)
 
                     if not st.get("legionella_active") and idle_too_long:
                         st["legionella_active"] = True
@@ -1877,7 +1883,7 @@ def control_loop():
 
                     if st.get("legionella_active"):
                         elapsed = now - (st.get("legionella_start") or now)
-                        if elapsed >= LEGIONELLA_RUN_SECONDS:
+                        if elapsed >= legionella_run_seconds:
                             st["legionella_active"] = False
                             st["legionella_start"] = None
                             st["last_active_time"] = now

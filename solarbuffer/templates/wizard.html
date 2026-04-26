@@ -1260,7 +1260,8 @@
             power_meter = '',
             power_ip = '',
             power_socket_type = '',
-            power_socket_ip = ''
+            power_socket_ip = '',
+            boiler_volume = 100
         ) {
             const container = document.getElementById('deviceContainer');
             if (container.children.length >= 5) {
@@ -1322,6 +1323,17 @@
                 <div style="flex:1.8;display:flex;flex-direction:column;">
                     <label>IP-adres</label>
                     <input type="text" name="power_socket_ip[]" placeholder="Bijv. 192.168.178.60" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                </div>
+            </div>
+        </div>
+
+        <div class="device-subsection">
+            <div class="device-subsection-title">Anti-legionella</div>
+            <div style="display:flex;flex-direction:column;gap:.35rem;">
+                <label>Inhoud boiler</label>
+                <div class="input-with-unit" style="max-width:160px;">
+                    <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" value="${escapeHtml(boiler_volume || 100)}">
+                    <span class="unit">L</span>
                 </div>
             </div>
         </div>
@@ -1590,7 +1602,8 @@
                 d.power_meter || "",
                 d.power_ip || "",
                 d.power_socket_type || "",
-                d.power_socket_ip || ""
+                d.power_socket_ip || "",
+                d.boiler_volume || 100
             ));
         } else {
             addDevice();
