@@ -1021,7 +1021,11 @@
       background: hsl(30, 20%, 97%); border-radius: 0.75rem;
       padding: 0.65rem 0.8rem; border: 1px solid hsl(30, 15%, 91%);
     }
-    .sched-item.sched-disabled { opacity: 0.5; }
+    .sched-item.sched-disabled .sched-item-info { opacity: 0.45; }
+    .sched-btn.enable { color: hsl(32, 95%, 42%); border-color: hsl(32, 85%, 78%); }
+    .sched-btn.enable:hover { background: hsl(32, 95%, 95%); }
+    .sched-btn.disable { color: hsl(32, 95%, 42%); border-color: hsl(32, 85%, 78%); }
+    .sched-btn.disable:hover { background: hsl(32, 95%, 95%); }
     .sched-item-info { flex: 1; min-width: 0; }
     .sched-item-name { font-size: 0.83rem; font-weight: 600; color: hsl(220, 20%, 14%); }
     .sched-item-meta { font-size: 0.75rem; color: hsl(220, 10%, 46%); margin-top: 2px; }
@@ -1312,6 +1316,12 @@
       border-color: hsl(220, 8%, 38%);
     }
     html[data-theme="dark"] .sched-btn:hover { background: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .sched-btn.enable { color: hsl(32, 95%, 62%); border-color: hsl(32, 60%, 40%); }
+    html[data-theme="dark"] .sched-btn.enable:hover { background: hsl(32, 20%, 26%); }
+    html[data-theme="dark"] .sched-btn.disable { color: hsl(32, 95%, 62%); border-color: hsl(32, 60%, 40%); }
+    html[data-theme="dark"] .sched-btn.disable:hover { background: hsl(32, 20%, 26%); }
+    html[data-theme="dark"] .sched-btn.danger { color: hsl(0, 75%, 65%); border-color: hsl(0, 50%, 38%); }
+    html[data-theme="dark"] .sched-btn.danger:hover { background: hsl(0, 30%, 24%); }
 
     html[data-theme="dark"] .sched-cancel-btn {
       background: hsl(220, 8%, 30%);
@@ -1777,7 +1787,7 @@
           </div>
           <div class="sched-item-actions">
             <button class="sched-btn" onclick="editSchedule('${s.id}')">${s.enabled ? 'Bewerken' : 'Bewerken'}</button>
-            <button class="sched-btn" onclick="toggleSchedEnabled('${s.id}', ${!s.enabled})">${s.enabled ? 'Uit' : 'Aan'}</button>
+            <button class="sched-btn${s.enabled ? ' disable' : ' enable'}" onclick="toggleSchedEnabled('${s.id}', ${!s.enabled})">${s.enabled ? 'Uit' : 'Aan'}</button>
             <button class="sched-btn danger" onclick="deleteSchedule('${s.id}')">✕</button>
           </div>
         </div>`;
