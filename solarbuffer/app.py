@@ -321,6 +321,7 @@ active_schedule_info = None
 _mqtt_client = None
 _mqtt_connected = False
 _update_available = False
+_tailscale_auth_url = None
 
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
@@ -877,6 +878,77 @@ def run_update_check():
         return jsonify(success=False, error="git pull duurde te lang (timeout)"), 500
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+
+# ================= TAILSCALE =================
+@app.route("/tailscale_status")
+def tailscale_status():
+    global _tailscale_auth_url
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+
+    check = subprocess.run(["which", "tailscale"], capture_output=True, text=True)
+    if check.returncode != 0:
+        return jsonify({"installed": False, "connected": False, "ip": None, "auth_url": None})
+
+    try:
+        result = subprocess.run(
+            ["tailscale", "status", "--json"],
+            capture_output=True, text=True, timeout=5
+        )
+        data = json.loads(result.stdout)
+        backend_state = data.get("BackendState", "")
+        self_node = data.get("Self") or {}
+        ips = self_node.get("TailscaleIPs", [])
+        ip = ips[0] if ips else None
+        connected = backend_state == "Running"
+
+        auth_url = (data.get("AuthURL") or _tailscale_auth_url) if not connected else None
+        if connected:
+            _tailscale_auth_url = None
+
+        return jsonify({
+            "installed": True,
+            "connected": connected,
+            "ip": ip,
+            "backend_state": backend_state,
+            "auth_url": auth_url
+        })
+    except Exception:
+        return jsonify({
+            "installed": True,
+            "connected": False,
+            "ip": None,
+            "auth_url": _tailscale_auth_url
+        })
+
+
+@app.route("/tailscale_connect", methods=["POST"])
+def tailscale_connect():
+    global _tailscale_auth_url
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+
+    _tailscale_auth_url = None
+
+    def _run():
+        global _tailscale_auth_url
+        try:
+            proc = subprocess.Popen(
+                ["sudo", "tailscale", "up"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+            )
+            for line in proc.stdout:
+                match = re.search(r'https://login\.tailscale\.com\S+', line)
+                if match:
+                    _tailscale_auth_url = match.group(0).rstrip('.')
+                    break
+            proc.wait()
+        except Exception as e:
+            print(f"Tailscale connect fout: {e}")
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"success": True})
 
 
 # ================= TIJDSCHEMA ROUTES =================
