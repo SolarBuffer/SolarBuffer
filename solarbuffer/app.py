@@ -1984,9 +1984,7 @@ def control_loop():
                 else:
                     state["power"] = 0
 
-            data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
-            measured_power = data.get("active_power_w", 0)
-            current_power = measured_power
+            measured_power = current_power
             pid_power = 0 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
             devices_sorted = get_sorted_devices(devices)
             active_brightness = 0
@@ -2300,9 +2298,25 @@ def control_loop():
             time.sleep(1)
 
 
+# ================= P1 POLL =================
+def p1_poll_loop():
+    global current_power
+    while True:
+        try:
+            cfg = load_config()
+            p1_ip = cfg.get("p1_ip")
+            if p1_ip:
+                data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
+                current_power = float(data.get("active_power_w", 0) or 0)
+        except Exception:
+            pass
+        time.sleep(1)
+
+
 # ================= START =================
 if __name__ == "__main__":
     startup_sync_devices()
+    threading.Thread(target=p1_poll_loop, daemon=True).start()
     threading.Thread(target=control_loop, daemon=True).start()
     threading.Thread(target=mqtt_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=5001)
