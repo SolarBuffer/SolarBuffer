@@ -364,4 +364,6 @@ De installatie is nu voltooid en je kunt direct starten met het gebruik van de S
 Uitleg over alle beschikbare parameters in de Expert Settings:
 test
 
+## MQTT
+
 
