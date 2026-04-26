@@ -69,6 +69,8 @@ def load_config():
         cfg["anti_legionella_enabled"] = False
     if "pid_enabled" not in cfg:
         cfg["pid_enabled"] = True
+    if "schedules_enabled" not in cfg:
+        cfg["schedules_enabled"] = True
 
     if "mqtt_enabled" not in cfg:
         cfg["mqtt_enabled"] = False
@@ -311,6 +313,7 @@ PID_KD = 0.000
 
 device_pids = {}
 enabled = True
+schedules_enabled = True
 device_states = {}
 current_power = 0
 current_brightness = 0
@@ -656,7 +659,8 @@ def status_json():
         expert_settings=get_runtime_settings(cfg),
         schedules=cfg.get("schedules", []),
         active_schedule=active_schedule_info,
-        anti_legionella_enabled=anti_legionella_enabled
+        anti_legionella_enabled=anti_legionella_enabled,
+        schedules_enabled=schedules_enabled
     )
 
 
@@ -671,6 +675,19 @@ def toggle_pid():
     save_config(cfg)
     write_audit_log("pid_toggled", {"enabled": enabled})
     return jsonify(success=True)
+
+
+@app.route("/toggle_schedules")
+def toggle_schedules():
+    global schedules_enabled
+    if not require_login():
+        return jsonify(success=False), 401
+    schedules_enabled = not schedules_enabled
+    cfg = load_config()
+    cfg["schedules_enabled"] = schedules_enabled
+    save_config(cfg)
+    write_audit_log("schedules_toggled", {"enabled": schedules_enabled})
+    return jsonify(success=True, enabled=schedules_enabled)
 
 
 @app.route("/toggle_anti_legionella")
@@ -1254,9 +1271,10 @@ def sync_configured_devices_off(devices):
 
 
 def startup_sync_devices():
-    global enabled
+    global enabled, schedules_enabled
     cfg = load_config()
     enabled = cfg.get("pid_enabled", True)
+    schedules_enabled = cfg.get("schedules_enabled", True)
     devices = cfg.get("shelly_devices", [])
     if not devices:
         return
@@ -1368,6 +1386,17 @@ def _publish_ha_discovery(client, prefix, devices):
         "availability_topic": f"{prefix}/availability",
         "device": base_device,
     })
+    pub(f"homeassistant/switch/solarbuffer_schedules_enabled/config", {
+        "name": "SolarBuffer Tijdschema's",
+        "unique_id": "solarbuffer_schedules_enabled_switch",
+        "state_topic": f"{prefix}/schedules_enabled",
+        "command_topic": f"{prefix}/set_schedules_enabled",
+        "payload_on": "ON",
+        "payload_off": "OFF",
+        "icon": "mdi:clock-outline",
+        "availability_topic": f"{prefix}/availability",
+        "device": base_device,
+    })
     pub(f"homeassistant/binary_sensor/solarbuffer_update_available/config", {
         "name": "SolarBuffer Update Beschikbaar",
         "unique_id": "solarbuffer_update_available",
@@ -1438,6 +1467,7 @@ def _publish_mqtt_state(client, prefix, cfg):
     client.publish(f"{prefix}/grid_power", str(round(current_power)), retain=True)
     client.publish(f"{prefix}/enabled", "ON" if enabled else "OFF", retain=True)
     client.publish(f"{prefix}/anti_legionella", "ON" if anti_legionella_enabled else "OFF", retain=True)
+    client.publish(f"{prefix}/schedules_enabled", "ON" if schedules_enabled else "OFF", retain=True)
     client.publish(f"{prefix}/update_available", "ON" if _update_available else "OFF", retain=True)
     client.publish(f"{prefix}/status", system_status, retain=True)
     client.publish(f"{prefix}/state", json.dumps({
@@ -1467,6 +1497,15 @@ def _handle_mqtt_command(prefix, topic, payload):
         cfg["anti_legionella_enabled"] = anti_legionella_enabled
         save_config(cfg)
         write_audit_log("anti_legionella_toggled_via_mqtt", {"enabled": anti_legionella_enabled})
+        return
+
+    if topic == f"{prefix}/set_schedules_enabled":
+        new_state = payload.strip().upper() == "ON"
+        schedules_enabled = new_state
+        cfg = load_config()
+        cfg["schedules_enabled"] = schedules_enabled
+        save_config(cfg)
+        write_audit_log("schedules_toggled_via_mqtt", {"enabled": schedules_enabled})
         return
 
     if topic == f"{prefix}/run_update":
@@ -1616,6 +1655,7 @@ def mqtt_loop():
                             c.publish(f"{_prefix}/availability", "online", retain=True)
                             c.subscribe(f"{_prefix}/set_enabled")
                             c.subscribe(f"{_prefix}/set_anti_legionella")
+                            c.subscribe(f"{_prefix}/set_schedules_enabled")
                             c.subscribe(f"{_prefix}/run_update")
                             c.subscribe(f"{_prefix}/device/+/set_on")
                             if _ha:
@@ -1800,7 +1840,7 @@ def get_active_schedule(schedules):
 
 # ================= CONTROL LOOP =================
 def control_loop():
-    global current_power, current_brightness, active_schedule_info, anti_legionella_enabled
+    global current_power, current_brightness, active_schedule_info, anti_legionella_enabled, schedules_enabled
 
     online_check_interval = 10
     last_online_check = {}
@@ -1812,6 +1852,7 @@ def control_loop():
         try:
             cfg = load_config()
             anti_legionella_enabled = cfg.get("anti_legionella_enabled", False)
+            schedules_enabled = cfg.get("schedules_enabled", True)
             p1_ip = cfg.get("p1_ip")
             devices = cfg.get("shelly_devices", [])
             settings = get_runtime_settings(cfg)
@@ -1939,7 +1980,7 @@ def control_loop():
             # --- Einde Anti-Legionella ---
 
             # --- Tijdschema override ---
-            active_sched = get_active_schedule(cfg.get("schedules", []))
+            active_sched = get_active_schedule(cfg.get("schedules", [])) if schedules_enabled else None
             if active_sched:
                 active_schedule_info = active_sched
                 sched_brightness = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, int(active_sched.get("brightness", MIN_BRIGHTNESS))))

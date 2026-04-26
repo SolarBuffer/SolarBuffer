@@ -1472,6 +1472,19 @@
           </label>
         </div>
       </div>
+      <div class="control-row">
+        <div class="control-label">
+          <div class="name">Tijdschema's</div>
+          <div class="sub" id="schedules_sub">Uitgeschakeld</div>
+        </div>
+        <div class="control-right">
+          <div class="dot" id="schedules_dot"></div>
+          <label class="toggle">
+            <input type="checkbox" id="schedules_toggle" onchange="toggleSchedules()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div class="card control-card" id="scheduleCard">
@@ -1611,7 +1624,7 @@
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.1.5</div>
+    <div class="footer">Version 0.2.0</div>
   </div>
 
   <script>
@@ -1721,6 +1734,11 @@
           }
           document.getElementById("legionella_sub").textContent = alSub;
           document.getElementById("legionella_dot").className = alDotCls;
+
+          const schedsEnabled = !!data.schedules_enabled;
+          document.getElementById("schedules_toggle").checked = schedsEnabled;
+          document.getElementById("schedules_sub").textContent = schedsEnabled ? "Actief" : "Uitgeschakeld";
+          document.getElementById("schedules_dot").className = "dot" + (schedsEnabled ? " active" : "");
 
           renderDevices(data.devices || []);
           renderSchedules(data.schedules || [], data.active_schedule || null);
@@ -1849,6 +1867,10 @@
 
     function toggleAntiLegionella() {
       fetch("/toggle_anti_legionella").then(() => setTimeout(updateStatus, 200));
+    }
+
+    function toggleSchedules() {
+      fetch("/toggle_schedules").then(() => setTimeout(updateStatus, 200));
     }
 
     function toggleDevice(ip) {
