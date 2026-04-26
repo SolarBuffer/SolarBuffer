@@ -67,6 +67,8 @@ def load_config():
         cfg["schedules"] = []
     if "anti_legionella_enabled" not in cfg:
         cfg["anti_legionella_enabled"] = False
+    if "pid_enabled" not in cfg:
+        cfg["pid_enabled"] = True
 
     if "mqtt_enabled" not in cfg:
         cfg["mqtt_enabled"] = False
@@ -303,7 +305,7 @@ def compare_configs(old_cfg, new_cfg):
 
 
 # ================= PID =================
-PID_KP = 0.0225
+PID_KP = 0.025
 PID_KI = 0.0012
 PID_KD = 0.000
 
@@ -664,6 +666,9 @@ def toggle_pid():
     if not require_login():
         return jsonify(success=False), 401
     enabled = not enabled
+    cfg = load_config()
+    cfg["pid_enabled"] = enabled
+    save_config(cfg)
     write_audit_log("pid_toggled", {"enabled": enabled})
     return jsonify(success=True)
 
@@ -1249,7 +1254,9 @@ def sync_configured_devices_off(devices):
 
 
 def startup_sync_devices():
+    global enabled
     cfg = load_config()
+    enabled = cfg.get("pid_enabled", True)
     devices = cfg.get("shelly_devices", [])
     if not devices:
         return
@@ -1365,8 +1372,8 @@ def _publish_ha_discovery(client, prefix, devices):
         "name": "SolarBuffer Update Beschikbaar",
         "unique_id": "solarbuffer_update_available",
         "state_topic": f"{prefix}/update_available",
-        "payload_on": "YES",
-        "payload_off": "NO",
+        "payload_on": "ON",
+        "payload_off": "OFF",
         "device_class": "update",
         "availability_topic": f"{prefix}/availability",
         "device": base_device,
@@ -1447,6 +1454,9 @@ def _handle_mqtt_command(prefix, topic, payload):
     if topic == f"{prefix}/set_enabled":
         new_state = payload.strip().upper() == "ON"
         enabled = new_state
+        cfg = load_config()
+        cfg["pid_enabled"] = enabled
+        save_config(cfg)
         write_audit_log("pid_toggled_via_mqtt", {"enabled": enabled})
         return
 
