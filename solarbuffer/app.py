@@ -313,6 +313,7 @@ current_brightness = 0
 active_schedule_info = None
 _mqtt_client = None
 _mqtt_connected = False
+_update_available = False
 
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
@@ -1253,6 +1254,21 @@ def startup_sync_devices():
 
 
 # ================= MQTT =================
+def _check_update_available():
+    global _update_available
+    try:
+        subprocess.run(["git", "fetch"], cwd=UPDATE_DIR, capture_output=True, timeout=15)
+        local = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=UPDATE_DIR, capture_output=True, text=True
+        ).stdout.strip()
+        remote = subprocess.run(
+            ["git", "rev-parse", "@{u}"], cwd=UPDATE_DIR, capture_output=True, text=True
+        ).stdout.strip()
+        _update_available = bool(local and remote and local != remote)
+    except Exception as e:
+        print(f"Update check fout: {e}")
+
+
 def _sanitize_ip(ip):
     return (ip or "").replace(".", "_").replace(":", "_")
 
@@ -1320,7 +1336,7 @@ def _publish_ha_discovery(client, prefix, devices):
         "device": base_device,
     })
     pub(f"homeassistant/sensor/solarbuffer_grid_power/config", {
-        "name": "SolarBuffer Netspanning",
+        "name": "SolarBuffer Netvermogen",
         "unique_id": "solarbuffer_grid_power",
         "state_topic": f"{prefix}/grid_power",
         "unit_of_measurement": "W",
@@ -1329,12 +1345,33 @@ def _publish_ha_discovery(client, prefix, devices):
         "availability_topic": f"{prefix}/availability",
         "device": base_device,
     })
-    pub(f"homeassistant/sensor/solarbuffer_power/config", {
-        "name": "SolarBuffer Vermogen",
-        "unique_id": "solarbuffer_power",
-        "state_topic": f"{prefix}/power",
-        "unit_of_measurement": "%",
-        "icon": "mdi:flash",
+    pub(f"homeassistant/switch/solarbuffer_anti_legionella/config", {
+        "name": "SolarBuffer Anti-Legionella",
+        "unique_id": "solarbuffer_anti_legionella_switch",
+        "state_topic": f"{prefix}/anti_legionella",
+        "command_topic": f"{prefix}/set_anti_legionella",
+        "payload_on": "ON",
+        "payload_off": "OFF",
+        "icon": "mdi:bacteria-outline",
+        "availability_topic": f"{prefix}/availability",
+        "device": base_device,
+    })
+    pub(f"homeassistant/binary_sensor/solarbuffer_update_available/config", {
+        "name": "SolarBuffer Update Beschikbaar",
+        "unique_id": "solarbuffer_update_available",
+        "state_topic": f"{prefix}/update_available",
+        "payload_on": "YES",
+        "payload_off": "NO",
+        "device_class": "update",
+        "availability_topic": f"{prefix}/availability",
+        "device": base_device,
+    })
+    pub(f"homeassistant/button/solarbuffer_run_update/config", {
+        "name": "SolarBuffer Update Uitvoeren",
+        "unique_id": "solarbuffer_run_update_button",
+        "command_topic": f"{prefix}/run_update",
+        "payload_press": "PRESS",
+        "icon": "mdi:update",
         "availability_topic": f"{prefix}/availability",
         "device": base_device,
     })
@@ -1360,16 +1397,6 @@ def _publish_ha_discovery(client, prefix, devices):
             "availability_topic": f"{prefix}/availability",
             "device": base_device,
         })
-        pub(f"homeassistant/sensor/solarbuffer_{uid}_power/config", {
-            "name": f"{dname} Vermogen",
-            "unique_id": f"solarbuffer_{uid}_power",
-            "state_topic": f"{prefix}/device/{uid}/power",
-            "unit_of_measurement": "%",
-            "icon": "mdi:flash",
-            "availability_topic": f"{prefix}/availability",
-            "device": base_device,
-        })
-
 
 def _publish_mqtt_state(client, prefix, cfg):
     devices_data = []
@@ -1397,24 +1424,54 @@ def _publish_mqtt_state(client, prefix, cfg):
 
     system_status = _system_status_label(devices_data, cfg)
     client.publish(f"{prefix}/grid_power", str(round(current_power)), retain=True)
-    client.publish(f"{prefix}/power", str(round(current_brightness)), retain=True)
     client.publish(f"{prefix}/enabled", "ON" if enabled else "OFF", retain=True)
+    client.publish(f"{prefix}/anti_legionella", "ON" if anti_legionella_enabled else "OFF", retain=True)
+    client.publish(f"{prefix}/update_available", "ON" if _update_available else "OFF", retain=True)
     client.publish(f"{prefix}/status", system_status, retain=True)
     client.publish(f"{prefix}/state", json.dumps({
         "active_power_w": round(current_power),
-        "power": round(current_brightness),
         "enabled": enabled,
+        "anti_legionella": anti_legionella_enabled,
         "status": system_status,
         "devices": devices_data,
     }), retain=True)
 
 
 def _handle_mqtt_command(prefix, topic, payload):
-    global enabled
+    global enabled, anti_legionella_enabled
     if topic == f"{prefix}/set_enabled":
         new_state = payload.strip().upper() == "ON"
         enabled = new_state
         write_audit_log("pid_toggled_via_mqtt", {"enabled": enabled})
+        return
+
+    if topic == f"{prefix}/set_anti_legionella":
+        new_state = payload.strip().upper() == "ON"
+        anti_legionella_enabled = new_state
+        cfg = load_config()
+        cfg["anti_legionella_enabled"] = anti_legionella_enabled
+        save_config(cfg)
+        write_audit_log("anti_legionella_toggled_via_mqtt", {"enabled": anti_legionella_enabled})
+        return
+
+    if topic == f"{prefix}/run_update":
+        def _do_update():
+            global _update_available
+            try:
+                pull = subprocess.run(
+                    ["git", "pull"], cwd=UPDATE_DIR,
+                    capture_output=True, text=True, timeout=60
+                )
+                output = (pull.stdout + pull.stderr).strip()
+                has_changes = pull.returncode == 0 and "already up to date" not in output.lower()
+                write_audit_log("update_run_via_mqtt", {"returncode": pull.returncode, "has_changes": has_changes})
+                if has_changes:
+                    _update_available = False
+                    time.sleep(1.5)
+                    subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
+            except Exception as e:
+                print(f"MQTT update fout: {e}")
+        threading.Thread(target=_do_update, daemon=True).start()
         return
 
     device_set_on_prefix = f"{prefix}/device/"
@@ -1476,6 +1533,7 @@ def mqtt_loop():
     current_key = None
     client = None
     last_publish = 0
+    last_update_check = 0
 
     while True:
         try:
@@ -1542,6 +1600,8 @@ def mqtt_loop():
                             _mqtt_connected = True
                             c.publish(f"{_prefix}/availability", "online", retain=True)
                             c.subscribe(f"{_prefix}/set_enabled")
+                            c.subscribe(f"{_prefix}/set_anti_legionella")
+                            c.subscribe(f"{_prefix}/run_update")
                             c.subscribe(f"{_prefix}/device/+/set_on")
                             if _ha:
                                 _publish_ha_discovery(c, _prefix, load_config().get("shelly_devices", []))
@@ -1584,6 +1644,10 @@ def mqtt_loop():
                 prefix = cfg.get("mqtt_topic_prefix", "solarbuffer")
                 _publish_mqtt_state(client, prefix, cfg)
                 last_publish = now
+
+            if now - last_update_check >= 600:
+                threading.Thread(target=_check_update_available, daemon=True).start()
+                last_update_check = now
 
             time.sleep(5)
 
