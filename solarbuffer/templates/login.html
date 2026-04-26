@@ -175,6 +175,28 @@
             transform: translateY(0);
         }
 
+        .remember-row {
+            flex-direction: row !important;
+            align-items: center;
+        }
+
+        .remember-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 400;
+            font-size: 0.9rem;
+            color: hsl(220, 10%, 46%);
+            cursor: pointer;
+        }
+
+        .remember-label input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            accent-color: hsl(32, 95%, 52%);
+            cursor: pointer;
+        }
+
         .error-message {
             color: hsl(0, 75%, 60%);
             font-size: 0.9rem;
@@ -212,6 +234,13 @@
                         <i id="passwordIcon" class="mdi mdi-eye-off"></i>
                     </button>
                 </div>
+            </div>
+
+            <div class="remember-row">
+                <label class="remember-label">
+                    <input type="checkbox" name="remember_me" id="remember_me">
+                    Onthoud mij
+                </label>
             </div>
 
             <button type="submit">Inloggen</button>

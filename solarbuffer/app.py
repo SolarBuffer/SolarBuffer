@@ -8,7 +8,7 @@ import ipaddress
 import subprocess
 import uuid
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session
 import threading
@@ -337,7 +337,8 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "verander_dit_naar_iets_veil
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=False
+    SESSION_COOKIE_SECURE=False,
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30)
 )
 
 
@@ -463,6 +464,8 @@ def login():
         users = cfg.get("users", [])
         matched = next((u for u in users if u["username"] == entered_username), None)
         if matched and check_password_hash(matched.get("password_hash", ""), entered_password):
+            if request.form.get("remember_me"):
+                session.permanent = True
             session["logged_in"] = True
             session["username"] = entered_username
             write_audit_log("login_success", {"username": entered_username})
