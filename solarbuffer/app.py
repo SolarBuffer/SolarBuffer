@@ -592,7 +592,7 @@ def wizard():
             write_audit_log("config_saved_no_changes", {})
         init_device_states(cfg["shelly_devices"])
         init_device_pids(cfg["shelly_devices"])
-        sync_configured_devices_off(cfg["shelly_devices"])
+        threading.Thread(target=sync_configured_devices_off, args=(cfg["shelly_devices"],), daemon=True).start()
         return redirect("/dashboard")
     return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
 
@@ -617,7 +617,7 @@ def wizard_forced():
             write_audit_log("config_saved_forced_no_changes", {})
         init_device_states(cfg["shelly_devices"])
         init_device_pids(cfg["shelly_devices"])
-        sync_configured_devices_off(cfg["shelly_devices"])
+        threading.Thread(target=sync_configured_devices_off, args=(cfg["shelly_devices"],), daemon=True).start()
         return redirect("/dashboard")
     return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
 
