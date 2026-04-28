@@ -8,6 +8,7 @@ import ipaddress
 import subprocess
 import uuid
 import re
+import traceback
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session
@@ -971,80 +972,88 @@ def get_schedules():
 
 @app.route("/schedules", methods=["POST"])
 def create_schedule():
-    if not require_login():
-        return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    days = data.get("days", [])
-    start_time = str(data.get("start_time", ""))
-    end_time = str(data.get("end_time", ""))
-    brightness = data.get("brightness", 50)
-    name = str(data.get("name", ""))[:50]
-    if not isinstance(days, list) or not days:
-        return jsonify(success=False, error="Geen dagen geselecteerd"), 400
-    if not _valid_time(start_time) or not _valid_time(end_time):
-        return jsonify(success=False, error="Ongeldige tijd (gebruik HH:MM)"), 400
     try:
-        brightness = int(brightness)
-        if not (1 <= brightness <= 100):
-            raise ValueError
-    except (ValueError, TypeError):
-        return jsonify(success=False, error="Helderheid moet tussen 1 en 100 zijn"), 400
-    cfg = load_config()
-    valid_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
-    raw_ips = data.get("device_ips", [])
-    device_ips = [ip for ip in raw_ips if ip in valid_ips] if isinstance(raw_ips, list) else []
-    new_sched = {
-        "id": str(uuid.uuid4()),
-        "name": name,
-        "days": sorted({int(d) for d in days if 0 <= int(d) <= 6}),
-        "start_time": start_time,
-        "end_time": end_time,
-        "brightness": brightness,
-        "device_ips": device_ips,
-        "enabled": True,
-    }
-    cfg["schedules"].append(new_sched)
-    save_config(cfg)
-    write_audit_log("schedule_created", {"id": new_sched["id"], "name": new_sched["name"]})
-    return jsonify(success=True, schedule=new_sched)
+        if not require_login():
+            return jsonify({"error": "unauthorized"}), 401
+        data = request.get_json(silent=True) or {}
+        days = data.get("days", [])
+        start_time = str(data.get("start_time", ""))
+        end_time = str(data.get("end_time", ""))
+        brightness = data.get("brightness", 50)
+        name = str(data.get("name", ""))[:50]
+        if not isinstance(days, list) or not days:
+            return jsonify(success=False, error="Geen dagen geselecteerd"), 400
+        if not _valid_time(start_time) or not _valid_time(end_time):
+            return jsonify(success=False, error="Ongeldige tijd (gebruik HH:MM)"), 400
+        try:
+            brightness = int(brightness)
+            if not (1 <= brightness <= 100):
+                raise ValueError
+        except (ValueError, TypeError):
+            return jsonify(success=False, error="Helderheid moet tussen 1 en 100 zijn"), 400
+        cfg = load_config()
+        valid_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
+        raw_ips = data.get("device_ips", [])
+        device_ips = [ip for ip in (raw_ips or []) if isinstance(ip, str) and ip in valid_ips]
+        new_sched = {
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "days": sorted({int(d) for d in days if isinstance(d, (int, float)) and 0 <= int(d) <= 6}),
+            "start_time": start_time,
+            "end_time": end_time,
+            "brightness": brightness,
+            "device_ips": device_ips,
+            "enabled": True,
+        }
+        cfg["schedules"].append(new_sched)
+        save_config(cfg)
+        write_audit_log("schedule_created", {"id": new_sched["id"], "name": new_sched["name"]})
+        return jsonify(success=True, schedule=new_sched)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify(success=False, error=f"Serverfout: {e}"), 500
 
 
 @app.route("/schedules/<sched_id>", methods=["PUT"])
 def update_schedule(sched_id):
-    if not require_login():
-        return jsonify({"error": "unauthorized"}), 401
-    data = request.get_json(silent=True) or {}
-    cfg = load_config()
-    schedules = cfg.get("schedules", [])
-    idx = next((i for i, s in enumerate(schedules) if s.get("id") == sched_id), None)
-    if idx is None:
-        return jsonify(success=False, error="Niet gevonden"), 404
-    sched = schedules[idx]
-    if "days" in data:
-        sched["days"] = sorted({int(d) for d in data["days"] if 0 <= int(d) <= 6})
-    if "start_time" in data and _valid_time(data["start_time"]):
-        sched["start_time"] = str(data["start_time"])
-    if "end_time" in data and _valid_time(data["end_time"]):
-        sched["end_time"] = str(data["end_time"])
-    if "brightness" in data:
-        try:
-            b = int(data["brightness"])
-            if 1 <= b <= 100:
-                sched["brightness"] = b
-        except (ValueError, TypeError):
-            pass
-    if "name" in data:
-        sched["name"] = str(data["name"])[:50]
-    if "enabled" in data:
-        sched["enabled"] = bool(data["enabled"])
-    if "device_ips" in data:
-        valid_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
-        raw_ips = data["device_ips"]
-        sched["device_ips"] = [ip for ip in raw_ips if ip in valid_ips] if isinstance(raw_ips, list) else []
-    cfg["schedules"] = schedules
-    save_config(cfg)
-    write_audit_log("schedule_updated", {"id": sched_id})
-    return jsonify(success=True, schedule=sched)
+    try:
+        if not require_login():
+            return jsonify({"error": "unauthorized"}), 401
+        data = request.get_json(silent=True) or {}
+        cfg = load_config()
+        schedules = cfg.get("schedules", [])
+        idx = next((i for i, s in enumerate(schedules) if s.get("id") == sched_id), None)
+        if idx is None:
+            return jsonify(success=False, error="Niet gevonden"), 404
+        sched = schedules[idx]
+        if "days" in data:
+            sched["days"] = sorted({int(d) for d in data["days"] if isinstance(d, (int, float)) and 0 <= int(d) <= 6})
+        if "start_time" in data and _valid_time(data["start_time"]):
+            sched["start_time"] = str(data["start_time"])
+        if "end_time" in data and _valid_time(data["end_time"]):
+            sched["end_time"] = str(data["end_time"])
+        if "brightness" in data:
+            try:
+                b = int(data["brightness"])
+                if 1 <= b <= 100:
+                    sched["brightness"] = b
+            except (ValueError, TypeError):
+                pass
+        if "name" in data:
+            sched["name"] = str(data["name"])[:50]
+        if "enabled" in data:
+            sched["enabled"] = bool(data["enabled"])
+        if "device_ips" in data:
+            valid_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
+            raw_ips = data["device_ips"]
+            sched["device_ips"] = [ip for ip in (raw_ips or []) if isinstance(ip, str) and ip in valid_ips]
+        cfg["schedules"] = schedules
+        save_config(cfg)
+        write_audit_log("schedule_updated", {"id": sched_id})
+        return jsonify(success=True, schedule=sched)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify(success=False, error=f"Serverfout: {e}"), 500
 
 
 @app.route("/schedules/<sched_id>", methods=["DELETE"])

@@ -1970,12 +1970,15 @@
       const method = editingSchedId ? "PUT" : "POST";
 
       fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-        .then(r => r.json())
+        .then(async r => {
+          const text = await r.text();
+          try { return JSON.parse(text); } catch { throw new Error("HTTP " + r.status + ": " + text.slice(0, 200)); }
+        })
         .then(data => {
           if (data.success) { closeSchedForm(); updateStatus(); }
           else { errEl.textContent = data.error || "Opslaan mislukt."; errEl.classList.add("visible"); }
         })
-        .catch(() => { errEl.textContent = "Verbindingsfout."; errEl.classList.add("visible"); });
+        .catch(e => { console.error("Opslaan fout:", e); errEl.textContent = e.message || "Verbindingsfout."; errEl.classList.add("visible"); });
     }
 
     function deleteSchedule(id) {
