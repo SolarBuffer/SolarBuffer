@@ -1951,7 +1951,7 @@
 
     function saveSchedule() {
       const days = [];
-      document.querySelectorAll(".sched-day-btn.active").forEach(btn => days.push(parseInt(btn.dataset.day)));
+      document.querySelectorAll("#schedDays .sched-day-btn.active").forEach(btn => days.push(parseInt(btn.dataset.day)));
       const name = document.getElementById("schedName").value.trim();
       const start = document.getElementById("schedStart").value;
       const end = document.getElementById("schedEnd").value;
