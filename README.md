@@ -9,7 +9,9 @@ Met een webgebaseerde configuratie-wizard kun je snel je apparaten instellen en 
 
 - Lees real-time P1-energiemeterdata uit  
 - Stuur SolarBuffer-apparaten aan (aan/uit en dimmen)  
-- PID-gestuurde automatische regeling voor verbruik  
+- PID-gestuurde automatische regeling voor verbruik
+- Tijdschema's
+- Anti-Legionella
 - Webgebaseerde configuratie wizard  
 - Real-time status dashboard
 - FUTURE, batterij koppeling mogelijk
