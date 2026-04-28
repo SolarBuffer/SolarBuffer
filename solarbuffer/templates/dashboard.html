@@ -1355,69 +1355,70 @@
     html[data-theme="dark"] .footer { color: hsl(220, 8%, 52%); }
 
     /* ===== TAILSCALE ===== */
-    .ts-badge {
-      font-size: 0.72rem; font-weight: 600; border-radius: 999px;
-      padding: 0.15rem 0.55rem; white-space: nowrap; margin-left: 2px;
+    .ts-status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background: hsl(220, 10%, 78%); margin-left: 2px;
+      transition: background 0.3s;
     }
-    .ts-badge-on  { color: hsl(145, 60%, 32%); background: hsl(145, 55%, 92%); border: 1px solid hsl(145, 50%, 78%); }
-    .ts-badge-off { color: hsl(220, 12%, 46%); background: hsl(220, 10%, 93%); border: 1px solid hsl(220, 10%, 84%); }
-    .ts-badge-pending { color: hsl(32, 95%, 38%); background: hsl(32, 95%, 92%); border: 1px solid hsl(32, 85%, 78%); }
+    .ts-status-dot.on      { background: hsl(145, 55%, 48%); }
+    .ts-status-dot.pending { background: hsl(32, 95%, 52%); }
 
-    .ts-not-installed {
-      margin-top: 0.75rem; padding: 0.65rem 0.8rem;
-      background: hsl(30, 20%, 97%); border: 1px solid hsl(30, 15%, 91%);
-      border-radius: 0.6rem; font-size: 0.82rem; color: hsl(220, 10%, 46%);
+    .ts-sub {
+      font-size: 0.75rem; color: hsl(220, 10%, 52%); margin-left: 4px;
+      font-weight: 400; white-space: nowrap;
     }
+
+    .ts-body { margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.55rem; }
+
+    .ts-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem; padding: 0.45rem 0;
+      border-bottom: 1px solid hsl(30, 15%, 92%);
+    }
+    .ts-row:last-child { border-bottom: none; }
+    .ts-row-label { font-size: 0.8rem; color: hsl(220, 10%, 50%); white-space: nowrap; }
+    .ts-row-val   { font-size: 0.8rem; font-weight: 600; font-family: monospace;
+                    color: hsl(220, 16%, 22%); text-align: right; word-break: break-all; }
+
+    .ts-hint { font-size: 0.78rem; color: hsl(220, 10%, 56%); margin-top: 0.6rem; }
+
+    .ts-url-row {
+      display: flex; align-items: center; gap: 0.5rem; margin-top: 0.7rem;
+      padding: 0.45rem 0.6rem; border-radius: 0.5rem;
+      background: hsl(220, 14%, 97%); border: 1px solid hsl(220, 10%, 90%);
+    }
+    .ts-auth-link {
+      flex: 1; font-size: 0.72rem; color: hsl(220, 60%, 50%);
+      word-break: break-all; text-decoration: none;
+    }
+    .ts-auth-link:hover { text-decoration: underline; }
+    .ts-copy-btn {
+      flex-shrink: 0; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 600;
+      border: 1px solid hsl(220, 10%, 84%); border-radius: 0.35rem;
+      background: white; color: hsl(220, 12%, 46%); cursor: pointer;
+      transition: background 0.15s, color 0.15s; white-space: nowrap;
+    }
+    .ts-copy-btn:hover { background: hsl(220, 10%, 93%); color: hsl(220, 16%, 26%); }
+
     .ts-install-cmd {
-      display: block; margin-top: 0.5rem; padding: 0.45rem 0.65rem;
-      background: hsl(220, 14%, 14%); color: hsl(120, 60%, 70%);
-      border-radius: 0.4rem; font-size: 0.78rem; font-family: monospace;
+      display: block; margin-top: 0.6rem; padding: 0.4rem 0.6rem;
+      background: hsl(220, 12%, 15%); color: hsl(120, 50%, 68%);
+      border-radius: 0.4rem; font-size: 0.73rem; font-family: monospace;
       user-select: all;
     }
 
-    .ts-auth-box {
-      margin-top: 0.75rem; padding: 0.75rem 0.8rem;
-      background: hsl(32, 95%, 97%); border: 1px solid hsl(32, 85%, 84%);
-      border-radius: 0.6rem;
-    }
-    .ts-auth-desc { font-size: 0.82rem; color: hsl(220, 12%, 36%); margin-bottom: 0.5rem; }
-    .ts-auth-link {
-      display: block; font-size: 0.75rem; color: hsl(220, 70%, 50%);
-      word-break: break-all; margin-bottom: 0.6rem;
-    }
-    .ts-copy-btn {
-      padding: 0.3rem 0.7rem; font-size: 0.78rem; font-weight: 600;
-      border: 1px solid hsl(32, 85%, 78%); border-radius: 0.4rem;
-      background: white; color: hsl(32, 95%, 42%); cursor: pointer;
-      transition: background 0.15s;
-    }
-    .ts-copy-btn:hover { background: hsl(32, 95%, 95%); }
-
-    .ts-connected-box {
-      margin-top: 0.75rem; padding: 0.65rem 0.8rem;
-      background: hsl(145, 40%, 96%); border: 1px solid hsl(145, 40%, 82%);
-      border-radius: 0.6rem;
-    }
-    .ts-ip-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    .ts-ip-label { font-size: 0.82rem; color: hsl(220, 12%, 40%); }
-    .ts-ip-val { font-size: 0.9rem; font-weight: 700; color: hsl(145, 60%, 28%); font-family: monospace; }
-    .ts-ip-hint { font-size: 0.75rem; color: hsl(220, 10%, 52%); margin-top: 0.4rem; }
-    .ts-ip-hint span { font-family: monospace; color: hsl(220, 70%, 50%); }
-
-    html[data-theme="dark"] .ts-badge-on  { color: hsl(145, 55%, 60%); background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); }
-    html[data-theme="dark"] .ts-badge-off { color: hsl(220, 8%, 58%); background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 38%); }
-    html[data-theme="dark"] .ts-badge-pending { color: hsl(32, 95%, 62%); background: hsl(32, 18%, 22%); border-color: hsl(32, 40%, 36%); }
-    html[data-theme="dark"] .ts-not-installed { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); color: hsl(220, 8%, 62%); }
-    html[data-theme="dark"] .ts-auth-box { background: hsl(32, 14%, 22%); border-color: hsl(32, 30%, 34%); }
-    html[data-theme="dark"] .ts-auth-desc { color: hsl(220, 8%, 68%); }
-    html[data-theme="dark"] .ts-auth-link { color: hsl(210, 80%, 65%); }
-    html[data-theme="dark"] .ts-copy-btn { background: hsl(220, 8%, 30%); color: hsl(32, 95%, 62%); border-color: hsl(32, 40%, 36%); }
-    html[data-theme="dark"] .ts-copy-btn:hover { background: hsl(32, 14%, 28%); }
-    html[data-theme="dark"] .ts-connected-box { background: hsl(145, 14%, 22%); border-color: hsl(145, 24%, 32%); }
-    html[data-theme="dark"] .ts-ip-label { color: hsl(220, 8%, 62%); }
-    html[data-theme="dark"] .ts-ip-val { color: hsl(145, 55%, 58%); }
-    html[data-theme="dark"] .ts-ip-hint { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .ts-ip-hint span { color: hsl(210, 80%, 65%); }
+    html[data-theme="dark"] .ts-status-dot        { background: hsl(220, 8%, 46%); }
+    html[data-theme="dark"] .ts-status-dot.on      { background: hsl(145, 50%, 46%); }
+    html[data-theme="dark"] .ts-status-dot.pending { background: hsl(32, 90%, 54%); }
+    html[data-theme="dark"] .ts-sub               { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .ts-row               { border-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .ts-row-label         { color: hsl(220, 8%, 54%); }
+    html[data-theme="dark"] .ts-row-val           { color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .ts-hint              { color: hsl(220, 8%, 48%); }
+    html[data-theme="dark"] .ts-url-row           { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .ts-auth-link         { color: hsl(210, 70%, 62%); }
+    html[data-theme="dark"] .ts-copy-btn          { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 70%); }
+    html[data-theme="dark"] .ts-copy-btn:hover    { background: hsl(220, 8%, 38%); }
   </style>
 </head>
 
@@ -1635,7 +1636,7 @@
       </div>
     </div>
 
-    <div class="card control-card updates-card" id="tailscaleCard">
+    <div class="card control-card" id="tailscaleCard">
       <h2>
         <div class="updates-header-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -1643,33 +1644,34 @@
           </svg>
         </div>
         Remote Toegang
-        <span class="ts-badge ts-badge-off" id="tsBadge">Controleren…</span>
+        <span class="ts-status-dot" id="tsDot"></span>
+        <span class="ts-sub" id="tsSub">Controleren…</span>
         <button class="update-check-btn" id="tsConnectBtn" onclick="tsConnect()" style="display:none">Verbinden</button>
       </h2>
 
       <div id="tsNotInstalled" style="display:none">
-        <div class="ts-not-installed">
-          Tailscale is niet geïnstalleerd. Voer dit uit op de server:
-          <code class="ts-install-cmd">curl -fsSL https://tailscale.com/install.sh | sh</code>
-        </div>
+        <span class="ts-hint">Tailscale is niet geïnstalleerd. Voer dit uit op de server:</span>
+        <code class="ts-install-cmd">curl -fsSL https://tailscale.com/install.sh | sh</code>
       </div>
 
       <div id="tsAuthBox" style="display:none">
-        <div class="ts-auth-box">
-          <div class="ts-auth-desc">Open de onderstaande link om in te loggen bij Tailscale:</div>
+        <span class="ts-hint">Open de link om in te loggen bij Tailscale:</span>
+        <div class="ts-url-row">
           <a id="tsAuthUrl" class="ts-auth-link" href="#" target="_blank" rel="noopener">—</a>
-          <button class="ts-copy-btn" onclick="tsCopyUrl()"><span id="tsCopyLabel">Kopieer link</span></button>
+          <button class="ts-copy-btn" onclick="tsCopyUrl()"><span id="tsCopyLabel">Kopieer</span></button>
         </div>
       </div>
 
       <div id="tsConnected" style="display:none">
-        <div class="ts-connected-box">
-          <div class="ts-ip-row">
-            <span class="ts-ip-label">Tailscale adres</span>
-            <span class="ts-ip-val" id="tsIpVal">—</span>
+        <div class="ts-body">
+          <div class="ts-row">
+            <span class="ts-row-label">Tailscale IP</span>
+            <span class="ts-row-val" id="tsIpVal">—</span>
           </div>
-          <div class="ts-ip-hint">Dashboard bereikbaar via: <span id="tsIpHint">—</span></div>
-          <div class="ts-ip-hint" style="margin-top:0.25rem">Of via hostnaam: <span>http://solarbuffer:5001</span></div>
+          <div class="ts-row">
+            <span class="ts-row-label">Hostnaam</span>
+            <span class="ts-row-val">http://solarbuffer:5001</span>
+          </div>
         </div>
       </div>
     </div>
@@ -2269,7 +2271,8 @@
     let _tsWaitingForAuth = false;
 
     function tsUpdateUI(data) {
-      const badge = document.getElementById('tsBadge');
+      const dot = document.getElementById('tsDot');
+      const sub = document.getElementById('tsSub');
       const connectBtn = document.getElementById('tsConnectBtn');
       const notInstalled = document.getElementById('tsNotInstalled');
       const authBox = document.getElementById('tsAuthBox');
@@ -2281,31 +2284,30 @@
       connectBtn.style.display = 'none';
 
       if (!data.installed) {
-        badge.textContent = 'Niet geïnstalleerd';
-        badge.className = 'ts-badge ts-badge-off';
+        dot.className = 'ts-status-dot';
+        sub.textContent = 'Niet geïnstalleerd';
         notInstalled.style.display = 'block';
         _tsWaitingForAuth = false;
         return;
       }
 
       if (data.connected) {
-        badge.textContent = '● Verbonden';
-        badge.className = 'ts-badge ts-badge-on';
+        dot.className = 'ts-status-dot on';
+        sub.textContent = 'Verbonden';
         document.getElementById('tsIpVal').textContent = data.ip || '—';
-        document.getElementById('tsIpHint').textContent = data.ip ? 'http://' + data.ip + ':5001' : '—';
         connectedBox.style.display = 'block';
         _tsWaitingForAuth = false;
       } else if (data.auth_url) {
-        badge.textContent = 'Wacht op inlog';
-        badge.className = 'ts-badge ts-badge-pending';
+        dot.className = 'ts-status-dot pending';
+        sub.textContent = 'Wacht op inlog…';
         const link = document.getElementById('tsAuthUrl');
         link.href = data.auth_url;
         link.textContent = data.auth_url;
         authBox.style.display = 'block';
         _tsWaitingForAuth = true;
       } else {
-        badge.textContent = 'Niet verbonden';
-        badge.className = 'ts-badge ts-badge-off';
+        dot.className = 'ts-status-dot';
+        sub.textContent = 'Niet verbonden';
         connectBtn.style.display = 'inline-block';
         connectBtn.disabled = false;
         connectBtn.textContent = 'Verbinden';
