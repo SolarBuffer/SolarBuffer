@@ -1,2 +1,0 @@
-{"timestamp": "2026-04-28T15:52:35", "user": "solarbuffer", "ip": "127.0.0.1", "action": "network_scan", "details": {"p1_found": 1, "shelly_found": 0}}
-{"timestamp": "2026-04-28T15:52:51", "user": "solarbuffer", "ip": "127.0.0.1", "action": "config_updated_forced", "details": {"p1_ip": {"old": "", "new": "192.168.178.21"}, "devices_added": [{"name": "Boiler", "ip": "192.168.178.17", "priority": 1, "power_meter": "", "power_ip": "", "power_socket_type": "", "power_socket_ip": "", "boiler_volume": 100}]}}
