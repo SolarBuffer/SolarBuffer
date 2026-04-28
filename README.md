@@ -52,7 +52,7 @@ solarbuffer.local:80
 Vul hier de wifi-gegevens van je thuisnetwerk in.
 Na het opslaan start de hub automatisch opnieuw op.
 Wacht opnieuw ongeveer 2 minuten tot de hub weer online is.
-<img width="420" height="540" alt="image" src="https://github.com/user-attachments/assets/5812057f-362b-431b-89b4-bf4803eb36a3" />
+<img width="220" height="340" alt="image" src="https://github.com/user-attachments/assets/5812057f-362b-431b-89b4-bf4803eb36a3" />
 
 ### Stap 5 – Controleren of de hub verbonden is
 Open opnieuw een webbrowser en ga naar:
@@ -66,6 +66,8 @@ Log in met:
 Gebruikersnaam: solarbuffer
 Wachtwoord: solarbuffer
 ```
+<img width="355" height="413" alt="image" src="https://github.com/user-attachments/assets/bb9e093c-aca7-4fd9-b443-1f18d6b86406" />
+
 ### Stap 6 – Configuratie via de wizard
 Na het inloggen kom je in de configuratiewizard.
 De hub voert automatisch een autoscan uit om compatibele apparaten te vinden.
