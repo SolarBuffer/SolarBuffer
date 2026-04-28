@@ -366,4 +366,5 @@ test
 
 ## MQTT
 
+## Tailscale
 
