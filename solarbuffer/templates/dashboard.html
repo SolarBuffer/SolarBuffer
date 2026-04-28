@@ -1105,6 +1105,8 @@
     }
     .sched-error { font-size: 0.78rem; color: hsl(0, 65%, 45%); font-weight: 600; display: none; }
     .sched-error.visible { display: block; }
+    .sched-devices-hint { font-weight: 400; color: hsl(220, 10%, 58%); font-size: 0.75rem; }
+    html[data-theme="dark"] .sched-devices-hint { color: hsl(220, 8%, 52%); }
 
     /* ===== DARK MODE ===== */
     html[data-theme="dark"] {
@@ -1619,6 +1621,11 @@
           </div>
         </div>
 
+        <div>
+          <label>Apparaat(en) <span class="sched-devices-hint">(leeg = alle)</span></label>
+          <div class="sched-days" id="schedDevices"></div>
+        </div>
+
         <div class="sched-error" id="schedError"></div>
 
         <div class="sched-form-actions">
@@ -1849,6 +1856,7 @@
     // ===== TIJDSCHEMA =====
     const DAY_NAMES = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
     const DAY_FULL  = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"];
+    const SCHED_DEVICES = {{ config.shelly_devices | tojson }};
     let editingSchedId = null;
 
     function renderSchedules(schedules, active) {
@@ -1870,10 +1878,14 @@
       list.innerHTML = schedules.map(s => {
         const dayStr = s.days.map(d => DAY_NAMES[d]).join(", ");
         const activeNow = active && active.id === s.id;
+        const deviceIps = s.device_ips || [];
+        const deviceStr = deviceIps.length
+          ? ' · ' + deviceIps.map(ip => { const dev = SCHED_DEVICES.find(d => d.ip === ip); return escapeHtml(dev ? dev.name : ip); }).join(", ")
+          : '';
         return `<div class="sched-item${s.enabled ? '' : ' sched-disabled'}">
           <div class="sched-item-info">
             <div class="sched-item-name">${escapeHtml(s.name || (s.start_time + '–' + s.end_time))}${activeNow ? ' <span style="color:hsl(145,60%,32%);font-size:0.72rem">● actief</span>' : ''}</div>
-            <div class="sched-item-meta">${dayStr} · ${s.start_time}–${s.end_time} · ${s.brightness}%</div>
+            <div class="sched-item-meta">${dayStr} · ${s.start_time}–${s.end_time} · ${s.brightness}%${deviceStr}</div>
           </div>
           <div class="sched-item-actions">
             <button class="sched-btn" onclick="editSchedule('${s.id}')">${s.enabled ? 'Bewerken' : 'Bewerken'}</button>
@@ -1896,6 +1908,13 @@
         const day = parseInt(btn.dataset.day);
         btn.classList.toggle("active", prefill ? prefill.days.includes(day) : false);
       });
+      const selectedIps = new Set(prefill && prefill.device_ips ? prefill.device_ips : []);
+      const devContainer = document.getElementById("schedDevices");
+      devContainer.innerHTML = SCHED_DEVICES.map(dev =>
+        `<button type="button" class="sched-day-btn${selectedIps.has(dev.ip) ? ' active' : ''}"
+          data-device-ip="${escapeHtml(dev.ip)}"
+          onclick="this.classList.toggle('active')">${escapeHtml(dev.name)}</button>`
+      ).join("");
       document.getElementById("schedError").classList.remove("visible");
       document.getElementById("schedError").textContent = "";
       document.getElementById("schedForm").classList.add("open");
@@ -1942,7 +1961,9 @@
       if (start >= end) { errEl.textContent = "Eindtijd moet na de begintijd liggen."; errEl.classList.add("visible"); return; }
       errEl.classList.remove("visible");
 
-      const payload = { name, days, start_time: start, end_time: end, brightness };
+      const device_ips = [];
+      document.querySelectorAll("#schedDevices .sched-day-btn.active").forEach(btn => device_ips.push(btn.dataset.deviceIp));
+      const payload = { name, days, start_time: start, end_time: end, brightness, device_ips };
       const url = editingSchedId ? "/schedules/" + encodeURIComponent(editingSchedId) : "/schedules";
       const method = editingSchedId ? "PUT" : "POST";
 

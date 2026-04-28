@@ -65,6 +65,9 @@ def load_config():
         cfg["expert_settings"] = {}
     if "schedules" not in cfg or not isinstance(cfg["schedules"], list):
         cfg["schedules"] = []
+    for sched in cfg["schedules"]:
+        if "device_ips" not in sched:
+            sched["device_ips"] = []
     if "anti_legionella_enabled" not in cfg:
         cfg["anti_legionella_enabled"] = False
     if "pid_enabled" not in cfg:
@@ -868,6 +871,8 @@ def run_update_check():
 
         if has_changes:
             def delayed_restart():
+                cfg = load_config()
+                sync_configured_devices_off(cfg.get("shelly_devices", []))
                 time.sleep(1.5)
                 subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
             threading.Thread(target=delayed_restart, daemon=True).start()
@@ -985,6 +990,9 @@ def create_schedule():
     except (ValueError, TypeError):
         return jsonify(success=False, error="Helderheid moet tussen 1 en 100 zijn"), 400
     cfg = load_config()
+    valid_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
+    raw_ips = data.get("device_ips", [])
+    device_ips = [ip for ip in raw_ips if ip in valid_ips] if isinstance(raw_ips, list) else []
     new_sched = {
         "id": str(uuid.uuid4()),
         "name": name,
@@ -992,6 +1000,7 @@ def create_schedule():
         "start_time": start_time,
         "end_time": end_time,
         "brightness": brightness,
+        "device_ips": device_ips,
         "enabled": True,
     }
     cfg["schedules"].append(new_sched)
@@ -1028,6 +1037,10 @@ def update_schedule(sched_id):
         sched["name"] = str(data["name"])[:50]
     if "enabled" in data:
         sched["enabled"] = bool(data["enabled"])
+    if "device_ips" in data:
+        valid_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
+        raw_ips = data["device_ips"]
+        sched["device_ips"] = [ip for ip in raw_ips if ip in valid_ips] if isinstance(raw_ips, list) else []
     cfg["schedules"] = schedules
     save_config(cfg)
     write_audit_log("schedule_updated", {"id": sched_id})
@@ -1596,6 +1609,8 @@ def _handle_mqtt_command(prefix, topic, payload):
                 write_audit_log("update_run_via_mqtt", {"returncode": pull.returncode, "has_changes": has_changes})
                 if has_changes:
                     _update_available = False
+                    cfg = load_config()
+                    sync_configured_devices_off(cfg.get("shelly_devices", []))
                     time.sleep(1.5)
                     subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
             except Exception as e:
@@ -2054,13 +2069,17 @@ def control_loop():
 
             # --- Tijdschema override ---
             active_sched = get_active_schedule(cfg.get("schedules", [])) if schedules_enabled else None
+            schedule_handled = set()
             if active_sched:
                 active_schedule_info = active_sched
                 sched_brightness = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, int(active_sched.get("brightness", MIN_BRIGHTNESS))))
+                sched_device_ips = set(active_sched.get("device_ips") or [])
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
                     if ip in legionella_handled:
+                        continue
+                    if sched_device_ips and ip not in sched_device_ips:
                         continue
                     if st.get("pending_start"):
                         ready = ensure_power_socket_on(d)
@@ -2074,13 +2093,16 @@ def control_loop():
                             st["brightness"] = sched_brightness
                             set_shelly(sched_brightness, True, ip)
                             mark_device_activity(d)
+                        schedule_handled.add(ip)
                         continue
                     # Socket eerst aanzetten vóór online-check — apparaat is
                     # offline zolang de socket uit staat
                     if has_power_socket(d) and not st["power_socket_on"]:
                         ensure_power_socket_on(d)
+                        schedule_handled.add(ip)
                         continue
                     if not st["online"]:
+                        schedule_handled.add(ip)
                         continue
                     st["started"] = True
                     st["on"] = True
@@ -2090,9 +2112,11 @@ def control_loop():
                     st["brightness"] = sched_brightness
                     set_shelly(sched_brightness, True, ip)
                     mark_device_activity(d)
+                    schedule_handled.add(ip)
                 current_brightness = sched_brightness
-                time.sleep(2)
-                continue
+                if not sched_device_ips:
+                    time.sleep(2)
+                    continue
             else:
                 active_schedule_info = None
             # --- Einde tijdschema override ---
@@ -2101,7 +2125,7 @@ def control_loop():
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
-                    if ip in legionella_handled:
+                    if ip in legionella_handled or ip in schedule_handled:
                         continue
                     if st.get("pending_start"):
                         ready = ensure_power_socket_on(d)
@@ -2157,7 +2181,7 @@ def control_loop():
             else:
                 export_start = None
 
-            non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled]
+            non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled and d["ip"] not in schedule_handled]
 
             if export_start is not None and (now - export_start) >= EXPORT_DELAY:
                 next_dev = get_next_startable_device(non_legionella)
