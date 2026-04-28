@@ -307,7 +307,7 @@ def compare_configs(old_cfg, new_cfg):
 
 
 # ================= PID =================
-PID_KP = 0.0225
+PID_KP = 0.02
 PID_KI = 0.0012
 PID_KD = 0.000
 
