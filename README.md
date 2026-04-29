@@ -97,6 +97,6 @@ Uitleg over alle beschikbare parameters in de Expert Settings:
 test
 
 ## MQTT
-
+Voeg een MQTT-Broker toe om verbinding met Home Assistant te kunnen maken.
 ## Tailscale
 
