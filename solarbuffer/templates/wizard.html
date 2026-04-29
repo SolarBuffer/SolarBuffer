@@ -911,6 +911,17 @@
                                         <span class="unit">s</span>
                                     </div>
                                 </div>
+
+                                <div class="field">
+                                    <label class="field-label" for="BOOST_DURATION">Boost duur</label>
+                                    <div class="field-help">Hoe lang een apparaat op 100% draait bij boost</div>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="BOOST_DURATION"
+                                            name="BOOST_DURATION"
+                                            value="{{ config.expert_settings.BOOST_DURATION if config.expert_settings else 900 }}">
+                                        <span class="unit">s</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="section-card" style="margin-top:1rem;">

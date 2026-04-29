@@ -11,7 +11,8 @@ import re
 import traceback
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Flask, render_template, jsonify, request, redirect, session
+from flask import Flask, render_template, jsonify, request, redirect, session, send_file
+import io
 import threading
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -41,7 +42,8 @@ DEFAULT_EXPERT_SETTINGS = {
     "PID_NEUTRAL_LOW": -5,
     "PID_NEUTRAL_HIGH": 45,
     "POWER_SOCKET_DELAY": 5,
-    "POWER_SOCKET_HOLD_SECONDS": 600
+    "POWER_SOCKET_HOLD_SECONDS": 600,
+    "BOOST_DURATION": 900
 }
 
 
@@ -660,6 +662,7 @@ def status_json():
             "waiting_for_power_socket": s.get("waiting_for_power_socket", False),
             "legionella_active": s.get("legionella_active", False),
             "legionella_start": s.get("legionella_start"),
+            "boost_until": s.get("boost_until"),
         })
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
@@ -709,6 +712,90 @@ def toggle_anti_legionella():
     save_config(cfg)
     write_audit_log("anti_legionella_toggled", {"enabled": anti_legionella_enabled})
     return jsonify(success=True, enabled=anti_legionella_enabled)
+
+
+@app.route("/boost/<path:ip>", methods=["POST"])
+def boost_device(ip):
+    if not require_login():
+        return jsonify(success=False), 401
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+    if not device or ip not in device_states:
+        return jsonify(success=False), 404
+    st = device_states[ip]
+    now = time.time()
+    settings = get_runtime_settings(cfg)
+    boost_duration = int(settings.get("BOOST_DURATION", 900))
+    if st.get("boost_until") and now < st["boost_until"]:
+        st["boost_until"] = None
+        write_audit_log("boost_cancelled", {"device_ip": ip})
+        return jsonify(success=True, boost_active=False)
+    st["boost_until"] = now + boost_duration
+    write_audit_log("boost_started", {"device_ip": ip, "duration_seconds": boost_duration})
+    return jsonify(success=True, boost_active=True, boost_until=st["boost_until"])
+
+
+@app.route("/settings")
+def settings():
+    if not require_login():
+        return redirect("/login")
+    return render_template("settings.html", dark_mode=get_user_dark_mode())
+
+
+@app.route("/config/backup")
+def config_backup():
+    if not require_login():
+        return redirect("/login")
+    success = request.args.get("success", "")
+    error = request.args.get("error", "")
+    return render_template("config_backup.html", dark_mode=get_user_dark_mode(),
+                           success=success, error=error)
+
+
+@app.route("/config/export")
+def config_export():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    json_bytes = json.dumps(cfg, indent=4, ensure_ascii=False).encode("utf-8")
+    write_audit_log("config_exported", {})
+    return send_file(
+        io.BytesIO(json_bytes),
+        mimetype="application/json",
+        as_attachment=True,
+        download_name="solarbuffer_config.json"
+    )
+
+
+@app.route("/config/import", methods=["POST"])
+def config_import():
+    if not require_login():
+        return redirect("/login")
+    f = request.files.get("config_file")
+    if not f:
+        return redirect("/config/backup?error=Geen+bestand+geselecteerd")
+    try:
+        raw = f.read().decode("utf-8")
+        imported = json.loads(raw)
+        if not isinstance(imported, dict):
+            raise ValueError("Geen geldig configuratieobject")
+    except Exception as e:
+        return redirect(f"/config/backup?error=Ongeldig+JSON-bestand:+{e}")
+    with open(CONFIG_FILE, "w", encoding="utf-8") as fout:
+        json.dump(imported, fout, indent=4)
+    cfg = load_config()
+    save_config(cfg)
+    new_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
+    for old_ip in list(device_states.keys()):
+        if old_ip not in new_ips:
+            del device_states[old_ip]
+    for old_ip in list(device_pids.keys()):
+        if old_ip not in new_ips:
+            del device_pids[old_ip]
+    init_device_states(cfg["shelly_devices"])
+    init_device_pids(cfg["shelly_devices"])
+    write_audit_log("config_imported", {"devices": len(cfg.get("shelly_devices", []))})
+    return redirect("/config/backup?success=1")
 
 
 @app.route("/set_theme", methods=["POST"])
@@ -1318,6 +1405,7 @@ def init_device_states(devices):
                 "waiting_for_power_socket": False, "power_socket_ready_at": None,
                 "legionella_active": s.get("legionella_active", False),
                 "legionella_start": s.get("legionella_start"),
+                "boost_until": None,
             }
 
 
@@ -1405,6 +1493,9 @@ def _device_status_label(st):
         return "Offline"
     if st.get("pending_start") or st.get("waiting_for_power_socket"):
         return "Opstarten"
+    boost_until = st.get("boost_until")
+    if boost_until and time.time() < boost_until:
+        return "Boost"
     if st.get("freeze"):
         return "Bevroren"
     if st.get("started") and st.get("on"):
@@ -2076,6 +2167,49 @@ def control_loop():
                     device_states[d["ip"]]["legionella_start"] = None
             # --- Einde Anti-Legionella ---
 
+            # --- Boost override ---
+            boost_handled = set()
+            for d in devices_sorted:
+                ip = d["ip"]
+                st = device_states[ip]
+                if ip in legionella_handled:
+                    continue
+                boost_until = st.get("boost_until")
+                if not boost_until:
+                    continue
+                if now >= boost_until:
+                    st["boost_until"] = None
+                    continue
+                if st.get("pending_start"):
+                    ready = ensure_power_socket_on(d)
+                    if ready:
+                        st["started"] = True
+                        st["pending_start"] = False
+                        st["on"] = True
+                        st["freeze"] = False
+                        st["saturated_since"] = None
+                        st["min_since"] = None
+                        st["brightness"] = MAX_BRIGHTNESS
+                        set_shelly(MAX_BRIGHTNESS, True, ip)
+                        mark_device_activity(d)
+                    boost_handled.add(ip)
+                    continue
+                if has_power_socket(d) and not st["power_socket_on"]:
+                    ensure_power_socket_on(d)
+                    boost_handled.add(ip)
+                    continue
+                if st["online"]:
+                    st["on"] = True
+                    st["started"] = True
+                    st["freeze"] = False
+                    st["saturated_since"] = None
+                    st["min_since"] = None
+                    st["brightness"] = MAX_BRIGHTNESS
+                    set_shelly(MAX_BRIGHTNESS, True, ip)
+                    mark_device_activity(d)
+                boost_handled.add(ip)
+            # --- Einde Boost override ---
+
             # --- Tijdschema override ---
             active_sched = get_active_schedule(cfg.get("schedules", [])) if schedules_enabled else None
             schedule_handled = set()
@@ -2087,6 +2221,8 @@ def control_loop():
                     ip = d["ip"]
                     st = device_states[ip]
                     if ip in legionella_handled:
+                        continue
+                    if ip in boost_handled:
                         continue
                     if sched_device_ips and ip not in sched_device_ips:
                         continue
@@ -2190,7 +2326,7 @@ def control_loop():
             else:
                 export_start = None
 
-            non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled and d["ip"] not in schedule_handled]
+            non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled and d["ip"] not in boost_handled and d["ip"] not in schedule_handled]
 
             if export_start is not None and (now - export_start) >= EXPORT_DELAY:
                 next_dev = get_next_startable_device(non_legionella)

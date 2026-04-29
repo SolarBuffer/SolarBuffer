@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Config Back-up - SolarBuffer</title>
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .card-desc {
+      font-size: 0.85rem;
+      color: hsl(220, 10%, 46%);
+      margin-bottom: 1.1rem;
+      line-height: 1.5;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+    .btn-primary:hover { background: hsl(32, 85%, 45%); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      display: inline-block;
+      width: 100%;
+      background: hsl(30, 15%, 95%);
+      color: hsl(220, 20%, 30%);
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+    .btn-secondary:hover { background: hsl(30, 15%, 90%); }
+
+    .file-upload-area {
+      border: 2px dashed hsl(30, 15%, 82%);
+      border-radius: 0.6rem;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    .file-upload-area:hover { border-color: hsl(32, 85%, 60%); background: hsl(32, 100%, 98%); }
+    .file-upload-area.has-file { border-color: hsl(32, 85%, 55%); background: hsl(32, 100%, 97%); }
+
+    .file-upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon { font-size: 1.6rem; margin-bottom: 0.4rem; color: hsl(32, 85%, 55%); }
+    .upload-label { font-weight: 600; font-size: 0.9rem; }
+    .upload-hint { font-size: 0.78rem; color: hsl(220, 10%, 55%); margin-top: 0.2rem; }
+    .file-name { font-size: 0.85rem; font-weight: 600; color: hsl(32, 85%, 38%); margin-top: 0.3rem; }
+
+    .warning-box {
+      background: hsl(37, 100%, 95%);
+      border: 1px solid hsl(37, 90%, 78%);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.82rem;
+      color: hsl(30, 70%, 32%);
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+
+    .success-banner {
+      background: hsl(145, 60%, 93%);
+      color: hsl(145, 65%, 28%);
+      border: 1px solid hsl(145, 55%, 78%);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .error-banner {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 38%);
+      border: 1px solid hsl(0, 55%, 84%);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .back-link { text-align: center; margin-top: 0.5rem; }
+    .back-link a {
+      color: hsl(220, 10%, 46%);
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .back-link a:hover { color: hsl(32, 95%, 52%); }
+
+    /* ===== DARK MODE ===== */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 34%);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2);
+    }
+    html[data-theme="dark"] .card-desc { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .btn-secondary {
+      background: hsl(220, 8%, 32%);
+      border-color: hsl(220, 8%, 40%);
+      color: hsl(220, 10%, 82%);
+    }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .file-upload-area {
+      border-color: hsl(220, 8%, 38%);
+    }
+    html[data-theme="dark"] .file-upload-area:hover {
+      border-color: hsl(32, 75%, 52%);
+      background: hsl(32, 20%, 22%);
+    }
+    html[data-theme="dark"] .file-upload-area.has-file {
+      border-color: hsl(32, 75%, 48%);
+      background: hsl(32, 20%, 22%);
+    }
+    html[data-theme="dark"] .upload-hint { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .warning-box {
+      background: hsl(37, 25%, 24%);
+      border-color: hsl(37, 40%, 36%);
+      color: hsl(37, 70%, 72%);
+    }
+    html[data-theme="dark"] .success-banner {
+      background: hsl(145, 25%, 24%);
+      color: hsl(145, 55%, 68%);
+      border-color: hsl(145, 30%, 34%);
+    }
+    html[data-theme="dark"] .error-banner {
+      background: hsl(0, 20%, 28%);
+      color: hsl(0, 60%, 70%);
+      border-color: hsl(0, 20%, 36%);
+    }
+    html[data-theme="dark"] .back-link a { color: hsl(220, 8%, 58%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Config back-up &amp; herstel</p>
+    </div>
+
+    {% if success %}
+    <div class="success-banner">Configuratie hersteld. Apparaten worden opnieuw geïnitialiseerd.</div>
+    {% endif %}
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
+    {% endif %}
+
+    <!-- Exporteren -->
+    <div class="card">
+      <h2>Exporteren</h2>
+      <p class="card-desc">
+        Download een volledige kopie van je instellingen: apparaten, P1-meter, tijdschema's en
+        expert-parameters. Bewaar dit bestand op een veilige plek.
+      </p>
+      <a href="/config/export" class="btn-primary">Download back-up</a>
+    </div>
+
+    <!-- Importeren -->
+    <div class="card">
+      <h2>Importeren</h2>
+      <p class="card-desc">
+        Herstel instellingen vanuit een eerder geëxporteerd back-upbestand.
+        De huidige configuratie wordt overschreven.
+      </p>
+
+      <div class="warning-box">
+        Let op: na importeren worden alle apparaten opnieuw geïnitialiseerd. Actieve
+        boost- of legionella-sessies worden beëindigd.
+      </div>
+
+      <form action="/config/import" method="POST" enctype="multipart/form-data" id="importForm">
+        <div class="file-upload-area" id="dropZone">
+          <input type="file" name="config_file" id="configFile" accept=".json"
+                 onchange="handleFileSelect(this)">
+          <div class="upload-icon">&#8679;</div>
+          <div class="upload-label">Klik om een bestand te kiezen</div>
+          <div class="upload-hint">Alleen .json bestanden</div>
+          <div class="file-name" id="fileName"></div>
+        </div>
+        <button type="submit" class="btn-primary" id="importBtn" disabled>Importeren</button>
+      </form>
+    </div>
+
+    <div class="back-link">
+      <a href="/settings">← Terug naar instellingen</a>
+    </div>
+
+  </div>
+
+  <script>
+    function handleFileSelect(input) {
+      const nameEl = document.getElementById("fileName");
+      const btn = document.getElementById("importBtn");
+      const zone = document.getElementById("dropZone");
+      if (input.files && input.files[0]) {
+        nameEl.textContent = input.files[0].name;
+        zone.classList.add("has-file");
+        btn.disabled = false;
+      } else {
+        nameEl.textContent = "";
+        zone.classList.remove("has-file");
+        btn.disabled = true;
+      }
+    }
+  </script>
+</body>
+</html>

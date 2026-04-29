@@ -643,6 +643,47 @@
       color: hsl(0, 65%, 42%);
     }
 
+    .state-badge.boost {
+      background: hsl(32, 100%, 88%);
+      color: hsl(25, 90%, 32%);
+    }
+
+    .boost-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid hsl(32, 80%, 70%);
+      background: hsl(32, 100%, 96%);
+      color: hsl(25, 85%, 35%);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    .boost-btn:hover:not(:disabled) {
+      background: hsl(32, 100%, 90%);
+      border-color: hsl(32, 80%, 55%);
+    }
+
+    .boost-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .boost-btn.active {
+      background: hsl(32, 95%, 52%);
+      border-color: hsl(28, 90%, 45%);
+      color: white;
+    }
+
+    .boost-btn.active:hover:not(:disabled) {
+      background: hsl(28, 90%, 45%);
+    }
+
     .socket-badge.none {
       background: hsl(37, 100%, 95%);
       color: hsl(32, 95%, 32%);
@@ -1237,6 +1278,21 @@
     html[data-theme="dark"] .state-badge.running { background: hsl(145, 32%, 28%); color: hsl(145, 55%, 72%); }
     html[data-theme="dark"] .state-badge.freeze  { background: hsl(215, 40%, 30%); color: hsl(215, 65%, 74%); }
     html[data-theme="dark"] .state-badge.offline { background: hsl(0, 30%, 30%);   color: hsl(0, 60%, 72%); }
+    html[data-theme="dark"] .state-badge.boost   { background: hsl(32, 55%, 28%);  color: hsl(32, 90%, 75%); }
+
+    html[data-theme="dark"] .boost-btn {
+      background: hsl(32, 30%, 26%);
+      border-color: hsl(32, 55%, 40%);
+      color: hsl(32, 80%, 72%);
+    }
+    html[data-theme="dark"] .boost-btn:hover:not(:disabled) {
+      background: hsl(32, 35%, 32%);
+    }
+    html[data-theme="dark"] .boost-btn.active {
+      background: hsl(32, 85%, 42%);
+      border-color: hsl(28, 80%, 38%);
+      color: white;
+    }
 
     html[data-theme="dark"] .socket-badge.none    { background: hsl(37, 40%, 30%); color: hsl(37, 75%, 72%); }
     html[data-theme="dark"] .socket-badge.off     { background: hsl(0, 30%, 30%);  color: hsl(0, 60%, 72%); }
@@ -1443,25 +1499,11 @@
         </button>
 
         <div class="menu-dropdown" id="menuDropdown">
-          <div class="menu-item" onclick="goToWizard()">
+          <div class="menu-item" onclick="window.location.href='/settings'">
             <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg></div>
             <div class="menu-item-text">
-              <span class="menu-item-label">Wizard</span>
-              <span class="menu-item-sub">Herconfigureer IP-adressen</span>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToChangeCredentials()">
-            <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7,14A2,2 0 0,1 5,12A2,2 0 0,1 7,10A2,2 0 0,1 9,12A2,2 0 0,1 7,14M12.65,10C11.83,7.67 9.61,6 7,6A6,6 0 0,0 1,12A6,6 0 0,0 7,18C9.61,18 11.83,16.33 12.65,14H17V18H21V14H23V10H12.65Z"/></svg></div>
-            <div class="menu-item-text">
-              <span class="menu-item-label">Inloggegevens</span>
-              <span class="menu-item-sub">Gebruikersnaam en wachtwoord</span>
-            </div>
-          </div>
-          <div class="menu-item" onclick="goToUsers()">
-            <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z"/></svg></div>
-            <div class="menu-item-text">
-              <span class="menu-item-label">Gebruikersbeheer</span>
-              <span class="menu-item-sub">Gebruikers toevoegen of verwijderen</span>
+              <span class="menu-item-label">Instellingen</span>
+              <span class="menu-item-sub">Apparaten, account en back-up</span>
             </div>
           </div>
           <div class="menu-item" onclick="toggleDarkMode()" id="darkModeMenuItem">
@@ -1481,6 +1523,7 @@
         </div>
       </div>
     </div>
+
 
     <div class="grid">
       <div class="card stat-card status-card neutral" id="buffer_status_card">
@@ -1691,7 +1734,21 @@
 
         <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.2.1</span>
+          <span class="version-badge new">v0.2.2</span>
+          <span class="update-date-small">29 apr</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Boost, Config back-up &amp; Instellingen</div>
+          <div class="update-body">Boost-knop per apparaat voor tijdelijk 100% vermogen (instelbaar via expert-instellingen). Config exporteren en importeren via een aparte back-uppagina. Nieuw instellingenmenu met navigatie naar wizard, account en back-up.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.2" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+        <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.2.1</span>
           <span class="update-date-small">27 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1705,7 +1762,7 @@
 
         <div class="update-card">
         <div class="update-left">
-          <span class="version-badge mid">v0.2.0</span>
+          <span class="version-badge old">v0.2.0</span>
           <span class="update-date-small">26 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1716,24 +1773,10 @@
           <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.0" target="_blank" rel="noopener">→ Release notes</a>
         </div>
       </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge old">v0.1.5</span>
-          <span class="update-date-small">25 apr</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Anti-Legionella &amp; Gebruikersbeheer</div>
-          <div class="update-body">Modus toegevoegd om Legionella tegen te gaan en een nieuw sub menu om gebruikers aan te maken.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.1.5" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.2.1</div>
+    <div class="footer">Version 0.2.2</div>
   </div>
 
   <script>
@@ -1796,9 +1839,6 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
 
     // ===== NAVIGATIE =====
-    function goToWizard() { closeMenu(); window.location.href = "/wizard_forced"; }
-    function goToChangeCredentials() { closeMenu(); window.location.href = "/change_credentials"; }
-    function goToUsers() { closeMenu(); window.location.href = "/users"; }
     function logoutNow() { closeMenu(); window.location.href = "/logout"; }
 
     // ===== GLOBALE STATUS =====
@@ -2003,6 +2043,12 @@
       fetch("/toggle_shelly/" + encodeURIComponent(ip)).then(() => setTimeout(updateStatus, 200));
     }
 
+    function toggleBoost(ip) {
+      fetch("/boost/" + encodeURIComponent(ip), { method: "POST" })
+        .then(() => setTimeout(updateStatus, 200));
+    }
+
+
     function setManualBrightness(ip) {
       const safeId = ip.replace(/\./g, "_").replace(/:/g, "_");
       const input = document.getElementById("mb_input_" + safeId);
@@ -2090,9 +2136,17 @@
     function getDeviceState(d) {
       if (d.pending_start || d.waiting_for_power_socket) return { label: "Opstarten", cls: "pending", dot: "pending" };
       if (!d.online) return { label: "", cls: "", dot: "" };
+      if (d.boost_until && Date.now() / 1000 < d.boost_until) return { label: "Boost", cls: "boost", dot: "active" };
       if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
       if (d.started && d.on) return { label: "Actief", cls: "running", dot: "active" };
       return { label: "Uit", cls: "off", dot: "" };
+    }
+
+    function formatBoostCountdown(boostUntil) {
+      const remaining = Math.max(0, Math.ceil(boostUntil - Date.now() / 1000));
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      return `${m}:${String(s).padStart(2, "0")}`;
     }
 
     function hasConfiguredSocket(d) { return !!(d.power_socket_type && d.power_socket_ip); }
@@ -2140,6 +2194,8 @@
         const onlineLabel = d.online ? "● Online" : (hasSocket && d.power_socket_online ? "● Offline - Ready to start" : "● Offline");
         const safeId = d.ip.replace(/\./g, "_").replace(/:/g, "_");
         const currentBrightness = Math.round(Number(d.brightness || 0));
+        const boostActive = !!(d.boost_until && Date.now() / 1000 < d.boost_until);
+        const boostLabel = boostActive ? `Stop boost (${formatBoostCountdown(d.boost_until)})` : "Boost";
 
         // Handmatige helderheid alleen tonen als PID uitstaat
         const manualBrightnessHtml = !pidEnabled ? `
@@ -2172,6 +2228,11 @@
               </div>
               <div class="device-top-right">
                 <span class="state-badge ${state.cls}">${state.label}</span>
+                <button class="boost-btn ${boostActive ? 'active' : ''}"
+                        onclick="toggleBoost('${escapeHtml(d.ip)}')"
+                        ${available ? '' : 'disabled'}>
+                  ${boostLabel}
+                </button>
                 <span class="online-badge ${d.online ? 'online' : 'offline'}">${onlineLabel}</span>
               </div>
             </div>
