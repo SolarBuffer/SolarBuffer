@@ -52,7 +52,14 @@
       display: flex;
       align-items: center;
       gap: 1rem;
+      transition: border-color 0.3s, background 0.3s;
     }
+    .check-card.update-available {
+      background: hsl(32, 100%, 97%);
+      border-color: hsl(32, 90%, 72%);
+    }
+    .check-card.update-available .check-card-title { color: hsl(32, 90%, 38%); }
+    .check-card.update-available .check-card-sub   { color: hsl(32, 80%, 50%); }
     .check-card-text { flex: 1; }
     .check-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem; }
     .check-card-sub { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.15rem; }
@@ -185,9 +192,9 @@
       <p>Versiegeschiedenis</p>
     </div>
 
-    <div class="check-card">
+    <div class="check-card" id="checkCard">
       <div class="check-card-text">
-        <div class="check-card-title">Software update</div>
+        <div class="check-card-title" id="checkTitle">Software update</div>
         <div class="check-card-sub" id="checkSub">Controleer of er een nieuwe versie beschikbaar is</div>
         <div class="update-result" id="updateResult"></div>
       </div>
@@ -243,6 +250,20 @@
   </div>
 
   <script>
+    function checkAvailable() {
+      fetch("/check_updates_available")
+        .then(r => r.json())
+        .then(data => {
+          if (data.available) {
+            document.getElementById("checkCard").classList.add("update-available");
+            document.getElementById("checkTitle").textContent = "Nieuwe update beschikbaar!";
+            document.getElementById("checkSub").textContent = "Druk op Update om de nieuwste versie te installeren.";
+          }
+        })
+        .catch(() => {});
+    }
+    checkAvailable();
+
     function runUpdateCheck() {
       const btn = document.getElementById("updateBtn");
       const result = document.getElementById("updateResult");
