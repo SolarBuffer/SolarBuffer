@@ -92,14 +92,12 @@ Dit bepaalt de volgorde van inschakelen en uitschakelen.
 Sla de configuratie op.
 De installatie is nu voltooid en je kunt direct starten met het gebruik van de SolarBuffer Hub 🚀
 
-## Expert Settings
-# SolarBuffer — Expert instellingen
+--
 
+## SolarBuffer — Expert instellingen
 De expertmodus biedt toegang tot de parameters die bepalen hoe de regellogica reageert op vermogensschommelingen. Alle waarden worden opgeslagen in `config.json` onder de sleutel `expert_settings`.
 
----
-
-## Inschakellogica (teruglevering)
+### Inschakellogica (teruglevering)
 
 Deze instellingen bepalen wanneer SolarBuffer apparaten **inschakelt** omdat er overtollige zonne-energie teruggeleverd wordt aan het net.
 
@@ -110,7 +108,7 @@ Deze instellingen bepalen wanneer SolarBuffer apparaten **inschakelt** omdat er 
 
 ---
 
-## Bevriezingslogica
+### Bevriezingslogica
 
 Als een apparaat (bijv. een boiler) een hoge stand bereikt, kan SolarBuffer het "bevriezen" — het wordt dan niet verder verhoogd totdat de situatie verandert.
 
@@ -123,7 +121,7 @@ Als een apparaat (bijv. een boiler) een hoge stand bereikt, kan SolarBuffer het 
 
 ---
 
-## Uitschakellogica
+### Uitschakellogica
 
 Deze instellingen bepalen wanneer SolarBuffer apparaten **uitschakelt** omdat er te veel van het net wordt afgenomen.
 
@@ -134,7 +132,7 @@ Deze instellingen bepalen wanneer SolarBuffer apparaten **uitschakelt** omdat er
 
 ---
 
-## PID-regelaar neutrale zone
+### PID-regelaar neutrale zone
 
 De PID-regelaar stuurt het vermogen van apparaten bij. Waarden binnen de neutrale zone worden als nul beschouwd, zodat de regelaar niet continu kleine aanpassingen maakt.
 
@@ -147,7 +145,7 @@ De PID-regelaar stuurt het vermogen van apparaten bij. Waarden binnen de neutral
 
 ---
 
-## Power socket
+### Power socket
 
 Instellingen voor apparaten die via een schakelbare stekker (bijv. Shelly Plug) worden aangestuurd.
 
@@ -158,7 +156,7 @@ Instellingen voor apparaten die via een schakelbare stekker (bijv. Shelly Plug) 
 
 ---
 
-## Boost
+### Boost
 
 | Instelling | Label | Standaard | Eenheid | Beschrijving |
 |---|---|---|---|---|
@@ -181,8 +179,5 @@ Optionele integratie met een MQTT broker, bijvoorbeeld voor gebruik met Home Ass
 | `mqtt_ha_discovery` | HA Auto-discovery | `true` | Registreert SolarBuffer-entiteiten automatisch in Home Assistant via het MQTT discovery-protocol. |
 | `mqtt_publish_interval` | Publiceer-interval | `30` | s — Hoe vaak (in seconden) de status wordt gepubliceerd op de MQTT topics. Minimaal `5`, maximaal `3600`. |
 
-
-## MQTT
-Voeg een MQTT-Broker toe om verbinding met Home Assistant te kunnen maken.
 ## Tailscale
 
