@@ -171,3 +171,5 @@ Optionele integratie met een MQTT broker, bijvoorbeeld voor gebruik met Home Ass
 
 ## Tailscale
 
+## Zonne voorspelling
+
