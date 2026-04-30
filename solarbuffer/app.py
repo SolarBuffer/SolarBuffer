@@ -580,6 +580,9 @@ def wizard():
     cfg = load_config()
     if cfg.get("p1_ip") and cfg.get("shelly_devices"):
         return redirect("/dashboard")
+    # On first boot (no config yet), show setup choice screen unless user chose fresh install
+    if request.method == "GET" and not request.args.get("fresh"):
+        return redirect("/setup")
     if request.method == "POST":
         old_cfg = load_config()
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
@@ -598,6 +601,50 @@ def wizard():
         threading.Thread(target=sync_configured_devices_off, args=(cfg["shelly_devices"],), daemon=True).start()
         return redirect("/dashboard")
     return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
+
+
+@app.route("/setup", methods=["GET"])
+def setup_choice():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    if cfg.get("p1_ip") and cfg.get("shelly_devices"):
+        return redirect("/dashboard")
+    error = request.args.get("error", "")
+    return render_template("setup_choice.html", error=error)
+
+
+@app.route("/setup/import", methods=["POST"])
+def setup_import():
+    if not require_login():
+        return redirect("/login")
+    f = request.files.get("config_file")
+    if not f:
+        return redirect("/setup?error=Geen+bestand+geselecteerd")
+    try:
+        raw = f.read().decode("utf-8")
+        imported = json.loads(raw)
+        if not isinstance(imported, dict):
+            raise ValueError("Geen geldig configuratieobject")
+    except Exception as e:
+        return redirect(f"/setup?error=Ongeldig+JSON-bestand:+{e}")
+    with open(CONFIG_FILE, "w", encoding="utf-8") as fout:
+        json.dump(imported, fout, indent=4)
+    cfg = load_config()
+    save_config(cfg)
+    new_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
+    for old_ip in list(device_states.keys()):
+        if old_ip not in new_ips:
+            del device_states[old_ip]
+    for old_ip in list(device_pids.keys()):
+        if old_ip not in new_ips:
+            del device_pids[old_ip]
+    init_device_states(cfg["shelly_devices"])
+    init_device_pids(cfg["shelly_devices"])
+    write_audit_log("config_imported_firstboot", {"devices": len(cfg.get("shelly_devices", []))})
+    if cfg.get("p1_ip") and cfg.get("shelly_devices"):
+        return redirect("/dashboard")
+    return redirect("/?fresh=1")
 
 
 @app.route("/wizard_forced", methods=["GET", "POST"])
