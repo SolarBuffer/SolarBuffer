@@ -117,32 +117,6 @@
       animation: pulse-dot 2s ease-in-out infinite;
     }
 
-    .menu-btn .update-tooltip {
-      display: none;
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: hsl(220, 20%, 18%);
-      color: white;
-      font-size: 0.72rem;
-      font-weight: 600;
-      white-space: nowrap;
-      padding: 0.3rem 0.6rem;
-      border-radius: 0.4rem;
-      pointer-events: none;
-      z-index: 200;
-    }
-    .menu-btn .update-tooltip::before {
-      content: '';
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 5px solid transparent;
-      border-bottom-color: hsl(220, 20%, 18%);
-    }
-    .menu-btn:hover .update-tooltip { display: block; }
 
     .menu-btn:hover {
       box-shadow: 0 4px 18px hsla(220, 20%, 14%, 0.13);
@@ -1632,7 +1606,6 @@
             <line x1="3" y1="12.5" x2="15" y2="12.5" stroke="hsl(220,20%,28%)" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
           <span class="update-dot" id="updateDot"></span>
-          <span class="update-tooltip" id="updateTooltip" style="display:none">Nieuwe update beschikbaar</span>
         </button>
 
         <div class="menu-dropdown" id="menuDropdown">
@@ -2421,7 +2394,6 @@
         .then(data => {
           const visible = !!data.available;
           document.getElementById("updateDot").classList.toggle("visible", visible);
-          document.getElementById("updateTooltip").style.display = visible ? "" : "none";
           document.getElementById("menuUpdateBadge").style.display = visible ? "" : "none";
           document.getElementById("updateMenuSub").textContent = visible
             ? "Nieuwe versie beschikbaar!"
