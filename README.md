@@ -170,6 +170,9 @@ Optionele integratie met een MQTT broker, bijvoorbeeld voor gebruik met Home Ass
 | `mqtt_publish_interval` | Publiceer-interval | `30` | s — Hoe vaak (in seconden) de status wordt gepubliceerd op de MQTT topics. Minimaal `5`, maximaal `3600`. |
 
 ## Tailscale
+Koppel SolarBuffer met TailScale om remote toegang te krijgen tot het dashboard
+
+---
 
 ## Zonnevoorspelling
 Zonnevoorspelling wordt gedaan op basis van locatie
