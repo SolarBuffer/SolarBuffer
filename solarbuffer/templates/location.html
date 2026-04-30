@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Locatie - SolarBuffer</title>
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 420px; }
+
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: hsl(220, 10%, 52%);
+      margin-bottom: 0.85rem;
+    }
+
+    /* IP detect button */
+    .btn-detect {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.7rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-detect:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+    .btn-detect:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-detect svg { flex-shrink: 0; }
+
+    /* Address search */
+    .search-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .search-row input {
+      flex: 1;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+      transition: border-color 0.2s;
+    }
+    .search-row input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+    .btn-search {
+      padding: 0.65rem 1rem;
+      background: hsl(30, 15%, 93%);
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: hsl(220, 20%, 30%);
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn-search:hover { background: hsl(30, 15%, 87%); }
+    .btn-search:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Found location pill */
+    .found-location {
+      display: none;
+      margin-top: 0.6rem;
+      padding: 0.45rem 0.75rem;
+      background: hsl(145, 55%, 94%);
+      border: 1px solid hsl(145, 45%, 78%);
+      border-radius: 0.4rem;
+      font-size: 0.8rem;
+      color: hsl(145, 50%, 28%);
+      line-height: 1.3;
+    }
+
+    /* Coordinate fields */
+    .coord-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .coord-group { flex: 1; }
+    .coord-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: hsl(220, 10%, 46%);
+      margin-bottom: 0.3rem;
+    }
+    .coord-group input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+      transition: border-color 0.2s;
+    }
+    .coord-group input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+    .coord-group input.filled {
+      border-color: hsl(145, 55%, 62%);
+      background: hsl(145, 60%, 98%);
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+
+    .inline-error {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: hsl(0, 65%, 45%);
+    }
+
+    .success-banner {
+      background: hsl(145, 60%, 93%);
+      color: hsl(145, 65%, 28%);
+      border: 1px solid hsl(145, 55%, 78%);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+    .error-banner {
+      background: hsl(0, 60%, 93%);
+      color: hsl(0, 65%, 36%);
+      border: 1px solid hsl(0, 55%, 82%);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 0.85rem 0;
+      color: hsl(220, 10%, 62%);
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: hsl(30, 15%, 87%);
+    }
+
+    .back-link { text-align: center; margin-top: 0.5rem; }
+    .back-link a { color: hsl(220, 10%, 46%); font-size: 0.85rem; text-decoration: none; }
+    .back-link a:hover { color: hsl(32, 95%, 52%); }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .search-row input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .search-row input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .btn-search { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 10%, 78%); }
+    html[data-theme="dark"] .btn-search:hover { background: hsl(220, 8%, 38%); }
+    html[data-theme="dark"] .coord-group label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .coord-group input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .coord-group input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .coord-group input.filled { border-color: hsl(145, 45%, 42%); background: hsl(145, 20%, 22%); }
+    html[data-theme="dark"] .found-location { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
+    html[data-theme="dark"] .divider { color: hsl(220, 8%, 46%); }
+    html[data-theme="dark"] .divider::before, html[data-theme="dark"] .divider::after { background: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .success-banner { background: hsl(145, 25%, 24%); color: hsl(145, 55%, 68%); border-color: hsl(145, 30%, 34%); }
+    html[data-theme="dark"] .error-banner { background: hsl(0, 20%, 28%); color: hsl(0, 60%, 70%); border-color: hsl(0, 20%, 36%); }
+    html[data-theme="dark"] .inline-error { color: hsl(0, 60%, 65%); }
+    html[data-theme="dark"] .back-link a { color: hsl(220, 8%, 58%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Locatie voor zonne-verwachting</p>
+    </div>
+
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
+    {% endif %}
+
+    <!-- Automatisch via IP -->
+    <div class="card">
+      <div class="card-title">Automatisch invullen</div>
+      <button class="btn-detect" id="detectBtn" onclick="detectViaIP()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10Z"/>
+        </svg>
+        Vul automatisch in
+      </button>
+      <div class="inline-error" id="detectError" style="display:none"></div>
+    </div>
+
+    <!-- Zoek op plaatsnaam -->
+    <div class="card">
+      <div class="card-title">Zoek op plaatsnaam of adres</div>
+      <div class="search-row">
+        <input type="text" id="addressInput" placeholder="bijv. Amsterdam of Hoofddorp"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();geocodeAddress()}">
+        <button class="btn-search" id="searchBtn" onclick="geocodeAddress()">Zoeken</button>
+      </div>
+      <div class="found-location" id="foundLocation"></div>
+      <div class="inline-error" id="geocodeError" style="display:none"></div>
+    </div>
+
+    <!-- Coördinaten + opslaan -->
+    <div class="card">
+      <div class="card-title">Coördinaten</div>
+      <form method="POST">
+        <div class="coord-row">
+          <div class="coord-group">
+            <label for="latitude">Breedtegraad</label>
+            <input type="text" id="latitude" name="latitude" value="{{ latitude }}"
+                   placeholder="0.000" inputmode="decimal">
+          </div>
+          <div class="coord-group">
+            <label for="longitude">Lengtegraad</label>
+            <input type="text" id="longitude" name="longitude" value="{{ longitude }}"
+                   placeholder="0.000" inputmode="decimal">
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" style="margin-top:0.75rem">Opslaan</button>
+      </form>
+    </div>
+
+    <div class="back-link">
+      <a href="/settings">← Terug naar instellingen</a>
+    </div>
+
+  </div>
+
+  <script>
+    function fillCoords(lat, lon) {
+      const latEl = document.getElementById('latitude');
+      const lonEl = document.getElementById('longitude');
+      latEl.value = parseFloat(lat).toFixed(4);
+      lonEl.value = parseFloat(lon).toFixed(4);
+      latEl.classList.add('filled');
+      lonEl.classList.add('filled');
+    }
+
+    function detectViaIP() {
+      const btn = document.getElementById('detectBtn');
+      const errEl = document.getElementById('detectError');
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      errEl.style.display = 'none';
+
+      fetch('/location/detect')
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            errEl.textContent = data.error;
+            errEl.style.display = 'block';
+          } else {
+            fillCoords(data.lat, data.lon);
+            const label = [data.city, data.country].filter(Boolean).join(', ');
+            if (label) {
+              const found = document.getElementById('foundLocation');
+              found.textContent = '📍 ' + label;
+              found.style.display = 'block';
+            }
+          }
+        })
+        .catch(() => {
+          errEl.textContent = 'Kan IP-locatie niet ophalen.';
+          errEl.style.display = 'block';
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10Z"/></svg> Vul automatisch in`;
+        });
+    }
+
+    function geocodeAddress() {
+      const q = document.getElementById('addressInput').value.trim();
+      if (!q) return;
+      const btn = document.getElementById('searchBtn');
+      const errEl = document.getElementById('geocodeError');
+      const foundEl = document.getElementById('foundLocation');
+      btn.disabled = true;
+      btn.textContent = '…';
+      errEl.style.display = 'none';
+      foundEl.style.display = 'none';
+
+      fetch('/location/geocode?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            errEl.textContent = data.error;
+            errEl.style.display = 'block';
+          } else {
+            fillCoords(data.lat, data.lon);
+            foundEl.textContent = '📍 ' + data.name;
+            foundEl.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          errEl.textContent = 'Kan locatie niet opzoeken.';
+          errEl.style.display = 'block';
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = 'Zoeken';
+        });
+    }
+
+    {% if latitude and longitude %}
+    document.getElementById('latitude').classList.add('filled');
+    document.getElementById('longitude').classList.add('filled');
+    {% endif %}
+  </script>
+</body>
+</html>

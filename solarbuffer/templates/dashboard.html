@@ -1471,6 +1471,85 @@
     html[data-theme="dark"] .ts-auth-link         { color: hsl(210, 70%, 62%); }
     html[data-theme="dark"] .ts-copy-btn          { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 70%); }
     html[data-theme="dark"] .ts-copy-btn:hover    { background: hsl(220, 8%, 38%); }
+
+    /* ===== SOLAR FORECAST ===== */
+    .forecast-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .forecast-tab {
+      flex: 1;
+      padding: 0.4rem 0;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.4rem;
+      background: transparent;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: hsl(220, 10%, 46%);
+      transition: all 0.15s;
+    }
+    .forecast-tab.active {
+      background: hsl(32, 95%, 52%);
+      border-color: hsl(32, 95%, 52%);
+      color: white;
+    }
+    .forecast-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 72px;
+      margin-bottom: 0.5rem;
+    }
+    .forecast-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .forecast-bar {
+      width: 100%;
+      border-radius: 3px 3px 0 0;
+      min-height: 2px;
+      background: hsl(32, 90%, 58%);
+      transition: height 0.3s ease;
+    }
+    .forecast-bar.dim { background: hsl(32, 60%, 82%); }
+    .forecast-hour {
+      font-size: 0.58rem;
+      color: hsl(220, 10%, 56%);
+      line-height: 1;
+    }
+    .forecast-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 50%);
+    }
+    .forecast-meta strong { color: hsl(220, 20%, 20%); }
+    .forecast-no-location {
+      text-align: center;
+      padding: 1.5rem 0 0.5rem;
+      color: hsl(220, 10%, 52%);
+      font-size: 0.85rem;
+    }
+    .forecast-no-location a {
+      color: hsl(32, 90%, 48%);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .forecast-no-location a:hover { text-decoration: underline; }
+    .forecast-loading { text-align: center; padding: 1.5rem 0 0.5rem; color: hsl(220, 10%, 56%); font-size: 0.85rem; }
+
+    html[data-theme="dark"] .forecast-tab { border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .forecast-tab.active { background: hsl(32, 85%, 50%); border-color: hsl(32, 85%, 50%); color: white; }
+    html[data-theme="dark"] .forecast-bar { background: hsl(32, 85%, 54%); }
+    html[data-theme="dark"] .forecast-bar.dim { background: hsl(32, 30%, 38%); }
+    html[data-theme="dark"] .forecast-hour { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .forecast-meta { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .forecast-meta strong { color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .forecast-no-location { color: hsl(220, 8%, 50%); }
   </style>
 </head>
 
@@ -1559,6 +1638,16 @@
     <div class="card control-card">
       <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
       <div id="devicesContainer"></div>
+    </div>
+
+    <div class="card control-card" id="forecastCard">
+      <h2>
+        <span class="ctrl-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
+        </span>
+        Zonne-verwachting
+      </h2>
+      <div id="forecastContent"><div class="forecast-loading">Laden…</div></div>
     </div>
 
     <div class="card control-card">
@@ -1730,7 +1819,21 @@
 
         <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.2.2</span>
+          <span class="version-badge new">v0.2.3</span>
+          <span class="update-date-small">30 apr</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Zonne-verwachting, PWA &amp; Installatie</div>
+          <div class="update-body">Zonne-verwachting via Open-Meteo op het dashboard met balkgrafiek per uur voor vandaag en morgen. Locatie automatisch invullen via plaatsnaam of automatisch. Volledige PWA-ondersteuning met service worker. Keuze tussen schone installatie of back-up importeren bij eerste opstart.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.3" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+        <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.2.2</span>
           <span class="update-date-small">29 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1744,7 +1847,7 @@
 
         <div class="update-card">
         <div class="update-left">
-          <span class="version-badge mid">v0.2.1</span>
+          <span class="version-badge old">v0.2.1</span>
           <span class="update-date-small">27 apr</span>
         </div>
         <div class="update-divider"></div>
@@ -1755,24 +1858,10 @@
           <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.1" target="_blank" rel="noopener">→ Release notes</a>
         </div>
       </div>
-
-        <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge old">v0.2.0</span>
-          <span class="update-date-small">26 apr</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">DarkMode &amp; MQTT</div>
-          <div class="update-body">Nu mogelijk om de volledige UI in darkmode te zetten en via de Expertsettings kan nu MQTT geconfigureerd worden.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.0" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.2.2</div>
+    <div class="footer">Version 0.2.3</div>
   </div>
 
   <script>
@@ -2400,6 +2489,76 @@
     tsFetchStatus();
     setInterval(() => { if (_tsWaitingForAuth) tsFetchStatus(); }, 3000);
     setInterval(tsFetchStatus, 30000);
+
+    // ===== SOLAR FORECAST =====
+    let _forecastData = null;
+    let _forecastDay = 'today';
+
+    function renderForecast(data, day) {
+      const hours = data[day] || [];
+      const SHOW_START = 6, SHOW_END = 21;
+      const visible = hours.filter(h => h.hour >= SHOW_START && h.hour <= SHOW_END);
+      const maxRad = Math.max(...visible.map(h => h.radiation), 1);
+      const total = (hours.reduce((s, h) => s + h.radiation, 0) / 1000).toFixed(1);
+      const peak = hours.reduce((best, h) => h.radiation > best.radiation ? h : best, hours[0] || {hour: 0, radiation: 0});
+
+      let bars = '';
+      for (const h of visible) {
+        const pct = Math.max(4, Math.round((h.radiation / maxRad) * 100));
+        const dim = h.radiation < 20 ? ' dim' : '';
+        bars += `<div class="forecast-col">
+          <div class="forecast-bar${dim}" style="height:${pct}%"></div>
+          <div class="forecast-hour">${String(h.hour).padStart(2,'0')}</div>
+        </div>`;
+      }
+
+      const dateLabel = data[day + '_date'] || '';
+      return `
+        <div class="forecast-tabs">
+          <button class="forecast-tab${day==='today'?' active':''}" onclick="switchForecastDay('today')">Vandaag</button>
+          <button class="forecast-tab${day==='tomorrow'?' active':''}" onclick="switchForecastDay('tomorrow')">Morgen</button>
+        </div>
+        <div class="forecast-bars">${bars}</div>
+        <div class="forecast-meta">
+          <span>Piek: <strong>${String(peak.hour).padStart(2,'0')}:00</strong> &middot; ${Math.round(peak.radiation)} W/m²</span>
+          <span>Totaal: <strong>${total} kWh/m²</strong></span>
+        </div>`;
+    }
+
+    function switchForecastDay(day) {
+      _forecastDay = day;
+      if (_forecastData) {
+        document.getElementById('forecastContent').innerHTML = renderForecast(_forecastData, day);
+      }
+    }
+
+    function loadForecast() {
+      fetch('/solar_forecast')
+        .then(r => r.json())
+        .then(data => {
+          if (data.error === 'no_location') {
+            document.getElementById('forecastContent').innerHTML =
+              '<div class="forecast-no-location">Stel je locatie in om de zonne-verwachting te zien.<br><a href="/location">Locatie instellen →</a></div>';
+            return;
+          }
+          if (data.error) {
+            document.getElementById('forecastContent').innerHTML =
+              '<div class="forecast-no-location">Kon verwachting niet ophalen.</div>';
+            return;
+          }
+          _forecastData = data;
+          document.getElementById('forecastContent').innerHTML = renderForecast(data, _forecastDay);
+        })
+        .catch(() => {
+          document.getElementById('forecastContent').innerHTML =
+            '<div class="forecast-no-location">Geen verbinding met Open-Meteo.</div>';
+        });
+    }
+
+    loadForecast();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
   </script>
 </body>
 </html>

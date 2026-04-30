@@ -95,6 +95,11 @@ def load_config():
     if "mqtt_publish_interval" not in cfg:
         cfg["mqtt_publish_interval"] = 30
 
+    if "latitude" not in cfg:
+        cfg["latitude"] = ""
+    if "longitude" not in cfg:
+        cfg["longitude"] = ""
+
     # Migreer oud formaat (enkele gebruiker) naar gebruikerslijst
     if "users" not in cfg:
         old_username = cfg.pop("username", "solarbuffer")
@@ -782,11 +787,123 @@ def boost_device(ip):
     return jsonify(success=True, boost_active=True, boost_until=st["boost_until"])
 
 
+@app.route("/sw.js")
+def service_worker():
+    return send_file(os.path.join(BASE_DIR, "static", "sw.js"), mimetype="application/javascript")
+
+
 @app.route("/settings")
 def settings():
     if not require_login():
         return redirect("/login")
     return render_template("settings.html", dark_mode=get_user_dark_mode())
+
+
+_forecast_cache = {"data": None, "ts": 0}
+
+@app.route("/solar_forecast")
+def solar_forecast():
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    cfg = load_config()
+    lat = cfg.get("latitude", "")
+    lon = cfg.get("longitude", "")
+    if not lat or not lon:
+        return jsonify(error="no_location")
+    global _forecast_cache
+    if time.time() - _forecast_cache["ts"] < 3600 and _forecast_cache["data"]:
+        return jsonify(_forecast_cache["data"])
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}"
+            f"&hourly=shortwave_radiation"
+            f"&forecast_days=2&timezone=auto"
+        )
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        raw = resp.json()
+        times = raw["hourly"]["time"]
+        radiation = raw["hourly"]["shortwave_radiation"]
+        today = datetime.now().strftime("%Y-%m-%d")
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        result = {"today": [], "tomorrow": [], "today_date": today, "tomorrow_date": tomorrow}
+        for t, r in zip(times, radiation):
+            hour = int(t[11:13])
+            if t.startswith(today):
+                result["today"].append({"hour": hour, "radiation": r or 0})
+            elif t.startswith(tomorrow):
+                result["tomorrow"].append({"hour": hour, "radiation": r or 0})
+        _forecast_cache = {"data": result, "ts": time.time()}
+        return jsonify(result)
+    except Exception as e:
+        return jsonify(error=str(e))
+
+
+@app.route("/location/detect")
+def location_detect():
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    try:
+        resp = requests.get("https://ipwho.is/", timeout=5)
+        data = resp.json()
+        if not data.get("success"):
+            return jsonify(error="Kon locatie niet bepalen via IP")
+        return jsonify(lat=str(data["latitude"]), lon=str(data["longitude"]),
+                       city=data.get("city", ""), country=data.get("country", ""))
+    except Exception as e:
+        return jsonify(error=str(e))
+
+
+@app.route("/location/geocode")
+def location_geocode():
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify(error="Geen zoekterm opgegeven")
+    try:
+        resp = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={"q": q, "format": "json", "limit": 1},
+            headers={"User-Agent": "SolarBuffer/1.0"},
+            timeout=5
+        )
+        results = resp.json()
+        if not results:
+            return jsonify(error="Geen resultaat gevonden voor deze plaatsnaam")
+        r = results[0]
+        return jsonify(lat=r["lat"], lon=r["lon"], name=r.get("display_name", q))
+    except Exception as e:
+        return jsonify(error=str(e))
+
+
+@app.route("/location", methods=["GET", "POST"])
+def location():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    error = ""
+    if request.method == "POST":
+        lat = request.form.get("latitude", "").strip().replace(",", ".")
+        lon = request.form.get("longitude", "").strip().replace(",", ".")
+        try:
+            float(lat)
+            float(lon)
+        except ValueError:
+            error = "Voer geldige coördinaten in (bijv. 52.3676 en 4.9041)"
+        if not error:
+            cfg["latitude"] = lat
+            cfg["longitude"] = lon
+            save_config(cfg)
+            global _forecast_cache
+            _forecast_cache = {"data": None, "ts": 0}
+            write_audit_log("location_updated", {"lat": lat, "lon": lon})
+            return redirect("/dashboard")
+    return render_template("location.html", dark_mode=get_user_dark_mode(),
+                           latitude=cfg.get("latitude", ""),
+                           longitude=cfg.get("longitude", ""),
+                           error=error)
 
 
 @app.route("/config/backup")
