@@ -92,7 +92,7 @@ Dit bepaalt de volgorde van inschakelen en uitschakelen.
 Sla de configuratie op.
 De installatie is nu voltooid en je kunt direct starten met het gebruik van de SolarBuffer Hub 🚀
 
---
+---
 
 ## SolarBuffer — Expert instellingen
 De expertmodus biedt toegang tot de parameters die bepalen hoe de regellogica reageert op vermogensschommelingen. Alle waarden worden opgeslagen in `config.json` onder de sleutel `expert_settings`.
@@ -106,8 +106,6 @@ Deze instellingen bepalen wanneer SolarBuffer apparaten **inschakelt** omdat er 
 | `EXPORT_THRESHOLD` | Inschakeldrempel | `-50` | W | Zodra het gemeten vermogen onder deze waarde daalt (negatief = teruglevering), start SolarBuffer met het inschakelen van apparaten. Maak de waarde negatiever om later in te schakelen. |
 | `EXPORT_DELAY` | Inschakelvertraging | `15` | s | Het aantal seconden dat de exportdrempel ononderbroken overschreden moet zijn voordat er daadwerkelijk wordt ingeschakeld. Voorkomt flapperen bij korte pieken. |
 
----
-
 ### Bevriezingslogica
 
 Als een apparaat (bijv. een boiler) een hoge stand bereikt, kan SolarBuffer het "bevriezen" — het wordt dan niet verder verhoogd totdat de situatie verandert.
@@ -119,8 +117,6 @@ Als een apparaat (bijv. een boiler) een hoge stand bereikt, kan SolarBuffer het 
 | `IMPORT_UNFREEZE_THRESHOLD` | Vrijgave importdrempel | `200` | W | Als de netafname boven deze waarde stijgt terwijl een apparaat bevroren is, wordt het vrijgegeven zodat de regelaar het kan dimmen. |
 | `UNFREEZE_DELAY` | Vrijgavevertraging | `5` | s | Hoelang de importdrempel overschreden moet zijn voordat een bevriezing wordt losgelaten. |
 
----
-
 ### Uitschakellogica
 
 Deze instellingen bepalen wanneer SolarBuffer apparaten **uitschakelt** omdat er te veel van het net wordt afgenomen.
@@ -129,8 +125,6 @@ Deze instellingen bepalen wanneer SolarBuffer apparaten **uitschakelt** omdat er
 |---|---|---|---|---|
 | `IMPORT_OFF_THRESHOLD` | Uitschakeldrempel import | `250` | W | Als de netafname boven deze waarde stijgt, begint SolarBuffer apparaten uit te schakelen. |
 | `OFF_DELAY` | Uitschakelvertraging | `120` | s | Hoelang de uitschakeldrempel continu overschreden moet zijn voordat apparaten worden uitgeschakeld. Een hogere waarde voorkomt onnodige uitschakelcycli. |
-
----
 
 ### PID-regelaar neutrale zone
 
@@ -143,8 +137,6 @@ De PID-regelaar stuurt het vermogen van apparaten bij. Waarden binnen de neutral
 
 > Voorbeeld: met standaardwaarden (`-5` tot `45`) geldt een gemeten vermogen van `20 W` als neutraal — de PID past niets aan.
 
----
-
 ### Power socket
 
 Instellingen voor apparaten die via een schakelbare stekker (bijv. Shelly Plug) worden aangestuurd.
@@ -153,8 +145,6 @@ Instellingen voor apparaten die via een schakelbare stekker (bijv. Shelly Plug) 
 |---|---|---|---|---|
 | `POWER_SOCKET_DELAY` | Power socket startvertraging | `5` | s | Wachttijd nadat een socket is ingeschakeld voordat het systeem het apparaat als actief beschouwt. Geeft het aangesloten apparaat tijd om op te starten. |
 | `POWER_SOCKET_HOLD_SECONDS` | Power socket nalooptijd | `600` | s | Hoelang een socket actief blijft nadat de regelaar voor het laatst heeft bepaald dat het apparaat nodig is. Voorkomt kort na elkaar in- en uitschakelen. |
-
----
 
 ### Boost
 
