@@ -176,3 +176,4 @@ Koppel SolarBuffer met TailScale om remote toegang te krijgen tot het dashboard.
 
 ## Zonnevoorspelling
 Zonnevoorspelling wordt gedaan op basis van locatie
+test
