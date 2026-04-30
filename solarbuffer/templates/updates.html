@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Updates - SolarBuffer</title>
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    /* Update check card */
+    .check-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .check-card-text { flex: 1; }
+    .check-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem; }
+    .check-card-sub { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.15rem; }
+    .btn-update {
+      padding: 0.5rem 1.1rem;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.88rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-update:hover { background: hsl(32, 90%, 45%); }
+    .btn-update:active { transform: scale(0.96); }
+    .btn-update:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+    .update-result {
+      margin-top: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.4rem;
+      font-size: 0.78rem;
+      display: none;
+    }
+    .update-result.success { background: hsl(145, 55%, 92%); color: hsl(145, 60%, 24%); display: block; }
+    .update-result.error   { background: hsl(0, 60%, 93%);  color: hsl(0, 65%, 38%);   display: block; }
+
+    /* Release cards */
+    .update-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.08);
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+    }
+    .update-card:last-child { margin-bottom: 0; }
+
+    .update-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+    .version-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .version-badge.new { background: hsl(32, 95%, 90%);  color: hsl(32, 95%, 32%); }
+    .version-badge.mid { background: hsl(215, 80%, 91%); color: hsl(215, 70%, 36%); }
+    .version-badge.old { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
+
+    .update-date-small { font-size: 0.67rem; color: hsl(220, 10%, 54%); white-space: nowrap; }
+
+    .update-divider { width: 1px; flex-shrink: 0; background: hsl(30, 15%, 90%); align-self: stretch; }
+
+    .update-right { flex: 1; min-width: 0; }
+    .update-tag {
+      display: inline-block;
+      font-size: 0.64rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      letter-spacing: 0.04em;
+    }
+    .tag-feature { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .tag-fix     { background: hsl(0, 60%, 93%);   color: hsl(0, 65%, 38%); }
+    .tag-ui      { background: hsl(280, 60%, 93%); color: hsl(280, 60%, 35%); }
+
+    .update-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 14%);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .update-body {
+      font-size: 0.81rem;
+      color: hsl(220, 10%, 44%);
+      line-height: 1.5;
+    }
+    .update-notes-link {
+      display: inline-block;
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: hsl(32, 95%, 42%);
+      text-decoration: none;
+    }
+    .update-notes-link:hover { text-decoration: underline; }
+
+    .back-link { text-align: center; margin-top: 0.75rem; }
+    .back-link a { color: hsl(220, 10%, 46%); font-size: 0.85rem; text-decoration: none; }
+    .back-link a:hover { color: hsl(32, 95%, 52%); }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .check-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
+    html[data-theme="dark"] .check-card-sub { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .update-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
+    html[data-theme="dark"] .update-divider { background: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .update-date-small { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .update-title { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .update-body { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .update-result.success { background: hsl(145, 25%, 24%); color: hsl(145, 55%, 68%); }
+    html[data-theme="dark"] .update-result.error   { background: hsl(0, 20%, 28%);   color: hsl(0, 60%, 70%); }
+    html[data-theme="dark"] .back-link a { color: hsl(220, 8%, 58%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Versiegeschiedenis</p>
+    </div>
+
+    <div class="check-card">
+      <div class="check-card-text">
+        <div class="check-card-title">Software update</div>
+        <div class="check-card-sub" id="checkSub">Controleer of er een nieuwe versie beschikbaar is</div>
+        <div class="update-result" id="updateResult"></div>
+      </div>
+      <button class="btn-update" id="updateBtn" onclick="runUpdateCheck()">Update</button>
+    </div>
+
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge new">v0.2.3</span>
+        <span class="update-date-small">30 apr</span>
+      </div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-feature">Nieuw</span>
+        <div class="update-title">Zonne-verwachting, PWA &amp; Installatie</div>
+        <div class="update-body">Zonne-verwachting via Open-Meteo op het dashboard met balkgrafiek per uur voor vandaag en morgen. Locatie automatisch invullen via plaatsnaam of automatisch. Volledige PWA-ondersteuning met service worker. Keuze tussen schone installatie of back-up importeren bij eerste opstart.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.3" target="_blank" rel="noopener">→ Release notes</a>
+      </div>
+    </div>
+
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge mid">v0.2.2</span>
+        <span class="update-date-small">29 apr</span>
+      </div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-feature">Nieuw</span>
+        <div class="update-title">Boost, Config back-up &amp; Instellingen</div>
+        <div class="update-body">Boost-knop per apparaat voor tijdelijk 100% vermogen (instelbaar via expert-instellingen). Config exporteren en importeren via een aparte back-uppagina. Nieuw instellingenmenu met navigatie naar wizard, account en back-up.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.2" target="_blank" rel="noopener">→ Release notes</a>
+      </div>
+    </div>
+
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge old">v0.2.1</span>
+        <span class="update-date-small">27 apr</span>
+      </div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-feature">Nieuw</span>
+        <div class="update-title">Tailscale</div>
+        <div class="update-body">Op het dashboard staat een nieuwe tegel voor Remote Acces. Door verbinding te maken met Tailscale kan je op afstand inloggen in SolarBuffer.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.1" target="_blank" rel="noopener">→ Release notes</a>
+      </div>
+    </div>
+
+    <div class="back-link">
+      <a href="/settings">← Terug naar instellingen</a>
+    </div>
+
+  </div>
+
+  <script>
+    function runUpdateCheck() {
+      const btn = document.getElementById("updateBtn");
+      const result = document.getElementById("updateResult");
+      const sub = document.getElementById("checkSub");
+      btn.disabled = true;
+      btn.textContent = "Bezig…";
+      result.className = "update-result";
+
+      fetch("/run_update_check")
+        .then(r => r.json())
+        .then(data => {
+          if (data.restarting) {
+            result.className = "update-result success";
+            result.textContent = "Updates worden uitgevoerd, hub zal herstarten…";
+            function pollUntilBack() {
+              fetch("/status_json").then(r => {
+                if (r.ok) location.reload(true);
+                else setTimeout(pollUntilBack, 1500);
+              }).catch(() => setTimeout(pollUntilBack, 1500));
+            }
+            setTimeout(pollUntilBack, 3000);
+          } else if (data.success) {
+            result.className = "update-result success";
+            result.textContent = "Geen updates beschikbaar, alles is up-to-date.";
+            btn.disabled = false;
+            btn.textContent = "Update";
+          } else {
+            result.className = "update-result error";
+            result.textContent = data.error || "Onbekende fout";
+            btn.disabled = false;
+            btn.textContent = "Update";
+          }
+        })
+        .catch(() => {
+          result.className = "update-result error";
+          result.textContent = "Verbindingsfout";
+          btn.disabled = false;
+          btn.textContent = "Update";
+        });
+    }
+  </script>
+</body>
+</html>

@@ -792,6 +792,13 @@ def service_worker():
     return send_file(os.path.join(BASE_DIR, "static", "sw.js"), mimetype="application/javascript")
 
 
+@app.route("/updates")
+def updates():
+    if not require_login():
+        return redirect("/login")
+    return render_template("updates.html", dark_mode=get_user_dark_mode())
+
+
 @app.route("/settings")
 def settings():
     if not require_login():
