@@ -171,5 +171,5 @@ Optionele integratie met een MQTT broker, bijvoorbeeld voor gebruik met Home Ass
 
 ## Tailscale
 
-## Zonne voorspelling
-
+## Zonnevoorspelling
+Zonnevoorspelling wordt gedaan op basis van locatie
