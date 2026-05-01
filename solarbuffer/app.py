@@ -319,7 +319,7 @@ def compare_configs(old_cfg, new_cfg):
 
 # ================= PID =================
 PID_KP = 0.02
-PID_KI = 0.0012
+PID_KI = 0.0014
 PID_KD = 0.000
 
 device_pids = {}
