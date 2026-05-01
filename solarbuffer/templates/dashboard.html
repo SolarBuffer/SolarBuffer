@@ -1464,8 +1464,9 @@
       display: flex;
       align-items: flex-end;
       gap: 3px;
-      height: 72px;
+      height: 96px;
       margin-bottom: 0.5rem;
+      position: relative;
     }
     .forecast-col {
       flex: 1;
@@ -1475,20 +1476,52 @@
       gap: 2px;
       height: 100%;
       justify-content: flex-end;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
     }
     .forecast-bar {
       width: 100%;
       border-radius: 3px 3px 0 0;
       min-height: 2px;
       background: hsl(32, 90%, 58%);
-      transition: height 0.3s ease;
+      transition: background 0.15s, height 0.3s ease;
     }
     .forecast-bar.dim { background: hsl(32, 60%, 82%); }
+    .forecast-col.selected .forecast-bar { background: hsl(32, 95%, 38%); }
+    .forecast-col.selected .forecast-bar.dim { background: hsl(32, 75%, 60%); }
     .forecast-hour {
       font-size: 0.58rem;
       color: hsl(220, 10%, 56%);
       line-height: 1;
     }
+    .forecast-col.selected .forecast-hour { color: hsl(32, 90%, 40%); font-weight: 700; }
+
+    .forecast-tooltip {
+      display: none;
+      position: absolute;
+      top: -2.6rem;
+      background: hsl(220, 20%, 16%);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.6rem;
+      border-radius: 0.4rem;
+      white-space: nowrap;
+      pointer-events: none;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    .forecast-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: hsl(220, 20%, 16%);
+    }
+    .forecast-tooltip.visible { display: block; }
+
     .forecast-meta {
       display: flex;
       justify-content: space-between;
@@ -1514,7 +1547,12 @@
     html[data-theme="dark"] .forecast-tab.active { background: hsl(32, 85%, 50%); border-color: hsl(32, 85%, 50%); color: white; }
     html[data-theme="dark"] .forecast-bar { background: hsl(32, 85%, 54%); }
     html[data-theme="dark"] .forecast-bar.dim { background: hsl(32, 30%, 38%); }
+    html[data-theme="dark"] .forecast-col.selected .forecast-bar { background: hsl(32, 90%, 68%); }
+    html[data-theme="dark"] .forecast-col.selected .forecast-bar.dim { background: hsl(32, 50%, 55%); }
     html[data-theme="dark"] .forecast-hour { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .forecast-col.selected .forecast-hour { color: hsl(32, 90%, 68%); }
+    html[data-theme="dark"] .forecast-tooltip { background: hsl(220, 8%, 90%); color: hsl(220, 20%, 14%); }
+    html[data-theme="dark"] .forecast-tooltip::after { border-top-color: hsl(220, 8%, 90%); }
     html[data-theme="dark"] .forecast-meta { color: hsl(220, 8%, 52%); }
     html[data-theme="dark"] .forecast-meta strong { color: hsl(220, 10%, 82%); }
     html[data-theme="dark"] .forecast-no-location { color: hsl(220, 8%, 50%); }
@@ -2231,27 +2269,62 @@
       const peak = hours.reduce((best, h) => h.radiation > best.radiation ? h : best, hours[0] || {hour: 0, radiation: 0});
 
       let bars = '';
-      for (const h of visible) {
+      for (let i = 0; i < visible.length; i++) {
+        const h = visible[i];
         const pct = Math.max(4, Math.round((h.radiation / maxRad) * 100));
         const dim = h.radiation < 20 ? ' dim' : '';
-        bars += `<div class="forecast-col">
+        bars += `<div class="forecast-col" data-hour="${h.hour}" data-rad="${Math.round(h.radiation)}" onclick="selectForecastBar(this)">
           <div class="forecast-bar${dim}" style="height:${pct}%"></div>
           <div class="forecast-hour">${String(h.hour).padStart(2,'0')}</div>
         </div>`;
       }
 
-      const dateLabel = data[day + '_date'] || '';
       return `
         <div class="forecast-tabs">
           <button class="forecast-tab${day==='today'?' active':''}" onclick="switchForecastDay('today')">Vandaag</button>
           <button class="forecast-tab${day==='tomorrow'?' active':''}" onclick="switchForecastDay('tomorrow')">Morgen</button>
         </div>
-        <div class="forecast-bars">${bars}</div>
+        <div class="forecast-bars" id="forecastBars">
+          <div class="forecast-tooltip" id="forecastTooltip"></div>
+          ${bars}
+        </div>
         <div class="forecast-meta">
           <span>Piek: <strong>${String(peak.hour).padStart(2,'0')}:00</strong> &middot; ${Math.round(peak.radiation)} W/m²</span>
           <span>Totaal: <strong>${total} kWh/m²</strong></span>
         </div>`;
     }
+
+    function selectForecastBar(col) {
+      const bars = document.getElementById('forecastBars');
+      const tooltip = document.getElementById('forecastTooltip');
+      const allCols = bars.querySelectorAll('.forecast-col');
+
+      const isAlreadySelected = col.classList.contains('selected');
+      allCols.forEach(c => c.classList.remove('selected'));
+      tooltip.classList.remove('visible');
+
+      if (!isAlreadySelected) {
+        col.classList.add('selected');
+        const hour = col.dataset.hour;
+        const rad = col.dataset.rad;
+        tooltip.textContent = `${String(hour).padStart(2,'0')}:00 — ${rad} W/m²`;
+        tooltip.classList.add('visible');
+        const colRect = col.getBoundingClientRect();
+        const barsRect = bars.getBoundingClientRect();
+        const leftPct = colRect.left - barsRect.left + colRect.width / 2;
+        tooltip.style.left = leftPct + 'px';
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      const bars = document.getElementById('forecastBars');
+      if (!bars) return;
+      if (!bars.contains(e.target)) {
+        bars.querySelectorAll('.forecast-col').forEach(c => c.classList.remove('selected'));
+        const tooltip = document.getElementById('forecastTooltip');
+        if (tooltip) tooltip.classList.remove('visible');
+      }
+    });
 
     function switchForecastDay(day) {
       _forecastDay = day;
