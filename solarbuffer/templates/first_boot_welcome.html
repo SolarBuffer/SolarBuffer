@@ -202,13 +202,44 @@
       color: hsl(220, 10%, 52%);
     }
 
+    .btn-start-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .btn-start-glow {
+      position: absolute;
+      inset: -6px;
+      border-radius: 1rem;
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%), hsl(32, 95%, 52%));
+      background-size: 200% 200%;
+      filter: blur(14px);
+      opacity: 0.7;
+      animation: glow-breathe 2.4s ease-in-out infinite, glow-shift 4s linear infinite;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    @keyframes glow-breathe {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50%       { opacity: 1;   transform: scale(1.04); }
+    }
+
+    @keyframes glow-shift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
     .btn-start {
+      position: relative;
+      z-index: 1;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
       width: 100%;
-      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(36, 95%, 56%));
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(36, 95%, 58%));
       color: white;
       font-family: 'Space Grotesk', sans-serif;
       font-weight: 700;
@@ -218,13 +249,13 @@
       border-radius: 0.625rem;
       cursor: pointer;
       text-decoration: none;
-      box-shadow: 0 8px 24px -6px hsla(32, 95%, 52%, 0.5);
+      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.4);
       transition: transform 0.15s, box-shadow 0.15s;
     }
 
     .btn-start:hover {
       transform: translateY(-2px);
-      box-shadow: 0 12px 32px -6px hsla(32, 95%, 52%, 0.6);
+      box-shadow: 0 8px 24px -4px hsla(32, 95%, 52%, 0.5);
     }
 
     .btn-start:active {
@@ -280,10 +311,13 @@
       </div>
     </div>
 
-    <a href="/first_boot/setup_choice" class="btn-start">
-      <i class="mdi mdi-arrow-right-circle-outline"></i>
-      Begin het avontuur
-    </a>
+    <div class="btn-start-wrap">
+      <div class="btn-start-glow"></div>
+      <a href="/first_boot/setup_choice" class="btn-start">
+        <i class="mdi mdi-arrow-right-circle-outline"></i>
+        Begin het avontuur
+      </a>
+    </div>
 
   </div>
 </body>
