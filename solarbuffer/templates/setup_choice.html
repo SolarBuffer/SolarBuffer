@@ -29,6 +29,18 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    .header .step {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: hsl(32, 90%, 50%);
+      background: hsl(32, 100%, 94%);
+      border-radius: 999px;
+      padding: 0.2rem 0.7rem;
+      margin-bottom: 0.6rem;
+    }
     .header .subtitle {
       font-size: 1rem;
       font-weight: 600;
@@ -161,8 +173,9 @@
 
     <div class="header">
       <h1><span class="solar">Solar</span>Buffer</h1>
-      <div class="subtitle">Welkom bij de eerste installatie</div>
-      <p>Kies hoe je wilt beginnen: start met een schone configuratie of herstel een eerder gemaakte back-up.</p>
+      <div class="step">Stap 2 van 2</div>
+      <div class="subtitle">Hoe wil je beginnen?</div>
+      <p>Start met een schone configuratie of herstel een eerder gemaakte back-up.</p>
     </div>
 
     {% if error %}

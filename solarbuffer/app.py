@@ -464,8 +464,50 @@ def scan_network_for_devices():
 
 
 # ================= ROUTES =================
+def is_first_boot():
+    cfg = load_config()
+    return not any(u.get("password_hash") for u in cfg.get("users", []))
+
+
+@app.route("/first_boot/welcome")
+def first_boot_welcome():
+    if not is_first_boot():
+        return redirect("/")
+    return render_template("first_boot_welcome.html")
+
+
+@app.route("/first_boot/user", methods=["GET", "POST"])
+def first_boot_user():
+    if not is_first_boot():
+        return redirect("/")
+    error = ""
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm_password", "")
+        if not username:
+            error = "Gebruikersnaam mag niet leeg zijn"
+        elif not password:
+            error = "Wachtwoord mag niet leeg zijn"
+        elif len(password) < 6:
+            error = "Wachtwoord moet minimaal 6 tekens bevatten"
+        elif password != confirm:
+            error = "Wachtwoorden komen niet overeen"
+        if not error:
+            cfg = load_config()
+            cfg["users"] = [{"username": username, "password_hash": generate_password_hash(password), "dark_mode": False}]
+            save_config(cfg)
+            session["logged_in"] = True
+            session["username"] = username
+            write_audit_log("first_boot_user_created", {"username": username})
+            return redirect("/setup")
+    return render_template("first_boot_user.html", error=error)
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if is_first_boot():
+        return redirect("/first_boot/welcome")
     cfg = load_config()
     client_ip = get_client_ip()
 
@@ -610,6 +652,8 @@ def wizard():
 
 @app.route("/setup", methods=["GET"])
 def setup_choice():
+    if is_first_boot():
+        return redirect("/first_boot/welcome")
     if not require_login():
         return redirect("/login")
     cfg = load_config()
