@@ -1440,72 +1440,6 @@
 
     html[data-theme="dark"] .footer { color: hsl(220, 8%, 52%); }
 
-    /* ===== TAILSCALE ===== */
-    .ts-status-dot {
-      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-      background: hsl(220, 10%, 78%); margin-left: 2px;
-      transition: background 0.3s;
-    }
-    .ts-status-dot.on      { background: hsl(145, 55%, 48%); }
-    .ts-status-dot.pending { background: hsl(32, 95%, 52%); }
-
-    .ts-sub {
-      font-size: 0.75rem; color: hsl(220, 10%, 52%); margin-left: 4px;
-      font-weight: 400; white-space: nowrap;
-    }
-
-    .ts-body { margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.55rem; }
-
-    .ts-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 0.75rem; padding: 0.45rem 0;
-      border-bottom: 1px solid hsl(30, 15%, 92%);
-    }
-    .ts-row:last-child { border-bottom: none; }
-    .ts-row-label { font-size: 0.8rem; color: hsl(220, 10%, 50%); white-space: nowrap; }
-    .ts-row-val   { font-size: 0.8rem; font-weight: 600; font-family: monospace;
-                    color: hsl(220, 16%, 22%); text-align: right; word-break: break-all; }
-
-    .ts-hint { font-size: 0.78rem; color: hsl(220, 10%, 56%); margin-top: 0.6rem; }
-
-    .ts-url-row {
-      display: flex; align-items: center; gap: 0.5rem; margin-top: 0.7rem;
-      padding: 0.45rem 0.6rem; border-radius: 0.5rem;
-      background: hsl(220, 14%, 97%); border: 1px solid hsl(220, 10%, 90%);
-    }
-    .ts-auth-link {
-      flex: 1; font-size: 0.72rem; color: hsl(220, 60%, 50%);
-      word-break: break-all; text-decoration: none;
-    }
-    .ts-auth-link:hover { text-decoration: underline; }
-    .ts-copy-btn {
-      flex-shrink: 0; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 600;
-      border: 1px solid hsl(220, 10%, 84%); border-radius: 0.35rem;
-      background: white; color: hsl(220, 12%, 46%); cursor: pointer;
-      transition: background 0.15s, color 0.15s; white-space: nowrap;
-    }
-    .ts-copy-btn:hover { background: hsl(220, 10%, 93%); color: hsl(220, 16%, 26%); }
-
-    .ts-install-cmd {
-      display: block; margin-top: 0.6rem; padding: 0.4rem 0.6rem;
-      background: hsl(220, 12%, 15%); color: hsl(120, 50%, 68%);
-      border-radius: 0.4rem; font-size: 0.73rem; font-family: monospace;
-      user-select: all;
-    }
-
-    html[data-theme="dark"] .ts-status-dot        { background: hsl(220, 8%, 46%); }
-    html[data-theme="dark"] .ts-status-dot.on      { background: hsl(145, 50%, 46%); }
-    html[data-theme="dark"] .ts-status-dot.pending { background: hsl(32, 90%, 54%); }
-    html[data-theme="dark"] .ts-sub               { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .ts-row               { border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .ts-row-label         { color: hsl(220, 8%, 54%); }
-    html[data-theme="dark"] .ts-row-val           { color: hsl(220, 8%, 82%); }
-    html[data-theme="dark"] .ts-hint              { color: hsl(220, 8%, 48%); }
-    html[data-theme="dark"] .ts-url-row           { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] .ts-auth-link         { color: hsl(210, 70%, 62%); }
-    html[data-theme="dark"] .ts-copy-btn          { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 70%); }
-    html[data-theme="dark"] .ts-copy-btn:hover    { background: hsl(220, 8%, 38%); }
-
     /* ===== SOLAR FORECAST ===== */
     .forecast-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     .forecast-tab {
@@ -1806,47 +1740,6 @@
         </div>
       </div>
     </div>
-
-    <div class="card control-card" id="tailscaleCard">
-      <h2>
-        <div class="updates-header-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,15.97 6,15.41C6,13.82 8.71,12.5 12,12.5C15.29,12.5 18,13.82 18,15.41C17.76,15.97 17.47,16.5 17.13,17Z"/>
-          </svg>
-        </div>
-        Remote Toegang
-        <span class="ts-status-dot" id="tsDot"></span>
-        <span class="ts-sub" id="tsSub">Controleren…</span>
-        <button class="update-check-btn" id="tsConnectBtn" onclick="tsConnect()" style="display:none">Verbinden</button>
-      </h2>
-
-      <div id="tsNotInstalled" style="display:none">
-        <span class="ts-hint">Tailscale is niet geïnstalleerd. Voer dit uit op de server:</span>
-        <code class="ts-install-cmd">curl -fsSL https://tailscale.com/install.sh | sh</code>
-      </div>
-
-      <div id="tsAuthBox" style="display:none">
-        <span class="ts-hint">Open de link om in te loggen bij Tailscale:</span>
-        <div class="ts-url-row">
-          <a id="tsAuthUrl" class="ts-auth-link" href="#" target="_blank" rel="noopener">—</a>
-          <button class="ts-copy-btn" onclick="tsCopyUrl()"><span id="tsCopyLabel">Kopieer</span></button>
-        </div>
-      </div>
-
-      <div id="tsConnected" style="display:none">
-        <div class="ts-body">
-          <div class="ts-row">
-            <span class="ts-row-label">Tailscale IP</span>
-            <span class="ts-row-val" id="tsIpVal">—</span>
-          </div>
-          <div class="ts-row">
-            <span class="ts-row-label">Hostnaam</span>
-            <span class="ts-row-val">http://solarbuffer:5001</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
 
     <div class="footer">Live data · Verversing elke seconde</div>
     <div class="footer">Version 0.2.3</div>
@@ -2407,81 +2300,6 @@
 
     setInterval(updateStatus, 1000);
     updateStatus();
-
-    // ===== TAILSCALE =====
-    let _tsWaitingForAuth = false;
-
-    function tsUpdateUI(data) {
-      const dot = document.getElementById('tsDot');
-      const sub = document.getElementById('tsSub');
-      const connectBtn = document.getElementById('tsConnectBtn');
-      const notInstalled = document.getElementById('tsNotInstalled');
-      const authBox = document.getElementById('tsAuthBox');
-      const connectedBox = document.getElementById('tsConnected');
-
-      notInstalled.style.display = 'none';
-      authBox.style.display = 'none';
-      connectedBox.style.display = 'none';
-      connectBtn.style.display = 'none';
-
-      if (!data.installed) {
-        dot.className = 'ts-status-dot';
-        sub.textContent = 'Niet geïnstalleerd';
-        notInstalled.style.display = 'block';
-        _tsWaitingForAuth = false;
-        return;
-      }
-
-      if (data.connected) {
-        dot.className = 'ts-status-dot on';
-        sub.textContent = 'Verbonden';
-        document.getElementById('tsIpVal').textContent = data.ip || '—';
-        connectedBox.style.display = 'block';
-        _tsWaitingForAuth = false;
-      } else if (data.auth_url) {
-        dot.className = 'ts-status-dot pending';
-        sub.textContent = 'Wacht op inlog…';
-        const link = document.getElementById('tsAuthUrl');
-        link.href = data.auth_url;
-        link.textContent = data.auth_url;
-        authBox.style.display = 'block';
-        _tsWaitingForAuth = true;
-      } else {
-        dot.className = 'ts-status-dot';
-        sub.textContent = 'Niet verbonden';
-        connectBtn.style.display = 'inline-block';
-        connectBtn.disabled = false;
-        connectBtn.textContent = 'Verbinden';
-        _tsWaitingForAuth = false;
-      }
-    }
-
-    function tsFetchStatus() {
-      fetch('/tailscale_status').then(r => r.json()).then(tsUpdateUI).catch(() => {});
-    }
-
-    function tsConnect() {
-      const btn = document.getElementById('tsConnectBtn');
-      btn.disabled = true;
-      btn.textContent = 'Bezig…';
-      fetch('/tailscale_connect', { method: 'POST' })
-        .then(r => r.json())
-        .then(() => { _tsWaitingForAuth = true; setTimeout(tsFetchStatus, 2000); })
-        .catch(() => { btn.disabled = false; btn.textContent = 'Verbinden'; });
-    }
-
-    function tsCopyUrl() {
-      const url = document.getElementById('tsAuthUrl').href;
-      navigator.clipboard.writeText(url).then(() => {
-        const lbl = document.getElementById('tsCopyLabel');
-        lbl.textContent = 'Gekopieerd!';
-        setTimeout(() => { lbl.textContent = 'Kopieer link'; }, 2000);
-      });
-    }
-
-    tsFetchStatus();
-    setInterval(() => { if (_tsWaitingForAuth) tsFetchStatus(); }, 3000);
-    setInterval(tsFetchStatus, 30000);
 
     // ===== SOLAR FORECAST =====
     let _forecastData = null;
