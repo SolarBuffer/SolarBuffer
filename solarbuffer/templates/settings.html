@@ -297,7 +297,7 @@
           <div class="settings-label">Remote Toegang</div>
           <div class="settings-sub">Tailscale VPN-verbinding</div>
         </div>
-        <span class="ts-badge off" id="tsBadge">Controleren…</span>
+        <span class="ts-badge off" id="tsBadge">Laden…</span>
         <svg class="settings-chevron" id="tsChevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transition:transform 0.2s"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
       </div>
 
@@ -391,7 +391,7 @@
 
       if (!data.installed) {
         badge.className = 'ts-badge off';
-        badge.textContent = 'Nee';
+        badge.textContent = 'Niet verbonden';
         notInstalled.style.display = 'block';
         _tsWaitingForAuth = false;
         return;
@@ -399,7 +399,7 @@
 
       if (data.connected) {
         badge.className = 'ts-badge on';
-        badge.textContent = 'Ja';
+        badge.textContent = 'Verbonden';
         document.getElementById('tsIpVal').textContent = data.ip || '—';
         connectedBox.style.display = 'block';
         _tsWaitingForAuth = false;
@@ -413,7 +413,7 @@
         _tsWaitingForAuth = true;
       } else {
         badge.className = 'ts-badge off';
-        badge.textContent = 'Nee';
+        badge.textContent = 'Niet verbonden';
         disconnectedBox.style.display = 'block';
         document.getElementById('tsConnectBtn').disabled = false;
         document.getElementById('tsConnectBtn').textContent = 'Verbinden';
