@@ -15,6 +15,7 @@
       }
     })();
   </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -101,6 +102,20 @@
       box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.15);
       outline: none;
     }
+    .password-wrapper { position: relative; }
+    .password-wrapper input { padding-right: 2.75rem; }
+    .toggle-password {
+      position: absolute;
+      top: 50%;
+      right: 0.75rem;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: hsl(220, 10%, 60%);
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+    .toggle-password:hover { color: hsl(220, 20%, 30%); }
+
     .btn-add {
       width: 100%;
       background: hsl(32, 95%, 52%);
@@ -116,16 +131,27 @@
     .btn-add:hover { background: hsl(32, 85%, 45%); transform: translateY(-1px); }
     .btn-add:active { transform: translateY(0); }
 
-    .back-link {
-      text-align: center;
-      margin-top: 0.5rem;
-    }
-    .back-link a {
-      color: hsl(220, 10%, 46%);
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
       text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
     }
-    .back-link a:hover { color: hsl(32, 95%, 52%); }
+    .back-btn:hover {
+      background: hsl(32, 100%, 96%);
+      border-color: hsl(32, 85%, 60%);
+      color: hsl(32, 90%, 40%);
+    }
 
     .note {
       font-size: 0.78rem;
@@ -171,7 +197,10 @@
     html[data-theme="dark"] label { color: hsl(220, 8%, 82%); }
     html[data-theme="dark"] .note  { color: hsl(220, 8%, 58%); }
     html[data-theme="dark"] .hint  { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .back-link a { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .toggle-password { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .toggle-password:hover { color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
     html[data-theme="dark"] .error-banner {
       background: hsl(0, 20%, 28%);
       color: hsl(0, 60%, 70%);
@@ -183,18 +212,21 @@
   <div class="container">
 
     <div class="header">
-      <div class="icon">☀️</div>
       <h1><span class="solar">Solar</span>Buffer</h1>
       <p>Gebruikersbeheer</p>
     </div>
 
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
     {% if error %}
     <div class="error-banner">{{ error }}</div>
     {% endif %}
 
     <!-- Bestaande gebruikers -->
     <div class="card">
-      <h2><span class="ctrl-icon">👤</span> Gebruikers</h2>
+      <h2>Gebruikers</h2>
       {% for user in users %}
       <div class="user-row">
         <span class="user-name">{{ user.username }}</span>
@@ -212,7 +244,7 @@
 
     <!-- Nieuwe gebruiker toevoegen -->
     <div class="card">
-      <h2><span class="ctrl-icon">➕</span> Gebruiker toevoegen</h2>
+      <h2>Gebruiker toevoegen</h2>
       <form action="/users/add" method="POST">
         <div class="form-group">
           <label for="username">Gebruikersnaam</label>
@@ -220,17 +252,35 @@
         </div>
         <div class="form-group">
           <label for="password">Wachtwoord</label>
-          <input type="password" id="password" name="password" required autocomplete="new-password" minlength="6">
+          <div class="password-wrapper">
+            <input type="password" id="password" name="password" required autocomplete="new-password" minlength="6">
+            <i class="mdi mdi-eye-off toggle-password" onclick="togglePassword('password', this)"></i>
+          </div>
           <span class="hint">Minimaal 6 tekens</span>
         </div>
         <button type="submit" class="btn-add">Toevoegen</button>
       </form>
     </div>
 
-    <div class="back-link">
-      <a href="/settings">← Terug naar instellingen</a>
-    </div>
 
   </div>
+
+  <script>
+    function togglePassword(fieldId, icon) {
+      const field = document.getElementById(fieldId);
+      if (field.type === "password") {
+        field.type = "text";
+        icon.classList.remove("mdi-eye-off");
+        icon.classList.add("mdi-eye");
+      } else {
+        field.type = "password";
+        icon.classList.remove("mdi-eye");
+        icon.classList.add("mdi-eye-off");
+      }
+    }
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+  </script>
 </body>
 </html>

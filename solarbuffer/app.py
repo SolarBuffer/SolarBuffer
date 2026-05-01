@@ -579,36 +579,48 @@ def change_credentials():
     cfg = load_config()
 
     if request.method == "POST":
+        action = request.form.get("action", "")
         current_password = request.form.get("current_password", "")
-        new_username = request.form.get("new_username", "").strip()
-        new_password = request.form.get("new_password", "")
-        confirm_password = request.form.get("confirm_password", "")
-
         current_username = session.get("username", "")
         users = cfg.get("users", [])
         user = next((u for u in users if u["username"] == current_username), None)
 
-        if not user:
-            return render_template("change_credentials.html", error="Gebruiker niet gevonden", dark_mode=get_user_dark_mode())
-        if not new_username:
-            return render_template("change_credentials.html", error="Gebruikersnaam mag niet leeg zijn", dark_mode=get_user_dark_mode())
-        if not check_password_hash(user.get("password_hash", ""), current_password):
-            return render_template("change_credentials.html", error="Huidig wachtwoord is onjuist", dark_mode=get_user_dark_mode())
-        if not new_password:
-            return render_template("change_credentials.html", error="Nieuw wachtwoord mag niet leeg zijn", dark_mode=get_user_dark_mode())
-        if len(new_password) < 6:
-            return render_template("change_credentials.html", error="Nieuw wachtwoord moet minimaal 6 tekens bevatten", dark_mode=get_user_dark_mode())
-        if new_password != confirm_password:
-            return render_template("change_credentials.html", error="Wachtwoorden komen niet overeen", dark_mode=get_user_dark_mode())
+        dm = get_user_dark_mode()
 
-        old_username = user["username"]
-        user["username"] = new_username
-        user["password_hash"] = generate_password_hash(new_password)
-        cfg["users"] = users
-        save_config(cfg)
-        session["username"] = new_username
-        write_audit_log("credentials_changed", {"old_username": old_username, "new_username": new_username})
-        return redirect("/dashboard")
+        def err(msg):
+            return render_template("change_credentials.html", error=msg, dark_mode=dm)
+
+        if not user:
+            return err("Gebruiker niet gevonden")
+        if not check_password_hash(user.get("password_hash", ""), current_password):
+            return err("Huidig wachtwoord is onjuist")
+
+        if action == "change_username":
+            new_username = request.form.get("new_username", "").strip()
+            if not new_username:
+                return err("Gebruikersnaam mag niet leeg zijn")
+            old_username = user["username"]
+            user["username"] = new_username
+            cfg["users"] = users
+            save_config(cfg)
+            session["username"] = new_username
+            write_audit_log("username_changed", {"old_username": old_username, "new_username": new_username})
+            return render_template("change_credentials.html", success="Gebruikersnaam gewijzigd naar " + new_username, dark_mode=dm)
+
+        elif action == "change_password":
+            new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
+            if not new_password:
+                return err("Nieuw wachtwoord mag niet leeg zijn")
+            if len(new_password) < 6:
+                return err("Nieuw wachtwoord moet minimaal 6 tekens bevatten")
+            if new_password != confirm_password:
+                return err("Wachtwoorden komen niet overeen")
+            user["password_hash"] = generate_password_hash(new_password)
+            cfg["users"] = users
+            save_config(cfg)
+            write_audit_log("password_changed", {"username": current_username})
+            return render_template("change_credentials.html", success="Wachtwoord succesvol gewijzigd", dark_mode=dm)
 
     return render_template("change_credentials.html", dark_mode=get_user_dark_mode())
 

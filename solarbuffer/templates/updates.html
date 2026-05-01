@@ -165,9 +165,27 @@
     }
     .update-notes-link:hover { text-decoration: underline; }
 
-    .back-link { text-align: center; margin-top: 0.75rem; }
-    .back-link a { color: hsl(220, 10%, 46%); font-size: 0.85rem; text-decoration: none; }
-    .back-link a:hover { color: hsl(32, 95%, 52%); }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover {
+      background: hsl(32, 100%, 96%);
+      border-color: hsl(32, 85%, 60%);
+      color: hsl(32, 90%, 40%);
+    }
 
     /* DARK MODE */
     html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
@@ -181,7 +199,8 @@
     html[data-theme="dark"] .update-body { color: hsl(220, 8%, 56%); }
     html[data-theme="dark"] .update-result.success { background: hsl(145, 25%, 24%); color: hsl(145, 55%, 68%); }
     html[data-theme="dark"] .update-result.error   { background: hsl(0, 20%, 28%);   color: hsl(0, 60%, 70%); }
-    html[data-theme="dark"] .back-link a { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
   </style>
 </head>
 <body>
@@ -192,6 +211,10 @@
       <p>Versiegeschiedenis</p>
     </div>
 
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
     <div class="check-card" id="checkCard">
       <div class="check-card-text">
         <div class="check-card-title" id="checkTitle">Software update</div>
@@ -243,9 +266,6 @@
       </div>
     </div>
 
-    <div class="back-link">
-      <a href="/settings">← Terug naar instellingen</a>
-    </div>
 
   </div>
 
