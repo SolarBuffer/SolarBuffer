@@ -1627,49 +1627,6 @@
       <div id="forecastContent"><div class="forecast-loading">Laden…</div></div>
     </div>
 
-    <div class="card control-card">
-      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"/></svg></span> Besturing</h2>
-      <div class="control-row">
-        <div class="control-label">
-          <div class="name">Besturing</div>
-          <div class="sub" id="pid_sub">Uitgeschakeld</div>
-        </div>
-        <div class="control-right">
-          <div class="dot" id="pid_dot"></div>
-          <label class="toggle">
-            <input type="checkbox" id="pid_toggle" onchange="togglePID()"/>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="control-row">
-        <div class="control-label">
-          <div class="name">Anti-Legionella</div>
-          <div class="sub" id="legionella_sub">Uitgeschakeld</div>
-        </div>
-        <div class="control-right">
-          <div class="dot" id="legionella_dot"></div>
-          <label class="toggle">
-            <input type="checkbox" id="legionella_toggle" onchange="toggleAntiLegionella()"/>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="control-row">
-        <div class="control-label">
-          <div class="name">Tijdschema's</div>
-          <div class="sub" id="schedules_sub">Uitgeschakeld</div>
-        </div>
-        <div class="control-right">
-          <div class="dot" id="schedules_dot"></div>
-          <label class="toggle">
-            <input type="checkbox" id="schedules_toggle" onchange="toggleSchedules()"/>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-    </div>
-
     <div class="card control-card" id="scheduleCard">
       <h2>
         <span class="ctrl-icon">
@@ -1825,36 +1782,6 @@
           document.getElementById("buffer_status_icon").innerHTML = bufferStatus.icon;
           document.getElementById("buffer_status_card").className = `card stat-card status-card ${bufferStatus.cls}`;
 
-          document.getElementById("pid_toggle").checked = pidEnabled;
-          document.getElementById("pid_sub").textContent = pidEnabled ? "Actief" : "Uitgeschakeld";
-          document.getElementById("pid_dot").className = "dot" + (pidEnabled ? " active" : "");
-
-          const alEnabled = !!data.anti_legionella_enabled;
-          document.getElementById("legionella_toggle").checked = alEnabled;
-          const alActive = (data.devices || []).filter(d => d.legionella_active);
-          let alSub = "Uitgeschakeld";
-          let alDotCls = "dot";
-          if (alEnabled) {
-            alDotCls = "dot active";
-            if (alActive.length > 0) {
-              const nowSec = Date.now() / 1000;
-              const elapsed = nowSec - (alActive[0].legionella_start || nowSec);
-              const remaining = Math.max(0, 3 * 3600 - elapsed);
-              const h = Math.floor(remaining / 3600);
-              const m = Math.floor((remaining % 3600) / 60);
-              alSub = `Cyclus actief — ${h}u ${m < 10 ? "0" + m : m}m resterend`;
-            } else {
-              alSub = "Monitoring actief";
-            }
-          }
-          document.getElementById("legionella_sub").textContent = alSub;
-          document.getElementById("legionella_dot").className = alDotCls;
-
-          const schedsEnabled = !!data.schedules_enabled;
-          document.getElementById("schedules_toggle").checked = schedsEnabled;
-          document.getElementById("schedules_sub").textContent = schedsEnabled ? "Actief" : "Uitgeschakeld";
-          document.getElementById("schedules_dot").className = "dot" + (schedsEnabled ? " active" : "");
-
           renderDevices(data.devices || []);
           renderSchedules(data.schedules || [], data.active_schedule || null);
         })
@@ -1993,17 +1920,7 @@
         .then(() => updateStatus());
     }
 
-    function togglePID() {
-      fetch("/toggle_pid").then(() => setTimeout(updateStatus, 200));
-    }
 
-    function toggleAntiLegionella() {
-      fetch("/toggle_anti_legionella").then(() => setTimeout(updateStatus, 200));
-    }
-
-    function toggleSchedules() {
-      fetch("/toggle_schedules").then(() => setTimeout(updateStatus, 200));
-    }
 
     function toggleDevice(ip) {
       fetch("/toggle_shelly/" + encodeURIComponent(ip)).then(() => setTimeout(updateStatus, 200));

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
   <title>Instellingen - SolarBuffer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
   <script>
     (function () {
       var dark = {{ dark_mode | tojson }};
@@ -117,6 +118,78 @@
       text-decoration: none;
     }
     .back-link a:hover { color: hsl(32, 95%, 52%); }
+
+    /* ===== BESTURING TOGGLES ===== */
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.1rem;
+      border-bottom: 1px solid hsl(30, 15%, 91%);
+    }
+    .ctrl-row:last-child { border-bottom: none; }
+
+    .ctrl-text { flex: 1; min-width: 0; }
+    .ctrl-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .ctrl-sub {
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 50%);
+      margin-top: 0.1rem;
+    }
+
+    .ctrl-right {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-shrink: 0;
+    }
+
+    .dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: hsl(220, 10%, 80%);
+      flex-shrink: 0;
+    }
+    .dot.active {
+      background: #22c55e;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .toggle input { display: none; }
+    .toggle .slider {
+      position: absolute; inset: 0;
+      background: hsl(30, 15%, 88%);
+      border-radius: 12px;
+      transition: background 0.3s;
+    }
+    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+    .toggle .slider::before {
+      content: "";
+      position: absolute;
+      width: 20px; height: 20px;
+      left: 2px; top: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      transition: transform 0.3s;
+    }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+    html[data-theme="dark"] .ctrl-row        { border-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .ctrl-sub        { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(220, 8%, 42%); }
 
     /* ===== REMOTE TOEGANG ===== */
     .ts-badge {
@@ -286,6 +359,62 @@
 
     </div>
 
+    <div class="section-title">Besturing</div>
+    <div class="settings-list">
+
+      <div class="ctrl-row">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8L10,17Z"/></svg>
+        </div>
+        <div class="ctrl-text">
+          <div class="ctrl-label">Automatische besturing</div>
+          <div class="ctrl-sub" id="pid_sub">Laden…</div>
+        </div>
+        <div class="ctrl-right">
+          <div class="dot" id="pid_dot"></div>
+          <label class="toggle">
+            <input type="checkbox" id="pid_toggle" onchange="togglePID()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="settings-icon">
+          <i class="mdi mdi-bacteria-outline" style="font-size:1.25rem;line-height:1"></i>
+        </div>
+        <div class="ctrl-text">
+          <div class="ctrl-label">Anti-Legionella</div>
+          <div class="ctrl-sub" id="legionella_sub">Laden…</div>
+        </div>
+        <div class="ctrl-right">
+          <div class="dot" id="legionella_dot"></div>
+          <label class="toggle">
+            <input type="checkbox" id="legionella_toggle" onchange="toggleAntiLegionella()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg>
+        </div>
+        <div class="ctrl-text">
+          <div class="ctrl-label">Tijdschema's</div>
+          <div class="ctrl-sub" id="schedules_sub">Laden…</div>
+        </div>
+        <div class="ctrl-right">
+          <div class="dot" id="schedules_dot"></div>
+          <label class="toggle">
+            <input type="checkbox" id="schedules_toggle" onchange="toggleSchedules()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+
     <div class="section-title">Verbinding</div>
     <div class="settings-list">
 
@@ -367,6 +496,53 @@
   </div>
 
   <script>
+    // ===== BESTURING =====
+    function loadBesturing() {
+      fetch('/status_json').then(r => r.json()).then(data => {
+        const pidEnabled = !!data.enabled;
+        document.getElementById('pid_toggle').checked = pidEnabled;
+        document.getElementById('pid_sub').textContent = pidEnabled ? 'Actief' : 'Uitgeschakeld';
+        document.getElementById('pid_dot').className = 'dot' + (pidEnabled ? ' active' : '');
+
+        const alEnabled = !!data.anti_legionella_enabled;
+        document.getElementById('legionella_toggle').checked = alEnabled;
+        const alActive = (data.devices || []).filter(d => d.legionella_active);
+        let alSub = 'Uitgeschakeld';
+        if (alEnabled) {
+          if (alActive.length > 0) {
+            const nowSec = Date.now() / 1000;
+            const elapsed = nowSec - (alActive[0].legionella_start || nowSec);
+            const remaining = Math.max(0, 3 * 3600 - elapsed);
+            const h = Math.floor(remaining / 3600);
+            const m = Math.floor((remaining % 3600) / 60);
+            alSub = `Cyclus actief — ${h}u ${m < 10 ? '0' + m : m}m resterend`;
+          } else {
+            alSub = 'Monitoring actief';
+          }
+        }
+        document.getElementById('legionella_sub').textContent = alSub;
+        document.getElementById('legionella_dot').className = 'dot' + (alEnabled ? ' active' : '');
+
+        const schedsEnabled = !!data.schedules_enabled;
+        document.getElementById('schedules_toggle').checked = schedsEnabled;
+        document.getElementById('schedules_sub').textContent = schedsEnabled ? 'Actief' : 'Uitgeschakeld';
+        document.getElementById('schedules_dot').className = 'dot' + (schedsEnabled ? ' active' : '');
+      }).catch(() => {});
+    }
+
+    function togglePID() {
+      fetch('/toggle_pid').then(() => setTimeout(loadBesturing, 300));
+    }
+    function toggleAntiLegionella() {
+      fetch('/toggle_anti_legionella').then(() => setTimeout(loadBesturing, 300));
+    }
+    function toggleSchedules() {
+      fetch('/toggle_schedules').then(() => setTimeout(loadBesturing, 300));
+    }
+
+    loadBesturing();
+
+    // ===== TAILSCALE =====
     let _tsWaitingForAuth = false;
     let _tsPanelOpen = false;
 
