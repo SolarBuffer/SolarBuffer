@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
@@ -8,7 +9,12 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background: hsl(30, 25%, 97%);
@@ -19,16 +25,35 @@
       justify-content: center;
       padding: 1.5rem 1rem;
     }
-    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 520px; }
 
-    .header { text-align: center; margin-bottom: 2rem; }
-    .header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
+    h1,
+    h2,
+    h3 {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
     .header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+
     .header .step {
       display: inline-block;
       font-size: 0.72rem;
@@ -41,13 +66,19 @@
       padding: 0.2rem 0.7rem;
       margin-bottom: 0.6rem;
     }
+
     .header .subtitle {
       font-size: 1rem;
       font-weight: 600;
       color: hsl(220, 20%, 30%);
       margin-bottom: 0.4rem;
     }
-    .header p { color: hsl(220, 10%, 50%); font-size: 0.875rem; line-height: 1.5; }
+
+    .header p {
+      color: hsl(220, 10%, 50%);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
 
     .divider {
       display: flex;
@@ -58,7 +89,9 @@
       font-size: 0.8rem;
       font-weight: 500;
     }
-    .divider::before, .divider::after {
+
+    .divider::before,
+    .divider::after {
       content: '';
       flex: 1;
       height: 1px;
@@ -73,6 +106,7 @@
       padding: 1.5rem;
       margin-bottom: 1rem;
     }
+
     .card h2 {
       font-size: 1.1rem;
       font-weight: 700;
@@ -81,7 +115,11 @@
       align-items: center;
       gap: 0.5rem;
     }
-    .card-icon { font-size: 1.2rem; }
+
+    .card-icon {
+      font-size: 1.2rem;
+    }
+
     .card-desc {
       font-size: 0.85rem;
       color: hsl(220, 10%, 46%);
@@ -105,8 +143,15 @@
       text-decoration: none;
       transition: background 0.2s, transform 0.15s;
     }
-    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
-    .btn-primary:active { transform: translateY(0); }
+
+    .btn-primary:hover {
+      background: hsl(32, 90%, 45%);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
 
     .btn-secondary {
       display: block;
@@ -124,7 +169,12 @@
       text-decoration: none;
       transition: background 0.2s, border-color 0.2s;
     }
-    .btn-secondary:hover { background: hsl(30, 15%, 94%); border-color: hsl(30, 15%, 72%); }
+
+    .btn-secondary:hover {
+      background: hsl(30, 15%, 94%);
+      border-color: hsl(30, 15%, 72%);
+    }
+
     .btn-secondary:disabled {
       opacity: 0.45;
       cursor: not-allowed;
@@ -141,8 +191,17 @@
       margin-bottom: 0.875rem;
       position: relative;
     }
-    .file-upload-area:hover { border-color: hsl(32, 85%, 58%); background: hsl(32, 100%, 98.5%); }
-    .file-upload-area.has-file { border-color: hsl(32, 85%, 52%); background: hsl(32, 100%, 97%); }
+
+    .file-upload-area:hover {
+      border-color: hsl(32, 85%, 58%);
+      background: hsl(32, 100%, 98.5%);
+    }
+
+    .file-upload-area.has-file {
+      border-color: hsl(32, 85%, 52%);
+      background: hsl(32, 100%, 97%);
+    }
+
     .file-upload-area input[type="file"] {
       position: absolute;
       inset: 0;
@@ -151,10 +210,31 @@
       width: 100%;
       height: 100%;
     }
-    .upload-icon { font-size: 1.5rem; margin-bottom: 0.3rem; color: hsl(32, 80%, 52%); }
-    .upload-label { font-weight: 600; font-size: 0.875rem; color: hsl(220, 20%, 30%); }
-    .upload-hint { font-size: 0.775rem; color: hsl(220, 10%, 56%); margin-top: 0.2rem; }
-    .file-name { font-size: 0.83rem; font-weight: 600; color: hsl(32, 85%, 36%); margin-top: 0.35rem; }
+
+    .upload-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.3rem;
+      color: hsl(32, 80%, 52%);
+    }
+
+    .upload-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: hsl(220, 20%, 30%);
+    }
+
+    .upload-hint {
+      font-size: 0.775rem;
+      color: hsl(220, 10%, 56%);
+      margin-top: 0.2rem;
+    }
+
+    .file-name {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: hsl(32, 85%, 36%);
+      margin-top: 0.35rem;
+    }
 
     .error-banner {
       background: hsl(0, 60%, 94%);
@@ -168,14 +248,15 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
 
     <div class="header">
       <h1><span class="solar">Solar</span>Buffer</h1>
-      <div class="step">Stap 2 van 2</div>
+      <div class="step">{% if first_boot %}Stap 1 van 2{% else %}Installatie{% endif %}</div>
       <div class="subtitle">Hoe wil je beginnen?</div>
-      <p>Start met een schone configuratie of herstel een eerder gemaakte back-up.</p>
+      <p>Herstel een eerder gemaakte back-up of start met een nieuwe installatie.</p>
     </div>
 
     {% if error %}
@@ -189,7 +270,7 @@
         Start met een lege configuratie en doorloop de installatiewizard.
         Ideaal als je SolarBuffer voor het eerst instelt.
       </p>
-      <a href="/?fresh=1" class="btn-primary">Starten met wizard</a>
+      <a href="{% if first_boot %}/first_boot/user{% else %}/?fresh=1{% endif %}" class="btn-primary">Let's go!</a>
     </div>
 
     <div class="divider">of</div>
@@ -201,10 +282,10 @@
         Herstel al je instellingen vanuit een eerder geëxporteerde back-up.
         Apparaten, schema's en expert-parameters worden direct hersteld.
       </p>
-      <form action="/setup/import" method="POST" enctype="multipart/form-data" id="importForm">
+      <form action="{% if first_boot %}/first_boot/import{% else %}/setup/import{% endif %}" method="POST"
+        enctype="multipart/form-data" id="importForm">
         <div class="file-upload-area" id="dropZone">
-          <input type="file" name="config_file" id="configFile" accept=".json"
-                 onchange="handleFileSelect(this)">
+          <input type="file" name="config_file" id="configFile" accept=".json" onchange="handleFileSelect(this)">
           <div class="upload-icon">&#8679;</div>
           <div class="upload-label">Klik om een back-upbestand te kiezen</div>
           <div class="upload-hint">Alleen .json bestanden (solarbuffer_config.json)</div>
@@ -237,4 +318,5 @@
     }
   </script>
 </body>
+
 </html>

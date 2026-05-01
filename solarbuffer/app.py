@@ -476,6 +476,38 @@ def first_boot_welcome():
     return render_template("first_boot_welcome.html")
 
 
+@app.route("/first_boot/setup_choice")
+def first_boot_setup_choice():
+    if not is_first_boot():
+        return redirect("/")
+    error = request.args.get("error", "")
+    return render_template("setup_choice.html", error=error, first_boot=True)
+
+
+@app.route("/first_boot/import", methods=["POST"])
+def first_boot_import():
+    if not is_first_boot():
+        return redirect("/")
+    f = request.files.get("config_file")
+    if not f:
+        return redirect("/first_boot/setup_choice?error=Geen+bestand+geselecteerd")
+    try:
+        raw = f.read().decode("utf-8")
+        imported = json.loads(raw)
+        if not isinstance(imported, dict):
+            raise ValueError("Geen geldig configuratieobject")
+    except Exception as e:
+        return redirect(f"/first_boot/setup_choice?error=Ongeldig+JSON-bestand:+{e}")
+    with open(CONFIG_FILE, "w", encoding="utf-8") as fout:
+        json.dump(imported, fout, indent=4)
+    cfg = load_config()
+    save_config(cfg)
+    init_device_states(cfg["shelly_devices"])
+    init_device_pids(cfg["shelly_devices"])
+    write_audit_log("config_imported_firstboot", {"devices": len(cfg.get("shelly_devices", []))})
+    return redirect("/login")
+
+
 @app.route("/first_boot/user", methods=["GET", "POST"])
 def first_boot_user():
     if not is_first_boot():
@@ -500,7 +532,7 @@ def first_boot_user():
             session["logged_in"] = True
             session["username"] = username
             write_audit_log("first_boot_user_created", {"username": username})
-            return redirect("/setup")
+            return redirect("/?fresh=1")
     return render_template("first_boot_user.html", error=error)
 
 
@@ -516,7 +548,7 @@ def login():
         entered_password = request.form.get("password", "")
 
         users = cfg.get("users", [])
-        matched = next((u for u in users if u["username"] == entered_username), None)
+        matched = next((u for u in users if u["username"].lower() == entered_username.lower()), None)
         if matched and check_password_hash(matched.get("password_hash", ""), entered_password):
             if request.form.get("remember_me"):
                 session.permanent = True
@@ -957,6 +989,38 @@ def location():
                            error=error)
 
 
+@app.route("/restart", methods=["POST"])
+def restart():
+    if not require_login():
+        return jsonify(success=False), 401
+    write_audit_log("manual_restart", {"user": safe_session_username()})
+    def _do_restart():
+        cfg = load_config()
+        sync_configured_devices_off(cfg.get("shelly_devices", []))
+        time.sleep(1)
+        if os.name != "nt":
+            subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
+    threading.Thread(target=_do_restart, daemon=True).start()
+    return jsonify(success=True)
+
+
+@app.route("/factory_reset", methods=["POST"])
+def factory_reset():
+    if not require_login():
+        return jsonify(success=False), 401
+    cfg = load_config()
+    threading.Thread(target=sync_configured_devices_off, args=(cfg.get("shelly_devices", []),), daemon=True).start()
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f)
+    if os.path.exists(STATE_FILE):
+        os.remove(STATE_FILE)
+    device_states.clear()
+    device_pids.clear()
+    write_audit_log("factory_reset", {"user": safe_session_username()})
+    session.clear()
+    return jsonify(success=True)
+
+
 @app.route("/config/backup")
 def config_backup():
     if not require_login():
@@ -1177,7 +1241,8 @@ def run_update_check():
                 cfg = load_config()
                 sync_configured_devices_off(cfg.get("shelly_devices", []))
                 time.sleep(1.5)
-                subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
+                if os.name != "nt":
+                    subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
             threading.Thread(target=delayed_restart, daemon=True).start()
 
         return jsonify(success=True, returncode=pull.returncode, output=output,
@@ -1194,6 +1259,9 @@ def tailscale_status():
     global _tailscale_auth_url
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+
+    if os.name == "nt":
+        return jsonify({"installed": False, "connected": False, "ip": None, "auth_url": None})
 
     check = subprocess.run(["which", "tailscale"], capture_output=True, text=True)
     if check.returncode != 0:
@@ -1394,7 +1462,7 @@ def users_add():
         return redirect("/users?error=Wachtwoord moet minimaal 6 tekens bevatten")
     cfg = load_config()
     users = cfg.get("users", [])
-    if any(u["username"] == username for u in users):
+    if any(u["username"].lower() == username.lower() for u in users):
         return redirect("/users?error=Gebruikersnaam bestaat al")
     users.append({"username": username, "password_hash": generate_password_hash(password)})
     cfg["users"] = users
@@ -1927,7 +1995,8 @@ def _handle_mqtt_command(prefix, topic, payload):
                     cfg = load_config()
                     sync_configured_devices_off(cfg.get("shelly_devices", []))
                     time.sleep(1.5)
-                    subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
+                    if os.name != "nt":
+                        subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
             except Exception as e:
                 print(f"MQTT update fout: {e}")
         threading.Thread(target=_do_update, daemon=True).start()

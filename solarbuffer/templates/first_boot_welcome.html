@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
@@ -9,7 +10,12 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background: hsl(30, 25%, 97%);
@@ -20,8 +26,17 @@
       justify-content: center;
       padding: 1.5rem 1rem;
     }
-    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 460px; text-align: center; }
+
+    h1,
+    h2 {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 460px;
+      text-align: center;
+    }
 
     .logo {
       font-family: 'Space Grotesk', sans-serif;
@@ -30,26 +45,84 @@
       margin-bottom: 0.5rem;
       line-height: 1;
     }
+
     .logo .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .icon-wrap {
+    .sun-container {
+      position: relative;
       width: 88px;
       height: 88px;
+      margin: 0 auto 1.75rem;
+    }
+
+    .sun-glow {
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      background: radial-gradient(circle, hsla(40, 100%, 65%, 0.45) 0%, transparent 70%);
+      animation: glow-pulse 2.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .sun-rays {
+      position: absolute;
+      inset: -24px;
+      border-radius: 50%;
+      background: repeating-conic-gradient(from 0deg,
+          hsla(36, 95%, 58%, 0.7) 0deg 7deg,
+          transparent 7deg 30deg);
+      mask-image: radial-gradient(transparent 58%, black 60%);
+      -webkit-mask-image: radial-gradient(transparent 58%, black 60%);
+      animation: rays-spin 9s linear infinite;
+      pointer-events: none;
+    }
+
+    .icon-wrap {
+      position: absolute;
+      inset: 0;
       border-radius: 50%;
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 1.75rem;
       box-shadow: 0 12px 36px -8px hsla(32, 95%, 52%, 0.45);
     }
+
     .icon-wrap .mdi {
       font-size: 2.4rem;
       color: white;
+      display: block;
+      animation: icon-spin 12s linear infinite;
+    }
+
+    @keyframes glow-pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+
+      50% {
+        transform: scale(1.3);
+        opacity: 1;
+      }
+    }
+
+    @keyframes rays-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes icon-spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .badge {
@@ -89,6 +162,7 @@
       margin-bottom: 2.25rem;
       text-align: left;
     }
+
     .feature {
       display: flex;
       align-items: center;
@@ -98,6 +172,7 @@
       border-radius: 0.75rem;
       padding: 0.9rem 1rem;
     }
+
     .feature-icon {
       width: 38px;
       height: 38px;
@@ -108,10 +183,12 @@
       justify-content: center;
       flex-shrink: 0;
     }
+
     .feature-icon .mdi {
       font-size: 1.2rem;
       color: hsl(32, 90%, 50%);
     }
+
     .feature-text strong {
       display: block;
       font-size: 0.88rem;
@@ -119,6 +196,7 @@
       color: hsl(220, 20%, 16%);
       margin-bottom: 0.1rem;
     }
+
     .feature-text span {
       font-size: 0.78rem;
       color: hsl(220, 10%, 52%);
@@ -143,19 +221,31 @@
       box-shadow: 0 8px 24px -6px hsla(32, 95%, 52%, 0.5);
       transition: transform 0.15s, box-shadow 0.15s;
     }
+
     .btn-start:hover {
       transform: translateY(-2px);
       box-shadow: 0 12px 32px -6px hsla(32, 95%, 52%, 0.6);
     }
-    .btn-start:active { transform: translateY(0); }
-    .btn-start .mdi { font-size: 1.2rem; }
+
+    .btn-start:active {
+      transform: translateY(0);
+    }
+
+    .btn-start .mdi {
+      font-size: 1.2rem;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
 
-    <div class="icon-wrap">
-      <i class="mdi mdi-white-balance-sunny"></i>
+    <div class="sun-container">
+      <div class="sun-glow"></div>
+      <div class="sun-rays"></div>
+      <div class="icon-wrap">
+        <i class="mdi mdi-white-balance-sunny"></i>
+      </div>
     </div>
 
     <div class="logo"><span class="solar">Solar</span>Buffer</div>
@@ -178,7 +268,7 @@
         <div class="feature-icon"><i class="mdi mdi-power-plug-outline"></i></div>
         <div class="feature-text">
           <strong>Apparaten koppelen</strong>
-          <span>Verbind je P1-meter en Shelly-apparaten</span>
+          <span>Verbind je P1-meter en SolarBuffers</span>
         </div>
       </div>
       <div class="feature">
@@ -190,11 +280,12 @@
       </div>
     </div>
 
-    <a href="/first_boot/user" class="btn-start">
+    <a href="/first_boot/setup_choice" class="btn-start">
       <i class="mdi mdi-arrow-right-circle-outline"></i>
-      Klik hier om te beginnen
+      Begin installatie
     </a>
 
   </div>
 </body>
+
 </html>

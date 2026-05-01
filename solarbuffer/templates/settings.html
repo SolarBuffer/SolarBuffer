@@ -300,6 +300,79 @@
     html[data-theme="dark"] .ts-copy-btn      { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 70%); }
     html[data-theme="dark"] .ts-copy-btn:hover { background: hsl(220, 8%, 38%); }
     html[data-theme="dark"] .ts-install-cmd   { background: hsl(220, 12%, 12%); }
+
+    /* ===== FACTORY RESET ===== */
+    .settings-icon.danger {
+      background: hsl(0, 80%, 95%);
+      color: hsl(0, 70%, 50%);
+    }
+    .settings-item.danger .settings-label { color: hsl(0, 65%, 42%); }
+    .settings-item.danger:hover { background: hsl(0, 80%, 98%); }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 20px 60px -10px rgba(0,0,0,0.3);
+    }
+    .modal-icon {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: hsl(0, 80%, 95%);
+      color: hsl(0, 65%, 48%);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem;
+      font-size: 1.5rem;
+    }
+    .modal h2 {
+      font-size: 1.1rem; font-weight: 700;
+      text-align: center; margin-bottom: 0.5rem;
+    }
+    .modal p {
+      font-size: 0.85rem; color: hsl(220, 10%, 46%);
+      text-align: center; line-height: 1.55; margin-bottom: 1.25rem;
+    }
+    .modal-btns { display: flex; gap: 0.75rem; }
+    .btn-cancel {
+      flex: 1; padding: 0.7rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem; background: transparent;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 0.95rem;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-cancel:hover { background: hsl(30, 15%, 94%); }
+    .btn-reset {
+      flex: 1; padding: 0.7rem;
+      background: hsl(0, 68%, 50%);
+      border: none; border-radius: 0.5rem; color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700; font-size: 0.95rem;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-reset:hover { background: hsl(0, 65%, 44%); }
+    .btn-reset:disabled { opacity: 0.6; cursor: default; }
+
+    html[data-theme="dark"] .settings-icon.danger { background: hsl(0, 40%, 22%); color: hsl(0, 70%, 62%); }
+    html[data-theme="dark"] .settings-item.danger .settings-label { color: hsl(0, 65%, 62%); }
+    html[data-theme="dark"] .settings-item.danger:hover { background: hsl(0, 20%, 22%); }
+    html[data-theme="dark"] .modal { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .modal p { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .btn-cancel { border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 70%); }
+    html[data-theme="dark"] .btn-cancel:hover { background: hsl(220, 8%, 30%); }
   </style>
 </head>
 <body>
@@ -489,10 +562,65 @@
 
     </div>
 
+    <div class="section-title">Systeem</div>
+    <div class="settings-list">
+      <div class="settings-item" onclick="openRestartModal()">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg>
+        </div>
+        <div class="settings-text">
+          <div class="settings-label">Herstart hub</div>
+          <div class="settings-sub">Start de SolarBuffer service opnieuw op</div>
+        </div>
+        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+      </div>
+
+      <div class="settings-item danger" onclick="openResetModal()">
+        <div class="settings-icon danger">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
+        </div>
+        <div class="settings-text">
+          <div class="settings-label">Factory reset</div>
+          <div class="settings-sub">Wist alle instellingen en start opnieuw</div>
+        </div>
+        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+      </div>
+    </div>
+
     <div class="back-link">
       <a href="/dashboard">← Terug naar dashboard</a>
     </div>
 
+  </div>
+
+  <!-- Herstart modal -->
+  <div class="modal-overlay" id="restartModal">
+    <div class="modal">
+      <div class="modal-icon" style="background:hsl(32,100%,94%);color:hsl(32,90%,48%)">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg>
+      </div>
+      <h2>Herstart hub</h2>
+      <p>De SolarBuffer service wordt opnieuw opgestart. De pagina is daarna circa <strong>30 seconden</strong> niet bereikbaar.</p>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeRestartModal()">Annuleren</button>
+        <button class="btn-reset" id="restartBtn" style="background:hsl(32,95%,52%)" onclick="doRestart()">Herstarten</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Factory reset modal -->
+  <div class="modal-overlay" id="resetModal">
+    <div class="modal">
+      <div class="modal-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
+      </div>
+      <h2>Factory reset</h2>
+      <p>Alle instellingen, apparaten, tijdschema's en accounts worden gewist. Je wordt teruggestuurd naar de eerste installatie.<br><br><strong>Dit kan niet ongedaan worden gemaakt.</strong></p>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeResetModal()">Annuleren</button>
+        <button class="btn-reset" id="resetBtn" onclick="doReset()">Resetten</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -626,6 +754,45 @@
 
     tsFetchStatus();
     setInterval(() => { if (_tsWaitingForAuth && _tsPanelOpen) tsFetchStatus(); }, 3000);
+
+    // ===== HERSTART =====
+    function openRestartModal()  { document.getElementById('restartModal').classList.add('open'); }
+    function closeRestartModal() { document.getElementById('restartModal').classList.remove('open'); }
+
+    function doRestart() {
+      const btn = document.getElementById('restartBtn');
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      fetch('/restart', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            btn.textContent = 'Herstarten…';
+            setTimeout(() => window.location.href = '/dashboard', 35000);
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Herstarten';
+          }
+        })
+        .catch(() => { btn.disabled = false; btn.textContent = 'Herstarten'; });
+    }
+
+    // ===== FACTORY RESET =====
+    function openResetModal()  { document.getElementById('resetModal').classList.add('open'); }
+    function closeResetModal() { document.getElementById('resetModal').classList.remove('open'); }
+
+    function doReset() {
+      const btn = document.getElementById('resetBtn');
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      fetch('/factory_reset', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) window.location.href = '/first_boot/welcome';
+          else { btn.disabled = false; btn.textContent = 'Resetten'; }
+        })
+        .catch(() => { btn.disabled = false; btn.textContent = 'Resetten'; });
+    }
   </script>
 </body>
 </html>
