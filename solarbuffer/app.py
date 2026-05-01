@@ -553,7 +553,7 @@ def login():
             if request.form.get("remember_me"):
                 session.permanent = True
             session["logged_in"] = True
-            session["username"] = entered_username
+            session["username"] = matched["username"]
             write_audit_log("login_success", {"username": entered_username})
             return redirect("/")
         else:
