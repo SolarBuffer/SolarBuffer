@@ -1,2 +1,2 @@
-*config.json, *audit.log, *state.json
+*config.json, *audit.log, *state.json, __pycache__/, *.pyc
 
