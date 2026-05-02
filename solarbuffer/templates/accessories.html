@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
   <title>Verbruikers - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
@@ -565,7 +568,13 @@
               <div class="acc-sub">{{ acc.power_meter_type | upper }} · {{ acc.power_ips | join(', ') }}</div>
             </div>
             <div class="acc-actions">
-              <button class="btn-icon" title="Bewerken" onclick="openEdit('{{ acc.id }}','{{ acc.name | replace("'","\\'")|e }}','{{ acc.power_meter_type }}',{{ acc.power_ips | tojson | e }},'{{ acc.icon or "mdi-power-plug" }}')">
+              <button class="btn-icon" title="Bewerken"
+                data-id="{{ acc.id }}"
+                data-name="{{ acc.name | e }}"
+                data-type="{{ acc.power_meter_type }}"
+                data-ips="{{ acc.power_ips | tojson | e }}"
+                data-icon="{{ acc.icon or 'mdi-power-plug' }}"
+                onclick="openEditFromBtn(this)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
               </button>
               <button class="btn-icon delete" title="Verwijderen" onclick="deleteAcc('{{ acc.id }}','{{ acc.name | replace("'","\\'")|e }}')">
@@ -802,6 +811,11 @@
         const fallback = document.querySelector('[data-icon="mdi-power-plug"]');
         if (fallback) fallback.classList.add('active');
       }
+    }
+
+    function openEditFromBtn(el) {
+      const ips = JSON.parse(el.dataset.ips);
+      openEdit(el.dataset.id, el.dataset.name, el.dataset.type, ips, el.dataset.icon);
     }
 
     function openAdd() {
