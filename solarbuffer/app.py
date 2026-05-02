@@ -107,8 +107,13 @@ def load_config():
             acc["id"] = str(uuid.uuid4())
         if "power_meter_type" not in acc:
             acc["power_meter_type"] = "shelly"
+        # Migreer enkel power_ip → power_ips array
+        if "power_ips" not in acc:
+            old_ip = (acc.get("power_ip") or "").strip()
+            acc["power_ips"] = [old_ip] if old_ip else []
+        acc["power_ips"] = [ip for ip in acc["power_ips"] if ip.strip()]
         if "power_ip" not in acc:
-            acc["power_ip"] = ""
+            acc["power_ip"] = acc["power_ips"][0] if acc["power_ips"] else ""
         if "icon" not in acc:
             acc["icon"] = "mdi-power-plug"
 
@@ -893,7 +898,7 @@ def status_json():
             "id": acc_id,
             "name": acc.get("name", ""),
             "power_meter_type": acc.get("power_meter_type", ""),
-            "power_ip": acc.get("power_ip", ""),
+            "power_ips": acc.get("power_ips", [acc.get("power_ip", "")]),
             "icon": acc.get("icon", "mdi-power-plug"),
             "power": st.get("power", 0.0),
             "online": st.get("online", False),
@@ -1564,7 +1569,8 @@ def scan_accessories():
         used_ips.add((d.get("power_ip") or "").strip())
         used_ips.add((d.get("power_socket_ip") or "").strip())
     for a in cfg.get("accessories", []):
-        used_ips.add((a.get("power_ip") or "").strip())
+        for ip in a.get("power_ips", [(a.get("power_ip") or "")]):
+            used_ips.add(ip.strip())
     used_ips.discard("")
 
     ips = get_subnet_ips()
@@ -1602,17 +1608,18 @@ def add_accessory():
     data = request.get_json(force=True) or {}
     name = (data.get("name") or "").strip()
     pm_type = (data.get("power_meter_type") or "").strip().lower()
-    pm_ip = (data.get("power_ip") or "").strip()
-    if not name or not pm_type or not pm_ip:
-        return jsonify(success=False, error="Naam, type en IP zijn verplicht"), 400
+    pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
+    if not name or not pm_type or not pm_ips:
+        return jsonify(success=False, error="Naam, type en minimaal één IP zijn verplicht"), 400
     if pm_type not in ("shelly", "homewizard"):
         return jsonify(success=False, error="Ongeldig type"), 400
     cfg = load_config()
     icon = (data.get("icon") or "mdi-power-plug").strip()
-    new_acc = {"id": str(uuid.uuid4()), "name": name, "power_meter_type": pm_type, "power_ip": pm_ip, "icon": icon}
+    new_acc = {"id": str(uuid.uuid4()), "name": name, "power_meter_type": pm_type,
+               "power_ip": pm_ips[0], "power_ips": pm_ips, "icon": icon}
     cfg["accessories"].append(new_acc)
     save_config(cfg)
-    write_audit_log("accessory_added", {"name": name, "power_ip": pm_ip})
+    write_audit_log("accessory_added", {"name": name, "power_ips": pm_ips})
     return jsonify(success=True, accessory=new_acc)
 
 
@@ -1627,14 +1634,15 @@ def update_accessory(acc_id):
         return jsonify(success=False, error="Niet gevonden"), 404
     name = (data.get("name") or "").strip()
     pm_type = (data.get("power_meter_type") or "").strip().lower()
-    pm_ip = (data.get("power_ip") or "").strip()
-    if not name or not pm_type or not pm_ip:
-        return jsonify(success=False, error="Naam, type en IP zijn verplicht"), 400
+    pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
+    if not name or not pm_type or not pm_ips:
+        return jsonify(success=False, error="Naam, type en minimaal één IP zijn verplicht"), 400
     if pm_type not in ("shelly", "homewizard"):
         return jsonify(success=False, error="Ongeldig type"), 400
     acc["name"] = name
     acc["power_meter_type"] = pm_type
-    acc["power_ip"] = pm_ip
+    acc["power_ip"] = pm_ips[0]
+    acc["power_ips"] = pm_ips
     acc["icon"] = (data.get("icon") or "mdi-power-plug").strip()
     save_config(cfg)
     write_audit_log("accessory_updated", {"id": acc_id, "name": name})
@@ -2988,21 +2996,25 @@ def accessory_poll_loop():
             for acc in cfg.get("accessories", []):
                 acc_id = acc.get("id")
                 pm_type = (acc.get("power_meter_type") or "").lower()
-                pm_ip = (acc.get("power_ip") or "").strip()
-                if not acc_id or not pm_ip:
+                pm_ips = [ip.strip() for ip in acc.get("power_ips", []) if ip.strip()]
+                if not acc_id or not pm_ips:
                     continue
                 if acc_id not in accessory_states:
                     accessory_states[acc_id] = {"power": 0.0, "online": False}
                 try:
-                    if pm_type == "shelly":
-                        accessory_states[acc_id]["power"] = get_shelly_device_power(pm_ip)
-                        accessory_states[acc_id]["online"] = accessory_states[acc_id]["power"] > 0 or check_http_device_online(pm_ip, "/rpc/Shelly.GetStatus")
-                    elif pm_type == "homewizard":
-                        accessory_states[acc_id]["power"] = get_homewizard_power(pm_ip)
-                        accessory_states[acc_id]["online"] = True
-                    else:
-                        accessory_states[acc_id]["power"] = 0.0
-                        accessory_states[acc_id]["online"] = False
+                    total_power = 0.0
+                    any_online = False
+                    for pm_ip in pm_ips:
+                        if pm_type == "shelly":
+                            p = get_shelly_device_power(pm_ip)
+                            total_power += p
+                            if p > 0 or check_http_device_online(pm_ip, "/rpc/Shelly.GetStatus"):
+                                any_online = True
+                        elif pm_type == "homewizard":
+                            total_power += get_homewizard_power(pm_ip)
+                            any_online = True
+                    accessory_states[acc_id]["power"] = total_power
+                    accessory_states[acc_id]["online"] = any_online
                 except Exception:
                     accessory_states[acc_id]["online"] = False
         except Exception:

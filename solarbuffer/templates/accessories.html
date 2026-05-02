@@ -261,6 +261,73 @@
     }
     .btn-add:hover { background: hsl(32, 100%, 94%); border-color: hsl(32, 70%, 60%); }
 
+    /* ===== MEERDERE IPs ===== */
+    .ip-row {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+    .ip-row input {
+      flex: 1;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: hsl(220, 20%, 14%);
+      background: white;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .ip-row input:focus {
+      border-color: hsl(32, 85%, 60%);
+      box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.12);
+    }
+    .btn-remove-ip {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      border: 1px solid hsl(0, 60%, 85%);
+      background: hsl(0, 80%, 97%);
+      color: hsl(0, 65%, 48%);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .btn-remove-ip:hover { background: hsl(0, 80%, 93%); }
+
+    .btn-add-ip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.65rem;
+      border: 1.5px dashed hsl(32, 70%, 72%);
+      border-radius: 0.4rem;
+      background: transparent;
+      color: hsl(32, 85%, 42%);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 0.3rem;
+      transition: background 0.12s;
+    }
+    .btn-add-ip:hover { background: hsl(32, 100%, 96%); }
+
+    html[data-theme="dark"] .ip-row input {
+      background: hsl(220, 8%, 20%);
+      border-color: hsl(220, 8%, 36%);
+      color: hsl(220, 10%, 88%);
+    }
+    html[data-theme="dark"] .ip-row input:focus {
+      border-color: hsl(32, 80%, 56%);
+      box-shadow: 0 0 0 3px hsla(32, 80%, 52%, 0.15);
+    }
+    html[data-theme="dark"] .btn-remove-ip { background: hsl(0, 20%, 22%); border-color: hsl(0, 40%, 34%); color: hsl(0, 65%, 60%); }
+    html[data-theme="dark"] .btn-add-ip { color: hsl(32, 70%, 58%); border-color: hsl(32, 40%, 40%); }
+    html[data-theme="dark"] .btn-add-ip:hover { background: hsl(220, 8%, 26%); }
+
     /* ===== ICON PICKER ===== */
     .icon-picker-grid {
       display: grid;
@@ -495,10 +562,10 @@
             </div>
             <div class="acc-info">
               <div class="acc-name">{{ acc.name }}</div>
-              <div class="acc-sub">{{ acc.power_meter_type | upper }} · {{ acc.power_ip }}</div>
+              <div class="acc-sub">{{ acc.power_meter_type | upper }} · {{ acc.power_ips | join(', ') }}</div>
             </div>
             <div class="acc-actions">
-              <button class="btn-icon" title="Bewerken" onclick="openEdit('{{ acc.id }}','{{ acc.name | replace("'","\\'")|e }}','{{ acc.power_meter_type }}','{{ acc.power_ip }}','{{ acc.icon or "mdi-power-plug" }}')">
+              <button class="btn-icon" title="Bewerken" onclick="openEdit('{{ acc.id }}','{{ acc.name | replace("'","\\'")|e }}','{{ acc.power_meter_type }}',{{ acc.power_ips | tojson }},'{{ acc.icon or "mdi-power-plug" }}')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
               </button>
               <button class="btn-icon delete" title="Verwijderen" onclick="deleteAcc('{{ acc.id }}','{{ acc.name | replace("'","\\'")|e }}')">
@@ -534,9 +601,13 @@
       </div>
 
       <div class="form-field">
-        <label>IP-adres vermogensmeter</label>
-        <input type="text" id="fIp" placeholder="192.168.1.xxx" inputmode="decimal">
-        <div class="form-hint">Het lokale IP van de Shelly of HomeWizard die aan dit apparaat hangt</div>
+        <label>IP-adres(sen) vermogensmeter</label>
+        <div id="ipList"></div>
+        <button type="button" class="btn-add-ip" onclick="addIpField('')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+          Nog een meter toevoegen
+        </button>
+        <div class="form-hint">Meerdere meters worden bij elkaar opgeteld (bijv. twee groepen zonnepanelen)</div>
       </div>
 
       <div class="form-field">
@@ -666,14 +737,50 @@
       openAdd();
       document.getElementById('fName').value = name;
       document.getElementById('fType').value = type;
-      document.getElementById('fIp').value = ip;
-      // Markeer het geselecteerde item zodat de gebruiker weet wat geselecteerd is
+      setIpList([ip]);
       document.querySelectorAll('.scan-item').forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');
     }
 
     function escHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function addIpField(value) {
+      const list = document.getElementById('ipList');
+      const row = document.createElement('div');
+      row.className = 'ip-row';
+      row.innerHTML = `
+        <input type="text" placeholder="192.168.1.xxx" inputmode="decimal" value="${escHtml(value)}">
+        <button type="button" class="btn-remove-ip" onclick="removeIpRow(this)" title="Verwijderen">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+        </button>`;
+      list.appendChild(row);
+      updateRemoveButtons();
+    }
+
+    function removeIpRow(btn) {
+      btn.closest('.ip-row').remove();
+      updateRemoveButtons();
+    }
+
+    function updateRemoveButtons() {
+      const rows = document.querySelectorAll('#ipList .ip-row');
+      rows.forEach(r => {
+        r.querySelector('.btn-remove-ip').style.display = rows.length > 1 ? '' : 'none';
+      });
+    }
+
+    function getIpList() {
+      return Array.from(document.querySelectorAll('#ipList .ip-row input'))
+        .map(i => i.value.trim()).filter(Boolean);
+    }
+
+    function setIpList(ips) {
+      const list = document.getElementById('ipList');
+      list.innerHTML = '';
+      const arr = (ips && ips.length) ? ips : [''];
+      arr.forEach(ip => addIpField(ip));
     }
 
     function selectIcon(el) {
@@ -702,7 +809,7 @@
       document.getElementById('formTitle').textContent = 'Verbruiker toevoegen';
       document.getElementById('fName').value = '';
       document.getElementById('fType').value = 'shelly';
-      document.getElementById('fIp').value = '';
+      setIpList(['']);
       setSelectedIcon('mdi-washing-machine');
       document.getElementById('formError').className = 'form-error';
       document.getElementById('btnSave').disabled = false;
@@ -711,12 +818,12 @@
       document.getElementById('fName').focus();
     }
 
-    function openEdit(id, name, type, ip, icon) {
+    function openEdit(id, name, type, ips, icon) {
       _editId = id;
       document.getElementById('formTitle').textContent = 'Verbruiker bewerken';
       document.getElementById('fName').value = name;
       document.getElementById('fType').value = type;
-      document.getElementById('fIp').value = ip;
+      setIpList(Array.isArray(ips) ? ips : [ips]);
       setSelectedIcon(icon || 'mdi-power-plug');
       document.getElementById('formError').className = 'form-error';
       document.getElementById('btnSave').disabled = false;
@@ -732,14 +839,14 @@
     }
 
     function saveAcc() {
-      const name = document.getElementById('fName').value.trim();
-      const type = document.getElementById('fType').value;
-      const ip   = document.getElementById('fIp').value.trim();
+      const name  = document.getElementById('fName').value.trim();
+      const type  = document.getElementById('fType').value;
+      const ips   = getIpList();
       const errEl = document.getElementById('formError');
       const btn   = document.getElementById('btnSave');
 
-      if (!name || !ip) {
-        errEl.textContent = 'Vul naam en IP-adres in.';
+      if (!name || ips.length === 0) {
+        errEl.textContent = 'Vul naam en minimaal één IP-adres in.';
         errEl.className = 'form-error show';
         return;
       }
@@ -754,7 +861,7 @@
       fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, power_meter_type: type, power_ip: ip, icon })
+        body: JSON.stringify({ name, power_meter_type: type, power_ips: ips, icon })
       })
       .then(r => r.json())
       .then(data => {
@@ -766,11 +873,11 @@
             const card = document.getElementById(`acc-${_editId}`);
             if (card) {
               card.querySelector('.acc-name').textContent = name;
-              card.querySelector('.acc-sub').textContent = type.toUpperCase() + ' · ' + ip;
+              card.querySelector('.acc-sub').textContent = type.toUpperCase() + ' · ' + ips.join(', ');
               const iconEl = card.querySelector('.acc-icon-mdi i');
               if (iconEl) iconEl.className = `mdi ${icon}`;
               card.querySelector('.btn-icon:not(.delete)').setAttribute('onclick',
-                `openEdit('${_editId}','${escHtml(name)}','${type}','${ip}','${icon}')`);
+                `openEdit('${_editId}','${escHtml(name)}','${type}',${JSON.stringify(ips)},'${icon}')`);
             }
           } else {
             // Bij toevoegen: kaart toevoegen aan de lijst
@@ -787,10 +894,10 @@
                 </div>
                 <div class="acc-info">
                   <div class="acc-name">${escHtml(acc.name)}</div>
-                  <div class="acc-sub">${escHtml(acc.power_meter_type.toUpperCase())} · ${escHtml(acc.power_ip)}</div>
+                  <div class="acc-sub">${escHtml(acc.power_meter_type.toUpperCase())} · ${escHtml((acc.power_ips || [acc.power_ip]).join(', '))}</div>
                 </div>
                 <div class="acc-actions">
-                  <button class="btn-icon" title="Bewerken" onclick="openEdit('${acc.id}','${escHtml(acc.name)}','${acc.power_meter_type}','${acc.power_ip}','${escHtml(acc.icon || 'mdi-power-plug')}')">
+                  <button class="btn-icon" title="Bewerken" onclick="openEdit('${acc.id}','${escHtml(acc.name)}','${acc.power_meter_type}',${JSON.stringify(acc.power_ips || [acc.power_ip])},'${escHtml(acc.icon || 'mdi-power-plug')}')">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
                   </button>
                   <button class="btn-icon delete" title="Verwijderen" onclick="deleteAcc('${acc.id}','${escHtml(acc.name)}')">
