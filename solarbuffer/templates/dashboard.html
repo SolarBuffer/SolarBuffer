@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
@@ -582,6 +583,70 @@
       color: hsl(220, 10%, 46%);
       margin-top: 1rem;
     }
+
+    /* ===== ACCESSOIRE TEGELS ===== */
+    .acc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+
+    .acc-tile {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.75rem 0.8rem;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.6rem;
+      background: white;
+    }
+
+    .acc-tile-icon {
+      width: 38px; height: 38px;
+      border-radius: 9px;
+      background: hsl(32, 100%, 95%);
+      color: hsl(32, 95%, 48%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .acc-tile-info { flex: 1; min-width: 0; }
+    .acc-tile-name { font-weight: 600; font-size: 0.93rem; }
+    .acc-tile-sub  { font-size: 0.76rem; color: hsl(220, 10%, 50%); margin-top: 0.08rem; }
+
+    .acc-tile-power {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .acc-tile-watt {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: hsl(220, 20%, 14%);
+    }
+    .acc-tile-unit { font-size: 0.72rem; color: hsl(220, 10%, 50%); }
+
+    .acc-online-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      margin-top: 0.3rem;
+      display: inline-block;
+    }
+    .acc-online-badge.online  { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .acc-online-badge.offline { background: hsl(0, 60%, 93%);   color: hsl(0, 65%, 42%); }
+
+    html[data-theme="dark"] .acc-grid .acc-tile {
+      background: hsl(220, 8%, 28%);
+      border-color: hsl(220, 8%, 35%);
+    }
+    html[data-theme="dark"] .acc-tile-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .acc-tile-sub  { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .acc-tile-watt { color: hsl(220, 10%, 90%); }
+    html[data-theme="dark"] .acc-tile-unit { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .acc-online-badge.online  { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
+    html[data-theme="dark"] .acc-online-badge.offline { background: hsl(0, 25%, 22%);   color: hsl(0, 65%, 60%); }
 
     .device-card {
       border: 1px solid hsl(30, 15%, 88%);
@@ -1655,6 +1720,11 @@
       <div id="devicesContainer"></div>
     </div>
 
+    <div class="card control-card" id="accessoriesCard" style="display:none">
+      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span> Verbruikers</h2>
+      <div id="accessoriesContainer"></div>
+    </div>
+
     <div class="card control-card" id="forecastCard">
       <h2>
         <span class="ctrl-icon">
@@ -1821,6 +1891,7 @@
           document.getElementById("buffer_status_card").className = `card stat-card status-card ${bufferStatus.cls}`;
 
           renderDevices(data.devices || []);
+          renderAccessories(data.accessories || []);
           renderSchedules(data.schedules || [], data.active_schedule || null);
         })
         .catch(err => console.error("Update error:", err));
@@ -2195,6 +2266,35 @@
         const restored = document.getElementById(focusedId);
         if (restored) restored.focus();
       }
+    }
+
+    function renderAccessories(accessories) {
+      const card = document.getElementById('accessoriesCard');
+      const cont = document.getElementById('accessoriesContainer');
+      if (!accessories || accessories.length === 0) {
+        card.style.display = 'none';
+        return;
+      }
+      card.style.display = '';
+      cont.innerHTML = '<div class="acc-grid">' + accessories.map(acc => {
+        const power = Number(acc.power || 0);
+        const onlineLabel = acc.online ? '● Online' : '● Offline';
+        const onlineCls   = acc.online ? 'online' : 'offline';
+        return `
+          <div class="acc-tile">
+            <div class="acc-tile-icon">
+              <i class="mdi ${escapeHtml(acc.icon || 'mdi-power-plug')}" style="font-size:1.2rem;line-height:1"></i>
+            </div>
+            <div class="acc-tile-info">
+              <div class="acc-tile-name">${escapeHtml(acc.name)}</div>
+              <span class="acc-online-badge ${onlineCls}">${onlineLabel}</span>
+            </div>
+            <div class="acc-tile-power">
+              <div class="acc-tile-watt">${power.toFixed(0)}</div>
+              <div class="acc-tile-unit">W</div>
+            </div>
+          </div>`;
+      }).join('') + '</div>';
     }
 
     function runUpdateCheck() {
