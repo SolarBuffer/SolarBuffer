@@ -572,7 +572,7 @@
                 data-id="{{ acc.id }}"
                 data-name="{{ acc.name | e }}"
                 data-type="{{ acc.power_meter_type }}"
-                data-ips="{{ acc.power_ips | tojson | e }}"
+                data-ips="{{ acc.power_ips | tojson | forceescape }}"
                 data-icon="{{ acc.icon or 'mdi-power-plug' }}"
                 onclick="openEditFromBtn(this)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
@@ -760,7 +760,7 @@
       const row = document.createElement('div');
       row.className = 'ip-row';
       row.innerHTML = `
-        <input type="text" placeholder="192.168.1.xxx" inputmode="decimal" value="${escHtml(value)}">
+        <input type="text" placeholder="192.168.1.xxx" inputmode="url" value="${escHtml(value)}">
         <button type="button" class="btn-remove-ip" onclick="removeIpRow(this)" title="Verwijderen">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
         </button>`;
@@ -890,8 +890,13 @@
               card.querySelector('.acc-sub').textContent = type.toUpperCase() + ' · ' + ips.join(', ');
               const iconEl = card.querySelector('.acc-icon-mdi i');
               if (iconEl) iconEl.className = `mdi ${icon}`;
-              card.querySelector('.btn-icon:not(.delete)').setAttribute('onclick',
-                `openEdit('${_editId}','${escHtml(name)}','${type}',${JSON.stringify(ips)},'${icon}')`);
+              const editBtn = card.querySelector('.btn-icon:not(.delete)');
+              if (editBtn) {
+                editBtn.dataset.name = name;
+                editBtn.dataset.type = type;
+                editBtn.dataset.ips  = JSON.stringify(ips);
+                editBtn.dataset.icon = icon;
+              }
             }
           } else {
             // Bij toevoegen: kaart toevoegen aan de lijst
