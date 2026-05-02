@@ -1,2 +1,2 @@
-*config.json, *audit.log, *state.json, __pycache__/, *.pyc, history.db
+*config.json, *audit.log, *state.json, __pycache__/, *.pyc, history.db, history.db-wal, history.db-shm
 
