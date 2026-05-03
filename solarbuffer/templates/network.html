@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Netwerk - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.12), transparent 28%),
+        hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover {
+      background: hsl(32, 100%, 96%);
+      border-color: hsl(32, 85%, 60%);
+      color: hsl(32, 90%, 40%);
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(220, 10%, 52%);
+      padding: 0 0.25rem;
+      margin: 1.25rem 0 0.4rem;
+    }
+
+    /* ===== HUIDIGE VERBINDING ===== */
+    .current-card {
+      background: white;
+      border: 1.5px solid hsl(32, 80%, 78%);
+      border-radius: 0.875rem;
+      box-shadow: 0 4px 20px -6px hsla(32, 95%, 52%, 0.22);
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .current-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.1rem;
+    }
+
+    .current-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .current-text { flex: 1; min-width: 0; }
+    .current-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: hsl(32, 80%, 48%);
+      margin-bottom: 0.2rem;
+    }
+    .current-ssid {
+      font-weight: 700;
+      font-size: 1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .current-meta {
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 50%);
+      margin-top: 0.1rem;
+    }
+
+    .connected-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: hsl(145, 55%, 32%);
+      background: hsl(145, 55%, 90%);
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+      flex-shrink: 0;
+    }
+    .connected-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: hsl(145, 55%, 42%);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ===== NETWERKEN LIJST ===== */
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .scan-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.1rem 0.6rem;
+      border-bottom: 1px solid hsl(30, 15%, 91%);
+    }
+    .scan-header-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .refresh-btn {
+      background: none;
+      border: none;
+      color: hsl(32, 95%, 48%);
+      cursor: pointer;
+      padding: 0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: opacity 0.15s;
+    }
+    .refresh-btn:hover { opacity: 0.75; }
+    .refresh-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .network-list { max-height: 220px; overflow-y: auto; }
+
+    .network-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1.1rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid hsl(30, 15%, 93%);
+      user-select: none;
+    }
+    .network-item:last-child { border-bottom: none; }
+    .network-item:hover { background: hsla(32, 95%, 52%, 0.06); }
+    .network-item.selected { background: hsla(32, 95%, 52%, 0.11); }
+    .network-item.is-current { background: hsla(145, 60%, 52%, 0.07); }
+    .network-item.is-current:hover { background: hsla(145, 60%, 52%, 0.12); }
+
+    .network-signal {
+      color: hsl(32, 95%, 48%);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .network-item.is-current .network-signal { color: hsl(145, 55%, 38%); }
+
+    .network-name {
+      flex: 1;
+      font-size: 0.9rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .network-item.is-current .network-name { font-weight: 700; }
+
+    .network-right {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-shrink: 0;
+    }
+    .network-lock {
+      color: hsl(220, 10%, 62%);
+      font-size: 0.95rem;
+    }
+    .current-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: hsl(145, 55%, 32%);
+      background: hsl(145, 55%, 90%);
+      border-radius: 999px;
+      padding: 0.1rem 0.45rem;
+    }
+
+    .scan-status {
+      text-align: center;
+      padding: 1rem;
+      color: hsl(220, 10%, 55%);
+      font-size: 0.85rem;
+    }
+
+    /* ===== FORMULIER ===== */
+    .form-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .form-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .form-field {
+      padding: 0.8rem 1.1rem;
+      border-bottom: 1px solid hsl(30, 15%, 91%);
+    }
+    .form-field:last-child { border-bottom: none; }
+
+    .form-label {
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: hsl(220, 10%, 46%);
+      margin-bottom: 0.35rem;
+      display: block;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1.5px solid hsl(30, 15%, 88%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      color: hsl(220, 20%, 14%);
+      background: hsl(30, 25%, 98%);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+      border-color: hsl(32, 95%, 52%);
+      box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.14);
+      outline: none;
+    }
+
+    .password-wrap { position: relative; }
+    .password-wrap .form-input { padding-right: 2.8rem; }
+    .toggle-pw {
+      position: absolute;
+      top: 50%; right: 0.75rem;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: hsl(220, 10%, 60%);
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+    .toggle-pw:hover { color: hsl(220, 10%, 32%); }
+
+    /* ===== KNOP ===== */
+    .connect-btn {
+      display: block;
+      width: calc(100% - 2.2rem);
+      margin: 0 1.1rem 1.1rem;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-weight: 700;
+      font-size: 0.95rem;
+      font-family: 'Space Grotesk', sans-serif;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 0.6rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .connect-btn:hover { background: hsl(32, 90%, 44%); }
+    .connect-btn:active { transform: scale(0.97); }
+    .connect-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    /* ===== STATUSBALK ===== */
+    .status-bar {
+      border-radius: 0.6rem;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: none;
+      margin-bottom: 0.75rem;
+      align-items: center;
+      gap: 0.55rem;
+    }
+    .status-bar.show { display: flex; }
+    .status-bar.info    { background: hsla(32, 95%, 52%, 0.1);  color: hsl(32, 90%, 38%); }
+    .status-bar.success { background: hsl(145, 55%, 90%); color: hsl(145, 55%, 30%); }
+    .status-bar.error   { background: hsl(0, 80%, 95%); color: hsl(0, 65%, 42%); }
+
+    /* ===== SPINNING ===== */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { display: inline-block; animation: spin 0.9s linear infinite; }
+
+    /* ===== DARK MODE ===== */
+    html[data-theme="dark"] body {
+      background: hsl(220, 8%, 18%);
+      color: hsl(220, 10%, 88%);
+    }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .back-btn {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 36%);
+      color: hsl(220, 10%, 82%);
+    }
+    html[data-theme="dark"] .back-btn:hover {
+      background: hsl(220, 8%, 32%);
+      border-color: hsl(32, 70%, 50%);
+      color: hsl(32, 80%, 62%);
+    }
+    html[data-theme="dark"] .section-title { color: hsl(220, 8%, 52%); }
+
+    html[data-theme="dark"] .current-card {
+      background: hsl(220, 8%, 24%);
+      border-color: hsl(32, 50%, 42%);
+    }
+    html[data-theme="dark"] .current-label { color: hsl(32, 80%, 60%); }
+    html[data-theme="dark"] .current-ssid  { color: hsl(220, 8%, 90%); }
+    html[data-theme="dark"] .current-meta  { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .connected-badge {
+      background: hsl(145, 30%, 22%);
+      color: hsl(145, 55%, 62%);
+    }
+    html[data-theme="dark"] .connected-dot { background: hsl(145, 55%, 50%); }
+
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .form-card {
+      background: hsl(220, 8%, 24%);
+      border-color: hsl(220, 8%, 32%);
+    }
+    html[data-theme="dark"] .scan-header {
+      border-color: hsl(220, 8%, 30%);
+    }
+    html[data-theme="dark"] .scan-header-title { color: hsl(220, 8%, 85%); }
+    html[data-theme="dark"] .network-item {
+      border-color: hsl(220, 8%, 30%);
+    }
+    html[data-theme="dark"] .network-item:hover    { background: hsla(32, 80%, 52%, 0.08); }
+    html[data-theme="dark"] .network-item.selected { background: hsla(32, 80%, 52%, 0.14); }
+    html[data-theme="dark"] .network-item.is-current { background: hsla(145, 55%, 42%, 0.1); }
+    html[data-theme="dark"] .network-item.is-current:hover { background: hsla(145, 55%, 42%, 0.16); }
+    html[data-theme="dark"] .network-name  { color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .current-tag {
+      background: hsl(145, 30%, 22%);
+      color: hsl(145, 55%, 62%);
+    }
+    html[data-theme="dark"] .scan-status  { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .network-lock { color: hsl(220, 8%, 50%); }
+
+    html[data-theme="dark"] .form-field { border-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .form-label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .form-input {
+      background: hsl(220, 8%, 20%);
+      border-color: hsl(220, 8%, 36%);
+      color: hsl(220, 8%, 88%);
+    }
+    html[data-theme="dark"] .form-input:focus {
+      border-color: hsl(32, 80%, 55%);
+      box-shadow: 0 0 0 3px hsla(32, 80%, 55%, 0.16);
+    }
+    html[data-theme="dark"] .toggle-pw { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .toggle-pw:hover { color: hsl(220, 8%, 78%); }
+
+    html[data-theme="dark"] .status-bar.info    { background: hsla(32, 80%, 52%, 0.14); color: hsl(32, 80%, 65%); }
+    html[data-theme="dark"] .status-bar.success { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
+    html[data-theme="dark"] .status-bar.error   { background: hsl(0, 30%, 22%); color: hsl(0, 70%, 62%); }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1><span class="solar">Solar</span>Buffer</h1>
+    <p>Netwerkinstellingen</p>
+  </div>
+
+  <a class="back-btn" href="/settings">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+    Instellingen
+  </a>
+
+  <!-- Huidige verbinding -->
+  <div class="section-title">Huidige verbinding</div>
+  <div class="current-card">
+    <div class="current-row">
+      <div class="current-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M1,9L3,11C7.97,6.03 16.03,6.03 21,11L23,9C16.93,2.93 7.08,2.93 1,9M9,17L12,20L15,17C13.35,15.34 10.66,15.34 9,17M5,13L7,15C9.76,12.24 14.24,12.24 17,15L19,13C15.14,9.14 8.87,9.14 5,13Z"/></svg>
+      </div>
+      <div class="current-text">
+        <div class="current-label">Verbonden netwerk</div>
+        <div class="current-ssid" id="currentSsid">Laden…</div>
+        <div class="current-meta" id="currentMeta"></div>
+      </div>
+      <div class="connected-badge" id="connectedBadge" style="display:none">
+        <div class="connected-dot"></div>
+        Verbonden
+      </div>
+    </div>
+  </div>
+
+  <!-- Netwerken scannen -->
+  <div class="section-title">Netwerk wijzigen</div>
+  <div class="card">
+    <div class="scan-header">
+      <span class="scan-header-title">Beschikbare netwerken</span>
+      <button class="refresh-btn" id="refreshBtn" onclick="scanNetworks(true)">
+        <i class="mdi mdi-refresh"></i> Vernieuwen
+      </button>
+    </div>
+    <div class="network-list" id="networkList">
+      <div class="scan-status"><i class="mdi mdi-loading spinning"></i> Netwerken zoeken…</div>
+    </div>
+  </div>
+
+  <!-- Formulier -->
+  <div class="form-card">
+    <div class="form-inner">
+      <div class="form-field">
+        <label class="form-label" for="ssidInput">WiFi naam (SSID)</label>
+        <input class="form-input" type="text" id="ssidInput" name="ssid"
+               placeholder="Selecteer hierboven of typ hier" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="wifiPassword">WiFi wachtwoord</label>
+        <div class="password-wrap">
+          <input class="form-input" type="password" id="wifiPassword" name="password"
+                 placeholder="Laat leeg om ongewijzigd te laten" autocomplete="new-password">
+          <i class="mdi mdi-eye-off toggle-pw" onclick="togglePw()"></i>
+        </div>
+      </div>
+    </div>
+    <div id="statusBar" class="status-bar"></div>
+    <button class="connect-btn" id="connectBtn" onclick="connectWifi()">Verbinden met netwerk</button>
+  </div>
+
+</div>
+
+<script>
+  const OWN_SSIDS = new Set(["PI-SETUP"]);
+  let currentSsid = null;
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function signalIcon(signal) {
+    if (signal >= 75) return 'mdi-wifi-strength-4';
+    if (signal >= 50) return 'mdi-wifi-strength-3';
+    if (signal >= 25) return 'mdi-wifi-strength-2';
+    return 'mdi-wifi-strength-1';
+  }
+
+  function togglePw() {
+    const f = document.getElementById('wifiPassword');
+    const i = f.nextElementSibling;
+    if (f.type === 'password') {
+      f.type = 'text';
+      i.classList.replace('mdi-eye-off', 'mdi-eye');
+    } else {
+      f.type = 'password';
+      i.classList.replace('mdi-eye', 'mdi-eye-off');
+    }
+  }
+
+  function showStatus(msg, type) {
+    const bar = document.getElementById('statusBar');
+    bar.textContent = msg;
+    bar.className = 'status-bar show ' + type;
+  }
+
+  function selectNetwork(el) {
+    document.querySelectorAll('.network-item').forEach(i => i.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('ssidInput').value = el.dataset.ssid;
+  }
+
+  function renderNetworks(networks) {
+    const list = document.getElementById('networkList');
+    if (!networks.length) {
+      list.innerHTML = '<div class="scan-status">Geen netwerken gevonden. Typ de naam handmatig.</div>';
+      return;
+    }
+    list.innerHTML = networks.map(n => {
+      const isCurrent = currentSsid && n.ssid === currentSsid;
+      return `
+        <div class="network-item${isCurrent ? ' is-current' : ''}" data-ssid="${escapeHtml(n.ssid)}">
+          <i class="mdi ${signalIcon(n.signal)} network-signal"></i>
+          <span class="network-name">${escapeHtml(n.ssid)}</span>
+          <div class="network-right">
+            ${isCurrent ? '<span class="current-tag">Huidig</span>' : ''}
+            <i class="mdi ${n.secured ? 'mdi-lock' : 'mdi-lock-open-outline'} network-lock"
+               style="${n.secured ? '' : 'opacity:0.35'}"></i>
+          </div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('.network-item').forEach(el => {
+      el.addEventListener('click', () => selectNetwork(el));
+    });
+  }
+
+  async function loadCurrentWifi() {
+    try {
+      const res = await fetch('/network/current');
+      if (!res.ok) return;
+      const data = await res.json();
+      currentSsid = data.ssid || null;
+      const ssidEl = document.getElementById('currentSsid');
+      const metaEl = document.getElementById('currentMeta');
+      const badgeEl = document.getElementById('connectedBadge');
+      if (currentSsid) {
+        ssidEl.textContent = currentSsid;
+        if (data.ip) metaEl.textContent = 'IP-adres: ' + data.ip;
+        badgeEl.style.display = '';
+      } else {
+        ssidEl.textContent = 'Geen WiFi-verbinding';
+        metaEl.textContent = '';
+        badgeEl.style.display = 'none';
+      }
+    } catch {
+      document.getElementById('currentSsid').textContent = 'Niet beschikbaar';
+    }
+  }
+
+  async function scanNetworks(force = false) {
+    const list = document.getElementById('networkList');
+    const btn = document.getElementById('refreshBtn');
+    list.innerHTML = '<div class="scan-status"><i class="mdi mdi-loading spinning"></i> Netwerken zoeken…</div>';
+    btn.disabled = true;
+    try {
+      const res = await fetch(force ? '/network/scan?rescan=1' : '/network/scan');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const networks = await res.json();
+      renderNetworks(networks);
+    } catch {
+      list.innerHTML = '<div class="scan-status">Scannen mislukt. Typ de naam handmatig.</div>';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function connectWifi() {
+    const ssid = document.getElementById('ssidInput').value.trim();
+    const password = document.getElementById('wifiPassword').value;
+    if (!ssid) { showStatus('Voer een netwerknaam in.', 'error'); return; }
+
+    const btn = document.getElementById('connectBtn');
+    btn.disabled = true;
+    showStatus('Verbinding wordt ingesteld… De Pi herstart daarna automatisch.', 'info');
+
+    try {
+      const res = await fetch('/network/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid, password })
+      });
+      if (res.ok) {
+        showStatus('Instellingen opgeslagen. SolarBuffer herstart nu…', 'success');
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showStatus(d.error || 'Verbinden mislukt.', 'error');
+        btn.disabled = false;
+      }
+    } catch {
+      showStatus('Verbindingsfout. Controleer de verbinding.', 'error');
+      btn.disabled = false;
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    await loadCurrentWifi();
+    scanNetworks(false);
+  });
+</script>
+</body>
+</html>

@@ -419,6 +419,17 @@
         <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
       </a>
 
+      <a class="settings-item" href="/network">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1,9L3,11C7.97,6.03 16.03,6.03 21,11L23,9C16.93,2.93 7.08,2.93 1,9M9,17L12,20L15,17C13.35,15.34 10.66,15.34 9,17M5,13L7,15C9.76,12.24 14.24,12.24 17,15L19,13C15.14,9.14 8.87,9.14 5,13Z"/></svg>
+        </div>
+        <div class="settings-text">
+          <div class="settings-label">Netwerk &amp; WiFi</div>
+          <div class="settings-sub" id="wifiSubText">WiFi-netwerk wijzigen</div>
+        </div>
+        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+      </a>
+
       <a class="settings-item" href="/location">
         <div class="settings-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z"/></svg>
@@ -657,6 +668,12 @@
   </div>
 
   <script>
+    // ===== NETWERK SUBTEKST =====
+    fetch('/network/current').then(r => r.json()).then(data => {
+      const el = document.getElementById('wifiSubText');
+      if (el && data.ssid) el.textContent = 'Verbonden met ' + data.ssid;
+    }).catch(() => {});
+
     // ===== BESTURING =====
     function loadBesturing() {
       fetch('/status_json').then(r => r.json()).then(data => {

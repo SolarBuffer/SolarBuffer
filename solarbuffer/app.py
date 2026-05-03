@@ -995,6 +995,147 @@ def settings():
     return render_template("settings.html", dark_mode=get_user_dark_mode())
 
 
+# ================= NETWERK ROUTES =================
+
+def _wifi_scan_networks(rescan=False):
+    try:
+        cmd = [
+            "nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY",
+            "dev", "wifi", "list",
+            "--rescan", "yes" if rescan else "no",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+        networks = []
+        seen = set()
+        for line in result.stdout.splitlines():
+            parts = re.split(r'(?<!\\):', line)
+            if not parts:
+                continue
+            ssid = parts[0].replace('\\:', ':').strip()
+            if not ssid or ssid in seen or ssid in {"PI-SETUP"}:
+                continue
+            seen.add(ssid)
+            signal = int(parts[1]) if len(parts) > 1 and parts[1].strip().isdigit() else 0
+            security = parts[2].strip() if len(parts) > 2 else ""
+            networks.append({"ssid": ssid, "signal": signal, "secured": bool(security)})
+        networks.sort(key=lambda x: x["signal"], reverse=True)
+        return networks
+    except Exception:
+        return []
+
+
+def _wifi_get_current():
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.splitlines():
+            parts = line.split(":", 1)
+            if len(parts) == 2 and parts[0].strip().lower() == "yes":
+                ssid = parts[1].replace("\\:", ":").strip()
+                if ssid:
+                    return ssid
+    except Exception:
+        pass
+    return None
+
+
+def _wifi_connect_and_reboot(ssid, password):
+    try:
+        subprocess.run(
+            ["nmcli", "connection", "delete", "customer-wifi"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        subprocess.run(
+            ["nmcli", "connection", "add", "type", "wifi", "ifname", "wlan0",
+             "con-name", "customer-wifi", "ssid", ssid],
+            check=True
+        )
+        if password:
+            subprocess.run(
+                ["nmcli", "connection", "modify", "customer-wifi",
+                 "wifi-sec.key-mgmt", "wpa-psk"],
+                check=True
+            )
+            subprocess.run(
+                ["nmcli", "connection", "modify", "customer-wifi",
+                 "wifi-sec.psk", password],
+                check=True
+            )
+        else:
+            subprocess.run(
+                ["nmcli", "connection", "modify", "customer-wifi",
+                 "wifi-sec.key-mgmt", ""],
+                check=False
+            )
+        for opt, val in [
+            ("connection.autoconnect", "yes"),
+            ("connection.autoconnect-priority", "100"),
+            ("connection.autoconnect-retries", "0"),
+        ]:
+            subprocess.run(
+                ["nmcli", "connection", "modify", "customer-wifi", opt, val],
+                check=True
+            )
+        for opt, val in [
+            ("connection.autoconnect", "no"),
+            ("connection.autoconnect-priority", "-100"),
+        ]:
+            subprocess.run(
+                ["nmcli", "connection", "modify", "PI-SETUP", opt, val],
+                check=False
+            )
+        time.sleep(2)
+        subprocess.run(
+            ["nmcli", "connection", "up", "customer-wifi"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+        )
+        time.sleep(5)
+        subprocess.Popen(["systemctl", "reboot"])
+    except Exception:
+        time.sleep(8)
+        subprocess.Popen(["systemctl", "reboot"])
+
+
+@app.route("/network")
+def network_page():
+    if not require_login():
+        return redirect("/login")
+    return render_template("network.html", dark_mode=get_user_dark_mode())
+
+
+@app.route("/network/current")
+def network_current():
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    ssid = _wifi_get_current()
+    ip = get_local_ip() if ssid else None
+    return jsonify(ssid=ssid, ip=ip)
+
+
+@app.route("/network/scan")
+def network_scan():
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    rescan = request.args.get("rescan") == "1"
+    return jsonify(_wifi_scan_networks(rescan=rescan))
+
+
+@app.route("/network/connect", methods=["POST"])
+def network_connect():
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    data = request.get_json(silent=True) or {}
+    ssid = str(data.get("ssid", "")).strip()
+    password = str(data.get("password", ""))
+    if not ssid:
+        return jsonify(error="Geen SSID opgegeven"), 400
+    write_audit_log("wifi_changed", {"user": safe_session_username(), "ssid": ssid})
+    threading.Thread(target=_wifi_connect_and_reboot, args=(ssid, password), daemon=True).start()
+    return jsonify(success=True)
+
+
 _forecast_cache = {"data": None, "ts": 0}
 
 @app.route("/solar_forecast")
