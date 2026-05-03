@@ -13,9 +13,7 @@ HTML = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WiFi Setup - SolarBuffer</title>
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -34,262 +32,304 @@ body {
 
 .container {
     width: 100%;
-    max-width: 420px;
-    background: white;
-    border: 1px solid hsl(30, 15%, 88%);
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
-    padding: 2rem;
+    max-width: 400px;
 }
 
+/* Header */
 .header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.75rem;
 }
-
-.header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
-
+.header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 0.75rem;
+    box-shadow: 0 6px 20px -4px hsla(32, 95%, 52%, 0.4);
+}
+.header-icon i { font-size: 1.6rem; color: white; }
 .header h1 {
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
-    font-size: 1.6rem;
-    margin-top: 0.25rem;
+    font-size: 1.55rem;
 }
-
 .header h1 .solar {
     background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+.header p { color: hsl(220, 10%, 50%); font-size: 0.83rem; margin-top: 0.2rem; }
 
-.header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
-
-form { display: flex; flex-direction: column; gap: 1.25rem; }
-form > div { display: flex; flex-direction: column; gap: 0.35rem; }
-
-label { font-weight: 600; font-size: 0.95rem; }
-
-input[type="text"], input[type="password"] {
-    width: 100%;
-    padding: 0.65rem 0.75rem;
+/* Card */
+.card {
+    background: white;
     border: 1px solid hsl(30, 15%, 88%);
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.2s ease;
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px -8px hsla(32, 95%, 52%, 0.12);
+    overflow: hidden;
+    margin-bottom: 0.75rem;
 }
 
-input:focus {
-    border-color: hsl(32, 95%, 52%);
-    box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.15);
-    outline: none;
-}
-
-button[type="submit"] {
-    width: 100%;
-    background: hsl(32, 95%, 52%);
-    color: white;
-    font-weight: 600;
-    font-size: 1rem;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-button[type="submit"]:hover { background: hsl(32, 85%, 45%); transform: translateY(-1px); }
-button[type="submit"]:active { transform: translateY(0); }
-button[type="submit"]:disabled { opacity: 0.45; cursor: default; transform: none; }
-
-.password-wrapper { position: relative; }
-.password-wrapper input { padding-right: 3rem; }
-
-.toggle-password {
-    position: absolute;
-    top: 50%; right: 0.9rem;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: #777;
-    font-size: 1.2rem;
-    line-height: 1;
-    z-index: 2;
-}
-.toggle-password:hover { color: #333; }
-
-/* Scan header row */
-.scan-header {
+/* Scan header */
+.scan-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
+    padding: 0.9rem 1rem 0.6rem;
 }
-
-.btn-refresh {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    background: white;
-    color: hsl(220, 20%, 30%);
+.scan-label {
+    font-family: 'Space Grotesk', sans-serif;
     font-weight: 600;
-    font-size: 0.8rem;
-    padding: 0.3rem 0.65rem;
-    border: 1.5px solid hsl(30, 15%, 82%);
+    font-size: 0.88rem;
+    color: hsl(220, 15%, 35%);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.btn-refresh {
+    display: flex; align-items: center; gap: 0.3rem;
+    background: hsl(30, 20%, 96%);
+    color: hsl(220, 15%, 40%);
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.28rem 0.65rem;
+    border: 1px solid hsl(30, 15%, 86%);
     border-radius: 999px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.15s;
     font-family: 'Inter', sans-serif;
 }
-
-.btn-refresh:hover {
-    border-color: hsl(32, 85%, 60%);
-    color: hsl(32, 90%, 40%);
-    background: hsl(32, 100%, 97%);
-}
-
+.btn-refresh:hover { background: hsl(32, 100%, 95%); border-color: hsl(32, 80%, 70%); color: hsl(32, 90%, 40%); }
 .btn-refresh:disabled { opacity: 0.5; cursor: default; }
 
-.spin { display: inline-block; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
 /* Network list */
-.network-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    max-height: 220px;
-    overflow-y: auto;
-}
+.network-list { display: flex; flex-direction: column; }
 
-.network-placeholder {
-    font-size: 0.82rem;
-    color: hsl(220, 10%, 56%);
-    text-align: center;
-    padding: 0.75rem 0;
-}
+.network-entry { border-top: 1px solid hsl(30, 15%, 92%); overflow: hidden; }
 
-.scan-error {
-    font-size: 0.8rem;
-    color: hsl(0, 65%, 45%);
-    text-align: center;
-    padding: 0.5rem 0;
-}
-
-.network-item {
+.network-header {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0.7rem;
-    border: 1.5px solid hsl(30, 15%, 88%);
-    border-radius: 0.5rem;
+    gap: 0.7rem;
+    padding: 0.7rem 1rem;
     cursor: pointer;
-    transition: all 0.15s ease;
-    background: white;
-    flex-shrink: 0;
+    transition: background 0.15s;
+    user-select: none;
 }
+.network-header:hover { background: hsl(30, 30%, 98%); }
+.network-entry.open .network-header { background: hsl(32, 100%, 97%); }
 
-.network-item:hover { border-color: hsl(32, 85%, 60%); background: hsl(32, 100%, 97%); }
+.net-signal { font-size: 1.1rem; color: hsl(220, 10%, 58%); flex-shrink: 0; }
+.network-entry.open .net-signal { color: hsl(32, 90%, 50%); }
 
-.network-item.selected {
-    border-color: hsl(32, 95%, 52%);
-    background: hsl(32, 100%, 96%);
-    box-shadow: 0 0 0 2px hsla(32, 95%, 52%, 0.18);
-}
-
-.network-ssid {
+.net-name {
     flex: 1;
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.network-entry.open .net-name { font-weight: 600; color: hsl(32, 80%, 35%); }
 
-.network-meta {
+.net-icons { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; color: hsl(220, 10%, 62%); font-size: 0.95rem; }
+.network-entry.open .net-icons { color: hsl(32, 80%, 55%); }
+
+.net-chevron { font-size: 1rem; color: hsl(220, 10%, 68%); transition: transform 0.2s; }
+.network-entry.open .net-chevron { transform: rotate(180deg); color: hsl(32, 80%, 55%); }
+
+/* Expand area */
+.network-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.28s ease;
+}
+.network-entry.open .network-body { max-height: 160px; }
+
+.network-body-inner {
+    padding: 0 1rem 0.9rem;
     display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    flex-shrink: 0;
-    color: hsl(220, 10%, 55%);
-    font-size: 1.05rem;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
-.network-item.selected .network-meta { color: hsl(32, 90%, 45%); }
-
-/* Divider */
-.or-divider {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+.pw-row { position: relative; }
+.pw-row input {
+    width: 100%;
+    padding: 0.6rem 2.6rem 0.6rem 0.75rem;
+    border: 1.5px solid hsl(30, 15%, 86%);
+    border-radius: 0.55rem;
+    font-size: 0.92rem;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: hsl(30, 20%, 98%);
+}
+.pw-row input:focus {
+    outline: none;
+    border-color: hsl(32, 90%, 55%);
+    box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.13);
+    background: white;
+}
+.pw-eye {
+    position: absolute;
+    top: 50%; right: 0.75rem;
+    transform: translateY(-50%);
+    cursor: pointer;
     color: hsl(220, 10%, 60%);
-    font-size: 0.78rem;
-    font-weight: 500;
-    margin: 0.25rem 0;
+    font-size: 1.1rem;
 }
-.or-divider::before, .or-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: hsl(30, 15%, 88%);
+.pw-eye:hover { color: hsl(220, 15%, 35%); }
+
+.btn-connect {
+    width: 100%;
+    background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(38, 98%, 56%));
+    color: white;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 0.6rem;
+    border: none;
+    border-radius: 0.55rem;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    box-shadow: 0 3px 12px -3px hsla(32, 95%, 52%, 0.45);
+    transition: all 0.15s;
+}
+.btn-connect:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn-connect:active { transform: translateY(0); filter: brightness(0.97); }
+
+/* Placeholders */
+.list-placeholder {
+    padding: 1.1rem 1rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: hsl(220, 10%, 58%);
+    border-top: 1px solid hsl(30, 15%, 92%);
+}
+.list-error {
+    padding: 0.9rem 1rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: hsl(0, 60%, 50%);
+    border-top: 1px solid hsl(30, 15%, 92%);
 }
 
-.manual-hint {
-    font-size: 0.78rem;
-    color: hsl(220, 10%, 52%);
-    margin-bottom: 0.1rem;
+/* Manual button */
+.btn-manual {
+    width: 100%;
+    background: white;
+    color: hsl(220, 15%, 38%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.75rem;
+    border: 1.5px dashed hsl(30, 15%, 82%);
+    border-radius: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.15s;
 }
+.btn-manual:hover { border-color: hsl(32, 80%, 65%); color: hsl(32, 85%, 40%); background: hsl(32, 100%, 98%); }
+.btn-manual.active { border-style: solid; border-color: hsl(32, 90%, 55%); color: hsl(32, 85%, 40%); background: hsl(32, 100%, 97%); }
+
+/* Manual form card */
+.manual-card {
+    background: white;
+    border: 1px solid hsl(30, 15%, 88%);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px -8px hsla(32, 95%, 52%, 0.12);
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+    margin-bottom: 0.75rem;
+}
+.manual-card.open { max-height: 260px; }
+
+.manual-inner {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+.manual-inner input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1.5px solid hsl(30, 15%, 86%);
+    border-radius: 0.55rem;
+    font-size: 0.92rem;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: hsl(30, 20%, 98%);
+}
+.manual-inner input:focus {
+    outline: none;
+    border-color: hsl(32, 90%, 55%);
+    box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.13);
+    background: white;
+}
+
+/* Spinner */
+.spin { display: inline-block; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
-
 <body>
 <div class="container">
+
     <div class="header">
-        <div class="icon">📡</div>
         <h1><span class="solar">Solar</span>Buffer</h1>
-        <p>Configureer uw WiFi netwerk</p>
+        <p>Verbind met uw WiFi netwerk</p>
     </div>
 
-    <form method="POST" id="wifiForm">
-
-        <div>
-            <div class="scan-header">
-                <label>Gevonden netwerken</label>
-                <button type="button" class="btn-refresh" id="refreshBtn" onclick="startScan()">
-                    <i class="mdi mdi-refresh" id="refreshIcon"></i>
-                    <span id="refreshText">Ververs</span>
-                </button>
-            </div>
-
-            <div class="network-list" id="networkList">
-                <div class="network-placeholder">
-                    <span class="spin"><i class="mdi mdi-loading"></i></span> Netwerken zoeken…
-                </div>
+    <!-- Netwerken kaart -->
+    <div class="card">
+        <div class="scan-row">
+            <span class="scan-label">Netwerken</span>
+            <button type="button" class="btn-refresh" id="refreshBtn" onclick="startScan()">
+                <i class="mdi mdi-refresh" id="refreshIcon"></i>
+                <span id="refreshText">Ververs</span>
+            </button>
+        </div>
+        <div class="network-list" id="networkList">
+            <div class="list-placeholder">
+                <span class="spin"><i class="mdi mdi-loading"></i></span>&nbsp; Netwerken zoeken…
             </div>
         </div>
+    </div>
 
-        <div class="or-divider">of voer handmatig in</div>
+    <!-- Handmatige invoer knop -->
+    <button type="button" class="btn-manual" id="manualBtn" onclick="toggleManual()">
+        <i class="mdi mdi-pencil-outline"></i>
+        <span id="manualBtnText">Netwerk handmatig invoeren</span>
+    </button>
 
-        <div>
-            <div class="manual-hint">Netwerk staat er niet bij? Typ de naam hieronder.</div>
-            <input type="text" id="ssidManual" placeholder="WiFi naam (SSID)" autocomplete="off" oninput="onManualInput()">
-        </div>
-
-        <input type="hidden" id="ssidHidden" name="ssid">
-
-        <div>
-            <label>WiFi wachtwoord</label>
-            <div class="password-wrapper">
-                <input id="wifi_password" name="password" type="password" autocomplete="current-password">
-                <i class="mdi mdi-eye-off toggle-password" onclick="togglePassword('wifi_password', this)"></i>
+    <!-- Handmatige invoer kaart -->
+    <div class="manual-card" id="manualCard">
+        <div class="manual-inner">
+            <input type="text" id="manualSsid" placeholder="WiFi naam (SSID)" autocomplete="off">
+            <div class="pw-row">
+                <input type="password" id="manualPw" placeholder="Wachtwoord (leeg = open netwerk)">
+                <i class="mdi mdi-eye-off pw-eye" onclick="toggleEye('manualPw', this)"></i>
             </div>
+            <button type="button" class="btn-connect" onclick="connectManual()">
+                <i class="mdi mdi-wifi-arrow-right"></i>&nbsp; Verbinden
+            </button>
         </div>
+    </div>
 
-        <button type="submit" id="submitBtn" disabled>Verbinden met netwerk</button>
+    <!-- Verborgen formulier voor submit -->
+    <form id="wifiForm" method="POST" style="display:none;">
+        <input type="hidden" id="fSsid" name="ssid">
+        <input type="hidden" id="fPassword" name="password">
     </form>
-</div>
 
+</div>
 <script>
-let selectedSsid = null;
+let openEntry = null;
+let manualOpen = false;
 
 function signalIcon(s) {
     if (s >= 75) return 'mdi-wifi-strength-4';
@@ -297,102 +337,115 @@ function signalIcon(s) {
     if (s >= 25) return 'mdi-wifi-strength-2';
     return 'mdi-wifi-strength-1';
 }
-
-function escHtml(s) {
+function esc(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function updateSubmit() {
-    const manual = document.getElementById('ssidManual').value.trim();
-    document.getElementById('submitBtn').disabled = !selectedSsid && !manual;
+function toggleEye(inputId, icon) {
+    const f = document.getElementById(inputId);
+    if (f.type === 'password') { f.type = 'text'; icon.classList.replace('mdi-eye-off','mdi-eye'); }
+    else { f.type = 'password'; icon.classList.replace('mdi-eye','mdi-eye-off'); }
 }
 
-function onManualInput() {
-    // Deselect list item when user starts typing manually
-    if (document.getElementById('ssidManual').value.trim()) {
-        document.querySelectorAll('.network-item').forEach(i => i.classList.remove('selected'));
-        selectedSsid = null;
+function submit(ssid, password) {
+    document.getElementById('fSsid').value = ssid;
+    document.getElementById('fPassword').value = password;
+    document.getElementById('wifiForm').submit();
+}
+
+function connectManual() {
+    const ssid = document.getElementById('manualSsid').value.trim();
+    if (!ssid) { document.getElementById('manualSsid').focus(); return; }
+    submit(ssid, document.getElementById('manualPw').value);
+}
+
+function toggleManual() {
+    manualOpen = !manualOpen;
+    document.getElementById('manualCard').classList.toggle('open', manualOpen);
+    document.getElementById('manualBtn').classList.toggle('active', manualOpen);
+    document.getElementById('manualBtnText').textContent = manualOpen
+        ? 'Handmatig invoeren verbergen'
+        : 'Netwerk handmatig invoeren';
+    if (manualOpen) {
+        setTimeout(() => document.getElementById('manualSsid').focus(), 300);
     }
-    updateSubmit();
 }
 
-function selectNetwork(ssid, el) {
-    document.querySelectorAll('.network-item').forEach(i => i.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedSsid = ssid;
-    document.getElementById('ssidManual').value = '';
-    updateSubmit();
-    document.getElementById('wifi_password').focus();
+function toggleEntry(entry) {
+    if (openEntry && openEntry !== entry) {
+        openEntry.classList.remove('open');
+        openEntry.querySelector('input[type=password]').value = '';
+    }
+    const isOpen = entry.classList.toggle('open');
+    openEntry = isOpen ? entry : null;
+    if (isOpen) {
+        setTimeout(() => entry.querySelector('.pw-input').focus(), 250);
+    }
 }
 
 function startScan() {
     const btn = document.getElementById('refreshBtn');
     const icon = document.getElementById('refreshIcon');
-    const text = document.getElementById('refreshText');
+    const txt = document.getElementById('refreshText');
     const list = document.getElementById('networkList');
 
     btn.disabled = true;
     icon.className = 'mdi mdi-loading spin';
-    text.textContent = 'Bezig…';
-    list.innerHTML = '<div class="network-placeholder"><span class="spin"><i class="mdi mdi-loading"></i></span> Netwerken zoeken…</div>';
+    txt.textContent = 'Bezig…';
+    list.innerHTML = '<div class="list-placeholder"><span class="spin"><i class="mdi mdi-loading"></i></span>&nbsp; Netwerken zoeken…</div>';
+    openEntry = null;
 
     fetch('/scan')
         .then(r => r.json())
         .then(data => {
             btn.disabled = false;
             icon.className = 'mdi mdi-refresh';
-            text.textContent = 'Ververs';
+            txt.textContent = 'Ververs';
 
             if (!data.networks || data.networks.length === 0) {
-                list.innerHTML = '<div class="scan-error">Geen netwerken gevonden.</div>';
+                list.innerHTML = '<div class="list-error"><i class="mdi mdi-wifi-off"></i>&nbsp; Geen netwerken gevonden.</div>';
                 return;
             }
 
             list.innerHTML = '';
             data.networks.forEach(n => {
-                const item = document.createElement('div');
-                item.className = 'network-item' + (n.ssid === selectedSsid ? ' selected' : '');
-                item.onclick = () => selectNetwork(n.ssid, item);
-                item.innerHTML =
-                    '<i class="mdi ' + signalIcon(n.signal) + '" style="font-size:1.15rem;color:hsl(220,10%,52%);flex-shrink:0"></i>' +
-                    '<span class="network-ssid">' + escHtml(n.ssid) + '</span>' +
-                    '<span class="network-meta">' +
-                        (n.secured
-                            ? '<i class="mdi mdi-lock" title="Beveiligd"></i>'
-                            : '<i class="mdi mdi-lock-open-outline" title="Open netwerk"></i>') +
-                    '</span>';
-                list.appendChild(item);
+                const entry = document.createElement('div');
+                entry.className = 'network-entry';
+                const pwId = 'pw_' + Math.random().toString(36).slice(2);
+                const eyeId = 'eye_' + Math.random().toString(36).slice(2);
+                entry.innerHTML =
+                    '<div class="network-header" onclick="toggleEntry(this.parentElement)">' +
+                        '<i class="mdi ' + signalIcon(n.signal) + ' net-signal"></i>' +
+                        '<span class="net-name">' + esc(n.ssid) + '</span>' +
+                        '<span class="net-icons">' +
+                            (n.secured ? '<i class="mdi mdi-lock"></i>' : '<i class="mdi mdi-lock-open-outline"></i>') +
+                        '</span>' +
+                        '<i class="mdi mdi-chevron-down net-chevron"></i>' +
+                    '</div>' +
+                    '<div class="network-body">' +
+                        '<div class="network-body-inner">' +
+                            '<div class="pw-row">' +
+                                '<input class="pw-input" id="' + pwId + '" type="password" placeholder="' + (n.secured ? 'Wachtwoord' : 'Wachtwoord (optioneel)') + '">' +
+                                '<i class="mdi mdi-eye-off pw-eye" id="' + eyeId + '" onclick="toggleEye(\'' + pwId + '\', document.getElementById(\'' + eyeId + '\'))"></i>' +
+                            '</div>' +
+                            '<button type="button" class="btn-connect" onclick="submit(\'' + esc(n.ssid).replace(/'/g,"\\'") + '\', document.getElementById(\'' + pwId + '\').value)">' +
+                                '<i class="mdi mdi-wifi-arrow-right"></i>&nbsp; Verbinden met ' + esc(n.ssid) +
+                            '</button>' +
+                        '</div>' +
+                    '</div>';
+                list.appendChild(entry);
             });
         })
         .catch(() => {
             btn.disabled = false;
             icon.className = 'mdi mdi-refresh';
-            text.textContent = 'Ververs';
-            list.innerHTML = '<div class="scan-error">Scan mislukt. Probeer opnieuw.</div>';
+            txt.textContent = 'Ververs';
+            list.innerHTML = '<div class="list-error"><i class="mdi mdi-alert-circle-outline"></i>&nbsp; Scan mislukt. Probeer opnieuw.</div>';
         });
 }
 
-function togglePassword(fieldId, icon) {
-    const field = document.getElementById(fieldId);
-    if (field.type === 'password') {
-        field.type = 'text';
-        icon.classList.replace('mdi-eye-off', 'mdi-eye');
-    } else {
-        field.type = 'password';
-        icon.classList.replace('mdi-eye', 'mdi-eye-off');
-    }
-}
-
-document.getElementById('wifiForm').addEventListener('submit', function(e) {
-    const manual = document.getElementById('ssidManual').value.trim();
-    const ssid = manual || selectedSsid;
-    if (!ssid) { e.preventDefault(); return; }
-    document.getElementById('ssidHidden').value = ssid;
-});
-
 startScan();
 </script>
-
 </body>
 </html>
 """
