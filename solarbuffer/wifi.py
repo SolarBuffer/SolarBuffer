@@ -269,7 +269,7 @@ button[type="submit"]:active {
         <div>
             <div class="scan-header">
                 <label>Beschikbare netwerken</label>
-                <button type="button" class="refresh-btn" id="refreshBtn" onclick="scanNetworks()">
+                <button type="button" class="refresh-btn" id="refreshBtn" onclick="scanNetworks(true)">
                     <i class="mdi mdi-refresh"></i> Vernieuwen
                 </button>
             </div>
@@ -348,13 +348,14 @@ function renderNetworks(networks) {
     });
 }
 
-async function scanNetworks() {
+async function scanNetworks(force = false) {
     const list = document.getElementById('networkList');
     const btn = document.getElementById('refreshBtn');
     list.innerHTML = '<div class="scan-status"><i class="mdi mdi-loading spinning"></i> Netwerken zoeken...</div>';
     btn.disabled = true;
     try {
-        const res = await fetch('/scan');
+        const res = await fetch(force ? '/scan?rescan=1' : '/scan');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const networks = await res.json();
         renderNetworks(networks);
     } catch {
@@ -364,7 +365,7 @@ async function scanNetworks() {
     }
 }
 
-window.addEventListener('DOMContentLoaded', scanNetworks);
+window.addEventListener('DOMContentLoaded', () => scanNetworks(false));
 </script>
 
 </body>
@@ -452,12 +453,14 @@ p {
 
 OWN_SSIDS = {"PI-SETUP"}
 
-def scan_networks():
+def scan_networks(rescan=False):
     try:
-        result = subprocess.run(
-            ["nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY", "dev", "wifi", "list", "ifname", "wlan0"],
-            capture_output=True, text=True, timeout=15
-        )
+        cmd = [
+            "nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY",
+            "dev", "wifi", "list",
+            "--rescan", "yes" if rescan else "no",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
         networks = []
         seen = set()
         for line in result.stdout.splitlines():
@@ -597,7 +600,8 @@ def configure_wifi_and_reboot(ssid, password):
 
 @app.route("/scan")
 def scan():
-    return jsonify(scan_networks())
+    rescan = request.args.get("rescan") == "1"
+    return jsonify(scan_networks(rescan=rescan))
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -616,4 +620,4 @@ def index():
 
     return render_template_string(HTML)
 
-app.run(host="0.0.0.0", port=80)
+app.run(host="0.0.0.0", port=80, threaded=True)
