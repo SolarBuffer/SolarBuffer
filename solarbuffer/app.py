@@ -1064,6 +1064,10 @@ def _wifi_scan_networks(rescan=False):
             if len(iwlist) > len(networks):
                 networks = iwlist
 
+        current = _wifi_get_current()
+        if current and current not in seen and current not in {"PI-SETUP"}:
+            networks.insert(0, {"ssid": current, "signal": 100, "secured": True})
+
         networks.sort(key=lambda x: x["signal"], reverse=True)
         return networks
     except Exception:
