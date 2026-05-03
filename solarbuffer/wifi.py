@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, jsonify
+from flask import Flask, request, jsonify, Response
 import subprocess
 import threading
 import time
@@ -395,57 +395,64 @@ function startScan() {
     list.innerHTML = '<div class="list-placeholder"><span class="spin"><i class="mdi mdi-loading"></i></span>&nbsp; Netwerken zoeken…</div>';
     openEntry = null;
 
-    const controller = new AbortController();
-    const scanTimeout = setTimeout(() => controller.abort(), 15000);
+    var xhr = new XMLHttpRequest();
+    var scanTimeout = setTimeout(function() { xhr.abort(); }, 15000);
 
-    fetch('/scan', { signal: controller.signal })
-        .then(r => { clearTimeout(scanTimeout); return r.json(); })
-        .then(data => {
-            btn.disabled = false;
-            icon.className = 'mdi mdi-refresh';
-            txt.textContent = 'Ververs';
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        clearTimeout(scanTimeout);
+        btn.disabled = false;
+        icon.className = 'mdi mdi-refresh';
+        txt.textContent = 'Ververs';
 
-            if (!data.networks || data.networks.length === 0) {
-                list.innerHTML = '<div class="list-error"><i class="mdi mdi-wifi-off"></i>&nbsp; Geen netwerken gevonden. Probeer opnieuw.</div>';
-                return;
-            }
-
-            list.innerHTML = '';
-            data.networks.forEach(n => {
-                const entry = document.createElement('div');
-                entry.className = 'network-entry';
-                const pwId = 'pw_' + Math.random().toString(36).slice(2);
-                const eyeId = 'eye_' + Math.random().toString(36).slice(2);
-                entry.innerHTML =
-                    '<div class="network-header" onclick="toggleEntry(this.parentElement)">' +
-                        '<i class="mdi ' + signalIcon(n.signal) + ' net-signal"></i>' +
-                        '<span class="net-name">' + esc(n.ssid) + '</span>' +
-                        '<span class="net-icons">' +
-                            (n.secured ? '<i class="mdi mdi-lock"></i>' : '<i class="mdi mdi-lock-open-outline"></i>') +
-                        '</span>' +
-                        '<i class="mdi mdi-chevron-down net-chevron"></i>' +
-                    '</div>' +
-                    '<div class="network-body">' +
-                        '<div class="network-body-inner">' +
-                            '<div class="pw-row">' +
-                                '<input class="pw-input" id="' + pwId + '" type="password" placeholder="' + (n.secured ? 'Wachtwoord' : 'Wachtwoord (optioneel)') + '">' +
-                                '<i class="mdi mdi-eye-off pw-eye" id="' + eyeId + '" onclick="toggleEye(\'' + pwId + '\', document.getElementById(\'' + eyeId + '\'))"></i>' +
-                            '</div>' +
-                            '<button type="button" class="btn-connect" onclick="doConnect(\'' + esc(n.ssid).replace(/'/g,"\\'") + '\', document.getElementById(\'' + pwId + '\').value)">' +
-                                '<i class="mdi mdi-wifi-arrow-right"></i>&nbsp; Verbinden met ' + esc(n.ssid) +
-                            '</button>' +
-                        '</div>' +
-                    '</div>';
-                list.appendChild(entry);
-            });
-        })
-        .catch(() => {
-            clearTimeout(scanTimeout);
-            btn.disabled = false;
-            icon.className = 'mdi mdi-refresh';
-            txt.textContent = 'Ververs';
+        if (xhr.status !== 200) {
             list.innerHTML = '<div class="list-error"><i class="mdi mdi-alert-circle-outline"></i>&nbsp; Scan mislukt. Probeer opnieuw.</div>';
+            return;
+        }
+
+        var data;
+        try { data = JSON.parse(xhr.responseText); } catch(e) {
+            list.innerHTML = '<div class="list-error"><i class="mdi mdi-alert-circle-outline"></i>&nbsp; Scan mislukt. Probeer opnieuw.</div>';
+            return;
+        }
+
+        if (!data.networks || data.networks.length === 0) {
+            list.innerHTML = '<div class="list-error"><i class="mdi mdi-wifi-off"></i>&nbsp; Geen netwerken gevonden. Probeer opnieuw.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        data.networks.forEach(function(n) {
+            var entry = document.createElement('div');
+            entry.className = 'network-entry';
+            var pwId = 'pw_' + Math.random().toString(36).slice(2);
+            var eyeId = 'eye_' + Math.random().toString(36).slice(2);
+            entry.innerHTML =
+                '<div class="network-header" onclick="toggleEntry(this.parentElement)">' +
+                    '<i class="mdi ' + signalIcon(n.signal) + ' net-signal"></i>' +
+                    '<span class="net-name">' + esc(n.ssid) + '</span>' +
+                    '<span class="net-icons">' +
+                        (n.secured ? '<i class="mdi mdi-lock"></i>' : '<i class="mdi mdi-lock-open-outline"></i>') +
+                    '</span>' +
+                    '<i class="mdi mdi-chevron-down net-chevron"></i>' +
+                '</div>' +
+                '<div class="network-body">' +
+                    '<div class="network-body-inner">' +
+                        '<div class="pw-row">' +
+                            '<input class="pw-input" id="' + pwId + '" type="password" placeholder="' + (n.secured ? 'Wachtwoord' : 'Wachtwoord (optioneel)') + '">' +
+                            '<i class="mdi mdi-eye-off pw-eye" id="' + eyeId + '" onclick="toggleEye(\'' + pwId + '\', document.getElementById(\'' + eyeId + '\'))"></i>' +
+                        '</div>' +
+                        '<button type="button" class="btn-connect" onclick="doConnect(\'' + esc(n.ssid).replace(/'/g,"\\'") + '\', document.getElementById(\'' + pwId + '\').value)">' +
+                            '<i class="mdi mdi-wifi-arrow-right"></i>&nbsp; Verbinden met ' + esc(n.ssid) +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+            list.appendChild(entry);
         });
+    };
+
+    xhr.open('GET', '/scan');
+    xhr.send();
 }
 
 startScan();
@@ -536,14 +543,14 @@ p {
 def configure_wifi_and_reboot(ssid, password):
     try:
         subprocess.run(
-            ["nmcli", "connection", "delete", "customer-wifi"],
+            ["sudo", "nmcli", "connection", "delete", "customer-wifi"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
         subprocess.run(
             [
-                "nmcli", "connection", "add",
+                "sudo", "nmcli", "connection", "add",
                 "type", "wifi",
                 "ifname", "wlan0",
                 "con-name", "customer-wifi",
@@ -555,7 +562,7 @@ def configure_wifi_and_reboot(ssid, password):
         if password:
             subprocess.run(
                 [
-                    "nmcli", "connection", "modify",
+                    "sudo", "nmcli", "connection", "modify",
                     "customer-wifi",
                     "wifi-sec.key-mgmt",
                     "wpa-psk"
@@ -565,7 +572,7 @@ def configure_wifi_and_reboot(ssid, password):
 
             subprocess.run(
                 [
-                    "nmcli", "connection", "modify",
+                    "sudo", "nmcli", "connection", "modify",
                     "customer-wifi",
                     "wifi-sec.psk",
                     password
@@ -575,7 +582,7 @@ def configure_wifi_and_reboot(ssid, password):
         else:
             subprocess.run(
                 [
-                    "nmcli", "connection", "modify",
+                    "sudo", "nmcli", "connection", "modify",
                     "customer-wifi",
                     "wifi-sec.key-mgmt",
                     ""
@@ -585,7 +592,7 @@ def configure_wifi_and_reboot(ssid, password):
 
         subprocess.run(
             [
-                "nmcli", "connection", "modify",
+                "sudo", "nmcli", "connection", "modify",
                 "customer-wifi",
                 "connection.autoconnect",
                 "yes"
@@ -595,7 +602,7 @@ def configure_wifi_and_reboot(ssid, password):
 
         subprocess.run(
             [
-                "nmcli", "connection", "modify",
+                "sudo", "nmcli", "connection", "modify",
                 "customer-wifi",
                 "connection.autoconnect-priority",
                 "100"
@@ -605,7 +612,7 @@ def configure_wifi_and_reboot(ssid, password):
 
         subprocess.run(
             [
-                "nmcli", "connection", "modify",
+                "sudo", "nmcli", "connection", "modify",
                 "customer-wifi",
                 "connection.autoconnect-retries",
                 "0"
@@ -615,7 +622,7 @@ def configure_wifi_and_reboot(ssid, password):
 
         subprocess.run(
             [
-                "nmcli", "connection", "modify",
+                "sudo", "nmcli", "connection", "modify",
                 "PI-SETUP",
                 "connection.autoconnect",
                 "no"
@@ -625,7 +632,7 @@ def configure_wifi_and_reboot(ssid, password):
 
         subprocess.run(
             [
-                "nmcli", "connection", "modify",
+                "sudo", "nmcli", "connection", "modify",
                 "PI-SETUP",
                 "connection.autoconnect-priority",
                 "-100"
@@ -636,7 +643,7 @@ def configure_wifi_and_reboot(ssid, password):
         time.sleep(2)
 
         subprocess.run(
-            ["nmcli", "connection", "up", "customer-wifi"],
+            ["sudo", "nmcli", "connection", "up", "customer-wifi"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False
@@ -644,17 +651,16 @@ def configure_wifi_and_reboot(ssid, password):
 
         time.sleep(5)
 
-        subprocess.Popen(["systemctl", "reboot"])
+        subprocess.Popen(["sudo", "systemctl", "reboot"])
 
     except Exception:
         time.sleep(8)
-        subprocess.Popen(["systemctl", "reboot"])
+        subprocess.Popen(["sudo", "systemctl", "reboot"])
 
 
 def do_wifi_scan():
-    # Rescan in achtergrond starten, niet wachten op resultaat
     subprocess.run(
-        ["nmcli", "device", "wifi", "rescan"],
+        ["sudo", "nmcli", "device", "wifi", "rescan"],
         capture_output=True, timeout=8
     )
 
@@ -663,14 +669,14 @@ def do_wifi_scan():
 def scan_wifi():
     try:
         subprocess.run(
-            ["nmcli", "device", "wifi", "rescan"],
+            ["sudo", "nmcli", "device", "wifi", "rescan"],
             capture_output=True, timeout=4
         )
     except Exception:
         pass
     try:
         result = subprocess.run(
-            ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"],
+            ["sudo", "nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"],
             capture_output=True, text=True, timeout=8
         )
         networks = []
@@ -703,7 +709,7 @@ def index():
         password = request.form.get("password", "")
 
         if not ssid:
-            return render_template_string(HTML)
+            return Response(HTML, mimetype='text/html')
 
         threading.Thread(
             target=configure_wifi_and_reboot,
@@ -711,9 +717,9 @@ def index():
             daemon=True
         ).start()
 
-        return render_template_string(PROCESSING_HTML)
+        return Response(PROCESSING_HTML, mimetype='text/html')
 
-    return render_template_string(HTML)
+    return Response(HTML, mimetype='text/html')
 
 
 app.run(host="0.0.0.0", port=80, threaded=True)
