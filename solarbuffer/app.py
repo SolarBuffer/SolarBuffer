@@ -999,10 +999,16 @@ def settings():
 
 def _wifi_scan_networks(rescan=False):
     try:
+        if rescan:
+            subprocess.run(
+                ["nmcli", "dev", "wifi", "rescan"],
+                capture_output=True, timeout=5
+            )
+            time.sleep(3)
         cmd = [
             "nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY",
             "dev", "wifi", "list",
-            "--rescan", "yes" if rescan else "no",
+            "--rescan", "no",
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
         networks = []
