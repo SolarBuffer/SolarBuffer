@@ -98,16 +98,16 @@
     }
 
     @keyframes pulse-dot {
-      0%, 100% { box-shadow: 0 0 0 0 hsla(32, 95%, 52%, 0.5); }
-      50%       { box-shadow: 0 0 0 5px hsla(32, 95%, 52%, 0); }
+      0%, 100% { box-shadow: 0 0 0 0 hsla(32, 95%, 52%, 0.55); }
+      50%       { box-shadow: 0 0 0 7px hsla(32, 95%, 52%, 0); }
     }
 
     .update-dot {
       position: absolute;
-      top: 5px;
-      right: 5px;
-      width: 10px;
-      height: 10px;
+      top: 4px;
+      right: 4px;
+      width: 13px;
+      height: 13px;
       background: hsl(32, 95%, 52%);
       border-radius: 50%;
       border: 2px solid white;
@@ -116,6 +116,11 @@
     .update-dot.visible {
       display: block;
       animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    .menu-item-sub.update-active {
+      color: hsl(32, 95%, 46%);
+      font-weight: 600;
     }
 
 
@@ -2343,9 +2348,9 @@
           const visible = !!data.available;
           document.getElementById("updateDot").classList.toggle("visible", visible);
           document.getElementById("menuUpdateBadge").style.display = visible ? "" : "none";
-          document.getElementById("updateMenuSub").textContent = visible
-            ? "Nieuwe versie beschikbaar!"
-            : "Versiegeschiedenis & update uitvoeren";
+          const sub = document.getElementById("updateMenuSub");
+          sub.textContent = visible ? "Nieuwe versie beschikbaar!" : "Versiegeschiedenis & update uitvoeren";
+          sub.classList.toggle("update-active", visible);
         })
         .catch(() => {});
     }
