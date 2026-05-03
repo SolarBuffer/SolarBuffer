@@ -395,15 +395,18 @@ function startScan() {
     list.innerHTML = '<div class="list-placeholder"><span class="spin"><i class="mdi mdi-loading"></i></span>&nbsp; Netwerken zoeken…</div>';
     openEntry = null;
 
-    fetch('/scan')
-        .then(r => r.json())
+    const controller = new AbortController();
+    const scanTimeout = setTimeout(() => controller.abort(), 15000);
+
+    fetch('/scan', { signal: controller.signal })
+        .then(r => { clearTimeout(scanTimeout); return r.json(); })
         .then(data => {
             btn.disabled = false;
             icon.className = 'mdi mdi-refresh';
             txt.textContent = 'Ververs';
 
             if (!data.networks || data.networks.length === 0) {
-                list.innerHTML = '<div class="list-error"><i class="mdi mdi-wifi-off"></i>&nbsp; Geen netwerken gevonden.</div>';
+                list.innerHTML = '<div class="list-error"><i class="mdi mdi-wifi-off"></i>&nbsp; Geen netwerken gevonden. Probeer opnieuw.</div>';
                 return;
             }
 
@@ -437,6 +440,7 @@ function startScan() {
             });
         })
         .catch(() => {
+            clearTimeout(scanTimeout);
             btn.disabled = false;
             icon.className = 'mdi mdi-refresh';
             txt.textContent = 'Ververs';
@@ -658,10 +662,16 @@ def do_wifi_scan():
 @app.route("/scan")
 def scan_wifi():
     try:
-        # Eerst de gecachde lijst ophalen voor snelle response
+        subprocess.run(
+            ["nmcli", "device", "wifi", "rescan"],
+            capture_output=True, timeout=4
+        )
+    except Exception:
+        pass
+    try:
         result = subprocess.run(
             ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"],
-            capture_output=True, text=True, timeout=10
+            capture_output=True, text=True, timeout=8
         )
         networks = []
         seen = set()
@@ -681,10 +691,6 @@ def scan_wifi():
                 "secured": bool(security and security not in ("--", "")),
             })
         networks.sort(key=lambda x: -x["signal"])
-
-        # Rescan op de achtergrond starten voor de volgende keer
-        threading.Thread(target=do_wifi_scan, daemon=True).start()
-
         return jsonify(networks=networks)
     except Exception:
         return jsonify(networks=[], error="Scan mislukt")
