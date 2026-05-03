@@ -597,10 +597,16 @@ def configure_wifi_and_reboot(ssid, password):
 @app.route("/scan")
 def scan_wifi():
     try:
+        # Trigger een achtergrond-rescan (werkt ook als de interface al verbonden is)
+        subprocess.run(
+            ["nmcli", "device", "wifi", "rescan"],
+            capture_output=True, timeout=5
+        )
+        time.sleep(2)
+
         result = subprocess.run(
-            ["nmcli", "--rescan", "yes", "-t", "-f", "SSID,SIGNAL,SECURITY",
-             "device", "wifi", "list"],
-            capture_output=True, text=True, timeout=20
+            ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"],
+            capture_output=True, text=True, timeout=10
         )
         networks = []
         seen = set()
