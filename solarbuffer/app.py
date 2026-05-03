@@ -1244,7 +1244,7 @@ def toggle_shelly(ip):
         st["min_since"] = None
         st["waiting_for_power_socket"] = False
         st["power_socket_ready_at"] = None
-        set_shelly(0, False, ip)
+        threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
 
     write_audit_log("device_toggled", {
         "device_ip": ip,
@@ -1912,6 +1912,12 @@ def init_device_states(devices):
                 "legionella_active": s.get("legionella_active", False),
                 "legionella_start": s.get("legionella_start"),
                 "boost_until": None,
+                "pre_schedule_started": None,
+                "pre_schedule_brightness": None,
+                "pre_schedule_freeze": None,
+                "pre_legionella_started": None,
+                "pre_legionella_brightness": None,
+                "pre_legionella_freeze": None,
             }
 
 
@@ -2262,7 +2268,7 @@ def _handle_mqtt_command(prefix, topic, payload):
             st["min_since"] = None
             st["waiting_for_power_socket"] = False
             st["power_socket_ready_at"] = None
-            set_shelly(0, False, ip)
+            threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
         write_audit_log("device_toggled_via_mqtt", {"device_ip": ip, "new_state": "on" if new_on else "off"})
 
 
@@ -2440,9 +2446,21 @@ def is_running(device):
     return st["started"] and not st["freeze"] and st["on"]
 
 
+def _socket_offline_unstarted(device):
+    """True when a device's power socket is unreachable and the device hasn't started yet."""
+    st = get_device_state(device)
+    if st["started"] or st.get("pending_start"):
+        return False
+    return (has_power_socket(device)
+            and not st.get("power_socket_online")
+            and not st["power_socket_on"])
+
+
 def higher_priorities_started_and_frozen(devices_sorted, priority):
     for d in devices_sorted:
         if d["priority"] < priority:
+            if _socket_offline_unstarted(d):
+                continue  # socket unreachable → transparent to priority chain
             st = get_device_state(d)
             if not st["started"] or not st["freeze"]:
                 return False
@@ -2464,6 +2482,8 @@ def get_next_startable_device(devices_sorted):
         prio = d["priority"]
         if st["started"] or st.get("pending_start"):
             continue
+        if _socket_offline_unstarted(d):
+            continue  # socket unreachable → skip, try next priority
         if prio == 1:
             return d
         if higher_priorities_started_and_frozen(devices_sorted, prio):
@@ -2493,6 +2513,12 @@ def is_last_possible_priority(devices_sorted, device):
     return device["priority"] == last_priority
 
 
+def graceful_off_device(ip):
+    set_shelly(MIN_BRIGHTNESS, True, ip)
+    time.sleep(1)
+    set_shelly(0, False, ip)
+
+
 def reset_device_to_off(ip):
     state = device_states[ip]
     state["on"] = False
@@ -2504,7 +2530,7 @@ def reset_device_to_off(ip):
     state["min_since"] = None
     state["waiting_for_power_socket"] = False
     state["power_socket_ready_at"] = None
-    set_shelly(0, False, ip)
+    threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
 
 
 def hold_frozen_output(ip):
@@ -2541,9 +2567,11 @@ def control_loop():
 
     online_check_interval = 10
     last_online_check = {}
+    offline_since_map = {}
     export_start = None
     import_unfreeze_start = None
     import_off_start = None
+    prev_schedule_active_ips = set()
 
     while True:
         try:
@@ -2594,6 +2622,28 @@ def control_loop():
                         device_states[ip]["power_socket_online"] = False
                     last_online_check[ip] = now
 
+            # --- Watchdog: track offline timestamps ---
+            for d in devices:
+                ip = d["ip"]
+                if not device_states[ip]["online"]:
+                    if ip not in offline_since_map:
+                        offline_since_map[ip] = now
+                else:
+                    offline_since_map.pop(ip, None)
+
+            # --- Watchdog: started + offline >30s → reset so next priority can take over ---
+            for d in devices:
+                ip = d["ip"]
+                st = device_states[ip]
+                offline_for = now - offline_since_map.get(ip, now)
+                if (offline_for >= 30
+                        and st.get("started")
+                        and not st.get("freeze")
+                        and not st.get("legionella_active")):
+                    print(f"Watchdog: {ip} al {int(offline_for)}s offline terwijl gestart → gereset")
+                    reset_device_to_off(ip)
+                    offline_since_map.pop(ip, None)
+
             for d in devices:
                 ip = d["ip"]
                 state = device_states[ip]
@@ -2622,6 +2672,10 @@ def control_loop():
                     legionella_run_seconds = int((d.get("boiler_volume", 100) / 100) * 3 * 3600)
 
                     if not st.get("legionella_active") and idle_too_long:
+                        if st.get("pre_legionella_started") is None:
+                            st["pre_legionella_started"] = st.get("started", False)
+                            st["pre_legionella_brightness"] = st.get("brightness", 0)
+                            st["pre_legionella_freeze"] = st.get("freeze", False)
                         st["legionella_active"] = True
                         st["legionella_start"] = now
                         save_state(force=True)
@@ -2635,6 +2689,40 @@ def control_loop():
                             st["last_active_time"] = now
                             save_state(force=True)
                             print(f"Anti-Legionella: cyclus voltooid voor {ip}")
+                            pre_started = st.get("pre_legionella_started")
+                            pre_brightness = st.get("pre_legionella_brightness", 0)
+                            pre_freeze = st.get("pre_legionella_freeze", False)
+                            st["saturated_since"] = None
+                            st["min_since"] = None
+                            st["pending_start"] = False
+                            st["waiting_for_power_socket"] = False
+                            st["power_socket_ready_at"] = None
+                            if not enabled:
+                                if pre_started:
+                                    restore_b = max(MIN_BRIGHTNESS, pre_brightness)
+                                    st["on"] = True
+                                    st["started"] = True
+                                    st["brightness"] = restore_b
+                                    st["freeze"] = pre_freeze
+                                    set_shelly(restore_b, True, ip)
+                                else:
+                                    st["on"] = False
+                                    st["started"] = False
+                                    st["brightness"] = 0
+                                    st["freeze"] = False
+                                    threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
+                            else:
+                                if pre_started:
+                                    st["freeze"] = pre_freeze
+                                else:
+                                    st["on"] = False
+                                    st["started"] = False
+                                    st["brightness"] = 0
+                                    st["freeze"] = False
+                                    threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
+                            st["pre_legionella_started"] = None
+                            st["pre_legionella_brightness"] = None
+                            st["pre_legionella_freeze"] = None
                             continue
 
                         if st.get("pending_start"):
@@ -2672,6 +2760,7 @@ def control_loop():
                 for d in devices_sorted:
                     device_states[d["ip"]]["legionella_active"] = False
                     device_states[d["ip"]]["legionella_start"] = None
+                    device_states[d["ip"]]["pre_legionella_started"] = None
             # --- Einde Anti-Legionella ---
 
             # --- Boost override ---
@@ -2733,6 +2822,10 @@ def control_loop():
                         continue
                     if sched_device_ips and ip not in sched_device_ips:
                         continue
+                    if st.get("pre_schedule_started") is None:
+                        st["pre_schedule_started"] = st.get("started", False)
+                        st["pre_schedule_brightness"] = st.get("brightness", 0)
+                        st["pre_schedule_freeze"] = st.get("freeze", False)
                     if st.get("pending_start"):
                         ready = ensure_power_socket_on(d)
                         if ready:
@@ -2765,12 +2858,59 @@ def control_loop():
                     set_shelly(sched_brightness, True, ip)
                     mark_device_activity(d)
                     schedule_handled.add(ip)
+                prev_schedule_active_ips = schedule_handled.copy()
                 current_brightness = sched_brightness
                 if not sched_device_ips:
                     time.sleep(2)
                     continue
             else:
                 active_schedule_info = None
+                for ip in prev_schedule_active_ips:
+                    st = device_states.get(ip)
+                    if st is None:
+                        continue
+                    pre_started = st.get("pre_schedule_started")
+                    pre_brightness = st.get("pre_schedule_brightness", 0)
+                    pre_freeze = st.get("pre_schedule_freeze", False)
+                    if not enabled:
+                        st["saturated_since"] = None
+                        st["min_since"] = None
+                        st["pending_start"] = False
+                        st["waiting_for_power_socket"] = False
+                        st["power_socket_ready_at"] = None
+                        if pre_started:
+                            restore_b = max(MIN_BRIGHTNESS, pre_brightness)
+                            st["on"] = True
+                            st["started"] = True
+                            st["brightness"] = restore_b
+                            st["freeze"] = pre_freeze
+                            set_shelly(restore_b, True, ip)
+                        else:
+                            st["on"] = False
+                            st["started"] = False
+                            st["brightness"] = 0
+                            st["freeze"] = False
+                            threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
+                    else:
+                        if pre_started:
+                            st["freeze"] = pre_freeze
+                            st["saturated_since"] = None
+                            st["min_since"] = None
+                        else:
+                            st["on"] = False
+                            st["started"] = False
+                            st["brightness"] = 0
+                            st["freeze"] = False
+                            st["saturated_since"] = None
+                            st["min_since"] = None
+                            st["pending_start"] = False
+                            st["waiting_for_power_socket"] = False
+                            st["power_socket_ready_at"] = None
+                            threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
+                    st["pre_schedule_started"] = None
+                    st["pre_schedule_brightness"] = None
+                    st["pre_schedule_freeze"] = None
+                prev_schedule_active_ips = set()
             # --- Einde tijdschema override ---
 
             if not enabled:
