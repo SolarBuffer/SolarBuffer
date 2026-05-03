@@ -997,6 +997,40 @@ def settings():
 
 # ================= NETWERK ROUTES =================
 
+def _iwlist_scan():
+    try:
+        result = subprocess.run(
+            ["sudo", "iwlist", "wlan0", "scan"],
+            capture_output=True, text=True, timeout=15
+        )
+        networks = []
+        seen = set()
+        current = {}
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("Cell "):
+                if current.get("ssid") and current["ssid"] not in seen and current["ssid"] not in {"PI-SETUP"}:
+                    seen.add(current["ssid"])
+                    networks.append(current)
+                current = {"ssid": None, "signal": 0, "secured": False}
+            elif 'ESSID:"' in line:
+                m = re.search(r'ESSID:"(.*?)"', line)
+                if m:
+                    current["ssid"] = m.group(1)
+            elif "Signal level=" in line:
+                m = re.search(r'Signal level=(-?\d+)', line)
+                if m:
+                    dbm = int(m.group(1))
+                    current["signal"] = max(0, min(100, 2 * (dbm + 100)))
+            elif "Encryption key:on" in line:
+                current["secured"] = True
+        if current.get("ssid") and current["ssid"] not in seen and current["ssid"] not in {"PI-SETUP"}:
+            networks.append(current)
+        return networks
+    except Exception:
+        return []
+
+
 def _wifi_scan_networks(rescan=False):
     try:
         if rescan:
@@ -1004,7 +1038,7 @@ def _wifi_scan_networks(rescan=False):
                 ["nmcli", "dev", "wifi", "rescan"],
                 capture_output=True, timeout=5
             )
-            time.sleep(3)
+            time.sleep(4)
         cmd = [
             "nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY",
             "dev", "wifi", "list",
@@ -1024,6 +1058,12 @@ def _wifi_scan_networks(rescan=False):
             signal = int(parts[1]) if len(parts) > 1 and parts[1].strip().isdigit() else 0
             security = parts[2].strip() if len(parts) > 2 else ""
             networks.append({"ssid": ssid, "signal": signal, "secured": bool(security)})
+
+        if rescan and len(networks) <= 1:
+            iwlist = _iwlist_scan()
+            if len(iwlist) > len(networks):
+                networks = iwlist
+
         networks.sort(key=lambda x: x["signal"], reverse=True)
         return networks
     except Exception:
