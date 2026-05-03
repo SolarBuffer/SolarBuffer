@@ -1128,6 +1128,25 @@ def network_scan():
     return jsonify(_wifi_scan_networks(rescan=rescan))
 
 
+@app.route("/network/debug")
+def network_debug():
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    out = {}
+    for label, cmd in [
+        ("nmcli_list_no_rescan",  ["nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY", "dev", "wifi", "list", "--rescan", "no"]),
+        ("nmcli_list_yes_rescan", ["nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY", "dev", "wifi", "list", "--rescan", "yes"]),
+        ("nmcli_dev_status",      ["nmcli", "-t", "-f", "device,type,state,connection", "dev"]),
+        ("iwconfig",              ["iwconfig"]),
+    ]:
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            out[label] = {"stdout": r.stdout, "stderr": r.stderr, "rc": r.returncode}
+        except Exception as e:
+            out[label] = {"error": str(e)}
+    return jsonify(out)
+
+
 @app.route("/network/connect", methods=["POST"])
 def network_connect():
     if not require_login():
