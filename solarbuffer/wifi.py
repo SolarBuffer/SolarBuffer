@@ -246,7 +246,7 @@ body {
     transition: max-height 0.3s ease;
     margin-bottom: 0.75rem;
 }
-.manual-card.open { max-height: 260px; }
+.manual-card.open { max-height: 400px; }
 
 .manual-inner {
     padding: 1rem;
@@ -647,16 +647,18 @@ def configure_wifi_and_reboot(ssid, password):
         subprocess.Popen(["systemctl", "reboot"])
 
 
+def do_wifi_scan():
+    # Rescan in achtergrond starten, niet wachten op resultaat
+    subprocess.run(
+        ["nmcli", "device", "wifi", "rescan"],
+        capture_output=True, timeout=8
+    )
+
+
 @app.route("/scan")
 def scan_wifi():
     try:
-        # Trigger een achtergrond-rescan (werkt ook als de interface al verbonden is)
-        subprocess.run(
-            ["nmcli", "device", "wifi", "rescan"],
-            capture_output=True, timeout=5
-        )
-        time.sleep(2)
-
+        # Eerst de gecachde lijst ophalen voor snelle response
         result = subprocess.run(
             ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"],
             capture_output=True, text=True, timeout=10
@@ -664,7 +666,6 @@ def scan_wifi():
         networks = []
         seen = set()
         for line in result.stdout.splitlines():
-            # nmcli terse mode escapes ':' in values as '\:' — split on unescaped colons
             parts = re.split(r'(?<!\\):', line, maxsplit=2)
             if not parts:
                 continue
@@ -680,6 +681,10 @@ def scan_wifi():
                 "secured": bool(security and security not in ("--", "")),
             })
         networks.sort(key=lambda x: -x["signal"])
+
+        # Rescan op de achtergrond starten voor de volgende keer
+        threading.Thread(target=do_wifi_scan, daemon=True).start()
+
         return jsonify(networks=networks)
     except Exception:
         return jsonify(networks=[], error="Scan mislukt")
@@ -705,4 +710,4 @@ def index():
     return render_template_string(HTML)
 
 
-app.run(host="0.0.0.0", port=80)
+app.run(host="0.0.0.0", port=80, threaded=True)
