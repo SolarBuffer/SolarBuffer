@@ -347,7 +347,7 @@ function toggleEye(inputId, icon) {
     else { f.type = 'password'; icon.classList.replace('mdi-eye','mdi-eye-off'); }
 }
 
-function submit(ssid, password) {
+function doConnect(ssid, password) {
     document.getElementById('fSsid').value = ssid;
     document.getElementById('fPassword').value = password;
     document.getElementById('wifiForm').submit();
@@ -356,7 +356,7 @@ function submit(ssid, password) {
 function connectManual() {
     const ssid = document.getElementById('manualSsid').value.trim();
     if (!ssid) { document.getElementById('manualSsid').focus(); return; }
-    submit(ssid, document.getElementById('manualPw').value);
+    doConnect(ssid, document.getElementById('manualPw').value);
 }
 
 function toggleManual() {
@@ -374,7 +374,7 @@ function toggleManual() {
 function toggleEntry(entry) {
     if (openEntry && openEntry !== entry) {
         openEntry.classList.remove('open');
-        openEntry.querySelector('input[type=password]').value = '';
+        openEntry.querySelector('.pw-input').value = '';
     }
     const isOpen = entry.classList.toggle('open');
     openEntry = isOpen ? entry : null;
@@ -428,7 +428,7 @@ function startScan() {
                                 '<input class="pw-input" id="' + pwId + '" type="password" placeholder="' + (n.secured ? 'Wachtwoord' : 'Wachtwoord (optioneel)') + '">' +
                                 '<i class="mdi mdi-eye-off pw-eye" id="' + eyeId + '" onclick="toggleEye(\'' + pwId + '\', document.getElementById(\'' + eyeId + '\'))"></i>' +
                             '</div>' +
-                            '<button type="button" class="btn-connect" onclick="submit(\'' + esc(n.ssid).replace(/'/g,"\\'") + '\', document.getElementById(\'' + pwId + '\').value)">' +
+                            '<button type="button" class="btn-connect" onclick="doConnect(\'' + esc(n.ssid).replace(/'/g,"\\'") + '\', document.getElementById(\'' + pwId + '\').value)">' +
                                 '<i class="mdi mdi-wifi-arrow-right"></i>&nbsp; Verbinden met ' + esc(n.ssid) +
                             '</button>' +
                         '</div>' +
