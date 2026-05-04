@@ -658,7 +658,8 @@
 
     .linked-temp-row {
       display: flex; flex-wrap: wrap; gap: 0.5rem;
-      padding: 0.55rem 0.8rem 0.6rem;
+      margin: 0.65rem -1rem -0.9rem;
+      padding: 0.55rem 1rem 0.6rem;
       border-top: 1px solid hsl(30, 15%, 91%);
     }
     .linked-temp-chip {
@@ -667,7 +668,7 @@
       border-radius: 999px; padding: 0.25rem 0.6rem 0.25rem 0.45rem;
       font-size: 0.8rem;
     }
-    .linked-temp-chip i { font-size: 0.95rem; color: hsl(200, 80%, 35%); }
+    .linked-temp-chip i { font-size: 0.95rem; line-height: 1; color: hsl(200, 80%, 35%); }
     .linked-temp-chip .lt-name { color: hsl(220, 20%, 30%); font-weight: 600; }
     .linked-temp-chip .lt-val  { color: hsl(200, 80%, 30%); font-weight: 700; margin-left: 0.2rem; }
     .linked-temp-chip .lt-offline { color: hsl(220, 10%, 54%); font-style: italic; }
@@ -686,6 +687,7 @@
       cursor: pointer;
       transition: opacity 0.2s;
       background: white;
+      overflow: hidden;
     }
 
     .device-card:last-child {
