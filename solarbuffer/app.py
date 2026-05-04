@@ -106,17 +106,28 @@ def load_config():
     for acc in cfg["accessories"]:
         if "id" not in acc:
             acc["id"] = str(uuid.uuid4())
-        if "power_meter_type" not in acc:
-            acc["power_meter_type"] = "shelly"
-        # Migreer enkel power_ip → power_ips array
-        if "power_ips" not in acc:
-            old_ip = (acc.get("power_ip") or "").strip()
-            acc["power_ips"] = [old_ip] if old_ip else []
-        acc["power_ips"] = [ip for ip in acc["power_ips"] if ip.strip()]
-        if "power_ip" not in acc:
-            acc["power_ip"] = acc["power_ips"][0] if acc["power_ips"] else ""
+        if "acc_type" not in acc:
+            acc["acc_type"] = "temperature" if acc.get("temp_ip") else "power"
+        if acc["acc_type"] == "temperature":
+            if "temp_ip" not in acc:
+                acc["temp_ip"] = ""
+            if "temp_channels" not in acc:
+                # migreer oud enkel-kanaal formaat
+                old_ch = acc.pop("temp_channel", None)
+                acc["temp_channels"] = [old_ch] if old_ch is not None else [100]
+            if "linked_device_ip" not in acc:
+                acc["linked_device_ip"] = ""
+        else:
+            if "power_meter_type" not in acc:
+                acc["power_meter_type"] = "shelly"
+            if "power_ips" not in acc:
+                old_ip = (acc.get("power_ip") or "").strip()
+                acc["power_ips"] = [old_ip] if old_ip else []
+            acc["power_ips"] = [ip for ip in acc["power_ips"] if ip.strip()]
+            if "power_ip" not in acc:
+                acc["power_ip"] = acc["power_ips"][0] if acc["power_ips"] else ""
         if "icon" not in acc:
-            acc["icon"] = "mdi-power-plug"
+            acc["icon"] = "mdi-thermometer" if acc["acc_type"] == "temperature" else "mdi-power-plug"
 
     # Migreer oud formaat (enkele gebruiker) naar gebruikerslijst
     if "users" not in cfg:
@@ -475,6 +486,26 @@ def detect_shelly_pm(ip):
                         return {"name": name, "ip": ip, "model": model, "type": "shelly"}
             except Exception:
                 pass
+    except Exception:
+        pass
+    return None
+
+
+def detect_shelly_temp(ip):
+    try:
+        r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=1.5)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        if not isinstance(data, dict):
+            return None
+        channels = [int(k.split(":")[1]) for k in data if k.startswith("temperature:") and int(k.split(":")[1]) >= 100]
+        if not channels:
+            return None
+        info_r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.2)
+        info = info_r.json() if info_r.status_code == 200 else {}
+        name = (info.get("name") or info.get("id") or f"Shelly Temp ({ip})").strip()
+        return {"name": name, "ip": ip, "type": "shelly_temp", "channels": sorted(channels)}
     except Exception:
         pass
     return None
@@ -895,15 +926,24 @@ def status_json():
     for acc in cfg.get("accessories", []):
         acc_id = acc.get("id", "")
         st = accessory_states.get(acc_id, {})
-        accessories.append({
+        acc_type = acc.get("acc_type", "power")
+        entry = {
             "id": acc_id,
             "name": acc.get("name", ""),
-            "power_meter_type": acc.get("power_meter_type", ""),
-            "power_ips": acc.get("power_ips", [acc.get("power_ip", "")]),
+            "acc_type": acc_type,
             "icon": acc.get("icon", "mdi-power-plug"),
-            "power": st.get("power", 0.0),
             "online": st.get("online", False),
-        })
+        }
+        if acc_type == "temperature":
+            entry["temp_ip"] = acc.get("temp_ip", "")
+            entry["temp_channels"] = acc.get("temp_channels", [100])
+            entry["linked_device_ip"] = acc.get("linked_device_ip", "")
+            entry["temperatures"] = st.get("temperatures", {})
+        else:
+            entry["power_meter_type"] = acc.get("power_meter_type", "")
+            entry["power_ips"] = acc.get("power_ips", [acc.get("power_ip", "")])
+            entry["power"] = st.get("power", 0.0)
+        accessories.append(entry)
 
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
@@ -1835,7 +1875,6 @@ def scan_accessories():
         return jsonify({"error": "unauthorized"}), 401
 
     cfg = load_config()
-    # Verzamel alle IPs die al in gebruik zijn
     used_ips = set()
     used_ips.add((cfg.get("p1_ip") or "").strip())
     for d in cfg.get("shelly_devices", []):
@@ -1847,24 +1886,36 @@ def scan_accessories():
             used_ips.add(ip.strip())
     used_ips.discard("")
 
+    used_temp_ips = {(a.get("temp_ip") or "").strip() for a in cfg.get("accessories", []) if a.get("acc_type") == "temperature"}
+    used_temp_ips.discard("")
+
     ips = get_subnet_ips()
-    found = []
+    found_power = []
+    found_temp = []
     with ThreadPoolExecutor(max_workers=50) as executor:
         futures = {}
         for ip in ips:
-            futures[executor.submit(detect_shelly_pm, ip)] = ip
-            futures[executor.submit(detect_homewizard_pm, ip)] = ip
+            futures[executor.submit(detect_shelly_pm, ip)] = ("power", ip)
+            futures[executor.submit(detect_homewizard_pm, ip)] = ("power", ip)
+            futures[executor.submit(detect_shelly_temp, ip)] = ("temp", ip)
         for future in as_completed(futures):
             try:
                 result = future.result()
-                if result and result["ip"] not in used_ips:
-                    if not any(f["ip"] == result["ip"] for f in found):
-                        found.append(result)
+                if not result:
+                    continue
+                kind = futures[future][0]
+                if kind == "power" and result["ip"] not in used_ips:
+                    if not any(f["ip"] == result["ip"] for f in found_power):
+                        found_power.append(result)
+                elif kind == "temp" and result["ip"] not in used_temp_ips:
+                    if not any(f["ip"] == result["ip"] for f in found_temp):
+                        found_temp.append(result)
             except Exception:
                 pass
 
-    found.sort(key=lambda d: d["ip"])
-    return jsonify(devices=found)
+    found_power.sort(key=lambda d: d["ip"])
+    found_temp.sort(key=lambda d: d["ip"])
+    return jsonify(devices=found_power, temp_devices=found_temp)
 
 
 @app.route("/accessories", methods=["GET"])
@@ -1872,7 +1923,8 @@ def accessories_page():
     if not require_login():
         return redirect("/login")
     cfg = load_config()
-    return render_template("accessories.html", accessories=cfg.get("accessories", []), dark_mode=get_user_dark_mode())
+    return render_template("accessories.html", accessories=cfg.get("accessories", []),
+                           shelly_devices=cfg.get("shelly_devices", []), dark_mode=get_user_dark_mode())
 
 
 @app.route("/accessories", methods=["POST"])
@@ -1881,19 +1933,30 @@ def add_accessory():
         return jsonify({"error": "unauthorized"}), 401
     data = request.get_json(force=True) or {}
     name = (data.get("name") or "").strip()
-    pm_type = (data.get("power_meter_type") or "").strip().lower()
-    pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
-    if not name or not pm_type or not pm_ips:
-        return jsonify(success=False, error="Naam, type en minimaal één IP zijn verplicht"), 400
-    if pm_type not in ("shelly", "homewizard"):
-        return jsonify(success=False, error="Ongeldig type"), 400
-    cfg = load_config()
+    acc_type = (data.get("acc_type") or "power").strip().lower()
     icon = (data.get("icon") or "mdi-power-plug").strip()
-    new_acc = {"id": str(uuid.uuid4()), "name": name, "power_meter_type": pm_type,
-               "power_ip": pm_ips[0], "power_ips": pm_ips, "icon": icon}
+    cfg = load_config()
+    if acc_type == "temperature":
+        temp_ip = (data.get("temp_ip") or "").strip()
+        temp_channels = [int(c) for c in data.get("temp_channels", [100]) if str(c).strip().isdigit()]
+        linked_device_ip = (data.get("linked_device_ip") or "").strip()
+        if not name or not temp_ip:
+            return jsonify(success=False, error="Naam en IP-adres zijn verplicht"), 400
+        new_acc = {"id": str(uuid.uuid4()), "name": name, "acc_type": "temperature",
+                   "temp_ip": temp_ip, "temp_channels": temp_channels or [100],
+                   "linked_device_ip": linked_device_ip, "icon": icon}
+    else:
+        pm_type = (data.get("power_meter_type") or "").strip().lower()
+        pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
+        if not name or not pm_type or not pm_ips:
+            return jsonify(success=False, error="Naam, type en minimaal één IP zijn verplicht"), 400
+        if pm_type not in ("shelly", "homewizard"):
+            return jsonify(success=False, error="Ongeldig type"), 400
+        new_acc = {"id": str(uuid.uuid4()), "name": name, "acc_type": "power",
+                   "power_meter_type": pm_type, "power_ip": pm_ips[0], "power_ips": pm_ips, "icon": icon}
     cfg["accessories"].append(new_acc)
     save_config(cfg)
-    write_audit_log("accessory_added", {"name": name, "power_ips": pm_ips})
+    write_audit_log("accessory_added", {"name": name, "acc_type": acc_type})
     return jsonify(success=True, accessory=new_acc)
 
 
@@ -1907,17 +1970,33 @@ def update_accessory(acc_id):
     if not acc:
         return jsonify(success=False, error="Niet gevonden"), 404
     name = (data.get("name") or "").strip()
-    pm_type = (data.get("power_meter_type") or "").strip().lower()
-    pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
-    if not name or not pm_type or not pm_ips:
-        return jsonify(success=False, error="Naam, type en minimaal één IP zijn verplicht"), 400
-    if pm_type not in ("shelly", "homewizard"):
-        return jsonify(success=False, error="Ongeldig type"), 400
-    acc["name"] = name
-    acc["power_meter_type"] = pm_type
-    acc["power_ip"] = pm_ips[0]
-    acc["power_ips"] = pm_ips
-    acc["icon"] = (data.get("icon") or "mdi-power-plug").strip()
+    acc_type = (data.get("acc_type") or acc.get("acc_type") or "power").strip().lower()
+    icon = (data.get("icon") or "mdi-power-plug").strip()
+    if acc_type == "temperature":
+        temp_ip = (data.get("temp_ip") or "").strip()
+        temp_channels = [int(c) for c in data.get("temp_channels", [100]) if str(c).strip().isdigit()]
+        linked_device_ip = (data.get("linked_device_ip") or "").strip()
+        if not name or not temp_ip:
+            return jsonify(success=False, error="Naam en IP-adres zijn verplicht"), 400
+        acc["name"] = name
+        acc["acc_type"] = "temperature"
+        acc["temp_ip"] = temp_ip
+        acc["temp_channels"] = temp_channels or [100]
+        acc["linked_device_ip"] = linked_device_ip
+        acc["icon"] = icon
+    else:
+        pm_type = (data.get("power_meter_type") or "").strip().lower()
+        pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
+        if not name or not pm_type or not pm_ips:
+            return jsonify(success=False, error="Naam, type en minimaal één IP zijn verplicht"), 400
+        if pm_type not in ("shelly", "homewizard"):
+            return jsonify(success=False, error="Ongeldig type"), 400
+        acc["name"] = name
+        acc["acc_type"] = "power"
+        acc["power_meter_type"] = pm_type
+        acc["power_ip"] = pm_ips[0]
+        acc["power_ips"] = pm_ips
+        acc["icon"] = icon
     save_config(cfg)
     write_audit_log("accessory_updated", {"id": acc_id, "name": name})
     return jsonify(success=True)
@@ -2063,6 +2142,17 @@ def get_shelly_device_power(ip):
         except Exception:
             pass
     return 0
+
+
+def get_shelly_temperature(ip, channel=100):
+    try:
+        r = requests.get(f"http://{ip}/rpc/Temperature.GetStatus?id={channel}", timeout=2)
+        data = r.json()
+        if isinstance(data, dict) and data.get("tC") is not None:
+            return round(float(data["tC"]), 1)
+    except Exception:
+        pass
+    return None
 
 
 # ================= POWER SOCKET HELPERS =================
@@ -3415,28 +3505,49 @@ def accessory_poll_loop():
             cfg = load_config()
             for acc in cfg.get("accessories", []):
                 acc_id = acc.get("id")
-                pm_type = (acc.get("power_meter_type") or "").lower()
-                pm_ips = [ip.strip() for ip in acc.get("power_ips", []) if ip.strip()]
-                if not acc_id or not pm_ips:
+                if not acc_id:
                     continue
-                if acc_id not in accessory_states:
-                    accessory_states[acc_id] = {"power": 0.0, "online": False}
-                try:
-                    total_power = 0.0
-                    any_online = False
-                    for pm_ip in pm_ips:
-                        if pm_type == "shelly":
-                            p = get_shelly_device_power(pm_ip)
-                            total_power += p
-                            if p > 0 or check_http_device_online(pm_ip, "/rpc/Shelly.GetStatus"):
+                acc_type = acc.get("acc_type", "power")
+                if acc_type == "temperature":
+                    temp_ip = (acc.get("temp_ip") or "").strip()
+                    channels = acc.get("temp_channels", [100])
+                    if not temp_ip:
+                        continue
+                    if acc_id not in accessory_states:
+                        accessory_states[acc_id] = {"temperatures": {}, "online": False}
+                    try:
+                        temps = {}
+                        for ch in channels:
+                            t = get_shelly_temperature(temp_ip, ch)
+                            if t is not None:
+                                temps[str(ch)] = t
+                        accessory_states[acc_id]["temperatures"] = temps
+                        accessory_states[acc_id]["online"] = bool(temps)
+                    except Exception:
+                        accessory_states[acc_id]["online"] = False
+                else:
+                    pm_type = (acc.get("power_meter_type") or "").lower()
+                    pm_ips = [ip.strip() for ip in acc.get("power_ips", []) if ip.strip()]
+                    if not pm_ips:
+                        continue
+                    if acc_id not in accessory_states:
+                        accessory_states[acc_id] = {"power": 0.0, "online": False}
+                    try:
+                        total_power = 0.0
+                        any_online = False
+                        for pm_ip in pm_ips:
+                            if pm_type == "shelly":
+                                p = get_shelly_device_power(pm_ip)
+                                total_power += p
+                                if p > 0 or check_http_device_online(pm_ip, "/rpc/Shelly.GetStatus"):
+                                    any_online = True
+                            elif pm_type == "homewizard":
+                                total_power += get_homewizard_power(pm_ip)
                                 any_online = True
-                        elif pm_type == "homewizard":
-                            total_power += get_homewizard_power(pm_ip)
-                            any_online = True
-                    accessory_states[acc_id]["power"] = total_power
-                    accessory_states[acc_id]["online"] = any_online
-                except Exception:
-                    accessory_states[acc_id]["online"] = False
+                        accessory_states[acc_id]["power"] = total_power
+                        accessory_states[acc_id]["online"] = any_online
+                    except Exception:
+                        accessory_states[acc_id]["online"] = False
         except Exception:
             pass
         time.sleep(5)

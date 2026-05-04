@@ -28,7 +28,6 @@
     }
 
     h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
-
     .container { width: 100%; max-width: 480px; }
 
     .header { text-align: center; margin-bottom: 1.75rem; }
@@ -56,11 +55,7 @@
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       margin-bottom: 0.75rem;
     }
-    .back-btn:hover {
-      background: hsl(32, 100%, 96%);
-      border-color: hsl(32, 85%, 60%);
-      color: hsl(32, 90%, 40%);
-    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
 
     .section-title {
       font-size: 0.72rem;
@@ -72,73 +67,35 @@
       margin: 1.25rem 0 0.4rem;
     }
 
-    /* ===== ACCESSOIRE KAART ===== */
-    .acc-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-
+    /* ===== KAARTEN ===== */
+    .acc-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
     .acc-empty {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.875rem;
-      padding: 1.5rem 1rem;
-      text-align: center;
-      color: hsl(220, 10%, 50%);
-      font-size: 0.88rem;
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem; padding: 1.5rem 1rem;
+      text-align: center; color: hsl(220, 10%, 50%); font-size: 0.88rem;
     }
-
     .acc-card {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.875rem;
-      box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem; box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
       overflow: hidden;
     }
-
-    .acc-header {
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-      padding: 0.9rem 1rem;
+    .acc-header { display: flex; align-items: center; gap: 0.85rem; padding: 0.9rem 1rem; }
+    .acc-icon-mdi {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: hsl(32, 100%, 95%); color: hsl(32, 95%, 48%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 1.25rem;
     }
-
-    .acc-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: hsl(32, 100%, 95%);
-      color: hsl(32, 95%, 48%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
+    .acc-icon-mdi.temp { background: hsl(200, 80%, 93%); color: hsl(200, 80%, 35%); }
     .acc-info { flex: 1; min-width: 0; }
     .acc-name { font-weight: 600; font-size: 0.95rem; }
-    .acc-sub {
-      font-size: 0.78rem;
-      color: hsl(220, 10%, 50%);
-      margin-top: 0.1rem;
-      font-family: monospace;
-    }
-
-    .acc-actions {
-      display: flex;
-      gap: 0.4rem;
-      flex-shrink: 0;
-    }
+    .acc-sub { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; font-family: monospace; }
+    .acc-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
 
     .btn-icon {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      border: 1px solid hsl(30, 15%, 85%);
-      background: transparent;
-      color: hsl(220, 10%, 46%);
-      cursor: pointer;
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid hsl(30, 15%, 85%); background: transparent;
+      color: hsl(220, 10%, 46%); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
@@ -147,334 +104,199 @@
 
     /* ===== FORMULIER ===== */
     .acc-form-wrap {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.875rem;
-      box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
-      padding: 1.25rem 1.1rem;
-      margin-bottom: 1rem;
-      display: none;
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem; box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
+      padding: 1.25rem 1.1rem; margin-bottom: 1rem; display: none;
     }
     .acc-form-wrap.open { display: block; }
+    .form-title { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
 
-    .form-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
+    /* type switcher */
+    .type-switcher {
+      display: flex; gap: 0; border: 1.5px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem; overflow: hidden; margin-bottom: 1rem;
     }
+    .type-btn {
+      flex: 1; padding: 0.5rem 0.5rem; font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 0.82rem; border: none; background: white;
+      color: hsl(220, 10%, 46%); cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .type-btn:first-child { border-right: 1.5px solid hsl(30, 15%, 84%); }
+    .type-btn.active { background: hsl(32, 95%, 52%); color: white; }
 
     .form-field { margin-bottom: 0.85rem; }
     .form-field label {
-      display: block;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: hsl(220, 10%, 40%);
-      margin-bottom: 0.3rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      display: block; font-size: 0.78rem; font-weight: 600;
+      color: hsl(220, 10%, 40%); margin-bottom: 0.3rem;
+      text-transform: uppercase; letter-spacing: 0.04em;
     }
-
-    .form-field input,
-    .form-field select {
-      width: 100%;
-      padding: 0.55rem 0.75rem;
-      border: 1.5px solid hsl(30, 15%, 84%);
-      border-radius: 0.5rem;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.9rem;
-      color: hsl(220, 20%, 14%);
-      background: white;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-      -webkit-appearance: none;
+    .form-field input, .form-field select {
+      width: 100%; padding: 0.55rem 0.75rem;
+      border: 1.5px solid hsl(30, 15%, 84%); border-radius: 0.5rem;
+      font-family: 'Inter', sans-serif; font-size: 0.9rem;
+      color: hsl(220, 20%, 14%); background: white; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none;
     }
-    .form-field input:focus,
-    .form-field select:focus {
+    .form-field input:focus, .form-field select:focus {
       border-color: hsl(32, 85%, 60%);
       box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.12);
     }
-
-    .form-hint {
-      font-size: 0.75rem;
-      color: hsl(220, 10%, 54%);
-      margin-top: 0.25rem;
-    }
-
-    .form-error {
-      font-size: 0.82rem;
-      color: hsl(0, 65%, 48%);
-      margin-bottom: 0.75rem;
-      display: none;
-    }
+    .form-hint { font-size: 0.75rem; color: hsl(220, 10%, 54%); margin-top: 0.25rem; }
+    .form-error { font-size: 0.82rem; color: hsl(0, 65%, 48%); margin-bottom: 0.75rem; display: none; }
     .form-error.show { display: block; }
-
-    .form-actions {
-      display: flex;
-      gap: 0.6rem;
-      margin-top: 1.1rem;
-    }
+    .form-actions { display: flex; gap: 0.6rem; margin-top: 1.1rem; }
 
     .btn-save {
-      flex: 1;
-      padding: 0.65rem;
-      background: hsl(32, 95%, 52%);
-      border: none;
-      border-radius: 0.5rem;
-      color: white;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700;
-      font-size: 0.92rem;
-      cursor: pointer;
-      transition: background 0.15s;
+      flex: 1; padding: 0.65rem; background: hsl(32, 95%, 52%);
+      border: none; border-radius: 0.5rem; color: white;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.92rem;
+      cursor: pointer; transition: background 0.15s;
     }
     .btn-save:hover { background: hsl(32, 90%, 45%); }
     .btn-save:disabled { opacity: 0.6; cursor: default; }
-
     .btn-cancel {
-      flex: 1;
-      padding: 0.65rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
-      border-radius: 0.5rem;
-      background: transparent;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.92rem;
-      cursor: pointer;
-      transition: background 0.15s;
+      flex: 1; padding: 0.65rem; border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem; background: transparent;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.92rem;
+      cursor: pointer; transition: background 0.15s;
     }
     .btn-cancel:hover { background: hsl(30, 15%, 94%); }
 
     .btn-add {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      width: 100%;
-      padding: 0.7rem;
-      border: 1.5px dashed hsl(32, 70%, 72%);
-      border-radius: 0.875rem;
-      background: hsl(32, 100%, 97%);
-      color: hsl(32, 85%, 42%);
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.92rem;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      width: 100%; padding: 0.7rem;
+      border: 1.5px dashed hsl(32, 70%, 72%); border-radius: 0.875rem;
+      background: hsl(32, 100%, 97%); color: hsl(32, 85%, 42%);
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.92rem;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s;
     }
     .btn-add:hover { background: hsl(32, 100%, 94%); border-color: hsl(32, 70%, 60%); }
 
-    /* ===== MEERDERE IPs ===== */
-    .ip-row {
-      display: flex;
-      gap: 0.4rem;
-      align-items: center;
-      margin-bottom: 0.4rem;
-    }
+    /* ===== IP LIJST ===== */
+    .ip-row { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; }
     .ip-row input {
-      flex: 1;
-      padding: 0.55rem 0.75rem;
-      border: 1.5px solid hsl(30, 15%, 84%);
-      border-radius: 0.5rem;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.9rem;
-      color: hsl(220, 20%, 14%);
-      background: white;
-      outline: none;
+      flex: 1; padding: 0.55rem 0.75rem;
+      border: 1.5px solid hsl(30, 15%, 84%); border-radius: 0.5rem;
+      font-family: 'Inter', sans-serif; font-size: 0.9rem;
+      color: hsl(220, 20%, 14%); background: white; outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .ip-row input:focus {
-      border-color: hsl(32, 85%, 60%);
-      box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.12);
-    }
+    .ip-row input:focus { border-color: hsl(32, 85%, 60%); box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.12); }
     .btn-remove-ip {
-      width: 30px; height: 30px;
-      border-radius: 7px;
-      border: 1px solid hsl(0, 60%, 85%);
-      background: hsl(0, 80%, 97%);
-      color: hsl(0, 65%, 48%);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.12s;
+      width: 30px; height: 30px; border-radius: 7px;
+      border: 1px solid hsl(0, 60%, 85%); background: hsl(0, 80%, 97%);
+      color: hsl(0, 65%, 48%); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .btn-remove-ip:hover { background: hsl(0, 80%, 93%); }
-
     .btn-add-ip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.35rem 0.65rem;
-      border: 1.5px dashed hsl(32, 70%, 72%);
-      border-radius: 0.4rem;
-      background: transparent;
-      color: hsl(32, 85%, 42%);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.78rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-bottom: 0.3rem;
-      transition: background 0.12s;
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.35rem 0.65rem; border: 1.5px dashed hsl(32, 70%, 72%);
+      border-radius: 0.4rem; background: transparent; color: hsl(32, 85%, 42%);
+      font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; margin-bottom: 0.3rem;
     }
     .btn-add-ip:hover { background: hsl(32, 100%, 96%); }
 
-    html[data-theme="dark"] .ip-row input {
-      background: hsl(220, 8%, 20%);
-      border-color: hsl(220, 8%, 36%);
-      color: hsl(220, 10%, 88%);
+    /* ===== ICON PICKER ===== */
+    .icon-picker-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.45rem; margin-top: 0.4rem;
     }
-    html[data-theme="dark"] .ip-row input:focus {
-      border-color: hsl(32, 80%, 56%);
-      box-shadow: 0 0 0 3px hsla(32, 80%, 52%, 0.15);
+    .icon-option {
+      display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+      padding: 0.5rem 0.25rem; border: 1.5px solid hsl(30, 15%, 88%);
+      border-radius: 0.5rem; cursor: pointer; background: white;
+      transition: background 0.12s, border-color 0.12s;
     }
+    .icon-option:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 70%, 72%); }
+    .icon-option.active { background: hsl(32, 100%, 93%); border-color: hsl(32, 95%, 52%); }
+    .icon-option i { font-size: 1.4rem; color: hsl(32, 95%, 48%); line-height: 1; }
+    .icon-option span { font-size: 0.6rem; color: hsl(220, 10%, 46%); text-align: center; line-height: 1.2; }
+
+    /* ===== SCAN ===== */
+    .btn-scan {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      width: 100%; padding: 0.7rem; border: 1.5px solid hsl(220, 15%, 82%);
+      border-radius: 0.875rem; background: white; color: hsl(220, 15%, 36%);
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.92rem;
+      cursor: pointer; margin-bottom: 0.6rem; transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-scan:hover:not(:disabled) { background: hsl(220, 15%, 96%); border-color: hsl(220, 15%, 68%); }
+    .btn-scan:disabled { opacity: 0.6; cursor: default; }
+    .scan-spinner {
+      width: 16px; height: 16px; border: 2px solid currentColor;
+      border-top-color: transparent; border-radius: 50%;
+      animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .scan-results {
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem; overflow: hidden; margin-bottom: 0.75rem; display: none;
+    }
+    .scan-results.show { display: block; }
+    .scan-results-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: hsl(220, 10%, 52%); padding: 0.7rem 1rem 0.4rem;
+    }
+    .scan-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1rem; border-top: 1px solid hsl(30, 15%, 91%);
+      cursor: pointer; transition: background 0.12s;
+    }
+    .scan-item:hover { background: hsl(32, 100%, 97%); }
+    .scan-item.selected { background: hsl(32, 100%, 94%); border-left: 3px solid hsl(32, 95%, 52%); }
+    .scan-item-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: hsl(145, 55%, 91%); color: hsl(145, 55%, 30%);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .scan-item-icon.temp { background: hsl(200, 80%, 90%); color: hsl(200, 80%, 30%); }
+    .scan-item-info { flex: 1; min-width: 0; }
+    .scan-item-name { font-weight: 600; font-size: 0.88rem; }
+    .scan-item-ip { font-size: 0.76rem; color: hsl(220, 10%, 50%); font-family: monospace; }
+    .scan-item-add { font-size: 0.75rem; font-weight: 600; color: hsl(32, 85%, 42%); flex-shrink: 0; }
+    .scan-none { padding: 0.9rem 1rem; font-size: 0.84rem; color: hsl(220, 10%, 50%); border-top: 1px solid hsl(30, 15%, 91%); }
+
+    /* ===== DARK MODE ===== */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 18%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .section-title { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .acc-empty,
+    html[data-theme="dark"] .acc-card,
+    html[data-theme="dark"] .acc-form-wrap { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); box-shadow: none; }
+    html[data-theme="dark"] .acc-icon-mdi { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .acc-icon-mdi.temp { background: hsl(200, 30%, 22%); color: hsl(200, 70%, 62%); }
+    html[data-theme="dark"] .acc-sub { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .btn-icon { border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 60%); }
+    html[data-theme="dark"] .btn-icon:hover { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .btn-icon.delete:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 62%); border-color: hsl(0, 40%, 35%); }
+    html[data-theme="dark"] .type-switcher { border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .type-btn { background: hsl(220, 8%, 24%); color: hsl(220, 8%, 58%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .type-btn.active { background: hsl(32, 80%, 46%); color: white; }
+    html[data-theme="dark"] .form-field label { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .form-field input,
+    html[data-theme="dark"] .form-field select { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .form-field input:focus,
+    html[data-theme="dark"] .form-field select:focus { border-color: hsl(32, 80%, 56%); box-shadow: 0 0 0 3px hsla(32, 80%, 52%, 0.15); }
+    html[data-theme="dark"] .form-hint { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .form-title { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .btn-cancel { border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 70%); }
+    html[data-theme="dark"] .btn-cancel:hover { background: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .btn-add { background: hsl(220, 8%, 22%); border-color: hsl(32, 40%, 40%); color: hsl(32, 70%, 58%); }
+    html[data-theme="dark"] .btn-add:hover { background: hsl(220, 8%, 28%); border-color: hsl(32, 60%, 50%); }
+    html[data-theme="dark"] .ip-row input { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .ip-row input:focus { border-color: hsl(32, 80%, 56%); }
     html[data-theme="dark"] .btn-remove-ip { background: hsl(0, 20%, 22%); border-color: hsl(0, 40%, 34%); color: hsl(0, 65%, 60%); }
     html[data-theme="dark"] .btn-add-ip { color: hsl(32, 70%, 58%); border-color: hsl(32, 40%, 40%); }
     html[data-theme="dark"] .btn-add-ip:hover { background: hsl(220, 8%, 26%); }
-
-    /* ===== ICON PICKER ===== */
-    .icon-picker-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 0.45rem;
-      margin-top: 0.4rem;
-    }
-
-    .icon-option {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.5rem 0.25rem;
-      border: 1.5px solid hsl(30, 15%, 88%);
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: background 0.12s, border-color 0.12s;
-      background: white;
-    }
-    .icon-option:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 70%, 72%); }
-    .icon-option.active {
-      background: hsl(32, 100%, 93%);
-      border-color: hsl(32, 95%, 52%);
-    }
-    .icon-option i {
-      font-size: 1.4rem;
-      color: hsl(32, 95%, 48%);
-      line-height: 1;
-    }
-    .icon-option span {
-      font-size: 0.6rem;
-      color: hsl(220, 10%, 46%);
-      text-align: center;
-      line-height: 1.2;
-    }
-
-    .acc-icon-mdi {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      background: hsl(32, 100%, 95%);
-      color: hsl(32, 95%, 48%);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      font-size: 1.25rem;
-    }
-
     html[data-theme="dark"] .icon-option { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 34%); }
     html[data-theme="dark"] .icon-option:hover { background: hsl(220, 8%, 28%); border-color: hsl(32, 50%, 44%); }
     html[data-theme="dark"] .icon-option.active { background: hsl(32, 20%, 24%); border-color: hsl(32, 80%, 56%); }
     html[data-theme="dark"] .icon-option i { color: hsl(32, 80%, 62%); }
     html[data-theme="dark"] .icon-option span { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .acc-icon-mdi { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-
-    /* ===== SCAN ===== */
-    .btn-scan {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      width: 100%;
-      padding: 0.7rem;
-      border: 1.5px solid hsl(220, 15%, 82%);
-      border-radius: 0.875rem;
-      background: white;
-      color: hsl(220, 15%, 36%);
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.92rem;
-      cursor: pointer;
-      margin-bottom: 0.6rem;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .btn-scan:hover:not(:disabled) { background: hsl(220, 15%, 96%); border-color: hsl(220, 15%, 68%); }
-    .btn-scan:disabled { opacity: 0.6; cursor: default; }
-
-    .scan-spinner {
-      width: 16px; height: 16px;
-      border: 2px solid currentColor;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .scan-results {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.875rem;
-      overflow: hidden;
-      margin-bottom: 0.75rem;
-      display: none;
-    }
-    .scan-results.show { display: block; }
-
-    .scan-results-title {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: hsl(220, 10%, 52%);
-      padding: 0.7rem 1rem 0.4rem;
-    }
-
-    .scan-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      border-top: 1px solid hsl(30, 15%, 91%);
-      cursor: pointer;
-      transition: background 0.12s;
-    }
-    .scan-item:hover { background: hsl(32, 100%, 97%); }
-    .scan-item.selected { background: hsl(32, 100%, 94%); border-left: 3px solid hsl(32, 95%, 52%); }
-
-    .scan-item-icon {
-      width: 34px; height: 34px;
-      border-radius: 8px;
-      background: hsl(145, 55%, 91%);
-      color: hsl(145, 55%, 30%);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .scan-item-info { flex: 1; min-width: 0; }
-    .scan-item-name { font-weight: 600; font-size: 0.88rem; }
-    .scan-item-ip   { font-size: 0.76rem; color: hsl(220, 10%, 50%); font-family: monospace; }
-
-    .scan-item-add {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: hsl(32, 85%, 42%);
-      flex-shrink: 0;
-    }
-
-    .scan-none {
-      padding: 0.9rem 1rem;
-      font-size: 0.84rem;
-      color: hsl(220, 10%, 50%);
-      border-top: 1px solid hsl(30, 15%, 91%);
-    }
-
     html[data-theme="dark"] .btn-scan { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 72%); }
     html[data-theme="dark"] .btn-scan:hover:not(:disabled) { background: hsl(220, 8%, 32%); }
     html[data-theme="dark"] .scan-results { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); }
@@ -483,51 +305,10 @@
     html[data-theme="dark"] .scan-item:hover { background: hsl(220, 8%, 28%); }
     html[data-theme="dark"] .scan-item.selected { background: hsl(32, 20%, 26%); border-left-color: hsl(32, 80%, 58%); }
     html[data-theme="dark"] .scan-item-icon { background: hsl(145, 25%, 22%); color: hsl(145, 55%, 58%); }
+    html[data-theme="dark"] .scan-item-icon.temp { background: hsl(200, 25%, 20%); color: hsl(200, 60%, 58%); }
     html[data-theme="dark"] .scan-item-ip { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .scan-item-add { color: hsl(32, 75%, 58%); }
     html[data-theme="dark"] .scan-none { color: hsl(220, 8%, 52%); border-top-color: hsl(220, 8%, 30%); }
-
-    /* ===== DARK MODE ===== */
-    html[data-theme="dark"] body {
-      background: hsl(220, 8%, 18%);
-      color: hsl(220, 10%, 88%);
-    }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 55%); }
-    html[data-theme="dark"] .section-title { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-
-    html[data-theme="dark"] .acc-empty,
-    html[data-theme="dark"] .acc-card,
-    html[data-theme="dark"] .acc-form-wrap {
-      background: hsl(220, 8%, 24%);
-      border-color: hsl(220, 8%, 32%);
-      box-shadow: 0 4px 16px -6px rgba(0,0,0,0.25);
-    }
-    html[data-theme="dark"] .acc-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .acc-sub { color: hsl(220, 8%, 55%); }
-    html[data-theme="dark"] .btn-icon { border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 60%); }
-    html[data-theme="dark"] .btn-icon:hover { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 82%); }
-    html[data-theme="dark"] .btn-icon.delete:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 62%); border-color: hsl(0, 40%, 35%); }
-
-    html[data-theme="dark"] .form-field label { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .form-field input,
-    html[data-theme="dark"] .form-field select {
-      background: hsl(220, 8%, 20%);
-      border-color: hsl(220, 8%, 36%);
-      color: hsl(220, 10%, 88%);
-    }
-    html[data-theme="dark"] .form-field input:focus,
-    html[data-theme="dark"] .form-field select:focus {
-      border-color: hsl(32, 80%, 56%);
-      box-shadow: 0 0 0 3px hsla(32, 80%, 52%, 0.15);
-    }
-    html[data-theme="dark"] .form-hint { color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .form-title { color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .btn-cancel { border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 70%); }
-    html[data-theme="dark"] .btn-cancel:hover { background: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .btn-add { background: hsl(220, 8%, 22%); border-color: hsl(32, 40%, 40%); color: hsl(32, 70%, 58%); }
-    html[data-theme="dark"] .btn-add:hover { background: hsl(220, 8%, 28%); border-color: hsl(32, 60%, 50%); }
   </style>
   <script>
     (function () {
@@ -538,6 +319,7 @@
         document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
       }
     })();
+    const SHELLY_DEVICES = {{ shelly_devices | tojson }};
   </script>
 </head>
 <body>
@@ -554,25 +336,32 @@
     </a>
 
     <div class="section-title">Mijn accessoires</div>
-
     <div class="acc-list" id="accList">
       {% if accessories %}
         {% for acc in accessories %}
         <div class="acc-card" id="acc-{{ acc.id }}">
           <div class="acc-header">
-            <div class="acc-icon-mdi">
+            <div class="acc-icon-mdi {% if acc.acc_type == 'temperature' %}temp{% endif %}">
               <i class="mdi {{ acc.icon or 'mdi-power-plug' }}" style="font-size:1.25rem"></i>
             </div>
             <div class="acc-info">
               <div class="acc-name">{{ acc.name }}</div>
+              {% if acc.acc_type == 'temperature' %}
+              <div class="acc-sub">TEMP · {{ acc.temp_ip }} · kanaal{% if acc.temp_channels|length > 1 %}en{% endif %} {{ acc.temp_channels | join(', ') }}{% if acc.linked_device_ip %} · gekoppeld{% endif %}</div>
+              {% else %}
               <div class="acc-sub">{{ acc.power_meter_type | upper }} · {{ acc.power_ips | join(', ') }}</div>
+              {% endif %}
             </div>
             <div class="acc-actions">
               <button class="btn-icon" title="Bewerken"
                 data-id="{{ acc.id }}"
                 data-name="{{ acc.name | e }}"
-                data-type="{{ acc.power_meter_type }}"
-                data-ips="{{ acc.power_ips | tojson | forceescape }}"
+                data-acctype="{{ acc.acc_type or 'power' }}"
+                data-type="{{ acc.power_meter_type or '' }}"
+                data-ips="{{ (acc.power_ips or []) | tojson | forceescape }}"
+                data-tempip="{{ acc.temp_ip or '' }}"
+                data-tempchannels="{{ (acc.temp_channels or [100]) | tojson | forceescape }}"
+                data-linkedip="{{ acc.linked_device_ip or '' }}"
                 data-icon="{{ acc.icon or 'mdi-power-plug' }}"
                 onclick="openEditFromBtn(this)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
@@ -591,87 +380,90 @@
       {% endif %}
     </div>
 
-    <!-- Formulier voor toevoegen/bewerken -->
+    <!-- Formulier -->
     <div class="acc-form-wrap" id="accForm">
       <div class="form-title" id="formTitle">Accessoire toevoegen</div>
+
+      <div class="type-switcher">
+        <button class="type-btn active" id="typeBtnPower" onclick="switchType('power')">Verbruiker</button>
+        <button class="type-btn" id="typeBtnTemp" onclick="switchType('temperature')">Temperatuursensor</button>
+      </div>
 
       <div class="form-field">
         <label>Naam</label>
         <input type="text" id="fName" placeholder="Bijv. Wasmachine" maxlength="50">
       </div>
 
-      <div class="form-field">
-        <label>Type vermogensmeter</label>
-        <select id="fType">
-          <option value="shelly">Shelly PM</option>
-          <option value="homewizard">HomeWizard</option>
-        </select>
-        <div class="form-hint">Kies het merk/type van de vermogensmeter</div>
+      <!-- Power-sectie -->
+      <div id="powerSection">
+        <div class="form-field">
+          <label>Type vermogensmeter</label>
+          <select id="fType">
+            <option value="shelly">Shelly PM</option>
+            <option value="homewizard">HomeWizard</option>
+          </select>
+          <div class="form-hint">Kies het merk/type van de vermogensmeter</div>
+        </div>
+        <div class="form-field">
+          <label>IP-adres(sen) vermogensmeter</label>
+          <div id="ipList"></div>
+          <button type="button" class="btn-add-ip" onclick="addIpField('')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+            Nog een meter toevoegen
+          </button>
+          <div class="form-hint">Meerdere meters worden bij elkaar opgeteld</div>
+        </div>
       </div>
 
-      <div class="form-field">
-        <label>IP-adres(sen) vermogensmeter</label>
-        <div id="ipList"></div>
-        <button type="button" class="btn-add-ip" onclick="addIpField('')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
-          Nog een meter toevoegen
-        </button>
-        <div class="form-hint">Meerdere meters worden bij elkaar opgeteld (bijv. twee groepen zonnepanelen)</div>
+      <!-- Temp-sectie -->
+      <div id="tempSection" style="display:none">
+        <div class="form-field">
+          <label>IP-adres Shelly Add-On</label>
+          <input type="text" id="fTempIp" placeholder="192.168.1.xxx" inputmode="url">
+          <div class="form-hint">IP van de Shelly met de temperatuursensor Add-On</div>
+        </div>
+        <div class="form-field" id="channelFieldWrap">
+          <label>Kanalen</label>
+          <div id="channelInfo" style="font-size:0.82rem;color:hsl(220,10%,50%);padding:0.4rem 0">Scan het netwerk om kanalen automatisch te detecteren, of voer een IP in.</div>
+        </div>
+        <div class="form-field">
+          <label>Gekoppeld SolarBuffer-apparaat</label>
+          <select id="fLinkedDevice">
+            <option value="">— Geen koppeling —</option>
+          </select>
+          <div class="form-hint">Koppel deze sensor aan een SolarBuffer-apparaat, bijv. als warmwater-temperatuur</div>
+        </div>
       </div>
 
       <div class="form-field">
         <label>Icoon</label>
         <div class="icon-picker-grid" id="iconPicker">
-          <div class="icon-option active" data-icon="mdi-washing-machine" onclick="selectIcon(this)">
-            <i class="mdi mdi-washing-machine"></i><span>Wasmachine</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-tumble-dryer" onclick="selectIcon(this)">
-            <i class="mdi mdi-tumble-dryer"></i><span>Droger</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-dishwasher" onclick="selectIcon(this)">
-            <i class="mdi mdi-dishwasher"></i><span>Vaatwasser</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-microwave" onclick="selectIcon(this)">
-            <i class="mdi mdi-microwave"></i><span>Magnetron</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-fridge" onclick="selectIcon(this)">
-            <i class="mdi mdi-fridge"></i><span>Koelkast</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-air-conditioner" onclick="selectIcon(this)">
-            <i class="mdi mdi-air-conditioner"></i><span>Airco</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-heat-pump" onclick="selectIcon(this)">
-            <i class="mdi mdi-heat-pump"></i><span>Warmtepomp</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-car-electric" onclick="selectIcon(this)">
-            <i class="mdi mdi-car-electric"></i><span>Auto laden</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-television" onclick="selectIcon(this)">
-            <i class="mdi mdi-television"></i><span>Televisie</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-coffee-maker" onclick="selectIcon(this)">
-            <i class="mdi mdi-coffee-maker"></i><span>Koffie</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-solar-panel" onclick="selectIcon(this)">
-            <i class="mdi mdi-solar-panel"></i><span>Zonnepanelen</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-printer-3d" onclick="selectIcon(this)">
-            <i class="mdi mdi-printer-3d"></i><span>3D printer</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-lightning-bolt" onclick="selectIcon(this)">
-            <i class="mdi mdi-lightning-bolt"></i><span>Overig</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-faucet" onclick="selectIcon(this)">
-            <i class="mdi mdi-faucet"></i><span>Quooker</span>
-          </div>
-          <div class="icon-option" data-icon="mdi-power-plug" onclick="selectIcon(this)">
-            <i class="mdi mdi-power-plug"></i><span>Stekker</span>
-          </div>
+          <!-- Power icons -->
+          <div class="icon-option power-icon active" data-icon="mdi-washing-machine" onclick="selectIcon(this)"><i class="mdi mdi-washing-machine"></i><span>Wasmachine</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-tumble-dryer" onclick="selectIcon(this)"><i class="mdi mdi-tumble-dryer"></i><span>Droger</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-dishwasher" onclick="selectIcon(this)"><i class="mdi mdi-dishwasher"></i><span>Vaatwasser</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-microwave" onclick="selectIcon(this)"><i class="mdi mdi-microwave"></i><span>Magnetron</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-fridge" onclick="selectIcon(this)"><i class="mdi mdi-fridge"></i><span>Koelkast</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-air-conditioner" onclick="selectIcon(this)"><i class="mdi mdi-air-conditioner"></i><span>Airco</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-heat-pump" onclick="selectIcon(this)"><i class="mdi mdi-heat-pump"></i><span>Warmtepomp</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-car-electric" onclick="selectIcon(this)"><i class="mdi mdi-car-electric"></i><span>Auto laden</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-television" onclick="selectIcon(this)"><i class="mdi mdi-television"></i><span>Televisie</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-coffee-maker" onclick="selectIcon(this)"><i class="mdi mdi-coffee-maker"></i><span>Koffie</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-solar-panel" onclick="selectIcon(this)"><i class="mdi mdi-solar-panel"></i><span>Zonnepanelen</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-printer-3d" onclick="selectIcon(this)"><i class="mdi mdi-printer-3d"></i><span>3D printer</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-lightning-bolt" onclick="selectIcon(this)"><i class="mdi mdi-lightning-bolt"></i><span>Overig</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-faucet" onclick="selectIcon(this)"><i class="mdi mdi-faucet"></i><span>Quooker</span></div>
+          <div class="icon-option power-icon" data-icon="mdi-power-plug" onclick="selectIcon(this)"><i class="mdi mdi-power-plug"></i><span>Stekker</span></div>
+          <!-- Temp icons (hidden by default) -->
+          <div class="icon-option temp-icon active" data-icon="mdi-thermometer" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-thermometer"></i><span>Temperatuur</span></div>
+          <div class="icon-option temp-icon" data-icon="mdi-thermometer-water" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-thermometer-water"></i><span>Boiler</span></div>
+          <div class="icon-option temp-icon" data-icon="mdi-water-boiler" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-water-boiler"></i><span>Waterboiler</span></div>
+          <div class="icon-option temp-icon" data-icon="mdi-radiator" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-radiator"></i><span>Radiator</span></div>
+          <div class="icon-option temp-icon" data-icon="mdi-home-thermometer" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-home-thermometer"></i><span>Kamer</span></div>
         </div>
       </div>
 
       <div class="form-error" id="formError"></div>
-
       <div class="form-actions">
         <button class="btn-save" id="btnSave" onclick="saveAcc()">Opslaan</button>
         <button class="btn-cancel" onclick="closeForm()">Annuleren</button>
@@ -680,13 +472,19 @@
 
     <!-- Scan resultaten -->
     <div class="scan-results" id="scanResults">
-      <div class="scan-results-title">Gevonden apparaten</div>
-      <div id="scanList"></div>
+      <div id="scanPowerSection">
+        <div class="scan-results-title">Vermogensmeters</div>
+        <div id="scanPowerList"></div>
+      </div>
+      <div id="scanTempSection">
+        <div class="scan-results-title" style="border-top:1px solid hsl(30,15%,91%);padding-top:0.6rem">Temperatuursensoren</div>
+        <div id="scanTempList"></div>
+      </div>
     </div>
 
     <button class="btn-scan" id="btnScan" onclick="doScan()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/></svg>
-      Scan netwerk op vermogensmeters
+      Scan netwerk
     </button>
 
     <button class="btn-add" id="btnAdd" onclick="openAdd()">
@@ -698,12 +496,29 @@
 
   <script>
     let _editId = null;
+    let _currentType = 'power';
+    let _tempChannels = [];
+
+    function switchType(type) {
+      _currentType = type;
+      document.getElementById('typeBtnPower').classList.toggle('active', type === 'power');
+      document.getElementById('typeBtnTemp').classList.toggle('active', type === 'temperature');
+      document.getElementById('powerSection').style.display  = type === 'power' ? '' : 'none';
+      document.getElementById('tempSection').style.display   = type === 'temperature' ? '' : 'none';
+      // icon sets
+      document.querySelectorAll('.power-icon').forEach(el => el.style.display = type === 'power' ? '' : 'none');
+      document.querySelectorAll('.temp-icon').forEach(el => el.style.display  = type === 'temperature' ? '' : 'none');
+      // select first visible active icon
+      const firstVisible = document.querySelector('.icon-option[style=""]') || document.querySelector(`.${type}-icon`);
+      document.querySelectorAll('.icon-option').forEach(o => o.classList.remove('active'));
+      const defaultIcon = type === 'temperature' ? 'mdi-thermometer' : 'mdi-washing-machine';
+      const target = document.querySelector(`[data-icon="${defaultIcon}"]`);
+      if (target) target.classList.add('active');
+    }
 
     function doScan() {
       const btn = document.getElementById('btnScan');
       const results = document.getElementById('scanResults');
-      const list = document.getElementById('scanList');
-
       btn.disabled = true;
       btn.innerHTML = '<span class="scan-spinner"></span> Scannen…';
       results.classList.remove('show');
@@ -711,18 +526,36 @@
       fetch('/scan_accessories')
         .then(r => r.json())
         .then(data => {
-          const devices = data.devices || [];
-          if (devices.length === 0) {
-            list.innerHTML = '<div class="scan-none">Geen vermogensmeters gevonden op het netwerk.</div>';
+          const power = data.devices || [];
+          const temps = data.temp_devices || [];
+
+          const powerList = document.getElementById('scanPowerList');
+          const tempList  = document.getElementById('scanTempList');
+          document.getElementById('scanPowerSection').style.display = power.length ? '' : 'none';
+          document.getElementById('scanTempSection').style.display  = temps.length ? '' : 'none';
+
+          if (power.length === 0 && temps.length === 0) {
+            powerList.innerHTML = '<div class="scan-none">Geen apparaten gevonden op het netwerk.</div>';
+            document.getElementById('scanPowerSection').style.display = '';
           } else {
-            list.innerHTML = devices.map(d => `
-              <div class="scan-item" data-name="${escHtml(d.name)}" data-ip="${escHtml(d.ip)}" data-type="${escHtml(d.type || 'shelly')}" onclick="prefillFromScan(this)">
-                <div class="scan-item-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg>
+            powerList.innerHTML = power.map(d => `
+              <div class="scan-item" data-name="${escHtml(d.name)}" data-ip="${escHtml(d.ip)}" data-type="${escHtml(d.type||'shelly')}" onclick="prefillPower(this)">
+                <div class="scan-item-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></div>
+                <div class="scan-item-info">
+                  <div class="scan-item-name">${escHtml(d.name)}</div>
+                  <div class="scan-item-ip">${escHtml(d.ip)} · ${escHtml((d.type||'shelly').toUpperCase())}</div>
+                </div>
+                <span class="scan-item-add">Toevoegen →</span>
+              </div>`).join('');
+
+            tempList.innerHTML = temps.map(d => `
+              <div class="scan-item" data-name="${escHtml(d.name)}" data-ip="${escHtml(d.ip)}" data-channels="${escHtml(JSON.stringify(d.channels||[100]))}" onclick="prefillTemp(this)">
+                <div class="scan-item-icon temp">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15,13V5A3,3 0 0,0 12,2A3,3 0 0,0 9,5V13A5,5 0 0,0 12,23A5,5 0 0,0 15,13M12,4A1,1 0 0,1 13,5V14.18C14.16,14.59 15,15.71 15,17A3,3 0 0,1 12,20A3,3 0 0,1 9,17C9,15.71 9.84,14.59 11,14.18V5A1,1 0 0,1 12,4Z"/></svg>
                 </div>
                 <div class="scan-item-info">
                   <div class="scan-item-name">${escHtml(d.name)}</div>
-                  <div class="scan-item-ip">${escHtml(d.ip)} · ${escHtml((d.type || 'shelly').toUpperCase())}</div>
+                  <div class="scan-item-ip">${escHtml(d.ip)} · ${(d.channels||[100]).length} kanaal${(d.channels||[]).length !== 1 ? 'en' : ''}: ${(d.channels||[]).join(', ')}</div>
                 </div>
                 <span class="scan-item-add">Toevoegen →</span>
               </div>`).join('');
@@ -730,25 +563,46 @@
           results.classList.add('show');
         })
         .catch(() => {
-          list.innerHTML = '<div class="scan-none">Scan mislukt, probeer opnieuw.</div>';
-          results.classList.add('show');
+          document.getElementById('scanPowerList').innerHTML = '<div class="scan-none">Scan mislukt, probeer opnieuw.</div>';
+          document.getElementById('scanPowerSection').style.display = '';
+          document.getElementById('scanTempSection').style.display = 'none';
+          document.getElementById('scanResults').classList.add('show');
         })
         .finally(() => {
           btn.disabled = false;
-          btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/></svg> Scan netwerk op vermogensmeters';
+          btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/></svg> Scan netwerk';
         });
     }
 
-    function prefillFromScan(el) {
-      const name = el.dataset.name;
-      const ip   = el.dataset.ip;
-      const type = el.dataset.type || 'shelly';
-      openAdd();
-      document.getElementById('fName').value = name;
-      document.getElementById('fType').value = type;
-      setIpList([ip]);
+    function prefillPower(el) {
+      openAdd('power');
+      document.getElementById('fName').value = el.dataset.name;
+      document.getElementById('fType').value = el.dataset.type || 'shelly';
+      setIpList([el.dataset.ip]);
       document.querySelectorAll('.scan-item').forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');
+    }
+
+    function prefillTemp(el) {
+      const channels = JSON.parse(el.dataset.channels || '[100]');
+      openAdd('temperature');
+      document.getElementById('fName').value = el.dataset.name;
+      document.getElementById('fTempIp').value = el.dataset.ip;
+      _tempChannels = channels;
+      renderChannelInfo(channels);
+      document.querySelectorAll('.scan-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function renderChannelInfo(channels) {
+      const info = document.getElementById('channelInfo');
+      if (channels && channels.length) {
+        info.textContent = `Gevonden kanalen: ${channels.join(', ')} (${channels.length} sensor${channels.length > 1 ? 'en' : ''})`;
+        info.style.color = 'hsl(145,55%,30%)';
+      } else {
+        info.textContent = 'Scan het netwerk om kanalen automatisch te detecteren.';
+        info.style.color = '';
+      }
     }
 
     function escHtml(str) {
@@ -775,21 +629,17 @@
 
     function updateRemoveButtons() {
       const rows = document.querySelectorAll('#ipList .ip-row');
-      rows.forEach(r => {
-        r.querySelector('.btn-remove-ip').style.display = rows.length > 1 ? '' : 'none';
-      });
+      rows.forEach(r => { r.querySelector('.btn-remove-ip').style.display = rows.length > 1 ? '' : 'none'; });
     }
 
     function getIpList() {
-      return Array.from(document.querySelectorAll('#ipList .ip-row input'))
-        .map(i => i.value.trim()).filter(Boolean);
+      return Array.from(document.querySelectorAll('#ipList .ip-row input')).map(i => i.value.trim()).filter(Boolean);
     }
 
     function setIpList(ips) {
       const list = document.getElementById('ipList');
       list.innerHTML = '';
-      const arr = (ips && ips.length) ? ips : [''];
-      arr.forEach(ip => addIpField(ip));
+      (ips && ips.length ? ips : ['']).forEach(ip => addIpField(ip));
     }
 
     function selectIcon(el) {
@@ -803,10 +653,7 @@
     }
 
     function setSelectedIcon(icon) {
-      document.querySelectorAll('.icon-option').forEach(o => {
-        o.classList.toggle('active', o.dataset.icon === icon);
-      });
-      // Als icoon niet in de lijst staat, selecteer 'mdi-power-plug' als fallback
+      document.querySelectorAll('.icon-option').forEach(o => o.classList.toggle('active', o.dataset.icon === icon));
       if (!document.querySelector('.icon-option.active')) {
         const fallback = document.querySelector('[data-icon="mdi-power-plug"]');
         if (fallback) fallback.classList.add('active');
@@ -814,17 +661,37 @@
     }
 
     function openEditFromBtn(el) {
-      const ips = JSON.parse(el.dataset.ips);
-      openEdit(el.dataset.id, el.dataset.name, el.dataset.type, ips, el.dataset.icon);
+      const accType = el.dataset.acctype || 'power';
+      const ips = JSON.parse(el.dataset.ips || '[]');
+      const channels = JSON.parse(el.dataset.tempchannels || '[100]');
+      openEdit(el.dataset.id, el.dataset.name, accType, el.dataset.type, ips, el.dataset.tempip, channels, el.dataset.linkedip || '', el.dataset.icon);
     }
 
-    function openAdd() {
+    function buildLinkedDeviceOptions(selectedIp) {
+      const sel = document.getElementById('fLinkedDevice');
+      sel.innerHTML = '<option value="">— Geen koppeling —</option>';
+      (SHELLY_DEVICES || []).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.ip;
+        opt.textContent = (d.name || d.ip) + ' (' + d.ip + ')';
+        if (d.ip === selectedIp) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    function openAdd(type) {
+      type = type || 'power';
       _editId = null;
-      document.getElementById('formTitle').textContent = 'Verbruiker toevoegen';
+      _tempChannels = [];
+      document.getElementById('formTitle').textContent = type === 'temperature' ? 'Temperatuursensor toevoegen' : 'Verbruiker toevoegen';
       document.getElementById('fName').value = '';
       document.getElementById('fType').value = 'shelly';
+      document.getElementById('fTempIp').value = '';
+      renderChannelInfo([]);
       setIpList(['']);
-      setSelectedIcon('mdi-washing-machine');
+      buildLinkedDeviceOptions('');
+      switchType(type);
+      setSelectedIcon(type === 'temperature' ? 'mdi-thermometer' : 'mdi-washing-machine');
       document.getElementById('formError').className = 'form-error';
       document.getElementById('btnSave').disabled = false;
       document.getElementById('accForm').classList.add('open');
@@ -832,13 +699,18 @@
       document.getElementById('fName').focus();
     }
 
-    function openEdit(id, name, type, ips, icon) {
+    function openEdit(id, name, accType, pmType, ips, tempIp, channels, linkedIp, icon) {
       _editId = id;
-      document.getElementById('formTitle').textContent = 'Verbruiker bewerken';
+      _tempChannels = channels || [100];
+      document.getElementById('formTitle').textContent = accType === 'temperature' ? 'Temperatuursensor bewerken' : 'Verbruiker bewerken';
       document.getElementById('fName').value = name;
-      document.getElementById('fType').value = type;
-      setIpList(Array.isArray(ips) ? ips : [ips]);
-      setSelectedIcon(icon || 'mdi-power-plug');
+      document.getElementById('fType').value = pmType || 'shelly';
+      document.getElementById('fTempIp').value = tempIp || '';
+      renderChannelInfo(_tempChannels);
+      setIpList(Array.isArray(ips) && ips.length ? ips : ['']);
+      buildLinkedDeviceOptions(linkedIp || '');
+      switchType(accType || 'power');
+      setSelectedIcon(icon || (accType === 'temperature' ? 'mdi-thermometer' : 'mdi-power-plug'));
       document.getElementById('formError').className = 'form-error';
       document.getElementById('btnSave').disabled = false;
       document.getElementById('accForm').classList.add('open');
@@ -854,106 +726,139 @@
 
     function saveAcc() {
       const name  = document.getElementById('fName').value.trim();
-      const type  = document.getElementById('fType').value;
-      const ips   = getIpList();
       const errEl = document.getElementById('formError');
       const btn   = document.getElementById('btnSave');
+      const icon  = getSelectedIcon();
+      let body;
 
-      if (!name || ips.length === 0) {
-        errEl.textContent = 'Vul naam en minimaal één IP-adres in.';
-        errEl.className = 'form-error show';
-        return;
+      if (_currentType === 'temperature') {
+        const tempIp = document.getElementById('fTempIp').value.trim();
+        if (!name || !tempIp) {
+          errEl.textContent = 'Vul naam en IP-adres in.';
+          errEl.className = 'form-error show';
+          return;
+        }
+        const channels = _tempChannels.length ? _tempChannels : [100];
+        const linkedDeviceIp = document.getElementById('fLinkedDevice').value;
+        body = { acc_type: 'temperature', name, temp_ip: tempIp, temp_channels: channels, linked_device_ip: linkedDeviceIp, icon };
+      } else {
+        const type = document.getElementById('fType').value;
+        const ips  = getIpList();
+        if (!name || ips.length === 0) {
+          errEl.textContent = 'Vul naam en minimaal één IP-adres in.';
+          errEl.className = 'form-error show';
+          return;
+        }
+        body = { acc_type: 'power', name, power_meter_type: type, power_ips: ips, icon };
       }
 
       btn.disabled = true;
       btn.textContent = 'Bezig…';
-
-      const icon   = getSelectedIcon();
       const url    = _editId ? `/accessories/${_editId}` : '/accessories';
       const method = _editId ? 'PUT' : 'POST';
 
-      fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, power_meter_type: type, power_ips: ips, icon })
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          btn.disabled = false;
-          btn.textContent = 'Opslaan';
-          if (_editId) {
-            // Bij bewerken: kaart in de lijst bijwerken
-            const card = document.getElementById(`acc-${_editId}`);
-            if (card) {
-              card.querySelector('.acc-name').textContent = name;
-              card.querySelector('.acc-sub').textContent = type.toUpperCase() + ' · ' + ips.join(', ');
-              const iconEl = card.querySelector('.acc-icon-mdi i');
-              if (iconEl) iconEl.className = `mdi ${icon}`;
-              const editBtn = card.querySelector('.btn-icon:not(.delete)');
-              if (editBtn) {
-                editBtn.dataset.name = name;
-                editBtn.dataset.type = type;
-                editBtn.dataset.ips  = JSON.stringify(ips);
-                editBtn.dataset.icon = icon;
+      fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            btn.disabled = false;
+            btn.textContent = 'Opslaan';
+            if (_editId) {
+              const card = document.getElementById(`acc-${_editId}`);
+              if (card) {
+                card.querySelector('.acc-name').textContent = body.name;
+                const iconMdi = card.querySelector('.acc-icon-mdi');
+                iconMdi.className = `acc-icon-mdi${body.acc_type === 'temperature' ? ' temp' : ''}`;
+                card.querySelector('.acc-icon-mdi i').className = `mdi ${body.icon}`;
+                const sub = card.querySelector('.acc-sub');
+                if (body.acc_type === 'temperature') {
+                  sub.textContent = `TEMP · ${body.temp_ip} · kanaal${body.temp_channels.length > 1 ? 'en' : ''} ${body.temp_channels.join(', ')}${body.linked_device_ip ? ' · gekoppeld' : ''}`;
+                } else {
+                  sub.textContent = `${body.power_meter_type.toUpperCase()} · ${body.power_ips.join(', ')}`;
+                }
+                const editBtn = card.querySelector('.btn-icon:not(.delete)');
+                if (editBtn) {
+                  editBtn.dataset.acctype = body.acc_type;
+                  editBtn.dataset.name = body.name;
+                  editBtn.dataset.type = body.power_meter_type || '';
+                  editBtn.dataset.ips = JSON.stringify(body.power_ips || []);
+                  editBtn.dataset.tempip = body.temp_ip || '';
+                  editBtn.dataset.tempchannels = JSON.stringify(body.temp_channels || []);
+                  editBtn.dataset.linkedip = body.linked_device_ip || '';
+                  editBtn.dataset.icon = body.icon;
+                }
               }
+            } else {
+              const acc = data.accessory;
+              const emptyMsg = document.getElementById('emptyMsg');
+              if (emptyMsg) emptyMsg.remove();
+              const div = document.createElement('div');
+              div.className = 'acc-card';
+              div.id = `acc-${acc.id}`;
+              const isTemp = acc.acc_type === 'temperature';
+              const sub = isTemp
+                ? `TEMP · ${escHtml(acc.temp_ip)} · kanaal${(acc.temp_channels||[]).length > 1 ? 'en' : ''} ${(acc.temp_channels||[100]).join(', ')}${acc.linked_device_ip ? ' · gekoppeld' : ''}`
+                : `${escHtml((acc.power_meter_type||'').toUpperCase())} · ${escHtml((acc.power_ips||[acc.power_ip]).join(', '))}`;
+              div.innerHTML = `
+                <div class="acc-header">
+                  <div class="acc-icon-mdi${isTemp ? ' temp' : ''}">
+                    <i class="mdi ${escHtml(acc.icon||'mdi-power-plug')}" style="font-size:1.25rem"></i>
+                  </div>
+                  <div class="acc-info">
+                    <div class="acc-name">${escHtml(acc.name)}</div>
+                    <div class="acc-sub">${sub}</div>
+                  </div>
+                  <div class="acc-actions">
+                    <button class="btn-icon" title="Bewerken"
+                      data-id="${escHtml(acc.id)}"
+                      data-name="${escHtml(acc.name)}"
+                      data-acctype="${escHtml(acc.acc_type||'power')}"
+                      data-type="${escHtml(acc.power_meter_type||'')}"
+                      data-ips="${escHtml(JSON.stringify(acc.power_ips||[]))}"
+                      data-tempip="${escHtml(acc.temp_ip||'')}"
+                      data-tempchannels="${escHtml(JSON.stringify(acc.temp_channels||[100]))}"
+                      data-linkedip="${escHtml(acc.linked_device_ip||'')}"
+                      data-icon="${escHtml(acc.icon||'mdi-power-plug')}"
+                      onclick="openEditFromBtn(this)">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
+                    </button>
+                    <button class="btn-icon delete" title="Verwijderen" onclick="deleteAcc('${acc.id}','${escHtml(acc.name)}')">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+                    </button>
+                  </div>
+                </div>`;
+              document.getElementById('accList').appendChild(div);
+              if (isTemp) {
+                document.querySelectorAll('.scan-item').forEach(item => {
+                  if (item.dataset.ip === acc.temp_ip) item.remove();
+                });
+              } else {
+                document.querySelectorAll('.scan-item').forEach(item => {
+                  if ((acc.power_ips||[]).includes(item.dataset.ip)) item.remove();
+                });
+              }
+              const scanLists = ['scanPowerList','scanTempList'];
+              scanLists.forEach(id => {
+                const sl = document.getElementById(id);
+                if (sl && !sl.querySelector('.scan-item')) {
+                  sl.innerHTML = '<div class="scan-none">Alle gevonden apparaten zijn toegevoegd.</div>';
+                }
+              });
             }
+            closeForm();
           } else {
-            // Bij toevoegen: kaart toevoegen aan de lijst
-            const acc = data.accessory;
-            const emptyMsg = document.getElementById('emptyMsg');
-            if (emptyMsg) emptyMsg.remove();
-            const div = document.createElement('div');
-            div.className = 'acc-card';
-            div.id = `acc-${acc.id}`;
-            div.innerHTML = `
-              <div class="acc-header">
-                <div class="acc-icon-mdi">
-                  <i class="mdi ${escHtml(acc.icon || 'mdi-power-plug')}" style="font-size:1.25rem"></i>
-                </div>
-                <div class="acc-info">
-                  <div class="acc-name">${escHtml(acc.name)}</div>
-                  <div class="acc-sub">${escHtml(acc.power_meter_type.toUpperCase())} · ${escHtml((acc.power_ips || [acc.power_ip]).join(', '))}</div>
-                </div>
-                <div class="acc-actions">
-                  <button class="btn-icon" title="Bewerken"
-                    data-id="${escHtml(acc.id)}"
-                    data-name="${escHtml(acc.name)}"
-                    data-type="${escHtml(acc.power_meter_type)}"
-                    data-ips="${escHtml(JSON.stringify(acc.power_ips || [acc.power_ip]))}"
-                    data-icon="${escHtml(acc.icon || 'mdi-power-plug')}"
-                    onclick="openEditFromBtn(this)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
-                  </button>
-                  <button class="btn-icon delete" title="Verwijderen" onclick="deleteAcc('${acc.id}','${escHtml(acc.name)}')">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
-                  </button>
-                </div>
-              </div>`;
-            document.getElementById('accList').appendChild(div);
-            // Verwijder het apparaat uit de scanlijst
-            document.querySelectorAll('.scan-item').forEach(item => {
-              if (ips.includes(item.dataset.ip)) item.remove();
-            });
-            const scanList = document.getElementById('scanList');
-            if (scanList && !scanList.querySelector('.scan-item')) {
-              scanList.innerHTML = '<div class="scan-none">Alle gevonden apparaten zijn toegevoegd.</div>';
-            }
+            errEl.textContent = data.error || 'Opslaan mislukt.';
+            errEl.className = 'form-error show';
+            btn.disabled = false;
+            btn.textContent = 'Opslaan';
           }
-          closeForm();
-        } else {
-          errEl.textContent = data.error || 'Opslaan mislukt.';
+        })
+        .catch(() => {
+          errEl.textContent = 'Verbindingsfout.';
           errEl.className = 'form-error show';
           btn.disabled = false;
           btn.textContent = 'Opslaan';
-        }
-      })
-      .catch(() => {
-        errEl.textContent = 'Verbindingsfout.';
-        errEl.className = 'form-error show';
-        btn.disabled = false;
-        btn.textContent = 'Opslaan';
-      });
+        });
     }
 
     function deleteAcc(id, name) {
