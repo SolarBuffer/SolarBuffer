@@ -336,8 +336,8 @@ def compare_configs(old_cfg, new_cfg):
 
 # ================= PID =================
 PID_KP = 0.02
-PID_KI = 0.0014
-PID_KD = 0.02
+PID_KI = 0.0013
+PID_KD = 0.01
 
 device_pids = {}
 enabled = True
@@ -3202,6 +3202,7 @@ def control_loop():
                                 st["min_since"] = None
                                 st["brightness"] = MIN_BRIGHTNESS
                                 if ip in device_pids:
+                                    device_pids[ip].set_auto_mode(False)
                                     device_pids[ip].set_auto_mode(True, last_output=MIN_BRIGHTNESS)
                                 set_shelly(MIN_BRIGHTNESS, True, ip)
                                 mark_device_activity(next_dev)
@@ -3215,6 +3216,7 @@ def control_loop():
                         st["min_since"] = None
                         st["brightness"] = MIN_BRIGHTNESS
                         if ip in device_pids:
+                            device_pids[ip].set_auto_mode(False)
                             device_pids[ip].set_auto_mode(True, last_output=MIN_BRIGHTNESS)
                         set_shelly(MIN_BRIGHTNESS, True, ip)
                         mark_device_activity(next_dev)
