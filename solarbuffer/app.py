@@ -2867,7 +2867,7 @@ def control_loop():
                     state["power"] = 0
 
             measured_power = current_power
-            pid_power = 0 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
+            pid_power = 20 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
             devices_sorted = get_sorted_devices(devices)
             active_brightness = 0
 
@@ -3202,6 +3202,8 @@ def control_loop():
                                 st["min_since"] = None
                                 if st["brightness"] < MIN_BRIGHTNESS:
                                     st["brightness"] = MIN_BRIGHTNESS
+                                if ip in device_pids:
+                                    device_pids[ip].set_auto_mode(True, last_output=st["brightness"])
                                 set_shelly(st["brightness"], True, ip)
                                 mark_device_activity(next_dev)
                         export_start = None
@@ -3214,6 +3216,8 @@ def control_loop():
                         st["min_since"] = None
                         if st["brightness"] < MIN_BRIGHTNESS:
                             st["brightness"] = MIN_BRIGHTNESS
+                        if ip in device_pids:
+                            device_pids[ip].set_auto_mode(True, last_output=st["brightness"])
                         set_shelly(st["brightness"], True, ip)
                         mark_device_activity(next_dev)
                         export_start = None
@@ -3305,6 +3309,8 @@ def control_loop():
                         st["min_since"] = None
                         if st["brightness"] < MIN_BRIGHTNESS:
                             st["brightness"] = MIN_BRIGHTNESS
+                        if candidate_unfreeze["ip"] in device_pids:
+                            device_pids[candidate_unfreeze["ip"]].set_auto_mode(True, last_output=st["brightness"])
                         set_shelly(st["brightness"], True, candidate_unfreeze["ip"])
                         mark_device_activity(candidate_unfreeze)
                         import_unfreeze_start = None
