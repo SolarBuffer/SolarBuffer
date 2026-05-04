@@ -111,10 +111,16 @@ def load_config():
         if acc["acc_type"] == "temperature":
             if "temp_ip" not in acc:
                 acc["temp_ip"] = ""
-            if "temp_channels" not in acc:
-                # migreer oud enkel-kanaal formaat
-                old_ch = acc.pop("temp_channel", None)
-                acc["temp_channels"] = [old_ch] if old_ch is not None else [100]
+            # migreer temp_channels (lijst) → enkelvoudig temp_channel
+            if "temp_channel" not in acc:
+                old_list = acc.pop("temp_channels", None)
+                if isinstance(old_list, list) and old_list:
+                    acc["temp_channel"] = int(old_list[0])
+                else:
+                    acc["temp_channel"] = 100
+            else:
+                acc["temp_channel"] = int(acc["temp_channel"])
+            acc.pop("temp_channels", None)
             if "linked_device_ip" not in acc:
                 acc["linked_device_ip"] = ""
         else:
@@ -898,6 +904,19 @@ def status_json():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
     cfg = load_config()
+    # bouw opzoektabel: device_ip -> lijst van gekoppelde temperatuursensoren
+    linked_temp_map = {}
+    for acc in cfg.get("accessories", []):
+        if acc.get("acc_type") == "temperature" and acc.get("linked_device_ip"):
+            dev_ip = acc["linked_device_ip"]
+            acc_st = accessory_states.get(acc.get("id", ""), {})
+            linked_temp_map.setdefault(dev_ip, []).append({
+                "name": acc.get("name", ""),
+                "icon": acc.get("icon", "mdi-thermometer"),
+                "temperature": acc_st.get("temperature"),
+                "online": acc_st.get("online", False),
+            })
+
     devices = []
     for d in cfg.get("shelly_devices", []):
         s = device_states.get(d["ip"], {})
@@ -921,12 +940,16 @@ def status_json():
             "legionella_active": s.get("legionella_active", False),
             "legionella_start": s.get("legionella_start"),
             "boost_until": s.get("boost_until"),
+            "linked_temperatures": linked_temp_map.get(d["ip"], []),
         })
     accessories = []
     for acc in cfg.get("accessories", []):
         acc_id = acc.get("id", "")
         st = accessory_states.get(acc_id, {})
         acc_type = acc.get("acc_type", "power")
+        # gekoppelde temp-sensoren worden getoond op de apparaattegel, niet hier
+        if acc_type == "temperature" and acc.get("linked_device_ip"):
+            continue
         entry = {
             "id": acc_id,
             "name": acc.get("name", ""),
@@ -936,9 +959,8 @@ def status_json():
         }
         if acc_type == "temperature":
             entry["temp_ip"] = acc.get("temp_ip", "")
-            entry["temp_channels"] = acc.get("temp_channels", [100])
-            entry["linked_device_ip"] = acc.get("linked_device_ip", "")
-            entry["temperatures"] = st.get("temperatures", {})
+            entry["temp_channel"] = acc.get("temp_channel", 100)
+            entry["temperature"] = st.get("temperature")
         else:
             entry["power_meter_type"] = acc.get("power_meter_type", "")
             entry["power_ips"] = acc.get("power_ips", [acc.get("power_ip", "")])
@@ -1886,9 +1908,6 @@ def scan_accessories():
             used_ips.add(ip.strip())
     used_ips.discard("")
 
-    used_temp_ips = {(a.get("temp_ip") or "").strip() for a in cfg.get("accessories", []) if a.get("acc_type") == "temperature"}
-    used_temp_ips.discard("")
-
     ips = get_subnet_ips()
     found_power = []
     found_temp = []
@@ -1907,7 +1926,8 @@ def scan_accessories():
                 if kind == "power" and result["ip"] not in used_ips:
                     if not any(f["ip"] == result["ip"] for f in found_power):
                         found_power.append(result)
-                elif kind == "temp" and result["ip"] not in used_temp_ips:
+                elif kind == "temp":
+                    # nooit filteren op IP — per kanaal aparte accessoire mogelijk
                     if not any(f["ip"] == result["ip"] for f in found_temp):
                         found_temp.append(result)
             except Exception:
@@ -1938,12 +1958,16 @@ def add_accessory():
     cfg = load_config()
     if acc_type == "temperature":
         temp_ip = (data.get("temp_ip") or "").strip()
-        temp_channels = [int(c) for c in data.get("temp_channels", [100]) if str(c).strip().isdigit()]
+        raw_ch = data.get("temp_channel", 100)
+        try:
+            temp_channel = int(raw_ch)
+        except (TypeError, ValueError):
+            temp_channel = 100
         linked_device_ip = (data.get("linked_device_ip") or "").strip()
         if not name or not temp_ip:
             return jsonify(success=False, error="Naam en IP-adres zijn verplicht"), 400
         new_acc = {"id": str(uuid.uuid4()), "name": name, "acc_type": "temperature",
-                   "temp_ip": temp_ip, "temp_channels": temp_channels or [100],
+                   "temp_ip": temp_ip, "temp_channel": temp_channel,
                    "linked_device_ip": linked_device_ip, "icon": icon}
     else:
         pm_type = (data.get("power_meter_type") or "").strip().lower()
@@ -1974,14 +1998,19 @@ def update_accessory(acc_id):
     icon = (data.get("icon") or "mdi-power-plug").strip()
     if acc_type == "temperature":
         temp_ip = (data.get("temp_ip") or "").strip()
-        temp_channels = [int(c) for c in data.get("temp_channels", [100]) if str(c).strip().isdigit()]
+        raw_ch = data.get("temp_channel", acc.get("temp_channel", 100))
+        try:
+            temp_channel = int(raw_ch)
+        except (TypeError, ValueError):
+            temp_channel = 100
         linked_device_ip = (data.get("linked_device_ip") or "").strip()
         if not name or not temp_ip:
             return jsonify(success=False, error="Naam en IP-adres zijn verplicht"), 400
         acc["name"] = name
         acc["acc_type"] = "temperature"
         acc["temp_ip"] = temp_ip
-        acc["temp_channels"] = temp_channels or [100]
+        acc["temp_channel"] = temp_channel
+        acc.pop("temp_channels", None)
         acc["linked_device_ip"] = linked_device_ip
         acc["icon"] = icon
     else:
@@ -3510,19 +3539,15 @@ def accessory_poll_loop():
                 acc_type = acc.get("acc_type", "power")
                 if acc_type == "temperature":
                     temp_ip = (acc.get("temp_ip") or "").strip()
-                    channels = acc.get("temp_channels", [100])
+                    channel = acc.get("temp_channel", 100)
                     if not temp_ip:
                         continue
                     if acc_id not in accessory_states:
-                        accessory_states[acc_id] = {"temperatures": {}, "online": False}
+                        accessory_states[acc_id] = {"temperature": None, "online": False}
                     try:
-                        temps = {}
-                        for ch in channels:
-                            t = get_shelly_temperature(temp_ip, ch)
-                            if t is not None:
-                                temps[str(ch)] = t
-                        accessory_states[acc_id]["temperatures"] = temps
-                        accessory_states[acc_id]["online"] = bool(temps)
+                        t = get_shelly_temperature(temp_ip, channel)
+                        accessory_states[acc_id]["temperature"] = t
+                        accessory_states[acc_id]["online"] = t is not None
                     except Exception:
                         accessory_states[acc_id]["online"] = False
                 else:

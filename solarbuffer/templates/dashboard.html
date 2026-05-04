@@ -647,11 +647,36 @@
       border-color: hsl(220, 8%, 35%);
     }
     html[data-theme="dark"] .acc-tile-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .acc-tile-icon.temp { background: hsl(200, 25%, 22%); color: hsl(200, 60%, 62%); }
     html[data-theme="dark"] .acc-tile-sub  { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .acc-tile-watt { color: hsl(220, 10%, 90%); }
     html[data-theme="dark"] .acc-tile-unit { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .acc-online-badge.online  { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
     html[data-theme="dark"] .acc-online-badge.offline { background: hsl(0, 25%, 22%);   color: hsl(0, 65%, 60%); }
+
+    .acc-tile-icon.temp { background: hsl(200, 80%, 93%); color: hsl(200, 80%, 35%); }
+
+    .linked-temp-row {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      padding: 0.55rem 0.8rem 0.6rem;
+      border-top: 1px solid hsl(30, 15%, 91%);
+    }
+    .linked-temp-chip {
+      display: flex; align-items: center; gap: 0.35rem;
+      background: hsl(200, 70%, 95%); border: 1px solid hsl(200, 60%, 84%);
+      border-radius: 999px; padding: 0.25rem 0.6rem 0.25rem 0.45rem;
+      font-size: 0.8rem;
+    }
+    .linked-temp-chip i { font-size: 0.95rem; color: hsl(200, 80%, 35%); }
+    .linked-temp-chip .lt-name { color: hsl(220, 20%, 30%); font-weight: 600; }
+    .linked-temp-chip .lt-val  { color: hsl(200, 80%, 30%); font-weight: 700; margin-left: 0.2rem; }
+    .linked-temp-chip .lt-offline { color: hsl(220, 10%, 54%); font-style: italic; }
+    html[data-theme="dark"] .linked-temp-row { border-top-color: hsl(220, 8%, 32%); }
+    html[data-theme="dark"] .linked-temp-chip { background: hsl(200, 20%, 22%); border-color: hsl(200, 25%, 30%); }
+    html[data-theme="dark"] .linked-temp-chip i { color: hsl(200, 60%, 62%); }
+    html[data-theme="dark"] .linked-temp-chip .lt-name { color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .linked-temp-chip .lt-val  { color: hsl(200, 60%, 68%); }
+    html[data-theme="dark"] .linked-temp-chip .lt-offline { color: hsl(220, 8%, 50%); }
 
     .device-card {
       border: 1px solid hsl(30, 15%, 88%);
@@ -2259,6 +2284,17 @@
               </div>
             </div>
             ${manualBrightnessHtml}
+            ${(d.linked_temperatures && d.linked_temperatures.length) ? `
+              <div class="linked-temp-row">
+                ${d.linked_temperatures.map(lt => `
+                  <div class="linked-temp-chip">
+                    <i class="mdi ${escapeHtml(lt.icon || 'mdi-thermometer')}"></i>
+                    <span class="lt-name">${escapeHtml(lt.name)}</span>
+                    ${lt.temperature !== null && lt.temperature !== undefined
+                      ? `<span class="lt-val">${lt.temperature}&thinsp;°C</span>`
+                      : `<span class="lt-offline">offline</span>`}
+                  </div>`).join('')}
+              </div>` : ''}
           </div>`;
       }).join("");
 
@@ -2282,12 +2318,15 @@
       }
       card.style.display = '';
       cont.innerHTML = '<div class="acc-grid">' + accessories.map(acc => {
-        const power = Number(acc.power || 0);
+        const isTemp = acc.acc_type === 'temperature';
         const onlineLabel = acc.online ? '● Online' : '● Offline';
         const onlineCls   = acc.online ? 'online' : 'offline';
+        const valueHtml = isTemp
+          ? `<div class="acc-tile-watt">${acc.temperature !== null && acc.temperature !== undefined ? acc.temperature : '—'}</div><div class="acc-tile-unit">°C</div>`
+          : `<div class="acc-tile-watt">${Number(acc.power || 0).toFixed(0)}</div><div class="acc-tile-unit">W</div>`;
         return `
           <div class="acc-tile">
-            <div class="acc-tile-icon">
+            <div class="acc-tile-icon${isTemp ? ' temp' : ''}">
               <i class="mdi ${escapeHtml(acc.icon || 'mdi-power-plug')}" style="font-size:1.2rem;line-height:1"></i>
             </div>
             <div class="acc-tile-info">
@@ -2295,8 +2334,7 @@
               <span class="acc-online-badge ${onlineCls}">${onlineLabel}</span>
             </div>
             <div class="acc-tile-power">
-              <div class="acc-tile-watt">${power.toFixed(0)}</div>
-              <div class="acc-tile-unit">W</div>
+              ${valueHtml}
             </div>
           </div>`;
       }).join('') + '</div>';

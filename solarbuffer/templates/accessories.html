@@ -347,7 +347,7 @@
             <div class="acc-info">
               <div class="acc-name">{{ acc.name }}</div>
               {% if acc.acc_type == 'temperature' %}
-              <div class="acc-sub">TEMP · {{ acc.temp_ip }} · kanaal{% if acc.temp_channels|length > 1 %}en{% endif %} {{ acc.temp_channels | join(', ') }}{% if acc.linked_device_ip %} · gekoppeld{% endif %}</div>
+              <div class="acc-sub">TEMP · {{ acc.temp_ip }} · kanaal {{ acc.temp_channel or 100 }}{% if acc.linked_device_ip %} · gekoppeld{% endif %}</div>
               {% else %}
               <div class="acc-sub">{{ acc.power_meter_type | upper }} · {{ acc.power_ips | join(', ') }}</div>
               {% endif %}
@@ -360,7 +360,7 @@
                 data-type="{{ acc.power_meter_type or '' }}"
                 data-ips="{{ (acc.power_ips or []) | tojson | forceescape }}"
                 data-tempip="{{ acc.temp_ip or '' }}"
-                data-tempchannels="{{ (acc.temp_channels or [100]) | tojson | forceescape }}"
+                data-tempchannel="{{ acc.temp_channel or 100 }}"
                 data-linkedip="{{ acc.linked_device_ip or '' }}"
                 data-icon="{{ acc.icon or 'mdi-power-plug' }}"
                 onclick="openEditFromBtn(this)">
@@ -423,8 +423,11 @@
           <div class="form-hint">IP van de Shelly met de temperatuursensor Add-On</div>
         </div>
         <div class="form-field" id="channelFieldWrap">
-          <label>Kanalen</label>
-          <div id="channelInfo" style="font-size:0.82rem;color:hsl(220,10%,50%);padding:0.4rem 0">Scan het netwerk om kanalen automatisch te detecteren, of voer een IP in.</div>
+          <label>Kanaal</label>
+          <select id="fChannelSelect">
+            <option value="100">Kanaal 100</option>
+          </select>
+          <div class="form-hint" id="channelHint">Scan het netwerk om kanalen automatisch in te laden.</div>
         </div>
         <div class="form-field">
           <label>Gekoppeld SolarBuffer-apparaat</label>
@@ -497,7 +500,6 @@
   <script>
     let _editId = null;
     let _currentType = 'power';
-    let _tempChannels = [];
 
     function switchType(type) {
       _currentType = type;
@@ -588,20 +590,24 @@
       openAdd('temperature');
       document.getElementById('fName').value = el.dataset.name;
       document.getElementById('fTempIp').value = el.dataset.ip;
-      _tempChannels = channels;
-      renderChannelInfo(channels);
+      renderChannelSelect(channels, channels[0]);
       document.querySelectorAll('.scan-item').forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');
     }
 
-    function renderChannelInfo(channels) {
-      const info = document.getElementById('channelInfo');
+    function renderChannelSelect(channels, selectedChannel) {
+      const sel = document.getElementById('fChannelSelect');
+      const hint = document.getElementById('channelHint');
       if (channels && channels.length) {
-        info.textContent = `Gevonden kanalen: ${channels.join(', ')} (${channels.length} sensor${channels.length > 1 ? 'en' : ''})`;
-        info.style.color = 'hsl(145,55%,30%)';
+        sel.innerHTML = channels.map(ch =>
+          `<option value="${ch}"${ch === selectedChannel ? ' selected' : ''}>Kanaal ${ch}</option>`
+        ).join('');
+        hint.textContent = `${channels.length} kanaal${channels.length > 1 ? 'en' : ''} gevonden`;
+        hint.style.color = 'hsl(145,55%,30%)';
       } else {
-        info.textContent = 'Scan het netwerk om kanalen automatisch te detecteren.';
-        info.style.color = '';
+        sel.innerHTML = `<option value="${selectedChannel || 100}">Kanaal ${selectedChannel || 100}</option>`;
+        hint.textContent = 'Scan het netwerk om kanalen automatisch in te laden.';
+        hint.style.color = '';
       }
     }
 
@@ -663,8 +669,8 @@
     function openEditFromBtn(el) {
       const accType = el.dataset.acctype || 'power';
       const ips = JSON.parse(el.dataset.ips || '[]');
-      const channels = JSON.parse(el.dataset.tempchannels || '[100]');
-      openEdit(el.dataset.id, el.dataset.name, accType, el.dataset.type, ips, el.dataset.tempip, channels, el.dataset.linkedip || '', el.dataset.icon);
+      const channel = parseInt(el.dataset.tempchannel || '100', 10);
+      openEdit(el.dataset.id, el.dataset.name, accType, el.dataset.type, ips, el.dataset.tempip, channel, el.dataset.linkedip || '', el.dataset.icon);
     }
 
     function buildLinkedDeviceOptions(selectedIp) {
@@ -682,12 +688,11 @@
     function openAdd(type) {
       type = type || 'power';
       _editId = null;
-      _tempChannels = [];
       document.getElementById('formTitle').textContent = type === 'temperature' ? 'Temperatuursensor toevoegen' : 'Verbruiker toevoegen';
       document.getElementById('fName').value = '';
       document.getElementById('fType').value = 'shelly';
       document.getElementById('fTempIp').value = '';
-      renderChannelInfo([]);
+      renderChannelSelect([], 100);
       setIpList(['']);
       buildLinkedDeviceOptions('');
       switchType(type);
@@ -699,14 +704,13 @@
       document.getElementById('fName').focus();
     }
 
-    function openEdit(id, name, accType, pmType, ips, tempIp, channels, linkedIp, icon) {
+    function openEdit(id, name, accType, pmType, ips, tempIp, channel, linkedIp, icon) {
       _editId = id;
-      _tempChannels = channels || [100];
       document.getElementById('formTitle').textContent = accType === 'temperature' ? 'Temperatuursensor bewerken' : 'Verbruiker bewerken';
       document.getElementById('fName').value = name;
       document.getElementById('fType').value = pmType || 'shelly';
       document.getElementById('fTempIp').value = tempIp || '';
-      renderChannelInfo(_tempChannels);
+      renderChannelSelect([], channel || 100);
       setIpList(Array.isArray(ips) && ips.length ? ips : ['']);
       buildLinkedDeviceOptions(linkedIp || '');
       switchType(accType || 'power');
@@ -738,9 +742,9 @@
           errEl.className = 'form-error show';
           return;
         }
-        const channels = _tempChannels.length ? _tempChannels : [100];
+        const tempChannel = parseInt(document.getElementById('fChannelSelect').value || '100', 10);
         const linkedDeviceIp = document.getElementById('fLinkedDevice').value;
-        body = { acc_type: 'temperature', name, temp_ip: tempIp, temp_channels: channels, linked_device_ip: linkedDeviceIp, icon };
+        body = { acc_type: 'temperature', name, temp_ip: tempIp, temp_channel: tempChannel, linked_device_ip: linkedDeviceIp, icon };
       } else {
         const type = document.getElementById('fType').value;
         const ips  = getIpList();
@@ -772,7 +776,7 @@
                 card.querySelector('.acc-icon-mdi i').className = `mdi ${body.icon}`;
                 const sub = card.querySelector('.acc-sub');
                 if (body.acc_type === 'temperature') {
-                  sub.textContent = `TEMP · ${body.temp_ip} · kanaal${body.temp_channels.length > 1 ? 'en' : ''} ${body.temp_channels.join(', ')}${body.linked_device_ip ? ' · gekoppeld' : ''}`;
+                  sub.textContent = `TEMP · ${body.temp_ip} · kanaal ${body.temp_channel}${body.linked_device_ip ? ' · gekoppeld' : ''}`;
                 } else {
                   sub.textContent = `${body.power_meter_type.toUpperCase()} · ${body.power_ips.join(', ')}`;
                 }
@@ -783,7 +787,7 @@
                   editBtn.dataset.type = body.power_meter_type || '';
                   editBtn.dataset.ips = JSON.stringify(body.power_ips || []);
                   editBtn.dataset.tempip = body.temp_ip || '';
-                  editBtn.dataset.tempchannels = JSON.stringify(body.temp_channels || []);
+                  editBtn.dataset.tempchannel = String(body.temp_channel || 100);
                   editBtn.dataset.linkedip = body.linked_device_ip || '';
                   editBtn.dataset.icon = body.icon;
                 }
@@ -797,7 +801,7 @@
               div.id = `acc-${acc.id}`;
               const isTemp = acc.acc_type === 'temperature';
               const sub = isTemp
-                ? `TEMP · ${escHtml(acc.temp_ip)} · kanaal${(acc.temp_channels||[]).length > 1 ? 'en' : ''} ${(acc.temp_channels||[100]).join(', ')}${acc.linked_device_ip ? ' · gekoppeld' : ''}`
+                ? `TEMP · ${escHtml(acc.temp_ip)} · kanaal ${acc.temp_channel || 100}${acc.linked_device_ip ? ' · gekoppeld' : ''}`
                 : `${escHtml((acc.power_meter_type||'').toUpperCase())} · ${escHtml((acc.power_ips||[acc.power_ip]).join(', '))}`;
               div.innerHTML = `
                 <div class="acc-header">
@@ -816,7 +820,7 @@
                       data-type="${escHtml(acc.power_meter_type||'')}"
                       data-ips="${escHtml(JSON.stringify(acc.power_ips||[]))}"
                       data-tempip="${escHtml(acc.temp_ip||'')}"
-                      data-tempchannels="${escHtml(JSON.stringify(acc.temp_channels||[100]))}"
+                      data-tempchannel="${escHtml(String(acc.temp_channel||100))}"
                       data-linkedip="${escHtml(acc.linked_device_ip||'')}"
                       data-icon="${escHtml(acc.icon||'mdi-power-plug')}"
                       onclick="openEditFromBtn(this)">
