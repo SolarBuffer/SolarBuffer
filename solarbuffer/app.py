@@ -9,6 +9,7 @@ import subprocess
 import uuid
 import re
 import traceback
+import shutil
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session, send_file
@@ -993,6 +994,69 @@ def settings():
     if not require_login():
         return redirect("/login")
     return render_template("settings.html", dark_mode=get_user_dark_mode())
+
+
+@app.route("/system")
+def system_page():
+    if not require_login():
+        return redirect("/login")
+    return render_template("system.html", dark_mode=get_user_dark_mode())
+
+
+@app.route("/system_info")
+def system_info():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+
+    info = {}
+
+    try:
+        usage = shutil.disk_usage("/")
+        info["disk_total"] = usage.total
+        info["disk_used"] = usage.used
+        info["disk_free"] = usage.free
+        info["disk_percent"] = round(usage.used / usage.total * 100, 1)
+    except Exception:
+        info["disk_total"] = info["disk_used"] = info["disk_free"] = 0
+        info["disk_percent"] = 0
+
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp") as f:
+            info["cpu_temp"] = round(int(f.read().strip()) / 1000, 1)
+    except Exception:
+        try:
+            r = subprocess.run(["vcgencmd", "measure_temp"], capture_output=True, text=True, timeout=3)
+            info["cpu_temp"] = float(r.stdout.replace("temp=", "").replace("'C", "").strip())
+        except Exception:
+            info["cpu_temp"] = None
+
+    try:
+        with open("/proc/uptime") as f:
+            secs = float(f.read().split()[0])
+        d = int(secs // 86400)
+        h = int((secs % 86400) // 3600)
+        m = int((secs % 3600) // 60)
+        info["uptime_str"] = f"{d}d {h}u {m:02d}m" if d > 0 else f"{h}u {m:02d}m"
+    except Exception:
+        info["uptime_str"] = "—"
+
+    try:
+        mem = {}
+        with open("/proc/meminfo") as f:
+            for line in f:
+                parts = line.split()
+                if parts[0] in ("MemTotal:", "MemAvailable:"):
+                    mem[parts[0]] = int(parts[1]) * 1024
+        total = mem.get("MemTotal:", 0)
+        used = total - mem.get("MemAvailable:", 0)
+        info["mem_total"] = total
+        info["mem_used"] = used
+        info["mem_percent"] = round(used / total * 100, 1) if total > 0 else 0
+    except Exception:
+        info["mem_total"] = info["mem_used"] = 0
+        info["mem_percent"] = 0
+
+    return jsonify(info)
 
 
 # ================= NETWERK ROUTES =================

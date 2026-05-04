@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Systeeminfo - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover {
+      background: hsl(32, 100%, 96%);
+      border-color: hsl(32, 85%, 60%);
+      color: hsl(32, 90%, 40%);
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.10);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: hsl(32, 100%, 95%);
+      color: hsl(32, 95%, 48%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stat-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+    .stat-value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+      color: hsl(220, 20%, 14%);
+      line-height: 1;
+    }
+    .stat-value .unit {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: hsl(220, 10%, 50%);
+      margin-left: 0.2rem;
+    }
+    .stat-sub {
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 52%);
+      margin-top: 0.3rem;
+    }
+
+    .bar-wrap {
+      background: hsl(30, 15%, 92%);
+      border-radius: 999px;
+      height: 7px;
+      overflow: hidden;
+      margin-top: 0.75rem;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: hsl(32, 95%, 52%);
+      transition: width 0.5s ease;
+    }
+    .bar-fill.warn  { background: hsl(38, 95%, 50%); }
+    .bar-fill.crit  { background: hsl(0, 70%, 55%); }
+
+    .temp-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+    .temp-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      margin-bottom: 0.2rem;
+    }
+    .temp-badge.ok   { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .temp-badge.warm { background: hsl(38, 100%, 90%); color: hsl(38, 90%, 32%); }
+    .temp-badge.hot  { background: hsl(0, 80%, 93%);   color: hsl(0, 65%, 40%); }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .two-col .stat-card { margin-bottom: 0; }
+
+    .last-update {
+      text-align: center;
+      font-size: 0.72rem;
+      color: hsl(220, 10%, 62%);
+      margin-top: 0.25rem;
+    }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .stat-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
+    html[data-theme="dark"] .stat-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .stat-value { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .stat-value .unit { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .stat-sub { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .bar-wrap { background: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .last-update { color: hsl(220, 8%, 48%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Systeeminfo</p>
+    </div>
+
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <!-- Schijfruimte -->
+    <div class="stat-card">
+      <div class="stat-header">
+        <div class="stat-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6,2H18A2,2 0 0,1 20,4V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M8,7V9H16V7H8Z"/></svg>
+        </div>
+        <div class="stat-title">Schijfruimte</div>
+      </div>
+      <div class="stat-value" id="diskVal">—</div>
+      <div class="stat-sub" id="diskSub">—</div>
+      <div class="bar-wrap"><div class="bar-fill" id="diskBar" style="width:0%"></div></div>
+    </div>
+
+    <!-- Geheugen + Uptime naast elkaar -->
+    <div class="two-col">
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17,17H7V7H17M21,11V9H19V7C19,5.89 18.1,5 17,5H15V3H13V5H11V3H9V5H7C5.89,5 5,5.89 5,7V9H3V11H5V13H3V15H5V17A2,2 0 0,0 7,19H9V21H11V19H13V21H15V19H17A2,2 0 0,0 19,17V15H21V13H19V11H21Z"/></svg>
+          </div>
+          <div class="stat-title">Geheugen</div>
+        </div>
+        <div class="stat-value" id="memVal">—</div>
+        <div class="stat-sub" id="memSub">—</div>
+        <div class="bar-wrap"><div class="bar-fill" id="memBar" style="width:0%"></div></div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg>
+          </div>
+          <div class="stat-title">Uptime</div>
+        </div>
+        <div class="stat-value" id="uptimeVal" style="font-size:1.15rem">—</div>
+        <div class="stat-sub">Sinds laatste herstart</div>
+      </div>
+
+    </div>
+
+    <!-- CPU-temperatuur -->
+    <div class="stat-card">
+      <div class="stat-header">
+        <div class="stat-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15,13V5A3,3 0 0,0 12,2A3,3 0 0,0 9,5V13A5,5 0 0,0 12,23A5,5 0 0,0 15,13M12,4A1,1 0 0,1 13,5V14.18C14.16,14.59 15,15.71 15,17A3,3 0 0,1 12,20A3,3 0 0,1 9,17C9,15.71 9.84,14.59 11,14.18V5A1,1 0 0,1 12,4Z"/></svg>
+        </div>
+        <div class="stat-title">CPU-temperatuur</div>
+      </div>
+      <div class="temp-row">
+        <div class="stat-value" id="tempVal">—</div>
+        <div class="temp-badge ok" id="tempBadge" style="display:none"></div>
+      </div>
+      <div class="bar-wrap" style="margin-top:0.75rem"><div class="bar-fill" id="tempBar" style="width:0%"></div></div>
+      <div class="stat-sub" style="margin-top:0.4rem">Schaal: 30°C – 85°C</div>
+    </div>
+
+    <div class="last-update" id="lastUpdate"></div>
+
+  </div>
+
+  <script>
+    function fmtBytes(b) {
+      if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
+      if (b >= 1e6) return (b / 1e6).toFixed(0) + ' MB';
+      return (b / 1e3).toFixed(0) + ' KB';
+    }
+
+    function barClass(pct) {
+      if (pct >= 90) return 'bar-fill crit';
+      if (pct >= 75) return 'bar-fill warn';
+      return 'bar-fill';
+    }
+
+    function load() {
+      fetch('/system_info')
+        .then(r => r.json())
+        .then(d => {
+          // Schijf
+          const dp = d.disk_percent ?? 0;
+          document.getElementById('diskVal').innerHTML =
+            fmtBytes(d.disk_used) + '<span class="unit">/ ' + fmtBytes(d.disk_total) + '</span>';
+          document.getElementById('diskSub').textContent = dp + '% gebruikt — ' + fmtBytes(d.disk_free) + ' vrij';
+          const diskBar = document.getElementById('diskBar');
+          diskBar.style.width = dp + '%';
+          diskBar.className = barClass(dp);
+
+          // Geheugen
+          const mp = d.mem_percent ?? 0;
+          document.getElementById('memVal').innerHTML =
+            fmtBytes(d.mem_used) + '<span class="unit">/ ' + fmtBytes(d.mem_total) + '</span>';
+          document.getElementById('memSub').textContent = mp + '% gebruikt';
+          const memBar = document.getElementById('memBar');
+          memBar.style.width = mp + '%';
+          memBar.className = barClass(mp);
+
+          // Uptime
+          document.getElementById('uptimeVal').textContent = d.uptime_str ?? '—';
+
+          // Temperatuur
+          const tempEl = document.getElementById('tempVal');
+          const badge  = document.getElementById('tempBadge');
+          const tempBar = document.getElementById('tempBar');
+          if (d.cpu_temp !== null && d.cpu_temp !== undefined) {
+            tempEl.innerHTML = d.cpu_temp + '<span class="unit">°C</span>';
+            const pct = Math.min(100, Math.max(0, ((d.cpu_temp - 30) / 55) * 100));
+            tempBar.style.width = pct + '%';
+            tempBar.className = barClass(pct);
+            badge.style.display = '';
+            if (d.cpu_temp < 60) {
+              badge.className = 'temp-badge ok';
+              badge.textContent = 'Normaal';
+            } else if (d.cpu_temp < 75) {
+              badge.className = 'temp-badge warm';
+              badge.textContent = 'Warm';
+            } else {
+              badge.className = 'temp-badge hot';
+              badge.textContent = 'Heet';
+            }
+          } else {
+            tempEl.textContent = 'N/B';
+            badge.style.display = 'none';
+            tempBar.style.width = '0%';
+          }
+
+          const now = new Date();
+          document.getElementById('lastUpdate').textContent =
+            'Bijgewerkt om ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+        })
+        .catch(() => {});
+    }
+
+    load();
+    setInterval(load, 10000);
+  </script>
+</body>
+</html>
