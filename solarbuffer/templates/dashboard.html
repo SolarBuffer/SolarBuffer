@@ -654,6 +654,21 @@
     html[data-theme="dark"] .acc-online-badge.online  { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
     html[data-theme="dark"] .acc-online-badge.offline { background: hsl(0, 25%, 22%);   color: hsl(0, 65%, 60%); }
 
+    .acc-card-header {
+      display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;
+    }
+    .acc-card-header h2 { flex: 1; margin-bottom: 0; }
+    .gas-badge {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 700;
+      color: hsl(24, 90%, 38%); background: hsl(24, 100%, 94%);
+      border: 1px solid hsl(24, 70%, 82%); border-radius: 999px;
+      padding: 0.2rem 0.65rem 0.2rem 0.45rem;
+    }
+    html[data-theme="dark"] .gas-badge {
+      background: hsl(24, 25%, 22%); border-color: hsl(24, 35%, 32%); color: hsl(24, 80%, 65%);
+    }
+
     .acc-tile-icon.temp { background: hsl(200, 80%, 93%); color: hsl(200, 80%, 35%); }
 
     .linked-temp-row {
@@ -1753,7 +1768,13 @@
     </div>
 
     <div class="card control-card" id="accessoriesCard" style="display:none">
-      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span> Verbruikers</h2>
+      <div class="acc-card-header">
+        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span> Verbruikers</h2>
+        <div class="gas-badge" id="gasBadge" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2Z"/></svg>
+          <span id="gasValue">—</span>&thinsp;m³
+        </div>
+      </div>
       <div id="accessoriesContainer"></div>
     </div>
 
@@ -1924,6 +1945,16 @@
 
           renderDevices(data.devices || []);
           renderAccessories(data.accessories || []);
+          const gasBadge = document.getElementById('gasBadge');
+          if (data.gas_enabled && data.gas_today_m3 !== null && data.gas_today_m3 !== undefined) {
+            document.getElementById('gasValue').textContent = Number(data.gas_today_m3).toFixed(3);
+            gasBadge.style.display = '';
+          } else {
+            gasBadge.style.display = 'none';
+          }
+          if (data.gas_enabled) {
+            document.getElementById('accessoriesCard').style.display = '';
+          }
           renderSchedules(data.schedules || [], data.active_schedule || null);
         })
         .catch(err => console.error("Update error:", err));
@@ -2314,8 +2345,9 @@
     function renderAccessories(accessories) {
       const card = document.getElementById('accessoriesCard');
       const cont = document.getElementById('accessoriesContainer');
+      const gasVisible = document.getElementById('gasBadge') && document.getElementById('gasBadge').style.display !== 'none';
       if (!accessories || accessories.length === 0) {
-        card.style.display = 'none';
+        if (!gasVisible) card.style.display = 'none';
         return;
       }
       card.style.display = '';

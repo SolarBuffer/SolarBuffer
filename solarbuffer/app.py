@@ -78,6 +78,8 @@ def load_config():
         cfg["pid_enabled"] = True
     if "schedules_enabled" not in cfg:
         cfg["schedules_enabled"] = True
+    if "gas_enabled" not in cfg:
+        cfg["gas_enabled"] = False
 
     if "mqtt_enabled" not in cfg:
         cfg["mqtt_enabled"] = False
@@ -192,6 +194,10 @@ def save_state(force=False):
             "legionella_start": st.get("legionella_start"),
         }
         for ip, st in device_states.items()
+    }
+    state["__gas__"] = {
+        "gas_day_start_m3": gas_day_start_m3,
+        "gas_day_date": gas_day_date,
     }
     try:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
@@ -354,7 +360,7 @@ def compare_configs(old_cfg, new_cfg):
 
 # ================= PID =================
 PID_KP = 0.0175
-PID_KI = 0.001
+PID_KI = 0.0010
 PID_KD = 0.00
 
 device_pids = {}
@@ -364,6 +370,9 @@ device_states = {}
 accessory_states = {}
 current_power = 0
 current_brightness = 0
+current_gas_m3 = None      # meest recente meterstand (m³)
+gas_day_start_m3 = None    # meterstand bij start van vandaag
+gas_day_date = None        # datum (YYYY-MM-DD) waarvoor de dagstand geldt
 active_schedule_info = None
 _mqtt_client = None
 _mqtt_connected = False
@@ -967,6 +976,10 @@ def status_json():
             entry["power"] = st.get("power", 0.0)
         accessories.append(entry)
 
+    gas_today = None
+    if cfg.get("gas_enabled") and current_gas_m3 is not None and gas_day_start_m3 is not None:
+        gas_today = round(max(0.0, current_gas_m3 - gas_day_start_m3), 3)
+
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
         devices=devices, expert_mode=cfg.get("expert_mode", False),
@@ -975,7 +988,8 @@ def status_json():
         active_schedule=active_schedule_info,
         anti_legionella_enabled=anti_legionella_enabled,
         schedules_enabled=schedules_enabled,
-        accessories=accessories
+        accessories=accessories,
+        gas_enabled=cfg.get("gas_enabled", False), gas_today_m3=gas_today,
     )
 
 
@@ -1944,7 +1958,7 @@ def accessories_page():
         return redirect("/login")
     cfg = load_config()
     return render_template("accessories.html", accessories=cfg.get("accessories", []),
-                           shelly_devices=cfg.get("shelly_devices", []), dark_mode=get_user_dark_mode())
+                           shelly_devices=cfg.get("shelly_devices", []), gas_enabled=cfg.get("gas_enabled", False), dark_mode=get_user_dark_mode())
 
 
 @app.route("/accessories", methods=["POST"])
@@ -2043,6 +2057,23 @@ def delete_accessory(acc_id):
     accessory_states.pop(acc_id, None)
     save_config(cfg)
     write_audit_log("accessory_deleted", {"id": acc_id})
+    return jsonify(success=True)
+
+
+@app.route("/set_gas_enabled", methods=["POST"])
+def set_gas_enabled():
+    global gas_day_start_m3, gas_day_date, current_gas_m3
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    cfg = load_config()
+    cfg["gas_enabled"] = bool(data.get("enabled", False))
+    save_config(cfg)
+    # reset dagbaseline zodat hij opnieuw start vanaf het inschakelen
+    if cfg["gas_enabled"] and current_gas_m3 is not None:
+        gas_day_date = datetime.now().date().isoformat()
+        gas_day_start_m3 = current_gas_m3
+        save_state(force=True)
     return jsonify(success=True)
 
 
@@ -3520,7 +3551,11 @@ def control_loop():
 
 # ================= P1 POLL =================
 def p1_poll_loop():
-    global current_power
+    global current_power, current_gas_m3, gas_day_start_m3, gas_day_date
+    saved = load_state()
+    gas_info = saved.get("__gas__", {})
+    gas_day_start_m3 = gas_info.get("gas_day_start_m3")
+    gas_day_date = gas_info.get("gas_day_date")
     while True:
         try:
             cfg = load_config()
@@ -3528,6 +3563,15 @@ def p1_poll_loop():
             if p1_ip:
                 data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
                 current_power = float(data.get("active_power_w", 0) or 0)
+                if cfg.get("gas_enabled"):
+                    gas_raw = data.get("total_gas_m3")
+                    if gas_raw is not None:
+                        current_gas_m3 = float(gas_raw)
+                        today = datetime.now().date().isoformat()
+                        if gas_day_date != today:
+                            gas_day_date = today
+                            gas_day_start_m3 = current_gas_m3
+                            save_state(force=True)
         except Exception:
             pass
         time.sleep(1)

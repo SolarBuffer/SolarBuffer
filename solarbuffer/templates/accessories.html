@@ -309,6 +309,41 @@
     html[data-theme="dark"] .scan-item-ip { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .scan-item-add { color: hsl(32, 75%, 58%); }
     html[data-theme="dark"] .scan-none { color: hsl(220, 8%, 52%); border-top-color: hsl(220, 8%, 30%); }
+
+/* ===== GAS TOGGLE ===== */
+.gas-settings-card {
+  background: white; border: 1px solid hsl(30, 15%, 88%);
+  border-radius: 0.875rem; box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
+  padding: 0.85rem 1rem; margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.gas-settings-icon {
+  width: 38px; height: 38px; border-radius: 9px;
+  background: hsl(24, 100%, 94%); color: hsl(24, 90%, 42%);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.gas-settings-info { flex: 1; min-width: 0; }
+.gas-settings-label { font-weight: 600; font-size: 0.92rem; }
+.gas-settings-sub { font-size: 0.76rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; }
+.pill-toggle { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+.pill-toggle input { opacity: 0; width: 0; height: 0; }
+.pill-thumb {
+  position: absolute; inset: 0; cursor: pointer;
+  background: hsl(220, 10%, 78%); border-radius: 999px;
+  transition: background 0.2s;
+}
+.pill-thumb::before {
+  content: ''; position: absolute;
+  width: 20px; height: 20px; left: 3px; top: 3px;
+  background: white; border-radius: 50%;
+  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.pill-toggle input:checked + .pill-thumb { background: hsl(32, 95%, 52%); }
+.pill-toggle input:checked + .pill-thumb::before { transform: translateX(18px); }
+html[data-theme="dark"] .gas-settings-card { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); box-shadow: none; }
+html[data-theme="dark"] .gas-settings-icon { background: hsl(24, 30%, 24%); color: hsl(24, 80%, 60%); }
+html[data-theme="dark"] .gas-settings-sub { color: hsl(220, 8%, 55%); }
+html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
   </style>
   <script>
     (function () {
@@ -334,6 +369,21 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
     </a>
+
+    <div class="section-title">Gas</div>
+    <div class="gas-settings-card">
+      <div class="gas-settings-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2Z"/></svg>
+      </div>
+      <div class="gas-settings-info">
+        <div class="gas-settings-label">Gasmeter weergeven</div>
+        <div class="gas-settings-sub">Dagelijks verbruik via P1-meter (m³)</div>
+      </div>
+      <label class="pill-toggle">
+        <input type="checkbox" id="gasToggle" onchange="setGasEnabled(this.checked)" {% if gas_enabled %}checked{% endif %}>
+        <span class="pill-thumb"></span>
+      </label>
+    </div>
 
     <div class="section-title">Mijn accessoires</div>
     <div class="acc-list" id="accList">
@@ -871,6 +921,16 @@
         .then(r => r.json())
         .then(data => { if (data.success) window.location.reload(); })
         .catch(() => alert('Verwijderen mislukt.'));
+    }
+
+    function setGasEnabled(enabled) {
+      fetch('/set_gas_enabled', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ enabled })
+      }).catch(() => {
+        document.getElementById('gasToggle').checked = !enabled;
+      });
     }
   </script>
 </body>
