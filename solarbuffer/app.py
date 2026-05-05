@@ -355,7 +355,7 @@ def compare_configs(old_cfg, new_cfg):
 # ================= PID =================
 PID_KP = 0.02
 PID_KI = 0.0013
-PID_KD = 0.0
+PID_KD = 0.00
 
 device_pids = {}
 enabled = True
@@ -3434,6 +3434,11 @@ def control_loop():
                 if regulating_device and ip == regulating_device["ip"]:
                     b = device_pids[ip](pid_power)
                     b = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, b))
+                    # teruglevering (negatief) → mag alleen omhoog; importerend (positief) → mag alleen omlaag
+                    if measured_power > 0:
+                        b = min(b, st["brightness"])
+                    elif measured_power < 0:
+                        b = max(b, st["brightness"])
                     st["brightness"] = b
                     st["on"] = True
                     set_shelly(b, True, ip)
