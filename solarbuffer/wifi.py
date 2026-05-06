@@ -14,7 +14,6 @@ HTML = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WiFi Setup - SolarBuffer</title>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
@@ -270,11 +269,11 @@ button[type="submit"]:active {
             <div class="scan-header">
                 <label>Beschikbare netwerken</label>
                 <button type="button" class="refresh-btn" id="refreshBtn" onclick="scanNetworks(true)">
-                    <i class="mdi mdi-refresh"></i> Vernieuwen
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg> Vernieuwen
                 </button>
             </div>
             <div class="network-list" id="networkList">
-                <div class="scan-status"><i class="mdi mdi-loading spinning"></i> Netwerken zoeken...</div>
+                <div class="scan-status"><svg class="spinning" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Netwerken zoeken...</div>
             </div>
         </div>
 
@@ -287,7 +286,9 @@ button[type="submit"]:active {
             <label>WiFi wachtwoord</label>
             <div class="password-wrapper">
                 <input id="wifi_password" name="password" type="password">
-                <i class="mdi mdi-eye-off toggle-password" onclick="togglePassword('wifi_password', this)"></i>
+                <span class="toggle-password" onclick="togglePassword('wifi_password', this)">
+                    <svg id="eye_icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>
+                </span>
             </div>
         </div>
 
@@ -296,24 +297,30 @@ button[type="submit"]:active {
 </div>
 
 <script>
-function togglePassword(fieldId, icon) {
+const SVG_EYE     = '<path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>';
+const SVG_EYE_OFF = '<path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/>';
+
+function togglePassword(fieldId, btn) {
     const field = document.getElementById(fieldId);
+    const svg = btn.querySelector('svg');
     if (field.type === "password") {
         field.type = "text";
-        icon.classList.remove("mdi-eye-off");
-        icon.classList.add("mdi-eye");
+        svg.innerHTML = SVG_EYE;
     } else {
         field.type = "password";
-        icon.classList.remove("mdi-eye");
-        icon.classList.add("mdi-eye-off");
+        svg.innerHTML = SVG_EYE_OFF;
     }
 }
 
 function signalIcon(signal) {
-    if (signal >= 75) return 'mdi-wifi-strength-4';
-    if (signal >= 50) return 'mdi-wifi-strength-3';
-    if (signal >= 25) return 'mdi-wifi-strength-2';
-    return 'mdi-wifi-strength-1';
+    const bars = signal >= 75 ? 4 : signal >= 50 ? 3 : signal >= 25 ? 2 : 1;
+    const paths = [
+        `<rect x="1"  y="13" width="3" height="5" rx="0.5" fill="${bars>=1?'hsl(32,95%,52%)':'#ccc'}"/>`,
+        `<rect x="6"  y="9"  width="3" height="9" rx="0.5" fill="${bars>=2?'hsl(32,95%,52%)':'#ccc'}"/>`,
+        `<rect x="11" y="5"  width="3" height="13" rx="0.5" fill="${bars>=3?'hsl(32,95%,52%)':'#ccc'}"/>`,
+        `<rect x="16" y="1"  width="3" height="17" rx="0.5" fill="${bars>=4?'hsl(32,95%,52%)':'#ccc'}"/>`,
+    ];
+    return `<svg width="20" height="18" viewBox="0 0 20 18">${paths.join('')}</svg>`;
 }
 
 function escapeHtml(str) {
@@ -336,11 +343,12 @@ function renderNetworks(networks) {
         list.innerHTML = '<div class="scan-status">Geen netwerken gevonden. Typ de netwerknaam handmatig.</div>';
         return;
     }
+    const lockSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,17A2,2 0 0,1 10,15A2,2 0 0,1 12,13A2,2 0 0,1 14,15A2,2 0 0,1 12,17M15.1,8H8.9V6A3.1,3.1 0 0,1 12,2.9A3.1,3.1 0 0,1 15.1,6V8Z"/></svg>`;
     list.innerHTML = networks.map(n => `
         <div class="network-item" data-ssid="${escapeHtml(n.ssid)}">
-            <i class="mdi ${signalIcon(n.signal)} network-signal"></i>
+            <span class="network-signal">${signalIcon(n.signal)}</span>
             <span class="network-name">${escapeHtml(n.ssid)}</span>
-            <i class="mdi ${n.secured ? 'mdi-lock' : 'mdi-lock-open-outline'} network-lock" style="${n.secured ? '' : 'opacity:0.35'}"></i>
+            <span class="network-lock" style="${n.secured ? '' : 'opacity:0.25'}">${n.secured ? lockSvg : lockSvg}</span>
         </div>
     `).join('');
     list.querySelectorAll('.network-item').forEach(el => {
@@ -351,7 +359,7 @@ function renderNetworks(networks) {
 async function scanNetworks(force = false) {
     const list = document.getElementById('networkList');
     const btn = document.getElementById('refreshBtn');
-    list.innerHTML = '<div class="scan-status"><i class="mdi mdi-loading spinning"></i> Netwerken zoeken...</div>';
+    list.innerHTML = '<div class="scan-status"><svg class="spinning" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Netwerken zoeken...</div>';
     btn.disabled = true;
     try {
         const res = await fetch(force ? '/scan?rescan=1' : '/scan');
