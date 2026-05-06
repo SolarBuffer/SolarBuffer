@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>P1-meter - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(220, 10%, 52%);
+      margin-bottom: 0.85rem;
+    }
+
+    .field-group { margin-bottom: 0.85rem; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: hsl(220, 10%, 46%);
+      margin-bottom: 0.35rem;
+    }
+    .field-group input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+      transition: border-color 0.2s;
+    }
+    .field-group input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+
+    .btn-scan {
+      display: block;
+      width: 100%;
+      background: hsl(215, 70%, 52%);
+      color: white;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      margin-top: 0.75rem;
+    }
+    .btn-scan:hover { background: hsl(215, 70%, 45%); transform: translateY(-1px); }
+    .btn-scan:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .scan-status {
+      margin-top: 0.6rem;
+      font-size: 0.83rem;
+      color: hsl(220, 10%, 46%);
+      min-height: 1.2rem;
+    }
+    .scan-results {
+      margin-top: 0.6rem;
+      padding: 0.65rem 0.85rem;
+      background: hsl(145, 55%, 94%);
+      border: 1px solid hsl(145, 45%, 78%);
+      border-radius: 0.5rem;
+      font-size: 0.83rem;
+      color: hsl(145, 50%, 28%);
+      display: none;
+    }
+    .scan-results.visible { display: block; }
+    .scan-results ul { margin: 0.3rem 0 0 1rem; }
+    .scan-results li { margin-bottom: 0.2rem; }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+
+    .btn-secondary {
+      flex: 1;
+      background: hsl(30, 15%, 95%);
+      color: hsl(220, 20%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+    .btn-row { display: flex; gap: 0.75rem; }
+    .btn-row .btn-primary { flex: 1; }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .field-group label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .field-group input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field-group input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .scan-status { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .scan-results { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>P1-meter</p>
+    </div>
+
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <form method="POST" action="/settings/p1">
+      <div class="card">
+        <div class="card-title">P1-meter koppelen</div>
+        <div class="field-group">
+          <label for="p1ip">IP-adres P1-meter</label>
+          <input type="text" id="p1ip" name="p1ip"
+                 placeholder="Bijv. 192.168.178.21"
+                 value="{{ config.p1_ip or '' }}"
+                 pattern="^(\d{1,3}\.){3}\d{1,3}$" required>
+        </div>
+        <button type="button" class="btn-scan" id="scanBtn" onclick="doScan()">Scan netwerk</button>
+        <div class="scan-status" id="scanStatus"></div>
+        <div class="scan-results" id="scanResults"></div>
+      </div>
+
+      <div class="btn-row">
+        <a href="/settings" class="btn-secondary">Annuleren</a>
+        <button type="submit" class="btn-primary">Opslaan</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function escapeHtml(v) {
+      return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    async function doScan() {
+      const btn = document.getElementById('scanBtn');
+      const status = document.getElementById('scanStatus');
+      const results = document.getElementById('scanResults');
+      btn.disabled = true;
+      status.textContent = 'Netwerk wordt gescand...';
+      results.innerHTML = '';
+      results.classList.remove('visible');
+      try {
+        const r = await fetch('/scan_devices', { headers: { 'Accept': 'application/json' } });
+        const data = await r.json();
+        const p1List = Array.isArray(data.p1_meters) ? data.p1_meters : [];
+        if (p1List.length > 0) {
+          const input = document.getElementById('p1ip');
+          if (!input.value.trim()) input.value = p1List[0].ip || '';
+          let html = '<strong>Gevonden:</strong><ul>';
+          p1List.forEach(d => { html += `<li>${escapeHtml(d.name || 'HomeWizard P1')} — ${escapeHtml(d.ip || '')}</li>`; });
+          html += '</ul>';
+          results.innerHTML = html;
+          results.classList.add('visible');
+          status.textContent = 'Scan voltooid.';
+        } else {
+          status.textContent = 'Geen P1-meter gevonden.';
+        }
+      } catch (e) {
+        status.textContent = 'Scannen mislukt.';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>MQTT / Home Assistant - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(220, 10%, 52%);
+      margin-bottom: 0.85rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: hsl(32, 95%, 52%);
+      cursor: pointer;
+    }
+
+    .fields-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .field.field-full { grid-column: span 2; }
+    .field-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: hsl(220, 10%, 46%);
+    }
+    .field-help {
+      font-size: 0.74rem;
+      color: hsl(220, 10%, 58%);
+      line-height: 1.3;
+    }
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+      transition: border-color 0.2s;
+    }
+    .field input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+
+    .btn-secondary {
+      flex: 1;
+      background: hsl(30, 15%, 95%);
+      color: hsl(220, 20%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+    .btn-row { display: flex; gap: 0.75rem; }
+    .btn-row .btn-primary { flex: 1; }
+
+    @media (max-width: 420px) {
+      .fields-grid { grid-template-columns: 1fr; }
+      .field.field-full { grid-column: span 1; }
+    }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .toggle-row { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field-label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .field-help { color: hsl(220, 8%, 48%); }
+    html[data-theme="dark"] .field input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>MQTT / Home Assistant</p>
+    </div>
+
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <form method="POST" action="/settings/mqtt">
+      <div class="card">
+        <div class="card-title">Verbinding</div>
+        <label class="toggle-row">
+          <input type="checkbox" id="mqttEnabled" name="mqtt_enabled"
+                 {% if config.mqtt_enabled %}checked{% endif %}>
+          MQTT inschakelen
+        </label>
+
+        <div id="mqttFields" style="display:none;">
+          <div class="fields-grid">
+            <div class="field field-full">
+              <span class="field-label">MQTT Broker</span>
+              <span class="field-help">IP-adres of hostnaam van je MQTT broker</span>
+              <input type="text" name="mqtt_broker" placeholder="Bijv. 192.168.178.100"
+                     value="{{ config.mqtt_broker or '' }}">
+            </div>
+            <div class="field">
+              <span class="field-label">Poort</span>
+              <span class="field-help">Standaard 1883</span>
+              <input type="number" name="mqtt_port" value="{{ config.mqtt_port or 1883 }}" min="1" max="65535">
+            </div>
+            <div class="field">
+              <span class="field-label">Publiceer-interval</span>
+              <span class="field-help">Elke N seconden</span>
+              <input type="number" name="mqtt_publish_interval" value="{{ config.mqtt_publish_interval or 30 }}" min="5" max="3600">
+            </div>
+            <div class="field">
+              <span class="field-label">Gebruikersnaam</span>
+              <span class="field-help">Laat leeg indien niet vereist</span>
+              <input type="text" name="mqtt_username" autocomplete="off" placeholder="mqtt_user"
+                     value="{{ config.mqtt_username or '' }}">
+            </div>
+            <div class="field">
+              <span class="field-label">Wachtwoord</span>
+              <span class="field-help">Laat leeg indien niet vereist</span>
+              <input type="password" name="mqtt_password" autocomplete="new-password" placeholder="••••••••"
+                     value="{{ config.mqtt_password or '' }}">
+            </div>
+            <div class="field">
+              <span class="field-label">Topic prefix</span>
+              <span class="field-help">Basisnaam voor MQTT topics</span>
+              <input type="text" name="mqtt_topic_prefix" placeholder="solarbuffer"
+                     value="{{ config.mqtt_topic_prefix or 'solarbuffer' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="haCard" style="display:none;">
+        <div class="card-title">Home Assistant</div>
+        <label class="toggle-row">
+          <input type="checkbox" name="mqtt_ha_discovery"
+                 {% if config.mqtt_ha_discovery is not defined or config.mqtt_ha_discovery %}checked{% endif %}>
+          HA Auto-discovery inschakelen
+        </label>
+        <p style="font-size:0.8rem; color:hsl(220,10%,52%); margin-top:0.5rem; line-height:1.4;">
+          Entiteiten automatisch registreren in Home Assistant via MQTT discovery.
+        </p>
+      </div>
+
+      <div class="btn-row">
+        <a href="/settings" class="btn-secondary">Annuleren</a>
+        <button type="submit" class="btn-primary">Opslaan</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function updateMqttVisibility() {
+      const enabled = document.getElementById('mqttEnabled').checked;
+      document.getElementById('mqttFields').style.display = enabled ? 'block' : 'none';
+      document.getElementById('haCard').style.display = enabled ? 'block' : 'none';
+    }
+    document.getElementById('mqttEnabled').addEventListener('change', updateMqttVisibility);
+    updateMqttVisibility();
+  </script>
+</body>
+</html>

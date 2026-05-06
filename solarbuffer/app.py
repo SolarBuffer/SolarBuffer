@@ -898,6 +898,74 @@ def wizard_forced():
     return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
 
 
+@app.route("/settings/p1", methods=["GET", "POST"])
+def settings_p1():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    if request.method == "POST":
+        old_cfg = load_config()
+        cfg["p1_ip"] = request.form.get("p1ip", "").strip()
+        changes = compare_configs(old_cfg, cfg)
+        save_config(cfg)
+        if changes:
+            write_audit_log("config_updated", changes)
+        return redirect("/settings")
+    return render_template("settings_p1.html", config=cfg, dark_mode=get_user_dark_mode())
+
+
+@app.route("/settings/solarbuffers", methods=["GET", "POST"])
+def settings_solarbuffers():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    if request.method == "POST":
+        old_cfg = load_config()
+        cfg["shelly_devices"] = parse_devices_from_request(request)
+        changes = compare_configs(old_cfg, cfg)
+        save_config(cfg)
+        if changes:
+            write_audit_log("config_updated", changes)
+        init_device_states(cfg["shelly_devices"])
+        init_device_pids(cfg["shelly_devices"])
+        threading.Thread(target=sync_configured_devices_off, args=(cfg["shelly_devices"],), daemon=True).start()
+        return redirect("/settings")
+    return render_template("settings_solarbuffers.html", config=cfg, dark_mode=get_user_dark_mode())
+
+
+@app.route("/settings/expert", methods=["GET", "POST"])
+def settings_expert():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    if request.method == "POST":
+        old_cfg = load_config()
+        cfg["expert_mode"] = request.form.get("expert_mode") == "on"
+        cfg["expert_settings"] = parse_expert_settings_from_request(request)
+        changes = compare_configs(old_cfg, cfg)
+        save_config(cfg)
+        if changes:
+            write_audit_log("config_updated", changes)
+        return redirect("/settings")
+    return render_template("settings_expert.html", config=cfg, dark_mode=get_user_dark_mode())
+
+
+@app.route("/settings/mqtt", methods=["GET", "POST"])
+def settings_mqtt():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    if request.method == "POST":
+        old_cfg = load_config()
+        cfg.update(parse_mqtt_settings_from_request(request))
+        changes = compare_configs(old_cfg, cfg)
+        save_config(cfg)
+        if changes:
+            write_audit_log("config_updated", changes)
+        return redirect("/settings")
+    return render_template("settings_mqtt.html", config=cfg, dark_mode=get_user_dark_mode())
+
+
 @app.route("/dashboard")
 def dashboard():
     if not require_login():

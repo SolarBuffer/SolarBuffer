@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>SolarBuffers - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    /* Waarschuwing */
+    .warn-banner {
+      background: hsl(38, 100%, 95%);
+      border: 1px solid hsl(38, 90%, 78%);
+      border-radius: 0.65rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.83rem;
+      color: hsl(38, 80%, 30%);
+      margin-bottom: 1rem;
+      line-height: 1.45;
+    }
+
+    /* Kaart rondom elk apparaat */
+    .device-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .device-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.1rem;
+    }
+    .device-card-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(220, 10%, 52%);
+    }
+    .remove-btn {
+      all: unset;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: hsl(0, 70%, 94%);
+      color: hsl(0, 65%, 46%);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .remove-btn:hover { background: hsl(0, 70%, 86%); color: hsl(0, 65%, 36%); }
+
+    /* Veldgroepen */
+    .field-group {
+      margin-bottom: 0.9rem;
+    }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: hsl(220, 10%, 46%);
+      margin-bottom: 0.35rem;
+    }
+    .field-group input,
+    .field-group select {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .field-group select {
+      padding-right: 2.5rem;
+      background-image:
+        linear-gradient(45deg, transparent 50%, hsl(220, 10%, 40%) 50%),
+        linear-gradient(135deg, hsl(220, 10%, 40%) 50%, transparent 50%);
+      background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+    }
+    .field-group input:focus,
+    .field-group select:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+    .field-group input:read-only {
+      background: hsl(30, 15%, 97%);
+      color: hsl(220, 10%, 58%);
+      cursor: default;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    /* Subsectie labels (Power meter, Socket, Anti-legionella) */
+    .subsection {
+      border-top: 1px solid hsl(30, 15%, 91%);
+      margin-top: 1.1rem;
+      padding-top: 1.1rem;
+    }
+    .subsection-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(220, 10%, 52%);
+      margin-bottom: 0.85rem;
+    }
+
+    .input-with-unit {
+      display: flex;
+      align-items: stretch;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      max-width: 160px;
+      transition: border-color 0.2s;
+    }
+    .input-with-unit:focus-within { border-color: hsl(32, 85%, 55%); }
+    .input-with-unit input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+    }
+    .input-with-unit input:focus { outline: none; }
+    .input-with-unit .unit {
+      padding: 0 0.65rem;
+      border-left: 1px solid hsl(30, 15%, 88%);
+      background: hsl(30, 20%, 96%);
+      color: hsl(220, 10%, 52%);
+      font-weight: 600;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    /* Actieknoppen */
+    .action-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .btn-add {
+      flex: 1;
+      background: hsl(145, 55%, 42%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-add:hover { background: hsl(145, 55%, 35%); transform: translateY(-1px); }
+
+    .btn-scan {
+      flex: 1;
+      background: hsl(215, 70%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-scan:hover { background: hsl(215, 70%, 45%); transform: translateY(-1px); }
+    .btn-scan:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .scan-status {
+      font-size: 0.83rem;
+      color: hsl(220, 10%, 46%);
+      min-height: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+
+    .btn-secondary {
+      flex: 1;
+      background: hsl(30, 15%, 95%);
+      color: hsl(220, 20%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+    }
+    .btn-row .btn-primary { flex: 1; }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .warn-banner { background: hsl(38, 40%, 22%); border-color: hsl(38, 60%, 35%); color: hsl(38, 80%, 72%); }
+    html[data-theme="dark"] .device-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .device-card-label { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .remove-btn { background: hsl(0, 30%, 30%); color: hsl(0, 60%, 65%); }
+    html[data-theme="dark"] .remove-btn:hover { background: hsl(0, 35%, 36%); }
+    html[data-theme="dark"] .field-group label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .field-group input,
+    html[data-theme="dark"] .field-group select { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field-group input:focus,
+    html[data-theme="dark"] .field-group select:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .field-group input:read-only { background: hsl(220, 8%, 28%); color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .subsection { border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .subsection-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .input-with-unit { border-color: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .input-with-unit:focus-within { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .input-with-unit input { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .input-with-unit .unit { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .scan-status { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>SolarBuffers</p>
+    </div>
+
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <div class="warn-banner">
+      ⚠️ Bij opslaan worden alle actieve SolarBuffers uitgeschakeld.
+    </div>
+
+    <form method="POST" action="/settings/solarbuffers" id="sbForm">
+
+      <div id="deviceContainer"></div>
+
+      <div class="action-row">
+        <button type="button" class="btn-add" onclick="addDevice()">+ SolarBuffer toevoegen</button>
+        <button type="button" class="btn-scan" id="scanBtn" onclick="doScan()">Zoek SolarBuffers</button>
+      </div>
+      <div class="scan-status" id="scanStatus"></div>
+
+      <div class="btn-row">
+        <a href="/settings" class="btn-secondary">Annuleren</a>
+        <button type="submit" class="btn-primary">Opslaan</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function escapeHtml(v) {
+      return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function createPriorityOptions(selected) {
+      let o = '<option value="">Kies</option>';
+      for (let i = 1; i <= 5; i++) {
+        o += `<option value="${i}" ${String(selected) == String(i) ? 'selected' : ''}>${i}</option>`;
+      }
+      return o;
+    }
+
+    function createPowerMeterOptions(selected) {
+      return `<option value="" ${selected === "" ? 'selected' : ''}>Geen</option>
+              <option value="shelly" ${selected === "shelly" ? 'selected' : ''}>Shelly</option>
+              <option value="homewizard" ${selected === "homewizard" ? 'selected' : ''}>HomeWizard</option>`;
+    }
+
+    function createPowerSocketOptions(selected) {
+      return `<option value="" ${selected === "" ? 'selected' : ''}>Geen</option>
+              <option value="shelly" ${selected === "shelly" ? 'selected' : ''}>Shelly Plug</option>
+              <option value="homewizard" ${selected === "homewizard" ? 'selected' : ''}>HomeWizard Energy Socket</option>`;
+    }
+
+    function getNextPriority() {
+      const used = Array.from(document.querySelectorAll('select[name="priority[]"]'))
+        .map(s => parseInt(s.value, 10)).filter(v => !Number.isNaN(v));
+      for (let i = 1; i <= 5; i++) if (!used.includes(i)) return i;
+      return "";
+    }
+
+    function updatePriorities() {
+      const selects = document.querySelectorAll('select[name="priority[]"]');
+      const used = new Set();
+      selects.forEach(s => { if (s.value) used.add(parseInt(s.value, 10)); });
+      selects.forEach(s => {
+        if (!s.value) {
+          for (let p = 1; p <= 5; p++) {
+            if (!used.has(p)) { s.value = p; used.add(p); break; }
+          }
+        }
+      });
+    }
+
+    function normalizePriorities() {
+      const rows = Array.from(document.querySelectorAll('.device-card[data-device]'));
+      const filled = rows.filter(r => {
+        const ip = (r.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+        const name = (r.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
+        return ip || name;
+      });
+      filled.forEach((r, i) => {
+        const p = r.querySelector('select[name="priority[]"]');
+        if (p) p.value = String(i + 1);
+      });
+    }
+
+    function updateDeviceNumbers() {
+      const cards = document.querySelectorAll('.device-card[data-device]');
+      cards.forEach((card, i) => {
+        card.querySelector('.device-card-label').textContent = `SolarBuffer ${i + 1}`;
+        const removeBtn = card.querySelector('.remove-btn');
+        if (removeBtn) removeBtn.style.display = cards.length > 1 ? 'flex' : 'none';
+      });
+    }
+
+    function updatePowerIpState(card) {
+      const pm = card.querySelector('select[name="power_meter[]"]');
+      const pi = card.querySelector('input[name="power_ip[]"]');
+      if (!pm || !pi) return;
+      const enabled = pm.value !== "";
+      pi.readOnly = !enabled;
+      pi.required = enabled;
+      if (!enabled) pi.value = "";
+    }
+
+    function updateSocketState(card) {
+      const st = card.querySelector('select[name="power_socket_type[]"]');
+      const si = card.querySelector('input[name="power_socket_ip[]"]');
+      if (!st || !si) return;
+      const enabled = st.value !== "";
+      si.readOnly = !enabled;
+      si.required = enabled;
+      if (!enabled) si.value = "";
+    }
+
+    function addDevice(name='', ip='', priority='', power_meter='', power_ip='', power_socket_type='', power_socket_ip='', boiler_volume=100) {
+      const container = document.getElementById('deviceContainer');
+      if (container.children.length >= 5) { alert("Maximaal 5 SolarBuffers mogelijk."); return false; }
+
+      const finalPriority = priority || getNextPriority();
+      const card = document.createElement('div');
+      card.className = 'device-card';
+      card.setAttribute('data-device', '');
+      card.innerHTML = `
+        <div class="device-card-header">
+          <span class="device-card-label">SolarBuffer</span>
+          <button type="button" class="remove-btn" onclick="removeDevice(this)" title="Verwijderen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+          </button>
+        </div>
+
+        <div class="field-group">
+          <label>Naam</label>
+          <input type="text" name="shelly_name[]" placeholder="Bijv. Woonkamer boiler" value="${escapeHtml(name)}" required>
+        </div>
+
+        <div class="two-col">
+          <div class="field-group" style="margin-bottom:0;">
+            <label>IP-adres</label>
+            <input type="text" name="shelly_ip[]" placeholder="192.168.178.x" value="${escapeHtml(ip)}" required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label>Prioriteit</label>
+            <select name="priority[]" required>${createPriorityOptions(finalPriority)}</select>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-title">Power meter</div>
+          <div class="two-col">
+            <div class="field-group" style="margin-bottom:0;">
+              <label>Type</label>
+              <select name="power_meter[]">${createPowerMeterOptions(power_meter)}</select>
+            </div>
+            <div class="field-group" style="margin-bottom:0;">
+              <label>IP-adres</label>
+              <input type="text" name="power_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-title">Power socket</div>
+          <div class="two-col">
+            <div class="field-group" style="margin-bottom:0;">
+              <label>Type</label>
+              <select name="power_socket_type[]">${createPowerSocketOptions(power_socket_type)}</select>
+            </div>
+            <div class="field-group" style="margin-bottom:0;">
+              <label>IP-adres</label>
+              <input type="text" name="power_socket_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-title">Anti-legionella</div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label>Inhoud boiler</label>
+            <div class="input-with-unit">
+              <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" value="${escapeHtml(boiler_volume || 100)}">
+              <span class="unit">L</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+
+      card.querySelector('select[name="power_meter[]"]').addEventListener('change', () => updatePowerIpState(card));
+      card.querySelector('select[name="power_socket_type[]"]').addEventListener('change', () => updateSocketState(card));
+      updatePowerIpState(card);
+      updateSocketState(card);
+      updatePriorities();
+      updateDeviceNumbers();
+      return true;
+    }
+
+    function removeDevice(btn) {
+      btn.closest('.device-card[data-device]').remove();
+      normalizePriorities();
+      updateDeviceNumbers();
+    }
+
+    async function doScan() {
+      const btn = document.getElementById('scanBtn');
+      const status = document.getElementById('scanStatus');
+      btn.disabled = true;
+      status.textContent = 'Netwerk wordt gescand...';
+      try {
+        const r = await fetch('/scan_devices', { headers: { 'Accept': 'application/json' } });
+        const data = await r.json();
+        const shellys = Array.isArray(data.shelly_devices) ? data.shelly_devices : [];
+        const existingIps = Array.from(document.querySelectorAll('input[name="shelly_ip[]"]'))
+          .map(i => i.value.trim()).filter(Boolean);
+        let added = 0, skipped = 0;
+        for (const d of shellys) {
+          const ip = (d.ip || '').trim();
+          if (!ip) continue;
+          if (existingIps.includes(ip)) { skipped++; continue; }
+          const cards = document.querySelectorAll('.device-card[data-device]');
+          let filled = false;
+          for (const c of cards) {
+            const nameF = c.querySelector('input[name="shelly_name[]"]');
+            const ipF = c.querySelector('input[name="shelly_ip[]"]');
+            if (!(ipF?.value || '').trim() && !(nameF?.value || '').trim()) {
+              nameF.value = d.name || `SolarBuffer ${ip}`;
+              ipF.value = ip;
+              c.querySelector('select[name="power_meter[]"]').value = "";
+              c.querySelector('input[name="power_ip[]"]').value = "";
+              c.querySelector('select[name="power_socket_type[]"]').value = "";
+              c.querySelector('input[name="power_socket_ip[]"]').value = "";
+              updatePowerIpState(c);
+              updateSocketState(c);
+              filled = true; added++; existingIps.push(ip); break;
+            }
+          }
+          if (!filled) {
+            if (document.getElementById('deviceContainer').children.length >= 5) break;
+            if (addDevice(d.name || 'SolarBuffer', ip)) { added++; existingIps.push(ip); }
+          }
+        }
+        normalizePriorities(); updateDeviceNumbers();
+        if (shellys.length === 0) {
+          status.textContent = 'Geen SolarBuffers gevonden.';
+        } else {
+          status.textContent = `Scan voltooid — ${added} toegevoegd${skipped ? `, ${skipped} overgeslagen` : ''}.`;
+        }
+      } catch (e) {
+        status.textContent = 'Scannen mislukt.';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('sbForm').addEventListener('submit', function(e) {
+      const cards = Array.from(document.querySelectorAll('.device-card[data-device]'));
+      const filled = cards.filter(c => {
+        const name = c.querySelector('input[name="shelly_name[]"]').value.trim();
+        const ip = c.querySelector('input[name="shelly_ip[]"]').value.trim();
+        return name || ip;
+      });
+      if (filled.length === 0) { e.preventDefault(); alert('Voeg minimaal één SolarBuffer toe.'); return; }
+      const priorities = Array.from(document.querySelectorAll('select[name="priority[]"]')).map(s => s.value).filter(Boolean);
+      if (new Set(priorities).size !== priorities.length) { e.preventDefault(); alert('Elke prioriteit mag maar één keer voorkomen.'); }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const devices = {{ config.shelly_devices | tojson or [] }};
+      if (devices.length > 0) {
+        devices.forEach(d => addDevice(
+          d.name, d.ip, d.priority,
+          d.power_meter || "", d.power_ip || "",
+          d.power_socket_type || "", d.power_socket_ip || "",
+          d.boiler_volume || 100
+        ));
+      } else {
+        addDevice();
+      }
+    });
+  </script>
+</body>
+</html>

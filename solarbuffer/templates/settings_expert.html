@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Expert instellingen - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(220, 10%, 52%);
+      margin-bottom: 0.85rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: hsl(32, 95%, 52%);
+      cursor: pointer;
+    }
+
+    .expert-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .field-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: hsl(220, 10%, 46%);
+      line-height: 1.25;
+    }
+    .field-help {
+      font-size: 0.74rem;
+      color: hsl(220, 10%, 58%);
+      line-height: 1.3;
+    }
+    .input-with-unit {
+      display: flex;
+      align-items: stretch;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .input-with-unit:focus-within { border-color: hsl(32, 85%, 55%); }
+    .input-with-unit input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+    }
+    .input-with-unit input:focus { outline: none; }
+    .input-with-unit .unit {
+      padding: 0 0.65rem;
+      border-left: 1px solid hsl(30, 15%, 88%);
+      background: hsl(30, 20%, 96%);
+      color: hsl(220, 10%, 52%);
+      font-weight: 600;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+
+    .btn-secondary {
+      flex: 1;
+      background: hsl(30, 15%, 95%);
+      color: hsl(220, 20%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+    .btn-row { display: flex; gap: 0.75rem; }
+    .btn-row .btn-primary { flex: 1; }
+
+    @media (max-width: 480px) {
+      .expert-grid { grid-template-columns: 1fr; }
+    }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .toggle-row { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field-label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .field-help { color: hsl(220, 8%, 48%); }
+    html[data-theme="dark"] .input-with-unit { border-color: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .input-with-unit:focus-within { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .input-with-unit input { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .input-with-unit .unit { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Expert instellingen</p>
+    </div>
+
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <form method="POST" action="/settings/expert">
+      <div class="card">
+        <div class="card-title">Expertmodus</div>
+        <label class="toggle-row">
+          <input type="checkbox" id="expertMode" name="expert_mode"
+                 {% if config.expert_mode %}checked{% endif %}>
+          Expertmodus inschakelen
+        </label>
+        <p style="font-size:0.8rem; color:hsl(220,10%,52%); margin-top:0.5rem; line-height:1.4;">
+          Zet aan om regelwaarden handmatig in te stellen. Uitgeschakeld gebruikt standaardinstellingen.
+        </p>
+      </div>
+
+      <div class="card" id="expertCard" style="display:none;">
+        <div class="card-title">Regelwaarden</div>
+        <div class="expert-grid">
+          <div class="field">
+            <span class="field-label">Inschakeldrempel</span>
+            <span class="field-help">Start bij teruglevering</span>
+            <div class="input-with-unit">
+              <input type="number" name="EXPORT_THRESHOLD"
+                     value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
+              <span class="unit">W</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Inschakelvertraging</span>
+            <span class="field-help">Wachttijd voor inschakelen</span>
+            <div class="input-with-unit">
+              <input type="number" name="EXPORT_DELAY"
+                     value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Bevriezen bij</span>
+            <span class="field-help">Bevries op hoge stand</span>
+            <div class="input-with-unit">
+              <input type="number" name="FREEZE_AT"
+                     value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
+              <span class="unit">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Bevestiging bevriezen</span>
+            <span class="field-help">Tijd vóór bevriezen</span>
+            <div class="input-with-unit">
+              <input type="number" name="FREEZE_CONFIRM"
+                     value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Vrijgave importdrempel</span>
+            <span class="field-help">Bevriezing loslaten bij afname</span>
+            <div class="input-with-unit">
+              <input type="number" name="IMPORT_UNFREEZE_THRESHOLD"
+                     value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
+              <span class="unit">W</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Vrijgavevertraging</span>
+            <span class="field-help">Wachttijd voor vrijgeven</span>
+            <div class="input-with-unit">
+              <input type="number" name="UNFREEZE_DELAY"
+                     value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Uitschakeldrempel import</span>
+            <span class="field-help">Schakel uit bij afname</span>
+            <div class="input-with-unit">
+              <input type="number" name="IMPORT_OFF_THRESHOLD"
+                     value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
+              <span class="unit">W</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Uitschakelvertraging</span>
+            <span class="field-help">Wachttijd voor uitschakelen</span>
+            <div class="input-with-unit">
+              <input type="number" name="OFF_DELAY"
+                     value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">PID-neutraal laag</span>
+            <span class="field-help">Ondergrens neutrale zone</span>
+            <div class="input-with-unit">
+              <input type="number" name="PID_NEUTRAL_LOW"
+                     value="{{ config.expert_settings.PID_NEUTRAL_LOW if config.expert_settings else -5 }}">
+              <span class="unit">W</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">PID-neutraal hoog</span>
+            <span class="field-help">Bovengrens neutrale zone</span>
+            <div class="input-with-unit">
+              <input type="number" name="PID_NEUTRAL_HIGH"
+                     value="{{ config.expert_settings.PID_NEUTRAL_HIGH if config.expert_settings else 45 }}">
+              <span class="unit">W</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Socket startvertraging</span>
+            <span class="field-help">Wachttijd na inschakelen socket</span>
+            <div class="input-with-unit">
+              <input type="number" name="POWER_SOCKET_DELAY"
+                     value="{{ config.expert_settings.POWER_SOCKET_DELAY if config.expert_settings else 5 }}">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Socket nalooptijd</span>
+            <span class="field-help">Uitschakelen na laatste activatie</span>
+            <div class="input-with-unit">
+              <input type="number" name="POWER_SOCKET_HOLD_SECONDS"
+                     value="{{ config.expert_settings.POWER_SOCKET_HOLD_SECONDS if config.expert_settings else 3600 }}">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Boost duur</span>
+            <span class="field-help">Hoe lang op 100% bij boost</span>
+            <div class="input-with-unit">
+              <input type="number" name="BOOST_DURATION"
+                     value="{{ config.expert_settings.BOOST_DURATION if config.expert_settings else 900 }}">
+              <span class="unit">s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <a href="/settings" class="btn-secondary">Annuleren</a>
+        <button type="submit" class="btn-primary">Opslaan</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function updateExpertVisibility() {
+      document.getElementById('expertCard').style.display =
+        document.getElementById('expertMode').checked ? 'block' : 'none';
+    }
+    document.getElementById('expertMode').addEventListener('change', updateExpertVisibility);
+    updateExpertVisibility();
+  </script>
+</body>
+</html>

@@ -289,65 +289,60 @@
             margin-bottom: .25rem;
         }
 
-        .device-row {
-            display: flex;
-            flex-direction: column;
-            gap: .9rem;
+        .device-card {
+            background: white;
+            border: 1px solid hsl(30, 15%, 88%);
+            border-radius: .75rem;
+            padding: 1.1rem 1.1rem 1.25rem;
             margin-bottom: 1rem;
-            padding: 1rem;
-            border: 1px solid hsl(30, 15%, 90%);
-            border-radius: .7rem;
-            background: hsl(30, 25%, 99%);
         }
 
-        .device-row-top,
-        .device-row-bottom {
+        .device-card-header {
             display: flex;
-            flex-direction: column;
-            gap: .25rem;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
         }
 
-        .device-row-bottom {
-            flex-direction: row;
-            gap: .5rem;
-            align-items: flex-end;
-        }
-
-        .device-row-bottom>div {
-            min-width: 0;
-        }
-
-        .remove-slot {
-            flex: 0 0 46px;
-            width: 46px;
-            min-width: 46px;
-            height: 46px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
+        .device-card-label {
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: hsl(220, 10%, 52%);
         }
 
         .remove-btn {
             all: unset;
-            width: 42px;
-            height: 42px;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 999px;
-            background: linear-gradient(135deg, hsl(0, 80%, 58%), hsl(0, 72%, 50%));
-            color: white;
-            font-size: 1.15rem;
-            font-weight: 700;
-            line-height: 1;
+            background: hsl(0, 70%, 94%);
+            color: hsl(0, 65%, 46%);
             cursor: pointer;
-            box-shadow: 0 8px 18px -10px hsla(0, 65%, 35%, 0.55);
-            border: 1px solid hsla(0, 70%, 35%, 0.25);
+            transition: background .15s, color .15s;
+            flex-shrink: 0;
         }
 
-        .remove-placeholder {
-            width: 42px;
-            height: 42px;
+        .remove-btn:hover { background: hsl(0, 70%, 86%); color: hsl(0, 65%, 36%); }
+
+        .field-group { margin-bottom: .85rem; }
+        .field-group:last-child { margin-bottom: 0; }
+        .field-group > label {
+            display: block;
+            font-size: .82rem;
+            font-weight: 600;
+            color: hsl(220, 10%, 46%);
+            margin-bottom: .3rem;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .65rem;
         }
 
         .section-card {
@@ -456,18 +451,19 @@
             white-space: nowrap;
         }
 
-        .device-subsection {
-            border: 1px dashed hsl(30, 15%, 86%);
-            border-radius: .6rem;
-            padding: .85rem;
-            background: white;
+        .subsection {
+            border-top: 1px solid hsl(30, 15%, 91%);
+            margin-top: 1rem;
+            padding-top: 1rem;
         }
 
-        .device-subsection-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: .92rem;
-            margin-bottom: .6rem;
-            color: hsl(220, 20%, 14%);
+        .subsection-title {
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: hsl(220, 10%, 52%);
+            margin-bottom: .75rem;
         }
 
         .inline-actions {
@@ -582,10 +578,16 @@
             color: hsl(220, 10%, 88%);
         }
         html[data-theme="dark"] .scan-status { color: hsl(220, 8%, 58%); }
-        html[data-theme="dark"] .device-row {
+        html[data-theme="dark"] .device-card {
             background: hsl(220, 8%, 28%);
             border-color: hsl(220, 8%, 35%);
         }
+        html[data-theme="dark"] .device-card-label { color: hsl(220, 8%, 50%); }
+        html[data-theme="dark"] .remove-btn { background: hsl(0, 30%, 30%); color: hsl(0, 60%, 65%); }
+        html[data-theme="dark"] .remove-btn:hover { background: hsl(0, 35%, 36%); }
+        html[data-theme="dark"] .field-group > label { color: hsl(220, 8%, 56%); }
+        html[data-theme="dark"] .subsection { border-color: hsl(220, 8%, 35%); }
+        html[data-theme="dark"] .subsection-title { color: hsl(220, 8%, 50%); }
         html[data-theme="dark"] .section-card {
             background: hsl(220, 8%, 30%);
             border-color: hsl(220, 8%, 37%);
@@ -610,11 +612,6 @@
             border-color: hsl(220, 8%, 38%);
             color: hsl(220, 8%, 58%);
         }
-        html[data-theme="dark"] .device-subsection {
-            background: hsl(220, 8%, 28%);
-            border-color: hsl(220, 8%, 36%);
-        }
-        html[data-theme="dark"] .device-subsection-title { color: hsl(220, 10%, 88%); }
         html[data-theme="dark"] .cancel-btn,
         html[data-theme="dark"] .prev-btn {
             background: hsl(220, 8%, 34%);
@@ -648,19 +645,8 @@
                 flex-direction: column;
             }
 
-            .device-row-bottom {
-                flex-direction: column;
-                align-items: stretch;
-            }
+            .two-col { grid-template-columns: 1fr; }
 
-            .remove-slot {
-                width: 100%;
-                min-width: 100%;
-                height: auto;
-            }
-
-            .remove-btn,
-            .remove-placeholder,
             .inline-actions button,
             .wizard-actions button {
                 width: 100%;
@@ -1064,14 +1050,14 @@
             }
 
             if (step === 2) {
-                const rows = Array.from(document.querySelectorAll('.device-row'));
-                const filledRows = rows.filter(row => {
-                    const name = row.querySelector('input[name="shelly_name[]"]').value.trim();
-                    const ip = row.querySelector('input[name="shelly_ip[]"]').value.trim();
+                const cards = Array.from(document.querySelectorAll('.device-card[data-device]'));
+                const filledCards = cards.filter(c => {
+                    const name = c.querySelector('input[name="shelly_name[]"]').value.trim();
+                    const ip = c.querySelector('input[name="shelly_ip[]"]').value.trim();
                     return name || ip;
                 });
 
-                if (filledRows.length === 0) {
+                if (filledCards.length === 0) {
                     alert('Voeg minimaal één SolarBuffer toe.');
                     return false;
                 }
@@ -1080,7 +1066,7 @@
                     .map(s => s.value)
                     .filter(Boolean);
 
-                if (vals.length !== filledRows.length) {
+                if (vals.length !== filledCards.length) {
                     alert('Vul alle prioriteiten in.');
                     return false;
                 }
@@ -1166,7 +1152,7 @@
         }
 
         function getExistingDeviceIps() {
-            return Array.from(document.querySelectorAll('input[name="shelly_ip[]"]'))
+            return Array.from(document.querySelectorAll('.device-card[data-device] input[name="shelly_ip[]"]'))
                 .map(i => (i.value || "").trim())
                 .filter(Boolean);
         }
@@ -1248,20 +1234,6 @@
             mqttFields.style.display = mqttEnabled.checked ? 'block' : 'none';
         }
 
-        function refreshRemoveButtons() {
-            const rows = Array.from(document.querySelectorAll('.device-row'));
-
-            rows.forEach((row, index) => {
-                const slot = row.querySelector('.remove-slot');
-                if (!slot) return;
-
-                if (index === 0) {
-                    slot.innerHTML = '<div class="remove-placeholder" aria-hidden="true"></div>';
-                } else {
-                    slot.innerHTML = '<button type="button" class="remove-btn" onclick="removeDevice(this)" title="Apparaat verwijderen" aria-label="Apparaat verwijderen">×</button>';
-                }
-            });
-        }
 
         function addDevice(
             name = '',
@@ -1281,65 +1253,64 @@
 
             const finalPriority = priority || getNextPriority();
 
-            const row = document.createElement('div');
-            row.className = 'device-row';
-            row.innerHTML = `
-        <div class="device-row-top">
-            <label>Naam</label>
-            <input type="text" name="shelly_name[]" placeholder="Bijv. Woonkamer" value="${escapeHtml(name)}" required>
+            const card = document.createElement('div');
+            card.className = 'device-card';
+            card.setAttribute('data-device', '');
+            card.innerHTML = `
+        <div class="device-card-header">
+            <span class="device-card-label">SolarBuffer</span>
+            <button type="button" class="remove-btn" onclick="removeDevice(this)" title="Verwijderen">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+            </button>
         </div>
 
-        <div class="device-row-bottom">
-            <div style="flex:2;display:flex;flex-direction:column;">
-                <label>IP-adres</label>
-                <input type="text" name="shelly_ip[]" placeholder="Bijv. 192.168.178.195" value="${escapeHtml(ip)}" required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
-            </div>
+        <div class="field-group">
+            <label>Naam</label>
+            <input type="text" name="shelly_name[]" placeholder="Bijv. Woonkamer boiler" value="${escapeHtml(name)}" required>
+        </div>
 
-            <div style="flex:1;display:flex;flex-direction:column;">
+        <div class="two-col">
+            <div class="field-group" style="margin-bottom:0;">
+                <label>IP-adres</label>
+                <input type="text" name="shelly_ip[]" placeholder="192.168.178.x" value="${escapeHtml(ip)}" required pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+            </div>
+            <div class="field-group" style="margin-bottom:0;">
                 <label>Prioriteit</label>
                 <select name="priority[]" required>${createPriorityOptions(finalPriority)}</select>
             </div>
-
-            <div class="remove-slot"></div>
         </div>
 
-        <div class="device-subsection">
-            <div class="device-subsection-title">Power meter</div>
-            <div class="device-row-bottom">
-                <div style="flex:1;display:flex;flex-direction:column;">
+        <div class="subsection">
+            <div class="subsection-title">Power meter</div>
+            <div class="two-col">
+                <div class="field-group" style="margin-bottom:0;">
                     <label>Type</label>
-                    <select name="power_meter[]">
-                        ${createPowerMeterOptions(power_meter)}
-                    </select>
+                    <select name="power_meter[]">${createPowerMeterOptions(power_meter)}</select>
                 </div>
-
-                <div style="flex:2;display:flex;flex-direction:column;">
+                <div class="field-group" style="margin-bottom:0;">
                     <label>IP-adres</label>
-                    <input type="text" name="power_ip[]" placeholder="Bijv. 192.168.178.50" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                    <input type="text" name="power_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
                 </div>
             </div>
         </div>
 
-        <div class="device-subsection">
-            <div class="device-subsection-title">Optionele power socket</div>
-            <div class="device-row-bottom">
-                <div style="flex:1.2;display:flex;flex-direction:column;">
+        <div class="subsection">
+            <div class="subsection-title">Power socket</div>
+            <div class="two-col">
+                <div class="field-group" style="margin-bottom:0;">
                     <label>Type</label>
-                    <select name="power_socket_type[]">
-                        ${createPowerSocketOptions(power_socket_type)}
-                    </select>
+                    <select name="power_socket_type[]">${createPowerSocketOptions(power_socket_type)}</select>
                 </div>
-
-                <div style="flex:1.8;display:flex;flex-direction:column;">
+                <div class="field-group" style="margin-bottom:0;">
                     <label>IP-adres</label>
-                    <input type="text" name="power_socket_ip[]" placeholder="Bijv. 192.168.178.60" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                    <input type="text" name="power_socket_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
                 </div>
             </div>
         </div>
 
-        <div class="device-subsection">
-            <div class="device-subsection-title">Anti-legionella</div>
-            <div style="display:flex;flex-direction:column;gap:.35rem;">
+        <div class="subsection">
+            <div class="subsection-title">Anti-legionella</div>
+            <div class="field-group" style="margin-bottom:0;">
                 <label>Inhoud boiler</label>
                 <div class="input-with-unit" style="max-width:160px;">
                     <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" value="${escapeHtml(boiler_volume || 100)}">
@@ -1349,55 +1320,59 @@
         </div>
     `;
 
-            container.appendChild(row);
+            container.appendChild(card);
 
-            const powerMeterSelect = row.querySelector('select[name="power_meter[]"]');
-            const powerSocketSelect = row.querySelector('select[name="power_socket_type[]"]');
+            const powerMeterSelect = card.querySelector('select[name="power_meter[]"]');
+            const powerSocketSelect = card.querySelector('select[name="power_socket_type[]"]');
 
-            powerMeterSelect.addEventListener('change', () => updatePowerIpState(row));
-            powerSocketSelect.addEventListener('change', () => updatePowerSocketState(row));
+            powerMeterSelect.addEventListener('change', () => updatePowerIpState(card));
+            powerSocketSelect.addEventListener('change', () => updatePowerSocketState(card));
 
-            updatePowerIpState(row);
-            updatePowerSocketState(row);
+            updatePowerIpState(card);
+            updatePowerSocketState(card);
             updatePriorities();
-            refreshRemoveButtons();
+            updateDeviceNumbers();
             return true;
         }
 
         function removeDevice(btn) {
-            const row = btn.closest('.device-row');
-            if (!row) return;
-
-            row.remove();
+            const card = btn.closest('.device-card[data-device]');
+            if (!card) return;
+            card.remove();
             normalizePriorities();
-            refreshRemoveButtons();
+            updateDeviceNumbers();
         }
 
         function normalizePriorities() {
-            const rows = Array.from(document.querySelectorAll('.device-row'));
+            const cards = Array.from(document.querySelectorAll('.device-card[data-device]'));
 
-            const filledRows = rows.filter(row => {
-                const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
-                const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
+            const filledCards = cards.filter(c => {
+                const ip = (c.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+                const name = (c.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
                 return ip !== '' || name !== '';
             });
 
-            filledRows.forEach((row, index) => {
-                const priorityField = row.querySelector('select[name="priority[]"]');
-                if (priorityField) {
-                    priorityField.value = String(index + 1);
-                }
+            filledCards.forEach((c, index) => {
+                const priorityField = c.querySelector('select[name="priority[]"]');
+                if (priorityField) priorityField.value = String(index + 1);
             });
 
-            rows.forEach(row => {
-                const ip = (row.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
-                const name = (row.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
+            cards.forEach(c => {
+                const ip = (c.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+                const name = (c.querySelector('input[name="shelly_name[]"]')?.value || '').trim();
                 if (ip === '' && name === '') {
-                    const priorityField = row.querySelector('select[name="priority[]"]');
-                    if (priorityField) {
-                        priorityField.value = '';
-                    }
+                    const priorityField = c.querySelector('select[name="priority[]"]');
+                    if (priorityField) priorityField.value = '';
                 }
+            });
+        }
+
+        function updateDeviceNumbers() {
+            const cards = document.querySelectorAll('.device-card[data-device]');
+            cards.forEach((card, i) => {
+                card.querySelector('.device-card-label').textContent = `SolarBuffer ${i + 1}`;
+                const removeBtn = card.querySelector('.remove-btn');
+                if (removeBtn) removeBtn.style.display = cards.length > 1 ? 'flex' : 'none';
             });
         }
 
@@ -1492,21 +1467,21 @@
 
                     let filledExistingRow = false;
 
-                    const rows = document.querySelectorAll('.device-row');
-                    for (const row of rows) {
-                        const nameField = row.querySelector('input[name="shelly_name[]"]');
-                        const ipField = row.querySelector('input[name="shelly_ip[]"]');
-                        const priorityField = row.querySelector('select[name="priority[]"]');
-                        const powerMeterField = row.querySelector('select[name="power_meter[]"]');
-                        const powerIpField = row.querySelector('input[name="power_ip[]"]');
-                        const powerSocketTypeField = row.querySelector('select[name="power_socket_type[]"]');
-                        const powerSocketIpField = row.querySelector('input[name="power_socket_ip[]"]');
+                    const cards = document.querySelectorAll('.device-card[data-device]');
+                    for (const card of cards) {
+                        const nameField = card.querySelector('input[name="shelly_name[]"]');
+                        const ipField = card.querySelector('input[name="shelly_ip[]"]');
+                        const priorityField = card.querySelector('select[name="priority[]"]');
+                        const powerMeterField = card.querySelector('select[name="power_meter[]"]');
+                        const powerIpField = card.querySelector('input[name="power_ip[]"]');
+                        const powerSocketTypeField = card.querySelector('select[name="power_socket_type[]"]');
+                        const powerSocketIpField = card.querySelector('input[name="power_socket_ip[]"]');
 
-                        const rowIp = (ipField?.value || '').trim();
-                        const rowName = (nameField?.value || '').trim();
+                        const cardIp = (ipField?.value || '').trim();
+                        const cardName = (nameField?.value || '').trim();
 
-                        if (!rowIp && !rowName) {
-                            nameField.value = device.name || `Shelly ${ip}`;
+                        if (!cardIp && !cardName) {
+                            nameField.value = device.name || `SolarBuffer ${ip}`;
                             ipField.value = ip;
                             priorityField.value = "";
                             powerMeterField.value = "";
@@ -1514,8 +1489,8 @@
                             powerSocketTypeField.value = "";
                             powerSocketIpField.value = "";
 
-                            updatePowerIpState(row);
-                            updatePowerSocketState(row);
+                            updatePowerIpState(card);
+                            updatePowerSocketState(card);
 
                             filledExistingRow = true;
                             addedCount++;
@@ -1529,7 +1504,7 @@
                         }
 
                         const added = addDevice(
-                            device.name || 'Shelly',
+                            device.name || 'SolarBuffer',
                             ip,
                             '',
                             '',
@@ -1569,7 +1544,7 @@
         }
 
         document.getElementById('configForm').addEventListener('submit', function (e) {
-            if (!validateStep(2)) {
+            if (!validateStep(currentStep)) {
                 e.preventDefault();
                 return;
             }
@@ -1619,7 +1594,7 @@
             addDevice();
         }
 
-        refreshRemoveButtons();
+        updateDeviceNumbers();
         updateWizardUI();
 });
     </script>

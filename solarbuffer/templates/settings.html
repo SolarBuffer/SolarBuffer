@@ -319,6 +319,28 @@
     html[data-theme="dark"] .ts-copy-btn:hover { background: hsl(220, 8%, 38%); }
     html[data-theme="dark"] .ts-install-cmd   { background: hsl(220, 12%, 12%); }
 
+    /* ===== DARK MODE TOGGLE ===== */
+    .settings-item.clickable { cursor: pointer; user-select: none; }
+    .dark-pill {
+      width: 40px; height: 24px; border-radius: 999px;
+      background: hsl(30, 15%, 80%);
+      position: relative; flex-shrink: 0;
+      transition: background 0.2s;
+      pointer-events: none;
+    }
+    .dark-pill::after {
+      content: ''; position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      border-radius: 50%; background: white;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .dark-pill.on { background: hsl(32, 95%, 52%); }
+    .dark-pill.on::after { transform: translateX(16px); }
+    html[data-theme="dark"] .dark-pill { background: hsl(220, 8%, 42%); }
+    html[data-theme="dark"] .dark-pill.on { background: hsl(32, 80%, 58%); }
+
     /* ===== FACTORY RESET ===== */
     .settings-icon.danger {
       background: hsl(0, 80%, 95%);
@@ -408,13 +430,46 @@
     <div class="section-title">Configuratie</div>
     <div class="settings-list">
 
-      <a class="settings-item" href="/wizard_forced">
+      <a class="settings-item" href="/settings/p1">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1,9L3,11C7.97,6.03 16.03,6.03 21,11L23,9C16.93,2.93 7.08,2.93 1,9M9,17L12,20L15,17C13.35,15.34 10.66,15.34 9,17M5,13L7,15C9.76,12.24 14.24,12.24 17,15L19,13C15.14,9.14 8.87,9.14 5,13Z"/></svg>
+        </div>
+        <div class="settings-text">
+          <div class="settings-label">P1-meter</div>
+          <div class="settings-sub">IP-adres van de HomeWizard P1-meter</div>
+        </div>
+        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+      </a>
+
+      <a class="settings-item" href="/settings/solarbuffers">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C14.67,4 17.07,5.17 18.67,7.07L7.07,18.67C5.17,17.07 4,14.67 4,12A8,8 0 0,1 12,4M12,20A8,8 0 0,1 4.93,15.14L15.14,4.93C18,5.86 20,8.72 20,12A8,8 0 0,1 12,20Z"/></svg>
+        </div>
+        <div class="settings-text">
+          <div class="settings-label">SolarBuffers</div>
+          <div class="settings-sub">SolarBuffer-apparaten, prioriteit en power meter</div>
+        </div>
+        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+      </a>
+
+      <a class="settings-item" href="/settings/expert">
         <div class="settings-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>
         </div>
         <div class="settings-text">
-          <div class="settings-label">Apparaten &amp; IP-adressen</div>
-          <div class="settings-sub">P1-meter, Shelly's en expert-instellingen</div>
+          <div class="settings-label">Expert instellingen</div>
+          <div class="settings-sub">Regelwaarden, drempelwaardes en timers</div>
+        </div>
+        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+      </a>
+
+      <a class="settings-item" href="/settings/mqtt">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z"/></svg>
+        </div>
+        <div class="settings-text">
+          <div class="settings-label">MQTT / Home Assistant</div>
+          <div class="settings-sub">MQTT broker en HA auto-discovery</div>
         </div>
         <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
       </a>
@@ -584,6 +639,17 @@
 
     <div class="section-title">Account</div>
     <div class="settings-list">
+
+      <div class="settings-item clickable" onclick="toggleDarkMode()">
+        <div class="settings-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V5Z"/></svg>
+        </div>
+        <div class="settings-text">
+          <div class="settings-label">Donkere modus</div>
+          <div class="settings-sub">Schakel donkere modus in of uit</div>
+        </div>
+        <div class="dark-pill" id="darkPill"></div>
+      </div>
 
       <a class="settings-item" href="/change_credentials">
         <div class="settings-icon">
@@ -855,6 +921,27 @@
         })
         .catch(() => { btn.disabled = false; btn.textContent = 'Resetten'; });
     }
+  </script>
+  <script>
+    function updateDarkModeUI() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      document.getElementById("darkPill").classList.toggle("on", isDark);
+    }
+
+    function toggleDarkMode() {
+      const newDark = document.documentElement.getAttribute("data-theme") !== "dark";
+      document.documentElement.setAttribute("data-theme", newDark ? "dark" : "light");
+      localStorage.setItem("theme", newDark ? "dark" : "light");
+      document.getElementById("themeColorMeta").setAttribute("content", newDark ? "#2e3238" : "#f9f7f5");
+      updateDarkModeUI();
+      fetch("/set_theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dark_mode: newDark })
+      });
+    }
+
+    updateDarkModeUI();
   </script>
 </body>
 </html>
