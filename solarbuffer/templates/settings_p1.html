@@ -187,6 +187,37 @@
     html[data-theme="dark"] .scan-status { color: hsl(220, 8%, 56%); }
     html[data-theme="dark"] .scan-results { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
     html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: hsl(32, 95%, 52%);
+      cursor: pointer;
+    }
+    .solaredge-fields { margin-top: 1rem; }
+    html[data-theme="dark"] .toggle-row { color: hsl(220, 10%, 88%); }
+    .select-field {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+      appearance: none;
+      transition: border-color 0.2s;
+    }
+    .select-field:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+    html[data-theme="dark"] .select-field { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
     html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
     html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
     html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
@@ -219,6 +250,39 @@
         <div class="scan-results" id="scanResults"></div>
       </div>
 
+      <div class="card">
+        <div class="card-title">Omvormer</div>
+        <label class="toggle-row">
+          <input type="checkbox" id="inverterEnabled" name="inverter_enabled"
+                 {% if config.inverter_enabled %}checked{% endif %}>
+          Omvormer koppelen via Modbus TCP
+        </label>
+        <div id="inverterFields" class="solaredge-fields" style="display:none;">
+          <div class="field-group" style="margin-top:0.85rem;">
+            <label for="inverter_type">Merk</label>
+            <select id="inverter_type" name="inverter_type" class="select-field">
+              {% set types = [
+                ('solaredge','SolarEdge'),('fronius','Fronius'),('sma','SMA'),
+                ('abb','ABB / FIMER'),('kostal','Kostal'),('huawei','Huawei SUN2000'),
+                ('growatt','Growatt'),('sungrow','Sungrow'),('goodwe','GoodWe')
+              ] %}
+              {% for val, lbl in types %}
+              <option value="{{ val }}" {% if config.inverter_type == val %}selected{% endif %}>{{ lbl }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="inverter_ip">IP-adres omvormer</label>
+            <input type="text" id="inverter_ip" name="inverter_ip"
+                   placeholder="Bijv. 192.168.178.30"
+                   value="{{ config.inverter_ip or '' }}">
+          </div>
+          <p style="font-size:0.78rem; color:hsl(220,10%,52%); margin-top:0.5rem; line-height:1.4;">
+            Modbus TCP moet ingeschakeld zijn in de omvormer.
+          </p>
+        </div>
+      </div>
+
       <div class="btn-row">
         <a href="/settings" class="btn-secondary">Annuleren</a>
         <button type="submit" class="btn-primary">Opslaan</button>
@@ -230,6 +294,14 @@
     function escapeHtml(v) {
       return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
+
+    (function() {
+      const cb = document.getElementById('inverterEnabled');
+      const fields = document.getElementById('inverterFields');
+      function update() { fields.style.display = cb.checked ? 'block' : 'none'; }
+      cb.addEventListener('change', update);
+      update();
+    })();
 
     async function doScan() {
       const btn = document.getElementById('scanBtn');

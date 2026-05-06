@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>ntfy - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(220, 10%, 52%);
+      margin-bottom: 0.85rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: hsl(32, 95%, 52%);
+      cursor: pointer;
+    }
+
+    .fields { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-label { font-size: 0.82rem; font-weight: 600; color: hsl(220, 10%, 46%); }
+    .field-help { font-size: 0.74rem; color: hsl(220, 10%, 58%); line-height: 1.4; }
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(30, 15%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(220, 20%, 14%);
+      transition: border-color 0.2s;
+    }
+    .field input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+
+    .hint-box {
+      background: hsl(215, 60%, 96%);
+      border: 1px solid hsl(215, 50%, 84%);
+      border-radius: 0.5rem;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.8rem;
+      color: hsl(215, 50%, 30%);
+      line-height: 1.5;
+      margin-top: 0.75rem;
+    }
+    .hint-box code {
+      background: hsl(215, 50%, 88%);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 0.78rem;
+    }
+
+    .btn-test {
+      display: block;
+      width: 100%;
+      padding: 0.6rem;
+      background: hsl(30, 15%, 95%);
+      color: hsl(220, 20%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+      margin-top: 0.75rem;
+    }
+    .btn-test:hover { background: hsl(30, 15%, 88%); }
+    .btn-test:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .test-result {
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      min-height: 1.1rem;
+      color: hsl(145, 55%, 32%);
+    }
+    .test-result.err { color: hsl(0, 65%, 44%); }
+
+    .events-list {
+      margin-top: 0.6rem;
+      padding-left: 1rem;
+      font-size: 0.82rem;
+      color: hsl(220, 10%, 44%);
+      line-height: 1.8;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+    .btn-secondary {
+      flex: 1;
+      background: hsl(30, 15%, 95%);
+      color: hsl(220, 20%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(30, 15%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+    .btn-row { display: flex; gap: 0.75rem; }
+    .btn-row .btn-primary { flex: 1; }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .toggle-row { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field-label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .field-help { color: hsl(220, 8%, 48%); }
+    html[data-theme="dark"] .field input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .hint-box { background: hsl(215, 20%, 24%); border-color: hsl(215, 20%, 34%); color: hsl(215, 30%, 70%); }
+    html[data-theme="dark"] .hint-box code { background: hsl(215, 20%, 30%); }
+    html[data-theme="dark"] .events-list { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .test-result { color: hsl(145, 50%, 56%); }
+    html[data-theme="dark"] .test-result.err { color: hsl(0, 60%, 60%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .btn-test { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .btn-test:hover { background: hsl(220, 8%, 36%); }
+    .free-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: hsl(145, 55%, 30%);
+      background: hsl(145, 55%, 92%);
+      border: 1px solid hsl(145, 45%, 76%);
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    html[data-theme="dark"] .free-badge { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>ntfy meldingen</p>
+    </div>
+
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <form method="POST" action="/settings/ntfy">
+      <div class="card">
+        <div class="card-title" style="display:flex; align-items:center; gap:0.5rem;">
+          Pushmeldingen — via ntfy
+          <span class="free-badge">gratis &amp; geen account</span>
+        </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="ntfyEnabled" name="ntfy_enabled"
+                 {% if user.ntfy_enabled %}checked{% endif %}>
+          Pushmeldingen via ntfy inschakelen
+        </label>
+
+        <div id="ntfyFields" style="display:none;">
+          <div class="fields">
+            <div class="field">
+              <span class="field-label">Topic URL</span>
+              <span class="field-help">
+                Kies een unieke topic-naam en plak de volledige URL hier.
+                Gebruik ntfy.sh of een eigen server.
+              </span>
+              <input type="text" name="ntfy_url" id="ntfyUrl"
+                     placeholder="https://ntfy.sh/solarbuffer-mijnhuis"
+                     value="{{ user.ntfy_url or '' }}">
+            </div>
+          </div>
+
+          <div class="hint-box">
+            <strong>Instellen in 3 stappen:</strong><br>
+            1. Installeer de ntfy-app op je telefoon.<br>
+            2. Kies een unieke naam, bijv. <code>solarbuffer-abc123</code>.<br>
+            3. Abonneer je op dat topic in de app en vul de URL in.
+          </div>
+
+          <button type="button" class="btn-test" id="testBtn" onclick="sendTest()">Stuur testbericht</button>
+          <div class="test-result" id="testResult"></div>
+        </div>
+      </div>
+
+      <div class="card" id="eventsCard" style="display:none;">
+        <div class="card-title">Meldingen bij</div>
+        <div style="display:flex; flex-direction:column; gap:0.65rem;">
+          <label class="toggle-row">
+            <input type="checkbox" name="ntfy_notify_start"
+                   {% if user.ntfy_notify_start %}checked{% endif %}>
+            Apparaat gestart op zonnestroom
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" name="ntfy_notify_legionella"
+                   {% if user.ntfy_notify_legionella %}checked{% endif %}>
+            Legionellabeveiliging voltooid
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" name="ntfy_notify_schedule"
+                   {% if user.ntfy_notify_schedule %}checked{% endif %}>
+            Tijdschema wordt actief
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" name="ntfy_notify_offline"
+                   {% if user.ntfy_notify_offline %}checked{% endif %}>
+            Apparaat niet bereikbaar
+          </label>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <a href="/settings" class="btn-secondary">Annuleren</a>
+        <button type="submit" class="btn-primary">Opslaan</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function updateVisibility() {
+      const enabled = document.getElementById('ntfyEnabled').checked;
+      document.getElementById('ntfyFields').style.display = enabled ? 'block' : 'none';
+      document.getElementById('eventsCard').style.display = enabled ? 'block' : 'none';
+    }
+    document.getElementById('ntfyEnabled').addEventListener('change', updateVisibility);
+    updateVisibility();
+
+    async function sendTest() {
+      const btn = document.getElementById('testBtn');
+      const result = document.getElementById('testResult');
+      btn.disabled = true;
+      result.className = 'test-result';
+      result.textContent = 'Versturen…';
+      try {
+        const r = await fetch('/ntfy/test');
+        const data = await r.json();
+        if (data.ok) {
+          result.className = 'test-result';
+          result.textContent = 'Testbericht verstuurd ✓';
+        } else {
+          result.className = 'test-result err';
+          result.textContent = data.error || 'Versturen mislukt.';
+        }
+      } catch {
+        result.className = 'test-result err';
+        result.textContent = 'Verbindingsfout.';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
