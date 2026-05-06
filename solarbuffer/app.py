@@ -86,7 +86,6 @@ def load_config():
         cfg["inverter_enabled"] = cfg.pop("solaredge_enabled")
         cfg["inverter_ip"] = cfg.pop("solaredge_ip", "")
         cfg["inverter_type"] = "solaredge"
-
     if "inverter_enabled" not in cfg:
         cfg["inverter_enabled"] = False
     if "inverter_ip" not in cfg:
@@ -156,33 +155,9 @@ def load_config():
         old_hash = cfg.pop("password_hash", "")
         cfg["users"] = [{"username": old_username, "password_hash": old_hash}]
 
-    # Migreer globale ntfy-instellingen naar eerste gebruiker
-    if "ntfy_enabled" in cfg or "ntfy_url" in cfg:
-        first = cfg["users"][0] if cfg["users"] else None
-        if first is not None:
-            for key in ("ntfy_enabled", "ntfy_url", "ntfy_notify_start",
-                        "ntfy_notify_legionella", "ntfy_notify_schedule", "ntfy_notify_offline"):
-                if key not in first:
-                    first[key] = cfg.pop(key, True if key.startswith("ntfy_notify") else (False if key == "ntfy_enabled" else ""))
-        for key in ("ntfy_enabled", "ntfy_url", "ntfy_notify_start",
-                    "ntfy_notify_legionella", "ntfy_notify_schedule", "ntfy_notify_offline"):
-            cfg.pop(key, None)
-
     for user in cfg["users"]:
         if "dark_mode" not in user:
             user["dark_mode"] = False
-        if "ntfy_enabled" not in user:
-            user["ntfy_enabled"] = False
-        if "ntfy_url" not in user:
-            user["ntfy_url"] = ""
-        if "ntfy_notify_start" not in user:
-            user["ntfy_notify_start"] = True
-        if "ntfy_notify_legionella" not in user:
-            user["ntfy_notify_legionella"] = True
-        if "ntfy_notify_schedule" not in user:
-            user["ntfy_notify_schedule"] = True
-        if "ntfy_notify_offline" not in user:
-            user["ntfy_notify_offline"] = True
 
     for key, value in DEFAULT_EXPERT_SETTINGS.items():
         if key not in cfg["expert_settings"]:
@@ -1183,9 +1158,7 @@ def updates():
 def settings():
     if not require_login():
         return redirect("/login")
-    cfg = load_config()
-    return render_template("settings.html", config=cfg, dark_mode=get_user_dark_mode(),
-                           session_username=session.get("username", ""))
+    return render_template("settings.html", dark_mode=get_user_dark_mode())
 
 
 @app.route("/system")
@@ -3108,8 +3081,6 @@ def control_loop():
     online_check_interval = 10
     last_online_check = {}
     offline_since_map = {}
-    offline_notified = set()
-    prev_active_sched_id = None
     export_start = None
     import_unfreeze_start = None
     import_off_start = None
@@ -3183,13 +3154,8 @@ def control_loop():
                         and not st.get("freeze")
                         and not st.get("legionella_active")):
                     print(f"Watchdog: {ip} al {int(offline_for)}s offline terwijl gestart → gereset")
-                    if ip not in offline_notified:
-                        send_notification(f"⚠️ <b>{d.get('name', ip)}</b> is niet bereikbaar en wordt uitgeschakeld.", event_key="ntfy_notify_offline")
-                        offline_notified.add(ip)
                     reset_device_to_off(ip)
                     offline_since_map.pop(ip, None)
-                elif device_states[ip].get("online"):
-                    offline_notified.discard(ip)
 
             for d in devices:
                 ip = d["ip"]
@@ -3236,7 +3202,6 @@ def control_loop():
                             st["last_active_time"] = now
                             save_state(force=True)
                             print(f"Anti-Legionella: cyclus voltooid voor {ip}")
-                            send_notification(f"🦠 <b>Legionellabeveiliging voltooid</b> voor {d.get('name', ip)}.", event_key="ntfy_notify_legionella")
                             pre_started = st.get("pre_legionella_started")
                             pre_brightness = st.get("pre_legionella_brightness", 0)
                             pre_freeze = st.get("pre_legionella_freeze", False)
@@ -3359,11 +3324,6 @@ def control_loop():
             schedule_handled = set()
             if active_sched:
                 active_schedule_info = active_sched
-                sched_id = active_sched.get("id")
-                if sched_id != prev_active_sched_id:
-                    sched_name = active_sched.get("name") or f"{active_sched.get('start_time')}–{active_sched.get('end_time')}"
-                    send_notification(f"🕐 Tijdschema <b>{sched_name}</b> is actief ({active_sched.get('brightness', MIN_BRIGHTNESS)}% vermogen).", event_key="ntfy_notify_schedule")
-                    prev_active_sched_id = sched_id
                 sched_brightness = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, int(active_sched.get("brightness", MIN_BRIGHTNESS))))
                 sched_device_ips = set(active_sched.get("device_ips") or [])
                 for d in devices_sorted:
@@ -3418,7 +3378,6 @@ def control_loop():
                     continue
             else:
                 active_schedule_info = None
-                prev_active_sched_id = None
                 for ip in prev_schedule_active_ips:
                     st = device_states.get(ip)
                     if st is None:
@@ -3550,7 +3509,6 @@ def control_loop():
                                     device_pids[ip].set_auto_mode(True, last_output=MIN_BRIGHTNESS)
                                 set_shelly(MIN_BRIGHTNESS, True, ip)
                                 mark_device_activity(next_dev)
-                                send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
                         export_start = None
                     else:
                         st["started"] = True
@@ -3565,7 +3523,6 @@ def control_loop():
                             device_pids[ip].set_auto_mode(True, last_output=MIN_BRIGHTNESS)
                         set_shelly(MIN_BRIGHTNESS, True, ip)
                         mark_device_activity(next_dev)
-                        send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
                         export_start = None
 
             regulating_device = get_lowest_priority_running(non_legionella)
@@ -3686,83 +3643,6 @@ def control_loop():
         except Exception as e:
             print("Fout control_loop:", e)
             time.sleep(1)
-
-
-# ================= TELEGRAM =================
-def _strip_html(text):
-    import re
-    return re.sub(r'<[^>]+>', '', text)
-
-
-def send_notification(text, event_key=None):
-    def _send():
-        cfg = load_config()
-        for user in cfg.get("users", []):
-            if not user.get("ntfy_enabled"):
-                continue
-            if event_key and not user.get(event_key, True):
-                continue
-            url = (user.get("ntfy_url") or "").strip().rstrip("/")
-            if not url:
-                continue
-            try:
-                requests.post(
-                    url,
-                    data=_strip_html(text).encode("utf-8"),
-                    headers={"Title": "SolarBuffer"},
-                    timeout=5
-                )
-            except Exception:
-                pass
-    threading.Thread(target=_send, daemon=True).start()
-
-
-def _get_current_user(cfg):
-    username = session.get("username", "")
-    return next((u for u in cfg.get("users", []) if u.get("username") == username), None)
-
-
-@app.route("/settings/ntfy", methods=["GET", "POST"])
-def settings_ntfy():
-    if not require_login():
-        return redirect("/login")
-    cfg = load_config()
-    user = _get_current_user(cfg)
-    if user is None:
-        return redirect("/settings")
-    if request.method == "POST":
-        old_cfg = load_config()
-        user["ntfy_enabled"] = "ntfy_enabled" in request.form
-        user["ntfy_url"] = request.form.get("ntfy_url", "").strip().rstrip("/")
-        user["ntfy_notify_start"] = "ntfy_notify_start" in request.form
-        user["ntfy_notify_legionella"] = "ntfy_notify_legionella" in request.form
-        user["ntfy_notify_schedule"] = "ntfy_notify_schedule" in request.form
-        user["ntfy_notify_offline"] = "ntfy_notify_offline" in request.form
-        changes = compare_configs(old_cfg, cfg)
-        save_config(cfg)
-        if changes:
-            write_audit_log("config_updated", changes)
-        return redirect("/settings")
-    return render_template("settings_ntfy.html", config=cfg, user=user, dark_mode=get_user_dark_mode())
-
-
-@app.route("/ntfy/test")
-def ntfy_test():
-    if not require_login():
-        return jsonify({"error": "unauthorized"}), 401
-    cfg = load_config()
-    user = _get_current_user(cfg)
-    url = (user.get("ntfy_url") if user else None or "").strip().rstrip("/")
-    if not url:
-        return jsonify({"error": "Geen URL ingevuld"}), 400
-    try:
-        r = requests.post(url, data="✅ SolarBuffer is verbonden met ntfy!".encode("utf-8"),
-                          headers={"Title": "SolarBuffer"}, timeout=5)
-        if r.status_code < 300:
-            return jsonify({"ok": True})
-        return jsonify({"error": f"HTTP {r.status_code}"}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 # ================= INVERTER MODBUS =================
