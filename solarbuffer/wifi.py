@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, jsonify
+from flask import Flask, request, render_template_string, jsonify, redirect
 import subprocess
 import threading
 import time
@@ -452,6 +452,46 @@ p {
 
 
 OWN_SSIDS = {"PI-SETUP"}
+PORTAL_IP = "10.4.0.1"
+
+
+# iOS detecteert een captive portal als /hotspot-detect.html NIET de exacte
+# "Success"-tekst teruggeeft. We sturen een redirect zodat WebSheet opent.
+APPLE_PROBES = {
+    '/hotspot-detect.html',
+    '/library/test/success.html',
+    '/library/test/success',
+}
+
+_CAPTIVE_REDIRECT = (
+    '<HTML><HEAD>'
+    f'<meta http-equiv="refresh" content="0;url=http://{PORTAL_IP}/">'
+    '</HEAD><BODY></BODY></HTML>'
+)
+
+
+@app.route('/hotspot-detect.html')
+@app.route('/library/test/success.html')
+def apple_captive_probe():
+    # Geeft een non-Success pagina terug → iOS toont "Verbinden met netwerk" popup
+    return _CAPTIVE_REDIRECT, 200, {'Content-Type': 'text/html'}
+
+
+@app.route('/generate_204')
+@app.route('/gen_204')
+def android_captive_probe():
+    return redirect(f'http://{PORTAL_IP}/', 302)
+
+
+@app.before_request
+def captive_portal_redirect():
+    if request.path in ('/', '/scan') or request.method == 'POST':
+        return None
+    # Specifieke Apple/Android routes worden hierboven al afgehandeld
+    if request.path in APPLE_PROBES or request.path in ('/generate_204', '/gen_204'):
+        return None
+    # Alle overige paden (Windows probes, onbekende hosts) → redirect
+    return redirect(f'http://{PORTAL_IP}/', 302)
 
 def scan_networks(rescan=False):
     try:
