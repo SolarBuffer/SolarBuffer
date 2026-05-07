@@ -1832,6 +1832,102 @@ def run_update_check():
         return jsonify(success=False, error=str(e)), 500
 
 
+# ================= FIRMWARE UPDATES =================
+
+def _check_shelly_firmware(device):
+    ip = device.get("ip", "")
+    name = device.get("name", ip)
+    try:
+        info_r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=3)
+        info = info_r.json() if info_r.status_code == 200 else {}
+        current_ver = info.get("ver", "onbekend")
+
+        upd_r = requests.get(f"http://{ip}/rpc/Shelly.CheckForUpdate", timeout=5)
+        upd = upd_r.json() if upd_r.status_code == 200 else {}
+        stable = upd.get("stable") or {}
+        has_update = bool(stable.get("version"))
+        latest_ver = stable.get("version", current_ver) if has_update else current_ver
+
+        return {"ip": ip, "name": name, "current_ver": current_ver,
+                "latest_ver": latest_ver, "has_update": has_update, "online": True}
+    except Exception:
+        return {"ip": ip, "name": name, "current_ver": "—",
+                "latest_ver": "—", "has_update": False, "online": False}
+
+
+@app.route("/firmware_check")
+def firmware_check():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    devices = cfg.get("shelly_devices", [])
+    results = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(_check_shelly_firmware, d): d for d in devices}
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception:
+                pass
+    results.sort(key=lambda x: x["name"].lower())
+    return jsonify(devices=results)
+
+
+@app.route("/firmware_update/<path:ip>", methods=["POST"])
+def firmware_update_device(ip):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+    if not device:
+        return jsonify(success=False, error="Apparaat niet gevonden"), 404
+    try:
+        r = requests.post(f"http://{ip}/rpc/Shelly.Update",
+                          json={"stage": "stable"}, timeout=10)
+        if r.status_code == 200:
+            write_audit_log("firmware_update_triggered", {"device_ip": ip})
+            return jsonify(success=True)
+        return jsonify(success=False, error=f"HTTP {r.status_code}"), 500
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
+@app.route("/system_updates_check")
+def system_updates_check():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        subprocess.run(["sudo", "apt-get", "update", "-qq"],
+                       capture_output=True, timeout=60)
+        result = subprocess.run(
+            ["apt", "list", "--upgradable"],
+            capture_output=True, text=True, timeout=30
+        )
+        lines = [ln.strip() for ln in result.stdout.splitlines()
+                 if ln.strip() and not ln.startswith("Listing")]
+        return jsonify(success=True, count=len(lines), packages=lines[:30])
+    except Exception as e:
+        return jsonify(success=False, error=str(e), count=0, packages=[])
+
+
+@app.route("/run_system_update", methods=["POST"])
+def run_system_update():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+
+    def _do_upgrade():
+        try:
+            subprocess.run(["sudo", "apt-get", "upgrade", "-y"],
+                           capture_output=True, timeout=300)
+        except Exception as e:
+            print(f"System upgrade fout: {e}")
+        write_audit_log("system_upgrade_run", {})
+
+    threading.Thread(target=_do_upgrade, daemon=True).start()
+    write_audit_log("system_upgrade_started", {"user": safe_session_username()})
+    return jsonify(success=True)
+
+
 # ================= TAILSCALE =================
 @app.route("/tailscale_status")
 def tailscale_status():
