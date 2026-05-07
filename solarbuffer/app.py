@@ -1922,11 +1922,39 @@ def system_updates_check():
         return jsonify(success=False, error=str(e), count=0, packages=[])
 
 
+def _stream_proc(proc):
+    for raw in proc.stdout:
+        line = raw.rstrip()
+        if line:
+            with _hw_update_cond:
+                _hw_update_log.append(line)
+                _hw_update_cond.notify_all()
+    proc.wait()
+    return proc.returncode
+
+
 def _run_apt_upgrade_worker(username):
     global _hw_update_running, _hw_update_done, _hw_update_success
     env = {"DEBIAN_FRONTEND": "noninteractive", "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"}
     write_audit_log("system_upgrade_started", {"user": username})
     try:
+        # Herstel eventueel onderbroken dpkg-configuratie
+        with _hw_update_cond:
+            _hw_update_log.append(">>> dpkg --configure -a")
+            _hw_update_cond.notify_all()
+        fix_proc = subprocess.Popen(
+            ["sudo", "dpkg", "--configure", "-a",
+             "-o", "Dpkg::Options::=--force-confdef",
+             "-o", "Dpkg::Options::=--force-confold"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, bufsize=1, env=env
+        )
+        _stream_proc(fix_proc)
+
+        # Volledige upgrade
+        with _hw_update_cond:
+            _hw_update_log.append(">>> apt-get full-upgrade")
+            _hw_update_cond.notify_all()
         proc = subprocess.Popen(
             ["sudo", "apt-get", "full-upgrade", "-y",
              "-o", "Dpkg::Progress-Fancy=0",
@@ -1936,15 +1964,9 @@ def _run_apt_upgrade_worker(username):
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1, env=env
         )
-        for raw in proc.stdout:
-            line = raw.rstrip()
-            if line:
-                with _hw_update_cond:
-                    _hw_update_log.append(line)
-                    _hw_update_cond.notify_all()
-        proc.wait()
-        success = proc.returncode == 0
-        write_audit_log("system_upgrade_run", {"returncode": proc.returncode})
+        returncode = _stream_proc(proc)
+        success = returncode == 0
+        write_audit_log("system_upgrade_run", {"returncode": returncode})
     except Exception as e:
         success = False
         with _hw_update_cond:
