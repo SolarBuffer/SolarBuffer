@@ -795,6 +795,7 @@
         if (data.line) {
           var span = document.createElement("span");
           if (/^(Get:|Hit:|Ign:)/.test(data.line)) span.className = "log-dim";
+          else if (/^>>>/.test(data.line)) span.className = "log-done";
           span.textContent = data.line + "\n";
           log.appendChild(span);
           log.scrollTop = log.scrollHeight;
