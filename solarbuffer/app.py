@@ -1925,7 +1925,9 @@ def _run_apt_upgrade_worker(username):
         proc = subprocess.Popen(
             ["sudo", "apt-get", "upgrade", "-y",
              "-o", "Dpkg::Progress-Fancy=0",
-             "-o", "APT::Color=0"],
+             "-o", "APT::Color=0",
+             "-o", "Dpkg::Options::=--force-confdef",
+             "-o", "Dpkg::Options::=--force-confold"],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1, env=env
         )
