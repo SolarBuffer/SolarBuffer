@@ -1907,11 +1907,16 @@ def system_updates_check():
         subprocess.run(["sudo", "apt-get", "update", "-qq"],
                        capture_output=True, timeout=60)
         result = subprocess.run(
-            ["apt", "list", "--upgradable"],
+            ["sudo", "apt-get", "full-upgrade", "--dry-run",
+             "-o", "Dpkg::Options::=--force-confdef",
+             "-o", "Dpkg::Options::=--force-confold"],
             capture_output=True, text=True, timeout=30
         )
-        lines = [ln.strip() for ln in result.stdout.splitlines()
-                 if ln.strip() and not ln.startswith("Listing")]
+        lines = []
+        for ln in result.stdout.splitlines():
+            ln = ln.strip()
+            if ln.startswith("Inst "):
+                lines.append(ln[5:])
         return jsonify(success=True, count=len(lines), packages=lines[:30])
     except Exception as e:
         return jsonify(success=False, error=str(e), count=0, packages=[])
@@ -1923,7 +1928,7 @@ def _run_apt_upgrade_worker(username):
     write_audit_log("system_upgrade_started", {"user": username})
     try:
         proc = subprocess.Popen(
-            ["sudo", "apt-get", "upgrade", "-y",
+            ["sudo", "apt-get", "full-upgrade", "-y",
              "-o", "Dpkg::Progress-Fancy=0",
              "-o", "APT::Color=0",
              "-o", "Dpkg::Options::=--force-confdef",
