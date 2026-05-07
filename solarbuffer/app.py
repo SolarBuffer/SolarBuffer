@@ -12,7 +12,7 @@ import traceback
 import shutil
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Flask, render_template, jsonify, request, redirect, session, send_file
+from flask import Flask, render_template, jsonify, request, redirect, session, send_file, Response
 import io
 import threading
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -417,6 +417,13 @@ _mqtt_client = None
 _mqtt_connected = False
 _update_available = False
 _tailscale_auth_url = None
+
+# ================= HW UPDATE STATE =================
+_hw_update_running = False
+_hw_update_done = False
+_hw_update_success = False
+_hw_update_log = []
+_hw_update_cond = threading.Condition()
 
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 34
@@ -1910,22 +1917,92 @@ def system_updates_check():
         return jsonify(success=False, error=str(e), count=0, packages=[])
 
 
-@app.route("/run_system_update", methods=["POST"])
-def run_system_update():
+def _run_apt_upgrade_worker(username):
+    global _hw_update_running, _hw_update_done, _hw_update_success
+    env = {"DEBIAN_FRONTEND": "noninteractive", "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"}
+    write_audit_log("system_upgrade_started", {"user": username})
+    try:
+        proc = subprocess.Popen(
+            ["sudo", "apt-get", "upgrade", "-y",
+             "-o", "Dpkg::Progress-Fancy=0",
+             "-o", "APT::Color=0"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, bufsize=1, env=env
+        )
+        for raw in proc.stdout:
+            line = raw.rstrip()
+            if line:
+                with _hw_update_cond:
+                    _hw_update_log.append(line)
+                    _hw_update_cond.notify_all()
+        proc.wait()
+        success = proc.returncode == 0
+        write_audit_log("system_upgrade_run", {"returncode": proc.returncode})
+    except Exception as e:
+        success = False
+        with _hw_update_cond:
+            _hw_update_log.append(f"Fout: {e}")
+            _hw_update_cond.notify_all()
+    with _hw_update_cond:
+        _hw_update_running = False
+        _hw_update_done = True
+        _hw_update_success = success
+        _hw_update_cond.notify_all()
+
+
+@app.route("/system_update_status")
+def system_update_status():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    return jsonify(
+        running=_hw_update_running,
+        done=_hw_update_done,
+        success=_hw_update_success,
+        log_count=len(_hw_update_log),
+    )
 
-    def _do_upgrade():
-        try:
-            subprocess.run(["sudo", "apt-get", "upgrade", "-y"],
-                           capture_output=True, timeout=300)
-        except Exception as e:
-            print(f"System upgrade fout: {e}")
-        write_audit_log("system_upgrade_run", {})
 
-    threading.Thread(target=_do_upgrade, daemon=True).start()
-    write_audit_log("system_upgrade_started", {"user": safe_session_username()})
-    return jsonify(success=True)
+@app.route("/run_system_update")
+def run_system_update():
+    global _hw_update_running, _hw_update_done, _hw_update_success, _hw_update_log
+    if not require_login():
+        return Response("data: {\"error\": \"unauthorized\"}\n\n", mimetype="text/event-stream"), 401
+
+    reset = request.args.get("reset") == "1"
+    if reset or (not _hw_update_running and not _hw_update_done):
+        with _hw_update_cond:
+            _hw_update_log = []
+            _hw_update_done = False
+            _hw_update_success = False
+            _hw_update_running = True
+        threading.Thread(
+            target=_run_apt_upgrade_worker,
+            args=(safe_session_username(),),
+            daemon=True
+        ).start()
+
+    def generate():
+        idx = 0
+        while True:
+            with _hw_update_cond:
+                _hw_update_cond.wait_for(
+                    lambda: idx < len(_hw_update_log) or _hw_update_done,
+                    timeout=30
+                )
+                batch = _hw_update_log[idx:]
+                done = _hw_update_done
+                success = _hw_update_success
+
+            for i, line in enumerate(batch):
+                yield f"id: {idx + i}\ndata: {json.dumps({'line': line})}\n\n"
+            idx += len(batch)
+
+            if done and idx >= len(_hw_update_log):
+                yield f"data: {json.dumps({'done': True, 'success': success})}\n\n"
+                break
+
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 # ================= TAILSCALE =================
