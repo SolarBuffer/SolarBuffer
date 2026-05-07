@@ -276,6 +276,45 @@
       max-height: 120px; overflow-y: auto;
     }
 
+    /* ---- Update log terminal ---- */
+    .update-log-wrap {
+      margin-top: 0.75rem;
+      background: hsl(220, 16%, 14%);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      display: none;
+    }
+    .update-log-wrap.visible { display: block; }
+    .update-log-bar {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 0.85rem;
+      background: hsl(220, 16%, 18%);
+      border-bottom: 1px solid hsl(220, 16%, 22%);
+    }
+    .log-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .log-dot.red    { background: hsl(0, 70%, 58%); }
+    .log-dot.yellow { background: hsl(42, 90%, 56%); }
+    .log-dot.green  { background: hsl(130, 60%, 50%); }
+    .update-log-bar span {
+      font-size: 0.72rem; color: hsl(220, 10%, 52%);
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      margin-left: auto;
+    }
+    .update-log {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.72rem;
+      line-height: 1.55;
+      color: hsl(130, 40%, 72%);
+      padding: 0.75rem 0.9rem;
+      max-height: 260px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .update-log .log-dim  { color: hsl(220, 10%, 48%); }
+    .update-log .log-done { color: hsl(130, 60%, 60%); font-weight: bold; }
+    .update-log .log-err  { color: hsl(0, 70%, 65%); }
+
     /* ---- DARK MODE ---- */
     html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
     html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
@@ -480,6 +519,16 @@
         </div>
         <button class="btn-action" id="hwCheckBtn" onclick="checkHardwareUpdates()">Controleer</button>
       </div>
+
+      <div class="update-log-wrap" id="hwLogWrap">
+        <div class="update-log-bar">
+          <div class="log-dot red"></div>
+          <div class="log-dot yellow"></div>
+          <div class="log-dot green"></div>
+          <span id="hwLogStatus">Bezig…</span>
+        </div>
+        <div class="update-log" id="hwLog"></div>
+      </div>
     </div>
 
   </div>
@@ -491,8 +540,45 @@
         document.getElementById('tab' + cap(t)).classList.toggle('active', t === name);
         document.getElementById('panel' + cap(t)).classList.toggle('active', t === name);
       });
+      if (name === 'hardware') checkHardwareAutoResume();
     }
     function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+    /* Check on page load if hardware tab is active or an update is in progress */
+    (function() {
+      fetch("/system_update_status")
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.running || (d.done && d.log_count > 0)) {
+            document.getElementById("dotHardware").style.display = "block";
+            if (document.getElementById("panelHardware").classList.contains("active")) {
+              resumeHardwareLog(d);
+            }
+          }
+        })
+        .catch(function() {});
+    })();
+
+    function checkHardwareAutoResume() {
+      fetch("/system_update_status")
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.running || (d.done && d.log_count > 0)) resumeHardwareLog(d); })
+        .catch(function() {});
+    }
+
+    function resumeHardwareLog(status) {
+      var logWrap = document.getElementById("hwLogWrap");
+      var log     = document.getElementById("hwLog");
+      var btn     = document.getElementById("hwCheckBtn");
+      logWrap.classList.add("visible");
+      log.innerHTML = "";
+      if (status.running) {
+        document.getElementById("hwLogStatus").textContent = "Bezig…";
+        btn.disabled = true;
+        btn.textContent = "Bezig…";
+      }
+      connectHardwareSSE();
+    }
 
     /* ---- Firmware ---- */
     function checkFirmware() {
@@ -679,29 +765,81 @@
         });
     }
 
-    function runHardwareUpdate() {
-      var btn = document.getElementById("hwCheckBtn");
-      var res = document.getElementById("hwResult");
-      btn.disabled = true; btn.textContent = "Bezig…";
+    var _hwEs = null;
 
-      fetch("/run_system_update", { method: "POST" })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
+    function runHardwareUpdate() {
+      var btn     = document.getElementById("hwCheckBtn");
+      var res     = document.getElementById("hwResult");
+      var logWrap = document.getElementById("hwLogWrap");
+      var log     = document.getElementById("hwLog");
+
+      btn.disabled = true;
+      btn.textContent = "Bezig…";
+      res.className = "action-result";
+      log.innerHTML = "";
+      logWrap.classList.add("visible");
+      document.getElementById("hwLogStatus").textContent = "Bezig…";
+
+      connectHardwareSSE(true);
+    }
+
+    function connectHardwareSSE(isNew) {
+      if (_hwEs) { _hwEs.close(); _hwEs = null; }
+      var url = "/run_system_update" + (isNew ? "?reset=1" : "");
+      _hwEs = new EventSource(url);
+
+      _hwEs.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        var log = document.getElementById("hwLog");
+
+        if (data.line) {
+          var span = document.createElement("span");
+          if (/^(Get:|Hit:|Ign:)/.test(data.line)) span.className = "log-dim";
+          span.textContent = data.line + "\n";
+          log.appendChild(span);
+          log.scrollTop = log.scrollHeight;
+        }
+
+        if (data.done) {
+          _hwEs.close(); _hwEs = null;
+          var btn = document.getElementById("hwCheckBtn");
+          var res = document.getElementById("hwResult");
           if (data.success) {
-            res.className = "action-result success";
-            res.textContent = "Updates worden uitgevoerd op de achtergrond. Dit kan enkele minuten duren.";
-            btn.textContent = "Gestart ✓";
+            document.getElementById("hwLogStatus").textContent = "Voltooid";
+            var ok = document.createElement("span");
+            ok.className = "log-done";
+            ok.textContent = "\nKlaar — alle updates geïnstalleerd.\n";
+            log.appendChild(ok);
+            btn.textContent = "Klaar ✓";
+            document.getElementById("dotHardware").style.display = "none";
           } else {
+            document.getElementById("hwLogStatus").textContent = "Mislukt";
+            var err = document.createElement("span");
+            err.className = "log-err";
+            err.textContent = "\nFout: " + (data.error || "onbekend") + "\n";
+            log.appendChild(err);
             res.className = "action-result error";
-            res.textContent = data.error || "Onbekende fout";
-            btn.disabled = false; btn.textContent = "Update";
+            res.textContent = "Update mislukt — zie log hierboven";
+            btn.disabled = false;
+            btn.textContent = "Opnieuw";
+            btn.onclick = function() { runHardwareUpdate(); };
           }
-        })
-        .catch(function() {
-          res.className = "action-result error";
-          res.textContent = "Verbindingsfout";
-          btn.disabled = false; btn.textContent = "Update";
-        });
+          log.scrollTop = log.scrollHeight;
+        }
+      };
+
+      _hwEs.onerror = function() {
+        /* SSE auto-reconnects; only show error if update is marked done */
+        fetch("/system_update_status")
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            if (!d.running) {
+              if (_hwEs) { _hwEs.close(); _hwEs = null; }
+              document.getElementById("hwLogStatus").textContent = "Verbinding verbroken";
+            }
+          })
+          .catch(function() {});
+      };
     }
 
     function escHtml(s) {
