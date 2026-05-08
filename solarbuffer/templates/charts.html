@@ -215,7 +215,7 @@
           },
           scales: {
             x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
-            y: { ticks: { color: tickColor, callback: v => v + ' ' + unit }, grid: { color: gridColor } }
+            y: { ticks: { color: tickColor, callback: v => (unit === '°C' ? v.toFixed(1) : Math.round(v)) + ' ' + unit }, grid: { color: gridColor } }
           }
         }
       });
