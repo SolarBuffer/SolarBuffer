@@ -4235,15 +4235,32 @@ def history_metrics_api():
         return jsonify({"error": "unauthorized"}), 401
     conn = sqlite3.connect(HISTORY_DB)
     try:
-        metrics = [r[0] for r in conn.execute(
+        all_metrics = [r[0] for r in conn.execute(
             "SELECT DISTINCT metric FROM history_5s "
             "UNION SELECT DISTINCT metric FROM history_1m"
         ).fetchall()]
     except Exception:
-        metrics = []
+        all_metrics = []
     finally:
         conn.close()
-    return jsonify({"metrics": metrics})
+
+    cfg = load_config()
+    active_acc_names = {
+        (acc.get("name") or acc.get("id", "")).strip()
+        for acc in cfg.get("accessories", [])
+        if acc.get("record_history")
+    }
+
+    filtered = []
+    for m in all_metrics:
+        if m.startswith("acc:"):
+            parts = m.split(":", 2)
+            if len(parts) == 3 and parts[1] in active_acc_names:
+                filtered.append(m)
+        else:
+            filtered.append(m)
+
+    return jsonify({"metrics": filtered})
 
 
 # ================= P1 POLL =================
