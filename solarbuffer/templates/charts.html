@@ -365,22 +365,37 @@
       });
     }
 
+    let _activeMetricKey = '';
+
+    async function fetchMetrics() {
+      const res  = await fetch('/api/history/metrics');
+      const json = await res.json();
+      return (json.metrics || []).filter(m =>
+        m === 'net_power' ||
+        /^device:.+:power$/.test(m) ||
+        /^acc:.+:(power|temperature)$/.test(m)
+      );
+    }
+
     async function loadAll() {
       const area = document.getElementById('chartsArea');
       area.innerHTML = '<div class="loading"><span class="spinner"></span>Gegevens laden…</div>';
       try {
-        const res     = await fetch('/api/history/metrics');
-        const json    = await res.json();
-        const metrics = (json.metrics || []).filter(m =>
-          m === 'net_power' ||
-          /^device:.+:power$/.test(m) ||
-          /^acc:.+:(power|temperature)$/.test(m)
-        );
+        const metrics = await fetchMetrics();
+        _activeMetricKey = JSON.stringify(metrics.slice().sort());
         renderCards(metrics);
       } catch(e) {
         area.innerHTML = '<div class="no-data">Laden mislukt. Controleer de verbinding.</div>';
       }
     }
+
+    setInterval(async () => {
+      try {
+        const metrics = await fetchMetrics();
+        const key = JSON.stringify(metrics.slice().sort());
+        if (key !== _activeMetricKey) loadAll();
+      } catch(e) {}
+    }, 30000);
 
     loadAll();
   </script>
