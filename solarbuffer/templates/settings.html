@@ -342,6 +342,21 @@
     html[data-theme="dark"] .dark-pill.on { background: hsl(32, 80%, 58%); }
 
     /* ===== FACTORY RESET ===== */
+    .update-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: white;
+      background: hsl(32, 95%, 52%);
+      border-radius: 999px;
+      padding: 0.15rem 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-right: 0.25rem;
+    }
+    html[data-theme="dark"] .update-badge {
+      background: hsl(32, 80%, 52%);
+    }
+
     .settings-icon.danger {
       background: hsl(0, 80%, 95%);
       color: hsl(0, 70%, 50%);
@@ -502,8 +517,9 @@
         </div>
         <div class="settings-text">
           <div class="settings-label">Updates</div>
-          <div class="settings-sub">Firmware, software &amp; hub updates</div>
+          <div class="settings-sub" id="updateSettingsSub">Firmware, software &amp; hub updates</div>
         </div>
+        <span class="update-badge" id="settingsUpdateBadge" style="display:none">Nieuw</span>
         <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
       </a>
 
@@ -762,6 +778,17 @@
       const el = document.getElementById('wifiSubText');
       if (el && data.ssid) el.textContent = 'Verbonden met ' + data.ssid;
     }).catch(() => {});
+
+    // ===== UPDATE BADGE =====
+    fetch('/check_updates_available')
+      .then(r => r.json())
+      .then(data => {
+        const available = !!data.available;
+        document.getElementById('settingsUpdateBadge').style.display = available ? '' : 'none';
+        const sub = document.getElementById('updateSettingsSub');
+        sub.textContent = available ? 'Nieuwe versie beschikbaar!' : 'Firmware, software & hub updates';
+      })
+      .catch(() => {});
 
     // ===== BESTURING =====
     function loadBesturing() {
