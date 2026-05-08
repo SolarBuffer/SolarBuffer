@@ -310,6 +310,29 @@
     html[data-theme="dark"] .scan-item-add { color: hsl(32, 75%, 58%); }
     html[data-theme="dark"] .scan-none { color: hsl(220, 8%, 52%); border-top-color: hsl(220, 8%, 30%); }
 
+/* ===== HISTORY BADGE ===== */
+.history-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.7rem; font-weight: 700;
+  background: hsl(215, 80%, 93%); color: hsl(215, 70%, 36%);
+  border: 1px solid hsl(215, 60%, 80%);
+  border-radius: 999px; padding: 0.15rem 0.55rem;
+  white-space: nowrap; flex-shrink: 0;
+}
+html[data-theme="dark"] .history-chip {
+  background: hsl(215, 30%, 22%); color: hsl(215, 70%, 62%); border-color: hsl(215, 30%, 32%);
+}
+
+/* ===== HISTORY TOGGLE ROW ===== */
+.history-toggle-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 0.85rem; border-radius: 0.5rem;
+  background: hsl(215, 80%, 97%); border: 1.5px solid hsl(215, 60%, 84%);
+}
+.history-toggle-label { flex: 1; font-size: 0.83rem; color: hsl(215, 40%, 36%); line-height: 1.35; }
+html[data-theme="dark"] .history-toggle-row { background: hsl(215, 20%, 22%); border-color: hsl(215, 25%, 34%); }
+html[data-theme="dark"] .history-toggle-label { color: hsl(215, 40%, 62%); }
+
 /* ===== GAS TOGGLE ===== */
 .gas-settings-card {
   background: white; border: 1px solid hsl(30, 15%, 88%);
@@ -403,6 +426,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
               {% endif %}
             </div>
             <div class="acc-actions">
+              {% if acc.record_history %}<span class="history-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13,2.05V4.05C17.39,4.59 20.5,8.58 19.96,12.97C19.5,16.61 16.64,19.5 13,19.93V21.93C18.5,21.38 22.5,16.5 21.95,11C21.5,6.25 17.73,2.5 13,2.05M11,2.06C9.05,2.25 7.19,3 5.67,4.26L7.1,5.74C8.22,4.84 9.57,4.26 11,4.06V2.06M4.26,5.67C3,7.19 2.25,9.04 2.05,11H4.05C4.24,9.58 4.8,8.23 5.69,7.1L4.26,5.67M2.06,13C2.26,14.96 3.03,16.81 4.27,18.33L5.69,16.9C4.81,15.77 4.24,14.42 4.06,13H2.06M7.1,18.37L5.67,19.74C7.18,21 9.04,21.79 11,22V20C9.58,19.82 8.23,19.25 7.1,18.37M12,7V12.41L15.28,15.7L16.7,14.29L14,11.59V7H12Z"/></svg> Grafiek</span>{% endif %}
               <button class="btn-icon" title="Bewerken"
                 data-id="{{ acc.id }}"
                 data-name="{{ acc.name | e }}"
@@ -413,6 +437,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
                 data-tempchannel="{{ acc.temp_channel or 100 }}"
                 data-linkedip="{{ acc.linked_device_ip or '' }}"
                 data-icon="{{ acc.icon or 'mdi-power-plug' }}"
+                data-recordhistory="{{ acc.record_history | tojson }}"
                 onclick="openEditFromBtn(this)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
               </button>
@@ -513,6 +538,17 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
           <div class="icon-option temp-icon" data-icon="mdi-water-boiler" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-water-boiler"></i><span>Waterboiler</span></div>
           <div class="icon-option temp-icon" data-icon="mdi-radiator" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-radiator"></i><span>Radiator</span></div>
           <div class="icon-option temp-icon" data-icon="mdi-home-thermometer" onclick="selectIcon(this)" style="display:none"><i class="mdi mdi-home-thermometer"></i><span>Kamer</span></div>
+        </div>
+      </div>
+
+      <div class="form-field" style="margin-top:0.25rem">
+        <div class="history-toggle-row">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(215,70%,40%)"><path d="M13,2.05V4.05C17.39,4.59 20.5,8.58 19.96,12.97C19.5,16.61 16.64,19.5 13,19.93V21.93C18.5,21.38 22.5,16.5 21.95,11C21.5,6.25 17.73,2.5 13,2.05M11,2.06C9.05,2.25 7.19,3 5.67,4.26L7.1,5.74C8.22,4.84 9.57,4.26 11,4.06V2.06M4.26,5.67C3,7.19 2.25,9.04 2.05,11H4.05C4.24,9.58 4.8,8.23 5.69,7.1L4.26,5.67M2.06,13C2.26,14.96 3.03,16.81 4.27,18.33L5.69,16.9C4.81,15.77 4.24,14.42 4.06,13H2.06M7.1,18.37L5.67,19.74C7.18,21 9.04,21.79 11,22V20C9.58,19.82 8.23,19.25 7.1,18.37M12,7V12.41L15.28,15.7L16.7,14.29L14,11.59V7H12Z"/></svg>
+          <span class="history-toggle-label">Metingen opslaan in grafiekgeschiedenis</span>
+          <label class="pill-toggle">
+            <input type="checkbox" id="fRecordHistory">
+            <span class="pill-thumb"></span>
+          </label>
         </div>
       </div>
 
@@ -720,7 +756,8 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       const accType = el.dataset.acctype || 'power';
       const ips = JSON.parse(el.dataset.ips || '[]');
       const channel = parseInt(el.dataset.tempchannel || '100', 10);
-      openEdit(el.dataset.id, el.dataset.name, accType, el.dataset.type, ips, el.dataset.tempip, channel, el.dataset.linkedip || '', el.dataset.icon);
+      const recordHistory = el.dataset.recordhistory === 'true';
+      openEdit(el.dataset.id, el.dataset.name, accType, el.dataset.type, ips, el.dataset.tempip, channel, el.dataset.linkedip || '', el.dataset.icon, recordHistory);
     }
 
     function buildLinkedDeviceOptions(selectedIp) {
@@ -742,6 +779,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       document.getElementById('fName').value = '';
       document.getElementById('fType').value = 'shelly';
       document.getElementById('fTempIp').value = '';
+      document.getElementById('fRecordHistory').checked = false;
       renderChannelSelect([], 100);
       setIpList(['']);
       buildLinkedDeviceOptions('');
@@ -754,12 +792,13 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       document.getElementById('fName').focus();
     }
 
-    function openEdit(id, name, accType, pmType, ips, tempIp, channel, linkedIp, icon) {
+    function openEdit(id, name, accType, pmType, ips, tempIp, channel, linkedIp, icon, recordHistory) {
       _editId = id;
       document.getElementById('formTitle').textContent = accType === 'temperature' ? 'Temperatuursensor bewerken' : 'Verbruiker bewerken';
       document.getElementById('fName').value = name;
       document.getElementById('fType').value = pmType || 'shelly';
       document.getElementById('fTempIp').value = tempIp || '';
+      document.getElementById('fRecordHistory').checked = !!recordHistory;
       renderChannelSelect([], channel || 100);
       setIpList(Array.isArray(ips) && ips.length ? ips : ['']);
       buildLinkedDeviceOptions(linkedIp || '');
@@ -785,6 +824,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       const icon  = getSelectedIcon();
       let body;
 
+      const recordHistory = document.getElementById('fRecordHistory').checked;
       if (_currentType === 'temperature') {
         const tempIp = document.getElementById('fTempIp').value.trim();
         if (!name || !tempIp) {
@@ -794,7 +834,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
         }
         const tempChannel = parseInt(document.getElementById('fChannelSelect').value || '100', 10);
         const linkedDeviceIp = document.getElementById('fLinkedDevice').value;
-        body = { acc_type: 'temperature', name, temp_ip: tempIp, temp_channel: tempChannel, linked_device_ip: linkedDeviceIp, icon };
+        body = { acc_type: 'temperature', name, temp_ip: tempIp, temp_channel: tempChannel, linked_device_ip: linkedDeviceIp, icon, record_history: recordHistory };
       } else {
         const type = document.getElementById('fType').value;
         const ips  = getIpList();
@@ -803,7 +843,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
           errEl.className = 'form-error show';
           return;
         }
-        body = { acc_type: 'power', name, power_meter_type: type, power_ips: ips, icon };
+        body = { acc_type: 'power', name, power_meter_type: type, power_ips: ips, icon, record_history: recordHistory };
       }
 
       btn.disabled = true;
@@ -853,6 +893,8 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
               const sub = isTemp
                 ? `TEMP · ${escHtml(acc.temp_ip)} · kanaal ${acc.temp_channel || 100}${acc.linked_device_ip ? ' · gekoppeld' : ''}`
                 : `${escHtml((acc.power_meter_type||'').toUpperCase())} · ${escHtml((acc.power_ips||[acc.power_ip]).join(', '))}`;
+              const historyChip = acc.record_history
+                ? `<span class="history-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13,2.05V4.05C17.39,4.59 20.5,8.58 19.96,12.97C19.5,16.61 16.64,19.5 13,19.93V21.93C18.5,21.38 22.5,16.5 21.95,11C21.5,6.25 17.73,2.5 13,2.05M11,2.06C9.05,2.25 7.19,3 5.67,4.26L7.1,5.74C8.22,4.84 9.57,4.26 11,4.06V2.06M4.26,5.67C3,7.19 2.25,9.04 2.05,11H4.05C4.24,9.58 4.8,8.23 5.69,7.1L4.26,5.67M2.06,13C2.26,14.96 3.03,16.81 4.27,18.33L5.69,16.9C4.81,15.77 4.24,14.42 4.06,13H2.06M7.1,18.37L5.67,19.74C7.18,21 9.04,21.79 11,22V20C9.58,19.82 8.23,19.25 7.1,18.37M12,7V12.41L15.28,15.7L16.7,14.29L14,11.59V7H12Z"/></svg> Grafiek</span>` : '';
               div.innerHTML = `
                 <div class="acc-header">
                   <div class="acc-icon-mdi${isTemp ? ' temp' : ''}">
@@ -863,6 +905,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
                     <div class="acc-sub">${sub}</div>
                   </div>
                   <div class="acc-actions">
+                    ${historyChip}
                     <button class="btn-icon" title="Bewerken"
                       data-id="${escHtml(acc.id)}"
                       data-name="${escHtml(acc.name)}"
@@ -873,6 +916,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
                       data-tempchannel="${escHtml(String(acc.temp_channel||100))}"
                       data-linkedip="${escHtml(acc.linked_device_ip||'')}"
                       data-icon="${escHtml(acc.icon||'mdi-power-plug')}"
+                      data-recordhistory="${acc.record_history ? 'true' : 'false'}"
                       onclick="openEditFromBtn(this)">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
                     </button>

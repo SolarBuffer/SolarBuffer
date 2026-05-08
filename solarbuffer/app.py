@@ -10,6 +10,7 @@ import uuid
 import re
 import traceback
 import shutil
+import sqlite3
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request, redirect, session, send_file, Response
@@ -149,6 +150,8 @@ def load_config():
                 acc["power_ip"] = acc["power_ips"][0] if acc["power_ips"] else ""
         if "icon" not in acc:
             acc["icon"] = "mdi-thermometer" if acc["acc_type"] == "temperature" else "mdi-power-plug"
+        if "record_history" not in acc:
+            acc["record_history"] = False
 
     # Migreer oud formaat (enkele gebruiker) naar gebruikerslijst
     if "users" not in cfg:
@@ -2270,6 +2273,13 @@ def scan_accessories():
     return jsonify(devices=found_power, temp_devices=found_temp)
 
 
+@app.route("/charts")
+def charts_page():
+    if not require_login():
+        return redirect("/login")
+    return render_template("charts.html", dark_mode=get_user_dark_mode())
+
+
 @app.route("/accessories", methods=["GET"])
 def accessories_page():
     if not require_login():
@@ -2298,9 +2308,11 @@ def add_accessory():
         linked_device_ip = (data.get("linked_device_ip") or "").strip()
         if not name or not temp_ip:
             return jsonify(success=False, error="Naam en IP-adres zijn verplicht"), 400
+        record_history = bool(data.get("record_history", False))
         new_acc = {"id": str(uuid.uuid4()), "name": name, "acc_type": "temperature",
                    "temp_ip": temp_ip, "temp_channel": temp_channel,
-                   "linked_device_ip": linked_device_ip, "icon": icon}
+                   "linked_device_ip": linked_device_ip, "icon": icon,
+                   "record_history": record_history}
     else:
         pm_type = (data.get("power_meter_type") or "").strip().lower()
         pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
@@ -2308,8 +2320,10 @@ def add_accessory():
             return jsonify(success=False, error="Naam, type en minimaal één IP zijn verplicht"), 400
         if pm_type not in ("shelly", "homewizard"):
             return jsonify(success=False, error="Ongeldig type"), 400
+        record_history = bool(data.get("record_history", False))
         new_acc = {"id": str(uuid.uuid4()), "name": name, "acc_type": "power",
-                   "power_meter_type": pm_type, "power_ip": pm_ips[0], "power_ips": pm_ips, "icon": icon}
+                   "power_meter_type": pm_type, "power_ip": pm_ips[0], "power_ips": pm_ips, "icon": icon,
+                   "record_history": record_history}
     cfg["accessories"].append(new_acc)
     save_config(cfg)
     write_audit_log("accessory_added", {"name": name, "acc_type": acc_type})
@@ -2345,6 +2359,7 @@ def update_accessory(acc_id):
         acc.pop("temp_channels", None)
         acc["linked_device_ip"] = linked_device_ip
         acc["icon"] = icon
+        acc["record_history"] = bool(data.get("record_history", acc.get("record_history", False)))
     else:
         pm_type = (data.get("power_meter_type") or "").strip().lower()
         pm_ips = [ip.strip() for ip in data.get("power_ips", []) if str(ip).strip()]
@@ -2358,6 +2373,7 @@ def update_accessory(acc_id):
         acc["power_ip"] = pm_ips[0]
         acc["power_ips"] = pm_ips
         acc["icon"] = icon
+        acc["record_history"] = bool(data.get("record_history", acc.get("record_history", False)))
     save_config(cfg)
     write_audit_log("accessory_updated", {"id": acc_id, "name": name})
     return jsonify(success=True)
@@ -4055,6 +4071,181 @@ def inverter_poll_loop():
         time.sleep(5)
 
 
+# ================= HISTORY DB =================
+HISTORY_DB = os.path.join(BASE_DIR, "history.db")
+
+HISTORY_RETENTION = {
+    "history_5s": 86400,       # 24 uur
+    "history_1m": 2_592_000,   # 30 dagen
+    "history_1h": 31_536_000,  # 1 jaar
+    "history_1d": 315_360_000, # 10 jaar
+}
+
+
+def init_history_db():
+    with sqlite3.connect(HISTORY_DB) as conn:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA wal_autocheckpoint=100")
+        for table in HISTORY_RETENTION:
+            conn.execute(f"""
+                CREATE TABLE IF NOT EXISTS {table} (
+                    ts     INTEGER NOT NULL,
+                    metric TEXT    NOT NULL,
+                    value  REAL    NOT NULL,
+                    PRIMARY KEY (ts, metric)
+                )
+            """)
+            conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table}_ts ON {table}(ts)")
+        conn.commit()
+
+
+def aggregate_and_purge(conn):
+    now = int(time.time())
+    try:
+        # 5s → 1m  (data ouder dan 2 minuten)
+        conn.execute("""
+            INSERT OR REPLACE INTO history_1m (ts, metric, value)
+            SELECT (ts / 60) * 60, metric, AVG(value)
+            FROM history_5s WHERE ts <= ?
+            GROUP BY (ts / 60) * 60, metric
+        """, (now - 120,))
+        # 1m → 1h  (data ouder dan 2 uur)
+        conn.execute("""
+            INSERT OR REPLACE INTO history_1h (ts, metric, value)
+            SELECT (ts / 3600) * 3600, metric, AVG(value)
+            FROM history_1m WHERE ts <= ?
+            GROUP BY (ts / 3600) * 3600, metric
+        """, (now - 7200,))
+        # 1h → 1d  (data ouder dan 2 dagen)
+        conn.execute("""
+            INSERT OR REPLACE INTO history_1d (ts, metric, value)
+            SELECT (ts / 86400) * 86400, metric, AVG(value)
+            FROM history_1h WHERE ts <= ?
+            GROUP BY (ts / 86400) * 86400, metric
+        """, (now - 172800,))
+        for table, max_age in HISTORY_RETENTION.items():
+            conn.execute(f"DELETE FROM {table} WHERE ts < ?", (now - max_age,))
+        conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    except Exception:
+        pass
+
+
+def history_worker():
+    last_aggregate = 0
+    conn = sqlite3.connect(HISTORY_DB, check_same_thread=False)
+    try:
+        while True:
+            try:
+                now = int(time.time())
+                ts = (now // 5) * 5
+
+                points = [("net_power", current_power, ts)]
+                cfg = load_config()
+                for d in cfg.get("shelly_devices", []):
+                    ip = d["ip"]
+                    st = device_states.get(ip, {})
+                    name = (d.get("name") or ip).strip()
+                    if d.get("power_meter"):
+                        points.append((f"device:{name}:power", st.get("power", 0), ts))
+                for acc in cfg.get("accessories", []):
+                    if not acc.get("record_history"):
+                        continue
+                    acc_id = acc.get("id", "")
+                    acc_name = (acc.get("name") or acc_id).strip()
+                    st = accessory_states.get(acc_id, {})
+                    if acc.get("acc_type") == "temperature":
+                        temp = st.get("temperature")
+                        if temp is not None:
+                            points.append((f"acc:{acc_name}:temperature", temp, ts))
+                    else:
+                        points.append((f"acc:{acc_name}:power", st.get("power", 0), ts))
+
+                conn.executemany(
+                    "INSERT OR REPLACE INTO history_5s (ts, metric, value) VALUES (?, ?, ?)",
+                    [(ts, m, float(v)) for m, v, ts in points]
+                )
+                conn.commit()
+
+                if now - last_aggregate >= 60:
+                    aggregate_and_purge(conn)
+                    last_aggregate = now
+            except Exception:
+                pass
+            time.sleep(5)
+    finally:
+        conn.close()
+
+
+@app.route("/api/history")
+def history_api():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    metric     = request.args.get("metric", "net_power")
+    resolution = request.args.get("resolution", "auto")
+    to_ts      = int(request.args.get("to",   int(time.time())))
+    from_ts    = int(request.args.get("from", to_ts - 86400))
+    span       = to_ts - from_ts
+    if resolution == "auto":
+        if span <= 86400:
+            resolution = "5s"
+        elif span <= 2_592_000:
+            resolution = "1m"
+        elif span <= 31_536_000:
+            resolution = "1h"
+        else:
+            resolution = "1d"
+    table = {"5s": "history_5s", "1m": "history_1m",
+             "1h": "history_1h", "1d": "history_1d"}.get(resolution, "history_1h")
+    conn = sqlite3.connect(HISTORY_DB)
+    try:
+        rows = conn.execute(
+            f"SELECT ts, value FROM {table} WHERE metric=? AND ts>=? AND ts<=? ORDER BY ts",
+            (metric, from_ts, to_ts)
+        ).fetchall()
+    except Exception:
+        rows = []
+    finally:
+        conn.close()
+    return jsonify({"metric": metric, "resolution": resolution,
+                    "data": [{"ts": r[0], "v": r[1]} for r in rows]})
+
+
+@app.route("/api/history/reset", methods=["POST"])
+def history_reset_api():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    conn = sqlite3.connect(HISTORY_DB)
+    try:
+        for table in HISTORY_RETENTION:
+            conn.execute(f"DELETE FROM {table}")
+        conn.commit()
+        conn.execute("VACUUM")
+    except Exception as e:
+        conn.close()
+        return jsonify(success=False, error=str(e))
+    conn.close()
+    write_audit_log("history_reset", {"user": safe_session_username()})
+    return jsonify(success=True)
+
+
+@app.route("/api/history/metrics")
+def history_metrics_api():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    conn = sqlite3.connect(HISTORY_DB)
+    try:
+        metrics = [r[0] for r in conn.execute(
+            "SELECT DISTINCT metric FROM history_5s "
+            "UNION SELECT DISTINCT metric FROM history_1m"
+        ).fetchall()]
+    except Exception:
+        metrics = []
+    finally:
+        conn.close()
+    return jsonify({"metrics": metrics})
+
+
 # ================= P1 POLL =================
 def p1_poll_loop():
     global current_power, current_gas_m3, gas_day_start_m3, gas_day_date
@@ -4135,10 +4326,12 @@ def accessory_poll_loop():
 
 # ================= START =================
 if __name__ == "__main__":
+    init_history_db()
     startup_sync_devices()
     threading.Thread(target=p1_poll_loop, daemon=True).start()
     threading.Thread(target=control_loop, daemon=True).start()
     threading.Thread(target=mqtt_loop, daemon=True).start()
     threading.Thread(target=accessory_poll_loop, daemon=True).start()
     threading.Thread(target=inverter_poll_loop, daemon=True).start()
+    threading.Thread(target=history_worker, daemon=True).start()
     app.run(host="0.0.0.0", port=5001)

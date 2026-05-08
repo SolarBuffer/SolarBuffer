@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="nl" data-theme="{{ 'dark' if dark_mode else 'light' }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Grafieken - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      const t = localStorage.getItem('theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+      document.getElementById('themeColorMeta').setAttribute('content', t === 'dark' ? '#1a1d23' : '#f9f7f5');
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.12), transparent 28%),
+        hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container { width: 100%; max-width: 520px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: white; border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px; padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem; font-weight: 600; color: hsl(220, 20%, 30%);
+      text-decoration: none; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover {
+      background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%);
+    }
+
+    .range-bar {
+      display: flex; gap: 0.4rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+    }
+    .range-btn {
+      flex: 1; min-width: 0;
+      padding: 0.45rem 0.5rem;
+      border: 1.5px solid hsl(30, 15%, 88%);
+      border-radius: 0.5rem;
+      background: white;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem; font-weight: 600;
+      color: hsl(220, 10%, 45%);
+      cursor: pointer;
+    }
+    .range-btn.active {
+      background: hsl(32, 95%, 52%);
+      border-color: hsl(32, 95%, 52%);
+      color: white;
+    }
+
+    .chart-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      padding: 1rem 1rem 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .chart-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.9rem; font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .chart-sub {
+      font-size: 0.75rem; color: hsl(220, 10%, 50%);
+      margin-bottom: 0.85rem;
+    }
+    .chart-wrap { position: relative; height: 220px; }
+
+    .loading {
+      text-align: center; padding: 3rem 1rem;
+      color: hsl(220, 10%, 50%); font-size: 0.88rem;
+    }
+    .spinner {
+      display: inline-block; width: 20px; height: 20px;
+      border: 2px solid hsl(30, 15%, 85%);
+      border-top-color: hsl(32, 95%, 52%);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 0.5rem; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .no-data {
+      text-align: center; padding: 2rem 1rem;
+      color: hsl(220, 10%, 55%); font-size: 0.82rem;
+    }
+
+    /* Dark mode */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 18%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .chart-card { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 28%); }
+    html[data-theme="dark"] .chart-sub  { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .range-btn  { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 30%); color: hsl(220, 8%, 60%); }
+    html[data-theme="dark"] .range-btn.active { background: hsl(32, 95%, 52%); border-color: hsl(32, 95%, 52%); color: white; }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .header p   { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .loading, html[data-theme="dark"] .no-data { color: hsl(220, 8%, 50%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Grafieken</p>
+    </div>
+
+    <a class="back-btn" href="/">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Dashboard
+    </a>
+
+    <div class="range-bar">
+      <button class="range-btn active" data-hours="1"  onclick="setRange(this)">1u</button>
+      <button class="range-btn" data-hours="24" onclick="setRange(this)">24u</button>
+      <button class="range-btn" data-hours="168" onclick="setRange(this)">7d</button>
+      <button class="range-btn" data-hours="720" onclick="setRange(this)">30d</button>
+    </div>
+
+    <div id="chartsArea">
+      <div class="loading"><span class="spinner"></span>Gegevens laden…</div>
+    </div>
+
+  </div>
+
+  <script>
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+    const tickColor   = isDark ? 'hsl(220,8%,50%)'        : 'hsl(220,10%,55%)';
+    const chartInstances = {};
+    let currentHours = 1;
+
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.size   = 11;
+
+    function setRange(btn) {
+      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentHours = parseInt(btn.dataset.hours);
+      loadAll();
+    }
+
+    function fmtTs(ts, hours) {
+      const d = new Date(ts * 1000);
+      if (hours <= 1)   return d.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      if (hours <= 24)  return d.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+      if (hours <= 168) return d.toLocaleDateString('nl-NL', {weekday:'short', hour:'2-digit', minute:'2-digit'});
+      return d.toLocaleDateString('nl-NL', {day:'numeric', month:'short'});
+    }
+
+    function chartColor(alpha, type) {
+      if (type === 'net')         return `hsla(220, 70%, 55%, ${alpha})`;
+      if (type === 'power')       return `hsla(145, 55%, 40%, ${alpha})`;
+      if (type === 'temperature') return `hsla(0, 80%, 55%, ${alpha})`;
+      return `hsla(260, 60%, 55%, ${alpha})`;
+    }
+
+    function buildChart(canvasId, labels, values, type, unit) {
+      if (type === 'net') { buildNetPowerChart(canvasId, labels, values); return; }
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+      const color = chartColor(1, type);
+      const fill  = chartColor(0.20, type);
+      chartInstances[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            borderColor: color,
+            backgroundColor: fill,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: true,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(1)} ${unit}` } }
+          },
+          scales: {
+            x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
+            y: { ticks: { color: tickColor, callback: v => v + ' ' + unit }, grid: { color: gridColor } }
+          }
+        }
+      });
+    }
+
+    function buildNetPowerChart(canvasId, labels, values) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+      const maxAbs = Math.max(...values.map(v => Math.abs(v)), 100);
+
+      const purpleLine = isDark ? 'hsl(270, 80%, 72%)' : 'hsl(270, 70%, 55%)';
+      const greenLine  = isDark ? 'hsl(145, 75%, 55%)' : 'hsl(145, 65%, 40%)';
+      const zeroLine   = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.20)';
+
+      chartInstances[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: 'origin',
+            segment: {
+              borderColor: c => {
+                const mid = (c.p0.parsed.y + c.p1.parsed.y) / 2;
+                return mid >= 0 ? purpleLine : greenLine;
+              },
+            },
+            backgroundColor: function(context) {
+              const chart = context.chart;
+              const { ctx: c, chartArea } = chart;
+              if (!chartArea) return 'transparent';
+              const zeroY  = chart.scales.y.getPixelForValue(0);
+              const { top, bottom } = chartArea;
+              const ratio  = Math.max(0, Math.min(1, (zeroY - top) / (bottom - top)));
+              const g = c.createLinearGradient(0, top, 0, bottom);
+              // Boven 0: paarse fill
+              g.addColorStop(0,     isDark ? 'hsla(270,70%,65%,0.40)' : 'hsla(270,70%,55%,0.25)');
+              g.addColorStop(ratio, isDark ? 'hsla(270,70%,65%,0.05)' : 'hsla(270,70%,55%,0.03)');
+              // Onder 0: teal/groen fill
+              g.addColorStop(ratio, isDark ? 'hsla(160,55%,40%,0.05)' : 'hsla(160,55%,40%,0.03)');
+              g.addColorStop(1,     isDark ? 'hsla(160,55%,35%,0.50)' : 'hsla(160,55%,35%,0.35)');
+              return g;
+            },
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: c => `${c.parsed.y.toFixed(0)} W`,
+                labelColor: c => {
+                  const col = c.parsed.y >= 0 ? purpleLine : greenLine;
+                  return { borderColor: col, backgroundColor: col };
+                }
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
+            y: {
+              min: -maxAbs,
+              max:  maxAbs,
+              ticks: { color: tickColor, callback: v => Math.round(v) + ' W' },
+              grid: {
+                color: c => c.tick.value === 0 ? zeroLine : gridColor,
+                lineWidth: c => c.tick.value === 0 ? 2 : 1,
+              }
+            }
+          }
+        }
+      });
+    }
+
+    async function fetchHistory(metric, hours) {
+      const to   = Math.floor(Date.now() / 1000);
+      const from = to - hours * 3600;
+      const res  = await fetch(`/api/history?metric=${encodeURIComponent(metric)}&from=${from}&to=${to}`);
+      return res.json();
+    }
+
+    function metricLabel(metric) {
+      if (metric === 'net_power') return ['Netvermogen', 'Huidig netverbruik (negatief = teruglevering)', 'W', 'net'];
+      const dm = metric.match(/^device:(.+):power$/);
+      if (dm) return [dm[1] + ' — Vermogen', 'Gemeten vermogen', 'W', 'power'];
+      const am = metric.match(/^acc:(.+):(power|temperature)$/);
+      if (am) {
+        const name = am[1];
+        if (am[2] === 'temperature') return [name + ' — Temperatuur', 'Gemeten temperatuur', '°C', 'temperature'];
+        if (am[2] === 'power')       return [name + ' — Vermogen', 'Gemeten vermogen', 'W', 'power'];
+      }
+      return [metric, '', '', 'other'];
+    }
+
+    function renderCards(metrics) {
+      const area = document.getElementById('chartsArea');
+      if (!metrics.length) {
+        area.innerHTML = '<div class="no-data">Nog geen historische data beschikbaar.<br>Data wordt elke 5 seconden opgeslagen.</div>';
+        return;
+      }
+
+      // Sorteer: net_power, dan device (SolarBuffers), dan acc (verbruikers)
+      const order = m => {
+        if (m === 'net_power') return 0;
+        if (m.startsWith('device:')) return 1;
+        if (m.startsWith('acc:'))    return m.endsWith(':temperature') ? 4 : 3;
+        return 5;
+      };
+      metrics.sort((a, b) => order(a) - order(b));
+
+      area.innerHTML = metrics.map((m, i) => {
+        const [title, sub] = metricLabel(m);
+        const cid = `chart_${i}`;
+        return `
+          <div class="chart-card">
+            <div class="chart-title">${title}</div>
+            <div class="chart-sub">${sub}</div>
+            <div class="chart-wrap"><canvas id="${cid}"></canvas></div>
+          </div>`;
+      }).join('');
+
+      metrics.forEach(async (m, i) => {
+        const cid = `chart_${i}`;
+        const [,, unit, type] = metricLabel(m);
+        try {
+          const data = await fetchHistory(m, currentHours);
+          const pts  = data.data || [];
+          if (!pts.length) {
+            document.getElementById(cid).closest('.chart-wrap').innerHTML =
+              '<div class="no-data" style="padding:1.5rem">Geen data in dit tijdsbestek</div>';
+            return;
+          }
+          const labels = pts.map(p => fmtTs(p.ts, currentHours));
+          const values = pts.map(p => p.v);
+          buildChart(cid, labels, values, type, unit);
+        } catch(e) {
+          console.error(m, e);
+        }
+      });
+    }
+
+    async function loadAll() {
+      const area = document.getElementById('chartsArea');
+      area.innerHTML = '<div class="loading"><span class="spinner"></span>Gegevens laden…</div>';
+      try {
+        const res     = await fetch('/api/history/metrics');
+        const json    = await res.json();
+        const metrics = (json.metrics || []).filter(m =>
+          m === 'net_power' ||
+          /^device:.+:power$/.test(m) ||
+          /^acc:.+:(power|temperature)$/.test(m)
+        );
+        renderCards(metrics);
+      } catch(e) {
+        area.innerHTML = '<div class="no-data">Laden mislukt. Controleer de verbinding.</div>';
+      }
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>
