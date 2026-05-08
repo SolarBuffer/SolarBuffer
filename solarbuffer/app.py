@@ -3752,6 +3752,7 @@ def control_loop():
                                     device_pids[ip].set_auto_mode(True, last_output=MIN_BRIGHTNESS)
                                 set_shelly(MIN_BRIGHTNESS, True, ip)
                                 mark_device_activity(next_dev)
+                                offline_since_map.pop(ip, None)
                                 send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
                         export_start = None
                     else:
@@ -3767,6 +3768,7 @@ def control_loop():
                             device_pids[ip].set_auto_mode(True, last_output=MIN_BRIGHTNESS)
                         set_shelly(MIN_BRIGHTNESS, True, ip)
                         mark_device_activity(next_dev)
+                        offline_since_map.pop(ip, None)
                         send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
                         export_start = None
 
