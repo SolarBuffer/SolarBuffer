@@ -30,7 +30,9 @@ BASE_DIR = os.path.dirname(__file__)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 AUDIT_LOG_FILE = os.path.join(BASE_DIR, "audit.log")
 STATE_FILE = os.path.join(BASE_DIR, "state.json")
+ENERGY_BASELINES_FILE = os.path.join(BASE_DIR, "energy_baselines.json")
 _last_state_save = 0
+_energy_baselines_lock = threading.Lock()
 
 DEFAULT_EXPERT_SETTINGS = {
     "EXPORT_THRESHOLD": -50,
@@ -250,6 +252,28 @@ def save_state(force=False):
             json.dump(state, f, indent=4)
     except Exception as e:
         print(f"State save fout: {e}")
+
+
+_energy_baselines: dict = {}
+
+
+def load_energy_baselines():
+    global _energy_baselines
+    try:
+        with open(ENERGY_BASELINES_FILE, encoding="utf-8") as f:
+            _energy_baselines = json.load(f)
+    except Exception:
+        _energy_baselines = {}
+    return _energy_baselines
+
+
+def save_energy_baselines():
+    with _energy_baselines_lock:
+        try:
+            with open(ENERGY_BASELINES_FILE, "w", encoding="utf-8") as f:
+                json.dump(_energy_baselines, f, indent=2)
+        except Exception as e:
+            print(f"Energy baselines save fout: {e}")
 
 
 def get_runtime_settings(cfg):
@@ -1076,6 +1100,7 @@ def status_json():
             "legionella_active": s.get("legionella_active", False),
             "legionella_start": s.get("legionella_start"),
             "boost_until": s.get("boost_until"),
+            "energy_today_kwh": round(s.get("energy_today_kwh", 0.0), 3),
             "linked_temperatures": linked_temp_map.get(d["ip"], []),
         })
     accessories = []
@@ -1101,6 +1126,7 @@ def status_json():
             entry["power_meter_type"] = acc.get("power_meter_type", "")
             entry["power_ips"] = acc.get("power_ips", [acc.get("power_ip", "")])
             entry["power"] = st.get("power", 0.0)
+            entry["energy_today_kwh"] = round(st.get("energy_today_kwh", 0.0), 2)
         accessories.append(entry)
 
     gas_today = None
@@ -2542,18 +2568,33 @@ def check_http_device_online(ip, path):
 
 
 def get_homewizard_power(ip):
+    pw, _ = get_homewizard_power_and_energy(ip)
+    return pw
+
+
+def get_homewizard_power_and_energy(ip):
+    """Returns (active_power_w, total_import_kwh). Energy is None when unavailable."""
     try:
         r = requests.get(f"http://{ip}/api/v1/data", timeout=2)
         if r.status_code != 200:
-            return 0
+            return 0.0, None
         data = r.json()
-        return float(data.get("active_power_w", 0) or 0)
+        pw = float(data.get("active_power_w", 0) or 0)
+        raw = data.get("total_power_import_kwh")
+        total_kwh = float(raw) if raw is not None else None
+        return pw, total_kwh
     except Exception as e:
         print(f"HomeWizard power error ({ip}): {e}")
-        return 0
+        return 0.0, None
 
 
 def get_shelly_device_power(ip):
+    pw, _ = get_shelly_power_and_energy(ip)
+    return pw
+
+
+def get_shelly_power_and_energy(ip):
+    """Returns (apower_w, aenergy_total_wh). Energy is None when unavailable."""
     endpoints = [
         f"http://{ip}/rpc/Switch.GetStatus?id=0",
         f"http://{ip}/rpc/PM1.GetStatus?id=0",
@@ -2566,15 +2607,22 @@ def get_shelly_device_power(ip):
             if r.status_code != 200:
                 continue
             data = r.json()
-            if isinstance(data, dict):
-                if "apower" in data:
-                    return float(data.get("apower", 0) or 0)
-                for _, value in data.items():
-                    if isinstance(value, dict) and "apower" in value:
-                        return float(value.get("apower", 0) or 0)
+            if not isinstance(data, dict):
+                continue
+            if "apower" in data:
+                pw = float(data.get("apower", 0) or 0)
+                ae = data.get("aenergy") or {}
+                total_wh = float(ae["total"]) if "total" in ae else None
+                return pw, total_wh
+            for value in data.values():
+                if isinstance(value, dict) and "apower" in value:
+                    pw = float(value.get("apower", 0) or 0)
+                    ae = value.get("aenergy") or {}
+                    total_wh = float(ae["total"]) if "total" in ae else None
+                    return pw, total_wh
         except Exception:
             pass
-    return 0
+    return 0.0, None
 
 
 def get_shelly_temperature(ip, channel=100):
@@ -2693,10 +2741,13 @@ def maybe_turn_off_power_socket(device):
 def init_device_states(devices):
     global device_states
     saved = load_state()
+    baselines = load_energy_baselines()
+    today_str = datetime.now().strftime("%Y-%m-%d")
     for d in devices:
         ip = d["ip"]
         if ip not in device_states:
             s = saved.get(ip, {})
+            bl = baselines.get(ip, {})
             device_states[ip] = {
                 "on": False, "brightness": 0, "online": False,
                 "power_meter_online": False, "manual_override": False,
@@ -2715,6 +2766,9 @@ def init_device_states(devices):
                 "pre_legionella_started": None,
                 "pre_legionella_brightness": None,
                 "pre_legionella_freeze": None,
+                "energy_today_kwh": 0.0,
+                "energy_day_date": today_str if bl.get("date") == today_str else "",
+                "energy_day_start_wh": bl.get("start_wh") if bl.get("date") == today_str else None,
             }
 
 
@@ -3486,17 +3540,42 @@ def control_loop():
                 elif device_states[ip].get("online"):
                     offline_notified.discard(ip)
 
+            energy_today_str = datetime.now().strftime("%Y-%m-%d")
             for d in devices:
                 ip = d["ip"]
                 state = device_states[ip]
                 pm_type = (d.get("power_meter") or "").lower()
                 pm_ip = (d.get("power_ip") or "").strip() or ip
+                total_wh = None
                 if pm_type == "shelly":
-                    state["power"] = get_shelly_device_power(pm_ip)
+                    pw, total_wh = get_shelly_power_and_energy(pm_ip)
+                    state["power"] = pw
                 elif pm_type == "homewizard":
-                    state["power"] = get_homewizard_power(pm_ip)
+                    pw, total_kwh = get_homewizard_power_and_energy(pm_ip)
+                    state["power"] = pw
+                    total_wh = total_kwh * 1000 if total_kwh is not None else None
                 else:
                     state["power"] = 0
+
+                # Dagelijkse kWh via cumulatieve teller van het apparaat
+                if state.get("energy_day_date") != energy_today_str:
+                    # Dag gewisseld (of eerste run): sla huidige stand op als baseline
+                    if total_wh is not None:
+                        state["energy_day_date"] = energy_today_str
+                        state["energy_day_start_wh"] = total_wh
+                        state["energy_today_kwh"] = 0.0
+                        _energy_baselines[ip] = {"date": energy_today_str, "start_wh": total_wh}
+                        save_energy_baselines()
+                elif total_wh is not None and state.get("energy_day_start_wh") is not None:
+                    delta = total_wh - state["energy_day_start_wh"]
+                    if delta < -10:
+                        # Teller gereset (factory reset apparaat) → herstart baseline
+                        state["energy_day_start_wh"] = total_wh
+                        state["energy_today_kwh"] = 0.0
+                        _energy_baselines[ip] = {"date": energy_today_str, "start_wh": total_wh}
+                        save_energy_baselines()
+                    else:
+                        state["energy_today_kwh"] = max(0.0, delta / 1000)
 
             measured_power = current_power
             pid_power = 20 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
@@ -4417,22 +4496,51 @@ def accessory_poll_loop():
                     pm_ips = [ip.strip() for ip in acc.get("power_ips", []) if ip.strip()]
                     if not pm_ips:
                         continue
+                    acc_today_str = datetime.now().strftime("%Y-%m-%d")
                     if acc_id not in accessory_states:
-                        accessory_states[acc_id] = {"power": 0.0, "online": False}
+                        acc_bl = _energy_baselines.get(acc_id, {})
+                        accessory_states[acc_id] = {
+                            "power": 0.0, "online": False,
+                            "energy_today_kwh": 0.0,
+                            "energy_day_date": acc_today_str if acc_bl.get("date") == acc_today_str else "",
+                            "energy_day_start_wh": acc_bl.get("start_wh") if acc_bl.get("date") == acc_today_str else None,
+                        }
                     try:
                         total_power = 0.0
+                        total_wh_sum = 0.0
+                        total_wh_valid = True
                         any_online = False
                         for pm_ip in pm_ips:
                             if pm_type == "shelly":
-                                p = get_shelly_device_power(pm_ip)
+                                p, wh = get_shelly_power_and_energy(pm_ip)
                                 total_power += p
+                                if wh is not None:
+                                    total_wh_sum += wh
+                                else:
+                                    total_wh_valid = False
                                 if p > 0 or check_http_device_online(pm_ip, "/rpc/Shelly.GetStatus"):
                                     any_online = True
                             elif pm_type == "homewizard":
-                                total_power += get_homewizard_power(pm_ip)
+                                p, kwh = get_homewizard_power_and_energy(pm_ip)
+                                total_power += p
+                                if kwh is not None:
+                                    total_wh_sum += kwh * 1000
+                                else:
+                                    total_wh_valid = False
                                 any_online = True
+                        total_wh = total_wh_sum if total_wh_valid and pm_ips else None
                         accessory_states[acc_id]["power"] = total_power
                         accessory_states[acc_id]["online"] = any_online
+                        st = accessory_states[acc_id]
+                        if st.get("energy_day_date") != acc_today_str:
+                            if total_wh is not None:
+                                st["energy_day_date"] = acc_today_str
+                                st["energy_day_start_wh"] = total_wh
+                                st["energy_today_kwh"] = 0.0
+                                _energy_baselines[acc_id] = {"date": acc_today_str, "start_wh": total_wh}
+                                save_energy_baselines()
+                        elif total_wh is not None and st.get("energy_day_start_wh") is not None:
+                            st["energy_today_kwh"] = max(0.0, (total_wh - st["energy_day_start_wh"]) / 1000)
                     except Exception:
                         accessory_states[acc_id]["online"] = False
         except Exception:
