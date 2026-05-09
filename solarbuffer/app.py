@@ -79,6 +79,12 @@ def load_config():
         cfg["pid_enabled"] = True
     if "schedules_enabled" not in cfg:
         cfg["schedules_enabled"] = True
+    if "vacation_mode" not in cfg:
+        cfg["vacation_mode"] = False
+    if "vacation_until" not in cfg:
+        cfg["vacation_until"] = None
+    if "vacation_legionella" not in cfg:
+        cfg["vacation_legionella"] = False
     if "gas_enabled" not in cfg:
         cfg["gas_enabled"] = False
 
@@ -406,6 +412,7 @@ PID_KD = 0.00
 device_pids = {}
 enabled = True
 schedules_enabled = True
+vacation_mode = False
 device_states = {}
 accessory_states = {}
 inverter_power = None
@@ -1114,6 +1121,9 @@ def status_json():
         inverter_type=cfg.get("inverter_type", "solaredge"),
         inverter_power=inverter_power,
         inverter_online=inverter_online,
+        vacation_mode=cfg.get("vacation_mode", False),
+        vacation_until=cfg.get("vacation_until"),
+        vacation_legionella=cfg.get("vacation_legionella", False),
     )
 
 
@@ -1154,6 +1164,35 @@ def toggle_anti_legionella():
     save_config(cfg)
     write_audit_log("anti_legionella_toggled", {"enabled": anti_legionella_enabled})
     return jsonify(success=True, enabled=anti_legionella_enabled)
+
+
+@app.route("/vacation", methods=["POST"])
+def set_vacation_mode():
+    global vacation_mode
+    if not require_login():
+        return jsonify(success=False), 401
+    data = request.json or {}
+    active = bool(data.get("active", False))
+    until_iso = data.get("until") or None
+    leg = bool(data.get("legionella", False))
+    cfg = load_config()
+    cfg["vacation_mode"] = active
+    cfg["vacation_legionella"] = leg
+    if active and until_iso:
+        try:
+            cfg["vacation_until"] = datetime.fromisoformat(until_iso).timestamp()
+        except (ValueError, TypeError):
+            cfg["vacation_until"] = None
+    else:
+        cfg["vacation_until"] = None
+    save_config(cfg)
+    vacation_mode = active
+    write_audit_log("vacation_mode_toggled", {"active": active, "until": until_iso, "legionella": leg})
+    if active:
+        send_notification("🌴 Vakantiestand ingeschakeld.", event_key="ntfy_notify_vacation")
+    else:
+        send_notification("🌴 Vakantiestand uitgeschakeld, normale regeling hervat.", event_key="ntfy_notify_vacation")
+    return jsonify(success=True, active=active)
 
 
 @app.route("/boost/<path:ip>", methods=["POST"])
@@ -3347,7 +3386,7 @@ def get_active_schedule(schedules):
 
 # ================= CONTROL LOOP =================
 def control_loop():
-    global current_power, current_brightness, active_schedule_info, anti_legionella_enabled, schedules_enabled
+    global current_power, current_brightness, active_schedule_info, anti_legionella_enabled, schedules_enabled, vacation_mode
 
     online_check_interval = 10
     last_online_check = {}
@@ -3364,6 +3403,18 @@ def control_loop():
             cfg = load_config()
             anti_legionella_enabled = cfg.get("anti_legionella_enabled", False)
             schedules_enabled = cfg.get("schedules_enabled", True)
+            vacation_mode = cfg.get("vacation_mode", False)
+            vacation_until = cfg.get("vacation_until")
+            vacation_legionella = cfg.get("vacation_legionella", False)
+
+            if vacation_mode and vacation_until and time.time() > vacation_until:
+                vacation_mode = False
+                cfg["vacation_mode"] = False
+                cfg["vacation_until"] = None
+                save_config(cfg)
+                write_audit_log("vacation_mode_ended", {})
+                send_notification("🌴 Vakantiestand beëindigd, normale regeling hervat.", event_key="ntfy_notify_vacation")
+
             p1_ip = cfg.get("p1_ip")
             devices = cfg.get("shelly_devices", [])
             settings = get_runtime_settings(cfg)
@@ -3454,7 +3505,7 @@ def control_loop():
 
             # --- Anti-Legionella ---
             legionella_handled = set()
-            if anti_legionella_enabled:
+            if anti_legionella_enabled and (not vacation_mode or vacation_legionella):
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
@@ -3554,6 +3605,28 @@ def control_loop():
                     device_states[d["ip"]]["legionella_start"] = None
                     device_states[d["ip"]]["pre_legionella_started"] = None
             # --- Einde Anti-Legionella ---
+
+            # --- Vakantiestand: alles uit behalve actieve legionella ---
+            if vacation_mode:
+                for d in devices_sorted:
+                    ip = d["ip"]
+                    st = device_states[ip]
+                    if ip in legionella_handled:
+                        continue
+                    if st.get("on") or st.get("started") or st.get("pending_start"):
+                        st["on"] = False
+                        st["started"] = False
+                        st["freeze"] = False
+                        st["brightness"] = 0
+                        st["pending_start"] = False
+                        st["waiting_for_power_socket"] = False
+                        st["power_socket_ready_at"] = None
+                        threading.Thread(target=graceful_off_device, args=(ip,), daemon=True).start()
+                    maybe_turn_off_power_socket(d)
+                current_brightness = 0
+                time.sleep(2)
+                continue
+            # --- Einde vakantiestand ---
 
             # --- Boost override ---
             boost_handled = set()
@@ -4377,4 +4450,9 @@ if __name__ == "__main__":
     threading.Thread(target=accessory_poll_loop, daemon=True).start()
     threading.Thread(target=inverter_poll_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
+    import logging
+    class _NoRequestLogs(logging.Filter):
+        def filter(self, record):
+            return "HTTP/1." not in record.getMessage()
+    logging.getLogger("werkzeug").addFilter(_NoRequestLogs())
     app.run(host="0.0.0.0", port=5001)

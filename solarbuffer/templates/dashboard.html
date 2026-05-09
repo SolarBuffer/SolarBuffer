@@ -1473,6 +1473,18 @@
       color: hsl(145, 50%, 72%);
     }
 
+    .vacation-banner {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: hsl(37, 90%, 92%); color: hsl(30, 80%, 28%);
+      border-radius: 0.6rem; padding: 0.55rem 0.85rem;
+      font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem;
+    }
+    .vacation-banner svg { flex-shrink: 0; }
+    html[data-theme="dark"] .vacation-banner {
+      background: hsl(37, 35%, 26%);
+      color: hsl(37, 80%, 70%);
+    }
+
     html[data-theme="dark"] .sched-item {
       background: hsl(220, 8%, 30%);
       border-color: hsl(220, 8%, 37%);
@@ -1728,6 +1740,11 @@
     </div>
 
 
+    <div id="vacationTopBanner" class="vacation-banner" style="display:none; margin-bottom:0.5rem;">
+      <i class="mdi mdi-palm-tree" style="font-size:1rem;line-height:1;flex-shrink:0"></i>
+      <span id="vacationTopText">Vakantiestand actief</span>
+    </div>
+
     <div class="grid">
       <div class="card stat-card status-card neutral" id="buffer_status_card">
         <div class="stat-card-top">
@@ -1876,7 +1893,7 @@
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 4.0.0</div>
+    <div class="footer">Version 0.4.1</div>
   </div>
 
   <script>
@@ -1947,6 +1964,7 @@
             document.getElementById('accessoriesCard').style.display = '';
           }
           renderSchedules(data.schedules || [], data.active_schedule || null);
+          renderVacationStatus(data);
 
           const seRow = document.getElementById('solarEdgeRow');
           if (data.inverter_enabled && data.inverter_online && data.inverter_power !== null) {
@@ -2003,6 +2021,20 @@
         </div>`;
       }).join("");
     }
+
+    // ===== VAKANTIESTAND (banner only — beheer via Instellingen) =====
+    function renderVacationStatus(data) {
+      const active = !!data.vacation_mode;
+      document.getElementById("vacationTopBanner").style.display = active ? "flex" : "none";
+      if (active && data.vacation_until) {
+        const d = new Date(data.vacation_until * 1000);
+        document.getElementById("vacationTopText").textContent =
+          "Vakantiestand actief — terug op " + d.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+      } else {
+        document.getElementById("vacationTopText").textContent = "Vakantiestand actief — apparaten uitgeschakeld";
+      }
+    }
+    // ===== EINDE VAKANTIESTAND =====
 
     function openSchedForm(prefill) {
       editingSchedId = prefill ? prefill.id : null;
@@ -2173,7 +2205,9 @@
       const SVG_IMPORT   = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z"/></svg>';
       const SVG_TIMER    = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6,2V8H6V8L10,12L6,16V16H6V22H18V16H18V16L14,12L18,8V8H18V2H6M16,16.5V20H8V16.5L12,12.5L16,16.5M12,11.5L8,7.5V4H16V7.5L12,11.5Z"/></svg>';
       const SVG_SUN      = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg>';
+      const SVG_VACATION = '<i class="mdi mdi-palm-tree" style="font-size:1.5rem;line-height:1;display:block"></i>';
 
+      if (data.vacation_mode) return { label: "Vakantiestand", sub: "Alle apparaten uitgeschakeld", cls: "off", icon: SVG_VACATION };
       if (!enabled) return { label: "Uitgeschakeld", sub: "Automatische regeling staat uit", cls: "off", icon: SVG_PAUSE };
       if (pending.length > 0) return { label: "Opstarten", sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`, cls: "pending", icon: SVG_ROCKET };
       if (frozen.length > 0 && running.length > 0) return { label: "Overcapaciteit", sub: `${frozen.length} bevroren · ${running.length} regelend`, cls: "cascade", icon: SVG_PARTCLOUD };

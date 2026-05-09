@@ -208,6 +208,62 @@
     html[data-theme="dark"] .ctrl-sub        { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(220, 8%, 42%); }
 
+    .vacation-panel {
+      display: none;
+      padding: 0.9rem 1.1rem 1rem;
+      border-top: 1px solid hsl(30, 15%, 91%);
+      background: hsl(37, 40%, 98%);
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    html[data-theme="dark"] .vacation-panel {
+      background: hsl(37, 12%, 22%);
+      border-color: hsl(220, 8%, 30%);
+    }
+    .vacation-field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .vacation-field label { font-size: 0.78rem; color: hsl(220,10%,52%); }
+    .vacation-date-selects { display: flex; gap: 0.4rem; }
+    .vacation-date-selects select {
+      flex: 1; padding: 0.42rem 0.5rem; border-radius: 0.5rem;
+      border: 1px solid hsl(220,12%,82%); font-size: 0.85rem;
+      background: hsl(0,0%,100%); color: hsl(220,10%,20%);
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.45rem center;
+      padding-right: 1.4rem; cursor: pointer;
+    }
+    .vacation-date-selects select:focus { outline: none; border-color: hsl(32,90%,55%); }
+    html[data-theme="dark"] .vacation-date-selects select {
+      background-color: hsl(220,8%,26%); border-color: hsl(220,8%,38%);
+      color: hsl(220,10%,88%);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23aaa'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    }
+    .vacation-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.83rem; color: hsl(220,10%,40%); cursor: pointer; }
+    html[data-theme="dark"] .vacation-check { color: hsl(220,10%,62%); }
+    .vacation-info-line { font-size: 0.82rem; color: hsl(220,10%,50%); }
+    html[data-theme="dark"] .vacation-info-line { color: hsl(220,8%,60%); }
+    .vacation-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.1rem; }
+    .vacation-save-btn {
+      padding: 0.42rem 1rem; border-radius: 0.5rem; border: none;
+      background: hsl(37, 90%, 52%); color: #fff; font-weight: 600;
+      font-size: 0.83rem; cursor: pointer;
+    }
+    .vacation-save-btn:hover { background: hsl(37, 90%, 44%); }
+    .vacation-deact-btn {
+      padding: 0.42rem 1rem; border-radius: 0.5rem;
+      border: 1px solid hsl(0, 60%, 78%); background: transparent;
+      color: hsl(0, 65%, 45%); font-size: 0.83rem; cursor: pointer;
+    }
+    .vacation-deact-btn:hover { background: hsl(0, 60%, 96%); }
+    html[data-theme="dark"] .vacation-deact-btn { border-color: hsl(0,40%,42%); color: hsl(0,60%,65%); }
+    html[data-theme="dark"] .vacation-deact-btn:hover { background: hsl(0,20%,28%); }
+    .vacation-cancel-btn {
+      padding: 0.42rem 1rem; border-radius: 0.5rem;
+      border: 1px solid hsl(220,12%,80%); background: transparent;
+      color: hsl(220,10%,40%); font-size: 0.83rem; cursor: pointer;
+    }
+    html[data-theme="dark"] .vacation-cancel-btn { border-color: hsl(220,8%,40%); color: hsl(220,10%,65%); }
+
     /* ===== REMOTE TOEGANG ===== */
     .ts-badge {
       font-size: 0.7rem;
@@ -593,6 +649,68 @@
         </div>
       </div>
 
+      <div class="ctrl-row" id="vacationCtrlRow">
+        <div class="settings-icon">
+          <i class="mdi mdi-palm-tree" style="font-size:1.25rem;line-height:1"></i>
+        </div>
+        <div class="ctrl-text">
+          <div class="ctrl-label">Vakantiestand</div>
+          <div class="ctrl-sub" id="vacation_sub">Uitgeschakeld</div>
+        </div>
+        <div class="ctrl-right">
+          <div class="dot" id="vacation_dot"></div>
+          <label class="toggle">
+            <input type="checkbox" id="vacation_toggle" onchange="onVacationToggle()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="vacation-panel" id="vacationPanel">
+        <div id="vacationFormSection">
+          <div class="vacation-field">
+            <label>Terug thuis op</label>
+            <div class="vacation-date-selects">
+              <select id="vacationDay"></select>
+              <select id="vacationMonth">
+                <option value="1">Januari</option><option value="2">Februari</option>
+                <option value="3">Maart</option><option value="4">April</option>
+                <option value="5">Mei</option><option value="6">Juni</option>
+                <option value="7">Juli</option><option value="8">Augustus</option>
+                <option value="9">September</option><option value="10">Oktober</option>
+                <option value="11">November</option><option value="12">December</option>
+              </select>
+              <select id="vacationYear"></select>
+            </div>
+          </div>
+          <div class="ctrl-row" style="padding:0.6rem 0; border-bottom:none;">
+            <div class="ctrl-text">
+              <div class="ctrl-label" style="font-size:0.88rem;">Anti-legionella</div>
+              <div class="ctrl-sub">Cyclus doorlopen tijdens vakantie</div>
+            </div>
+            <div class="ctrl-right">
+              <label class="toggle">
+                <input type="checkbox" id="vacationLegInput"/>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div id="vacationDateError" style="display:none; font-size:0.78rem; color:hsl(0,65%,48%); margin-top:-0.25rem;"></div>
+          <div class="vacation-btn-row">
+            <button class="vacation-save-btn" onclick="saveVacation()">Opslaan</button>
+            <button class="vacation-cancel-btn" onclick="cancelVacation()">Annuleren</button>
+          </div>
+        </div>
+
+        <div id="vacationActiveSection" style="display:none; flex-direction:column; gap:0.4rem;">
+          <div class="vacation-info-line" id="vacationUntilLine"></div>
+          <div class="vacation-info-line" id="vacationLegLine"></div>
+          <div class="vacation-btn-row" style="margin-top:0.25rem;">
+            <button class="vacation-deact-btn" onclick="deactivateVacation()">Vakantiestand uitschakelen</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <div class="section-title">Verbinding</div>
@@ -847,6 +965,41 @@
         document.getElementById('schedules_toggle').checked = schedsEnabled;
         document.getElementById('schedules_sub').textContent = schedsEnabled ? 'Actief' : 'Uitgeschakeld';
         document.getElementById('schedules_dot').className = 'dot' + (schedsEnabled ? ' active' : '');
+
+        const vacActive = !!data.vacation_mode;
+        if (!_vacationFormOpen) {
+          document.getElementById('vacation_toggle').checked = vacActive;
+        }
+        document.getElementById('vacation_dot').className = 'dot' + (vacActive ? ' active' : '');
+        if (vacActive) {
+          let sub = 'Actief';
+          if (data.vacation_until) {
+            const d = new Date(data.vacation_until * 1000);
+            sub = 'Actief tot ' + d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+          }
+          document.getElementById('vacation_sub').textContent = sub;
+          if (!_vacationFormOpen) {
+            document.getElementById('vacationFormSection').style.display = 'none';
+            const activeSection = document.getElementById('vacationActiveSection');
+            activeSection.style.display = 'flex';
+            const untilLine = document.getElementById('vacationUntilLine');
+            const legLine = document.getElementById('vacationLegLine');
+            untilLine.textContent = data.vacation_until
+              ? 'Terug thuis op: ' + new Date(data.vacation_until * 1000).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+              : 'Geen einddatum ingesteld';
+            legLine.textContent = data.vacation_legionella
+              ? 'Anti-legionella: loopt door tijdens vakantie'
+              : 'Anti-legionella: gepauzeerd tijdens vakantie';
+            document.getElementById('vacationPanel').style.display = 'flex';
+          }
+        } else {
+          document.getElementById('vacation_sub').textContent = 'Uitgeschakeld';
+          if (!_vacationFormOpen) {
+            document.getElementById('vacationPanel').style.display = 'none';
+            document.getElementById('vacationActiveSection').style.display = 'none';
+            document.getElementById('vacationFormSection').style.display = '';
+          }
+        }
       }).catch(() => {});
     }
 
@@ -858,6 +1011,135 @@
     }
     function toggleSchedules() {
       fetch('/toggle_schedules').then(() => setTimeout(loadBesturing, 300));
+    }
+
+    let _vacationFormOpen = false;
+
+    function _initDateSelects() {
+      const dayEl = document.getElementById('vacationDay');
+      const yearEl = document.getElementById('vacationYear');
+      if (dayEl.options.length === 0) {
+        for (let d = 1; d <= 31; d++) {
+          const o = document.createElement('option');
+          o.value = d; o.textContent = d;
+          dayEl.appendChild(o);
+        }
+      }
+      if (yearEl.options.length === 0) {
+        const now = new Date().getFullYear();
+        for (let y = now; y <= now + 4; y++) {
+          const o = document.createElement('option');
+          o.value = y; o.textContent = y;
+          yearEl.appendChild(o);
+        }
+      }
+      document.getElementById('vacationYear').onchange = _updateDateConstraints;
+      document.getElementById('vacationMonth').onchange = _updateDateConstraints;
+    }
+
+    function _updateDateConstraints() {
+      const today = new Date();
+      const todayY = today.getFullYear();
+      const todayM = today.getMonth() + 1;
+      const todayD = today.getDate();
+      const selY = parseInt(document.getElementById('vacationYear').value);
+      const selM = parseInt(document.getElementById('vacationMonth').value);
+
+      // Maanden: disable alleen échte verleden maanden (niet de huidige)
+      document.querySelectorAll('#vacationMonth option').forEach(o => {
+        o.disabled = (selY === todayY && parseInt(o.value) < todayM);
+      });
+
+      // Dagen: disable verleden dagen alleen als huidig jaar én huidige maand gekozen
+      const isCurrentYearMonth = (selY === todayY && selM === todayM);
+      document.querySelectorAll('#vacationDay option').forEach(o => {
+        o.disabled = isCurrentYearMonth && parseInt(o.value) <= todayD;
+      });
+    }
+
+    function _setDateSelects(date) {
+      document.getElementById('vacationDay').value = date.getDate();
+      document.getElementById('vacationMonth').value = date.getMonth() + 1;
+      document.getElementById('vacationYear').value = date.getFullYear();
+      _updateDateConstraints();
+    }
+
+    function _getDateFromSelects() {
+      const d = parseInt(document.getElementById('vacationDay').value);
+      const m = parseInt(document.getElementById('vacationMonth').value) - 1;
+      const y = parseInt(document.getElementById('vacationYear').value);
+      return new Date(y, m, d);
+    }
+
+    function onVacationToggle() {
+      const checked = document.getElementById('vacation_toggle').checked;
+      const panel = document.getElementById('vacationPanel');
+      if (checked) {
+        _vacationFormOpen = true;
+        _initDateSelects();
+        document.getElementById('vacationFormSection').style.display = '';
+        document.getElementById('vacationActiveSection').style.display = 'none';
+        panel.style.display = 'flex';
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        _setDateSelects(nextWeek);
+        document.getElementById('vacationLegInput').checked = false;
+      } else {
+        _vacationFormOpen = false;
+        panel.style.display = 'none';
+        document.getElementById('vacation_sub').textContent = 'Uitgeschakeld';
+        document.getElementById('vacation_dot').className = 'dot';
+        // Als vakantiestand al actief was: direct uitschakelen via backend
+        if (document.getElementById('vacationActiveSection').style.display !== 'none') {
+          fetch('/vacation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active: false })
+          }).then(r => r.json()).then(() => setTimeout(loadBesturing, 300));
+        }
+      }
+    }
+
+    function saveVacation() {
+      const chosen = _getDateFromSelects();
+      const errorEl = document.getElementById('vacationDateError');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (chosen <= today) {
+        errorEl.textContent = 'Kies een datum in de toekomst.';
+        errorEl.style.display = '';
+        return;
+      }
+      errorEl.style.display = 'none';
+      const pad = n => String(n).padStart(2, '0');
+      const until = `${chosen.getFullYear()}-${pad(chosen.getMonth()+1)}-${pad(chosen.getDate())}`;
+      const legionella = document.getElementById('vacationLegInput').checked;
+      fetch('/vacation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: true, until, legionella })
+      }).then(r => r.json()).then(() => {
+        _vacationFormOpen = false;
+        setTimeout(loadBesturing, 300);
+      });
+    }
+
+    function cancelVacation() {
+      _vacationFormOpen = false;
+      document.getElementById('vacation_toggle').checked = false;
+      document.getElementById('vacationPanel').style.display = 'none';
+      document.getElementById('vacationDateError').style.display = 'none';
+    }
+
+    function deactivateVacation() {
+      fetch('/vacation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: false })
+      }).then(r => r.json()).then(() => {
+        _vacationFormOpen = false;
+        setTimeout(loadBesturing, 300);
+      });
     }
 
     loadBesturing();
