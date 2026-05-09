@@ -2335,7 +2335,10 @@
                 ${hasPowerMeter ? `
                   <div class="mini-info">
                     <div class="mini-label">Vermogensmeter</div>
-                    <div class="mini-value"><span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span></div>
+                    <div class="mini-value" style="display:flex;align-items:center;gap:0.5rem;">
+                      <span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span>
+                      <span style="font-size:0.78rem;color:hsl(220,10%,52%);">${Number(d.energy_today_kwh || 0).toFixed(2)} kWh</span>
+                    </div>
                   </div>` : ''}
               </div>` : ''}
             <div class="device-bottom">
@@ -2392,7 +2395,8 @@
         const onlineCls   = acc.online ? 'online' : 'offline';
         const valueHtml = isTemp
           ? `<div class="acc-tile-watt">${acc.temperature !== null && acc.temperature !== undefined ? acc.temperature : '—'}</div><div class="acc-tile-unit">°C</div>`
-          : `<div class="acc-tile-watt">${Number(acc.power || 0).toFixed(0)}</div><div class="acc-tile-unit">W</div>`;
+          : `<div style="display:flex;align-items:baseline;gap:0.2rem;justify-content:flex-end;"><span class="acc-tile-watt">${Number(acc.power || 0).toFixed(0)}</span><span class="acc-tile-unit">W</span></div>
+             <div style="font-size:0.72rem;color:hsl(220,10%,54%);text-align:right;margin-top:0.1rem;line-height:1;">${Number(acc.energy_today_kwh || 0).toFixed(2)} kWh</div>`;
         return `
           <div class="acc-tile">
             <div class="acc-tile-icon${isTemp ? ' temp' : ''}">
