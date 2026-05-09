@@ -2689,39 +2689,64 @@ def init_device_pids(devices):
             device_pids[ip] = p
 
 
+def _is_host_reachable(ip, port=80, timeout=0.3):
+    try:
+        with socket.create_connection((ip, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def _sync_single_device_off(d):
+    ip = d["ip"]
+    if ip not in device_states:
+        return
+    state = device_states[ip]
+    state["on"] = False
+    state["brightness"] = 0
+    state["freeze"] = False
+    state["started"] = False
+    state["pending_start"] = False
+    state["manual_override"] = False
+    state["saturated_since"] = None
+    state["min_since"] = None
+    state["waiting_for_power_socket"] = False
+    state["power_socket_ready_at"] = None
+    state["power_socket_on"] = False
+    state["power_socket_last_on_command"] = 0
+
+    # Quick TCP pre-check: skip HTTP calls entirely if device is unreachable.
+    if not _is_host_reachable(ip):
+        return
+
+    # Check current state first; only send turn-off if device is actually on.
+    try:
+        r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
+        if r.status_code == 200:
+            data = r.json()
+            light = (data.get("light:0") or data.get("switch:0") or {})
+            already_off = not light.get("output", True) and light.get("brightness", 0) == 0
+            if not already_off:
+                set_shelly(0, False, ip)
+        # Device unreachable: internal state already reset above, skip HTTP call.
+    except Exception as e:
+        print(f"Sync error ({ip}): {e}")
+
+    if has_power_socket(d):
+        ps_ip = d.get("power_socket_ip")
+        if ps_ip and _is_host_reachable(ps_ip):
+            try:
+                set_power_socket(d.get("power_socket_type"), ps_ip, False)
+            except Exception as e:
+                print(f"Power socket sync error ({ps_ip}): {e}")
+
+
 def sync_configured_devices_off(devices):
     if not devices:
         return
     print("Sync: geconfigureerde Shelly apparaten naar UIT zetten...")
-    for d in devices:
-        ip = d["ip"]
-        if ip not in device_states:
-            continue
-        state = device_states[ip]
-        state["on"] = False
-        state["brightness"] = 0
-        state["freeze"] = False
-        state["started"] = False
-        state["pending_start"] = False
-        state["manual_override"] = False
-        state["saturated_since"] = None
-        state["min_since"] = None
-        state["waiting_for_power_socket"] = False
-        state["power_socket_ready_at"] = None
-        state["power_socket_on"] = False
-        state["power_socket_last_on_command"] = 0
-        for _ in range(3):
-            try:
-                set_shelly(0, False, ip)
-                time.sleep(0.35)
-            except Exception as e:
-                print(f"Sync error ({ip}): {e}")
-        if has_power_socket(d):
-            try:
-                set_power_socket(d.get("power_socket_type"), d.get("power_socket_ip"), False)
-                time.sleep(0.2)
-            except Exception as e:
-                print(f"Power socket sync error ({d.get('power_socket_ip')}): {e}")
+    with ThreadPoolExecutor(max_workers=len(devices)) as ex:
+        list(ex.map(_sync_single_device_off, devices))
     print("Sync voltooid.")
 
 
@@ -2735,7 +2760,8 @@ def startup_sync_devices():
         return
     init_device_states(devices)
     init_device_pids(devices)
-    sync_configured_devices_off(devices)
+    # Run HTTP sync in background so offline devices don't delay Flask startup.
+    threading.Thread(target=sync_configured_devices_off, args=(devices,), daemon=True).start()
 
 
 # ================= MQTT =================
