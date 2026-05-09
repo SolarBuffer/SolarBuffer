@@ -179,3 +179,5 @@ Zonnevoorspelling wordt gedaan op basis van locatie
 test
 
 ## Verbruikers
+
+## Geschiedenisgrafieken
