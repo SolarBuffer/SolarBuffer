@@ -215,8 +215,10 @@ def load_config():
 
 
 def save_config(data):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+    tmp = CONFIG_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
+    os.replace(tmp, CONFIG_FILE)
 
 
 def load_state():
@@ -637,12 +639,17 @@ def detect_homewizard_pm(ip):
 
 def scan_network_for_devices():
     ips = get_subnet_ips()
+    known_p1_ip = (load_config().get("p1_ip") or "").strip()
     found_p1 = []
     found_shelly = []
 
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=25) as executor:
         future_map = {}
         for ip in ips:
+            if ip == known_p1_ip:
+                # Al geconfigureerd; voeg direct toe zonder extra HTTP-hit
+                found_p1.append({"type": "homewizard_p1", "name": f"HomeWizard P1 ({ip})", "ip": ip})
+                continue
             future_map[executor.submit(detect_homewizard_p1, ip)] = ("p1", ip)
             future_map[executor.submit(detect_shelly, ip)] = ("shelly", ip)
 
@@ -2311,7 +2318,7 @@ def scan_accessories():
     ips = get_subnet_ips()
     found_power = []
     found_temp = []
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=25) as executor:
         futures = {}
         for ip in ips:
             futures[executor.submit(detect_shelly_pm, ip)] = ("power", ip)
@@ -4187,6 +4194,7 @@ def _modbus_read(ip, port, unit, func, address, count, timeout=3):
 
 def _read_inverter_ac_power(ip, inverter_type, timeout=3):
     import struct as _s
+    _SUNSPEC_NI = -32768  # SunSpec "not implemented" sentinel (0x8000 as INT16)
     meta = _INVERTER_TYPES.get(inverter_type)
     if not meta:
         return None
@@ -4199,6 +4207,9 @@ def _read_inverter_ac_power(ip, inverter_type, timeout=3):
                 return None
             val = _s.unpack('>h', r[9:11])[0]
             sf  = _s.unpack('>h', r[11:13])[0]
+            # 0x8000 means "not implemented" in SunSpec; sf buiten -10..10 is corrupte data
+            if val == _SUNSPEC_NI or sf == _SUNSPEC_NI or not (-10 <= sf <= 10):
+                return None
             return round(val * (10 ** sf), 1)
         elif proto == "huawei":
             # Register 32080, INT32 (2 regs), unit W
@@ -4236,7 +4247,8 @@ def inverter_poll_loop():
             cfg = load_config()
             if cfg.get("inverter_enabled") and cfg.get("inverter_ip"):
                 val = _read_inverter_ac_power(cfg["inverter_ip"], cfg.get("inverter_type", "solaredge"))
-                if val is not None:
+                import math as _math
+                if val is not None and _math.isfinite(val):
                     inverter_power = val
                     inverter_online = True
                 else:
