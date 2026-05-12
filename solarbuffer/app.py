@@ -9,6 +9,7 @@ import subprocess
 import uuid
 import re
 import traceback
+import secrets
 import shutil
 import sqlite3
 from datetime import datetime, timedelta
@@ -452,6 +453,8 @@ active_schedule_info = None
 _mqtt_client = None
 _mqtt_connected = False
 _update_available = False
+_api_tokens = {}           # token -> {"username": str, "expires": float}
+_api_tokens_lock = threading.Lock()
 _tailscale_auth_url = None
 
 # ================= HW UPDATE STATE =================
@@ -481,8 +484,25 @@ app.config.update(
 )
 
 
+def _get_bearer_username():
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[7:].strip()
+    with _api_tokens_lock:
+        entry = _api_tokens.get(token)
+        if not entry:
+            return None
+        if time.time() > entry["expires"]:
+            del _api_tokens[token]
+            return None
+        return entry["username"]
+
+
 def require_login():
-    return session.get("logged_in", False)
+    if session.get("logged_in"):
+        return True
+    return _get_bearer_username() is not None
 
 
 def get_user_dark_mode():
@@ -789,6 +809,35 @@ def logout():
     session.clear()
     write_audit_log("logout", {"username": old_username})
     return redirect("/login")
+
+
+@app.route("/api/token", methods=["POST"])
+def api_token_create():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    cfg = load_config()
+    matched = next((u for u in cfg.get("users", []) if u.get("username", "").lower() == username.lower()), None)
+    if not matched or not check_password_hash(matched.get("password_hash", ""), password):
+        write_audit_log("api_login_failed", {"username": username, "ip": get_client_ip()})
+        return jsonify({"error": "Ongeldige gebruikersnaam of wachtwoord"}), 401
+    token = secrets.token_hex(32)
+    expires = time.time() + 30 * 86400  # 30 dagen
+    with _api_tokens_lock:
+        _api_tokens[token] = {"username": matched["username"], "expires": expires}
+    write_audit_log("api_login_success", {"username": matched["username"], "ip": get_client_ip()})
+    return jsonify({"token": token, "username": matched["username"], "expires_in": 30 * 86400})
+
+
+@app.route("/api/token", methods=["DELETE"])
+def api_token_revoke():
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return jsonify({"error": "Geen token opgegeven"}), 400
+    token = auth[7:].strip()
+    with _api_tokens_lock:
+        _api_tokens.pop(token, None)
+    return jsonify({"ok": True})
 
 
 @app.route("/change_credentials", methods=["GET", "POST"])
