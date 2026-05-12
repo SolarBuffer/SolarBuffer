@@ -811,6 +811,23 @@ def logout():
     return redirect("/login")
 
 
+def _cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
+    return response
+
+
+@app.route("/api/ping")
+def api_ping():
+    return _cors_headers(jsonify({"solarbuffer": True}))
+
+
+@app.route("/api/token", methods=["OPTIONS"])
+def api_token_options():
+    return _cors_headers(jsonify({}))
+
+
 @app.route("/api/token", methods=["POST"])
 def api_token_create():
     data = request.get_json(silent=True) or {}
@@ -820,13 +837,13 @@ def api_token_create():
     matched = next((u for u in cfg.get("users", []) if u.get("username", "").lower() == username.lower()), None)
     if not matched or not check_password_hash(matched.get("password_hash", ""), password):
         write_audit_log("api_login_failed", {"username": username, "ip": get_client_ip()})
-        return jsonify({"error": "Ongeldige gebruikersnaam of wachtwoord"}), 401
+        return _cors_headers(jsonify({"error": "Ongeldige gebruikersnaam of wachtwoord"})), 401
     token = secrets.token_hex(32)
     expires = time.time() + 30 * 86400  # 30 dagen
     with _api_tokens_lock:
         _api_tokens[token] = {"username": matched["username"], "expires": expires}
     write_audit_log("api_login_success", {"username": matched["username"], "ip": get_client_ip()})
-    return jsonify({"token": token, "username": matched["username"], "expires_in": 30 * 86400})
+    return _cors_headers(jsonify({"token": token, "username": matched["username"], "expires_in": 30 * 86400}))
 
 
 @app.route("/api/token", methods=["DELETE"])
@@ -838,6 +855,19 @@ def api_token_revoke():
     with _api_tokens_lock:
         _api_tokens.pop(token, None)
     return jsonify({"ok": True})
+
+
+@app.route("/api/session")
+def api_session():
+    token = request.args.get("token", "")
+    with _api_tokens_lock:
+        entry = _api_tokens.get(token)
+        username = entry["username"] if entry and time.time() <= entry["expires"] else None
+    if not username:
+        return redirect("/login")
+    session["logged_in"] = True
+    session["username"] = username
+    return redirect("/")
 
 
 @app.route("/change_credentials", methods=["GET", "POST"])
