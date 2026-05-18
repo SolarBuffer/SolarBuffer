@@ -161,6 +161,8 @@ def load_config():
             acc["icon"] = "mdi-thermometer" if acc["acc_type"] == "temperature" else "mdi-power-plug"
         if "record_history" not in acc:
             acc["record_history"] = False
+        if acc.get("acc_type") == "power" and "is_solar" not in acc:
+            acc["is_solar"] = False
 
     # Migreer oud formaat (enkele gebruiker) naar gebruikerslijst
     if "users" not in cfg:
@@ -1213,6 +1215,7 @@ def status_json():
             entry["power_ips"] = acc.get("power_ips", [acc.get("power_ip", "")])
             entry["power"] = st.get("power", 0.0)
             entry["energy_today_kwh"] = round(st.get("energy_today_kwh", 0.0), 2)
+            entry["is_solar"] = acc.get("is_solar", False)
         accessories.append(entry)
 
     gas_today = None
@@ -2472,9 +2475,10 @@ def add_accessory():
         if pm_type not in ("shelly", "homewizard"):
             return jsonify(success=False, error="Ongeldig type"), 400
         record_history = bool(data.get("record_history", False))
+        is_solar = bool(data.get("is_solar", False))
         new_acc = {"id": str(uuid.uuid4()), "name": name, "acc_type": "power",
                    "power_meter_type": pm_type, "power_ip": pm_ips[0], "power_ips": pm_ips, "icon": icon,
-                   "record_history": record_history}
+                   "record_history": record_history, "is_solar": is_solar}
     cfg["accessories"].append(new_acc)
     save_config(cfg)
     write_audit_log("accessory_added", {"name": name, "acc_type": acc_type})
@@ -2525,6 +2529,7 @@ def update_accessory(acc_id):
         acc["power_ips"] = pm_ips
         acc["icon"] = icon
         acc["record_history"] = bool(data.get("record_history", acc.get("record_history", False)))
+        acc["is_solar"] = bool(data.get("is_solar", acc.get("is_solar", False)))
     save_config(cfg)
     write_audit_log("accessory_updated", {"id": acc_id, "name": name})
     return jsonify(success=True)

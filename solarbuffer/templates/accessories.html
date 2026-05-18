@@ -332,6 +332,8 @@ html[data-theme="dark"] .history-chip {
 .history-toggle-label { flex: 1; font-size: 0.83rem; color: hsl(215, 40%, 36%); line-height: 1.35; }
 html[data-theme="dark"] .history-toggle-row { background: hsl(215, 20%, 22%); border-color: hsl(215, 25%, 34%); }
 html[data-theme="dark"] .history-toggle-label { color: hsl(215, 40%, 62%); }
+html[data-theme="dark"] .history-toggle-row[style*="hsl(40"] { background: hsl(40, 20%, 20%); border-color: hsl(40, 30%, 32%); }
+html[data-theme="dark"] .history-toggle-row[style*="hsl(40"] .history-toggle-label { color: hsl(40, 60%, 62%); }
 
 /* ===== GAS TOGGLE ===== */
 .gas-settings-card {
@@ -438,6 +440,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
                 data-linkedip="{{ acc.linked_device_ip or '' }}"
                 data-icon="{{ acc.icon or 'mdi-power-plug' }}"
                 data-recordhistory="{{ acc.record_history | tojson }}"
+                data-issolar="{{ acc.is_solar | default(false) | tojson }}"
                 onclick="openEditFromBtn(this)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
               </button>
@@ -541,6 +544,17 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
         </div>
       </div>
 
+      <div class="form-field power-only-field" style="margin-top:0.25rem">
+        <div class="history-toggle-row" style="background:hsl(40,100%,95%);border-color:hsl(40,80%,78%)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(40,90%,38%)"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
+          <span class="history-toggle-label" style="color:hsl(40,60%,30%)">Dit is de zonnepanelenproductie-meter<br><span style="font-size:0.73rem;opacity:0.75">Activeer voor Zelfverbruik &amp; Zelfvoorziening berekeningen</span></span>
+          <label class="pill-toggle">
+            <input type="checkbox" id="fIsSolar">
+            <span class="pill-thumb"></span>
+          </label>
+        </div>
+      </div>
+
       <div class="form-field" style="margin-top:0.25rem">
         <div class="history-toggle-row">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(215,70%,40%)"><path d="M13,2.05V4.05C17.39,4.59 20.5,8.58 19.96,12.97C19.5,16.61 16.64,19.5 13,19.93V21.93C18.5,21.38 22.5,16.5 21.95,11C21.5,6.25 17.73,2.5 13,2.05M11,2.06C9.05,2.25 7.19,3 5.67,4.26L7.1,5.74C8.22,4.84 9.57,4.26 11,4.06V2.06M4.26,5.67C3,7.19 2.25,9.04 2.05,11H4.05C4.24,9.58 4.8,8.23 5.69,7.1L4.26,5.67M2.06,13C2.26,14.96 3.03,16.81 4.27,18.33L5.69,16.9C4.81,15.77 4.24,14.42 4.06,13H2.06M7.1,18.37L5.67,19.74C7.18,21 9.04,21.79 11,22V20C9.58,19.82 8.23,19.25 7.1,18.37M12,7V12.41L15.28,15.7L16.7,14.29L14,11.59V7H12Z"/></svg>
@@ -593,6 +607,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       document.getElementById('typeBtnTemp').classList.toggle('active', type === 'temperature');
       document.getElementById('powerSection').style.display  = type === 'power' ? '' : 'none';
       document.getElementById('tempSection').style.display   = type === 'temperature' ? '' : 'none';
+      document.querySelectorAll('.power-only-field').forEach(el => el.style.display = type === 'power' ? '' : 'none');
       // icon sets
       document.querySelectorAll('.power-icon').forEach(el => el.style.display = type === 'power' ? '' : 'none');
       document.querySelectorAll('.temp-icon').forEach(el => el.style.display  = type === 'temperature' ? '' : 'none');
@@ -757,7 +772,8 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       const ips = JSON.parse(el.dataset.ips || '[]');
       const channel = parseInt(el.dataset.tempchannel || '100', 10);
       const recordHistory = el.dataset.recordhistory === 'true';
-      openEdit(el.dataset.id, el.dataset.name, accType, el.dataset.type, ips, el.dataset.tempip, channel, el.dataset.linkedip || '', el.dataset.icon, recordHistory);
+      const isSolar = el.dataset.issolar === 'true';
+      openEdit(el.dataset.id, el.dataset.name, accType, el.dataset.type, ips, el.dataset.tempip, channel, el.dataset.linkedip || '', el.dataset.icon, recordHistory, isSolar);
     }
 
     function buildLinkedDeviceOptions(selectedIp) {
@@ -780,6 +796,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       document.getElementById('fType').value = 'shelly';
       document.getElementById('fTempIp').value = '';
       document.getElementById('fRecordHistory').checked = false;
+      document.getElementById('fIsSolar').checked = false;
       renderChannelSelect([], 100);
       setIpList(['']);
       buildLinkedDeviceOptions('');
@@ -792,13 +809,14 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
       document.getElementById('fName').focus();
     }
 
-    function openEdit(id, name, accType, pmType, ips, tempIp, channel, linkedIp, icon, recordHistory) {
+    function openEdit(id, name, accType, pmType, ips, tempIp, channel, linkedIp, icon, recordHistory, isSolar) {
       _editId = id;
       document.getElementById('formTitle').textContent = accType === 'temperature' ? 'Temperatuursensor bewerken' : 'Verbruiker bewerken';
       document.getElementById('fName').value = name;
       document.getElementById('fType').value = pmType || 'shelly';
       document.getElementById('fTempIp').value = tempIp || '';
       document.getElementById('fRecordHistory').checked = !!recordHistory;
+      document.getElementById('fIsSolar').checked = !!isSolar;
       renderChannelSelect([], channel || 100);
       setIpList(Array.isArray(ips) && ips.length ? ips : ['']);
       buildLinkedDeviceOptions(linkedIp || '');
@@ -843,7 +861,8 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
           errEl.className = 'form-error show';
           return;
         }
-        body = { acc_type: 'power', name, power_meter_type: type, power_ips: ips, icon, record_history: recordHistory };
+        const isSolar = document.getElementById('fIsSolar').checked;
+        body = { acc_type: 'power', name, power_meter_type: type, power_ips: ips, icon, record_history: recordHistory, is_solar: isSolar };
       }
 
       btn.disabled = true;
@@ -893,6 +912,7 @@ html[data-theme="dark"] .pill-thumb { background: hsl(220, 8%, 42%); }
                   editBtn.dataset.linkedip = body.linked_device_ip || '';
                   editBtn.dataset.icon = body.icon;
                   editBtn.dataset.recordhistory = body.record_history ? 'true' : 'false';
+                  editBtn.dataset.issolar = body.is_solar ? 'true' : 'false';
                 }
               }
             } else {
