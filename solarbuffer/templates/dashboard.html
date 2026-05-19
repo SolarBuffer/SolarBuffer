@@ -463,6 +463,44 @@
       margin-bottom: 1rem;
     }
 
+    .control-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .buffer-status-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      flex-shrink: 0;
+      align-self: center;
+      line-height: 1.4;
+    }
+    .buffer-status-badge.standby  { background: hsl(145,30%,92%); color: hsl(145,35%,28%); border-color: hsl(145,20%,80%); }
+    .buffer-status-badge.neutral  { background: hsl(30,15%,93%);  color: hsl(220,12%,36%);  border-color: hsl(30,10%,84%); }
+    .buffer-status-badge.off      { background: hsl(220,14%,92%); color: hsl(220,12%,36%);  border-color: hsl(220,10%,80%); }
+    .buffer-status-badge.pending  { background: hsl(37,100%,92%); color: hsl(32,90%,28%);   border-color: hsl(35,80%,76%); }
+    .buffer-status-badge.running  { background: hsl(145,48%,90%); color: hsl(145,40%,22%);  border-color: hsl(145,30%,76%); }
+    .buffer-status-badge.freeze   { background: hsl(215,80%,91%); color: hsl(215,65%,26%);  border-color: hsl(215,50%,76%); }
+    .buffer-status-badge.cascade  { background: hsl(208,75%,90%); color: hsl(208,60%,24%);  border-color: hsl(208,50%,76%); }
+    .buffer-status-badge.import   { background: hsl(0,70%,92%);   color: hsl(0,60%,30%);    border-color: hsl(0,50%,80%); }
+    .buffer-status-badge.waiting  { background: hsl(48,100%,90%); color: hsl(40,80%,26%);   border-color: hsl(45,80%,74%); }
+
+    html[data-theme="dark"] .buffer-status-badge.standby  { background: hsl(145,20%,22%); color: hsl(145,45%,68%); border-color: hsl(145,20%,30%); }
+    html[data-theme="dark"] .buffer-status-badge.neutral  { background: hsl(220,8%,26%);  color: hsl(220,8%,65%);  border-color: hsl(220,8%,34%); }
+    html[data-theme="dark"] .buffer-status-badge.off      { background: hsl(220,8%,26%);  color: hsl(220,8%,65%);  border-color: hsl(220,8%,34%); }
+    html[data-theme="dark"] .buffer-status-badge.pending  { background: hsl(37,30%,22%);  color: hsl(37,80%,70%);  border-color: hsl(37,40%,32%); }
+    html[data-theme="dark"] .buffer-status-badge.running  { background: hsl(145,25%,20%); color: hsl(145,55%,68%); border-color: hsl(145,25%,30%); }
+    html[data-theme="dark"] .buffer-status-badge.freeze   { background: hsl(215,30%,22%); color: hsl(215,65%,72%); border-color: hsl(215,30%,32%); }
+    html[data-theme="dark"] .buffer-status-badge.cascade  { background: hsl(208,30%,22%); color: hsl(208,65%,72%); border-color: hsl(208,30%,32%); }
+    html[data-theme="dark"] .buffer-status-badge.import   { background: hsl(0,25%,22%);   color: hsl(0,65%,72%);   border-color: hsl(0,30%,32%); }
+    html[data-theme="dark"] .buffer-status-badge.waiting  { background: hsl(48,30%,20%);  color: hsl(48,80%,70%);  border-color: hsl(48,35%,30%); }
+
     .control-card h2 {
       font-size: 1.1rem;
       margin-bottom: 1rem;
@@ -470,6 +508,10 @@
       align-items: center;
       gap: 0.5rem;
     }
+
+    .control-card-header h2 { margin-bottom: 0; }
+
+    .power-card { margin-bottom: 1rem; }
 
     .control-card h2 .ctrl-icon {
       color: hsl(32, 95%, 52%);
@@ -1745,29 +1787,10 @@
       <span id="vacationTopText">Vakantiestand actief</span>
     </div>
 
-    <div class="grid">
-      <div class="card stat-card status-card neutral" id="buffer_status_card">
-        <div class="stat-card-top">
-          <div class="stat-card-head">
-            <span class="label">Bufferstatus</span>
-          </div>
-          <div class="stat-icon-wrap">
-            <span class="stat-icon" id="buffer_status_icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg></span>
-          </div>
-        </div>
-        <div class="stat-card-main">
-          <span class="value" id="buffer_status_value">Standby</span>
-          <span class="unit" id="buffer_status_sub">Geen actieve regeling</span>
-        </div>
-      </div>
-
-      <div class="card stat-card power-card">
+    <div class="card stat-card power-card">
         <div class="stat-card-top">
           <div class="stat-card-head">
             <span class="label">Vermogen</span>
-          </div>
-          <div class="stat-icon-wrap">
-            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span>
           </div>
         </div>
         <div class="stat-card-main">
@@ -1814,11 +1837,13 @@
             </div>
           </div>
         </div>
-      </div>
     </div>
 
     <div class="card control-card">
-      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
+      <div class="control-card-header">
+        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
+        <span id="buffer_status_badge" class="buffer-status-badge standby">Standby</span>
+      </div>
       <div id="devicesContainer"></div>
     </div>
 
@@ -1969,10 +1994,9 @@
           document.getElementById("current_power").textContent = Number(data.power || 0).toFixed(1);
 
           const bufferStatus = getBufferStatus(data);
-          document.getElementById("buffer_status_value").textContent = bufferStatus.label;
-          document.getElementById("buffer_status_sub").textContent = bufferStatus.sub;
-          document.getElementById("buffer_status_icon").innerHTML = bufferStatus.icon;
-          document.getElementById("buffer_status_card").className = `card stat-card status-card ${bufferStatus.cls}`;
+          const badge = document.getElementById("buffer_status_badge");
+          badge.textContent = bufferStatus.label;
+          badge.className = `buffer-status-badge ${bufferStatus.cls}`;
 
           renderDevices(data.devices || []);
           renderAccessories(data.accessories || []);
@@ -2252,12 +2276,16 @@
       if (data.vacation_mode) return { label: "Vakantiestand", sub: "Alle apparaten uitgeschakeld", cls: "off", icon: SVG_VACATION };
       if (!enabled) return { label: "Uitgeschakeld", sub: "Automatische regeling staat uit", cls: "off", icon: SVG_PAUSE };
       if (pending.length > 0) return { label: "Opstarten", sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`, cls: "pending", icon: SVG_ROCKET };
-      if (frozen.length > 0 && running.length > 0) return { label: "Overcapaciteit", sub: `${frozen.length} bevroren · ${running.length} regelend`, cls: "cascade", icon: SVG_PARTCLOUD };
-      if (frozen.length > 0) return { label: "Bevroren", sub: `${frozen.length} buffer${frozen.length > 1 ? "s" : ""} op vast niveau`, cls: "freeze", icon: SVG_SNOWFLAKE };
-      if (running.length > 0) return { label: "Actief", sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`, cls: "running", icon: SVG_FIRE };
-
-      const importThreshold = Number(data.expert_settings?.IMPORT_OFF_THRESHOLD ?? 300);
-      if (power >= importThreshold) return { label: "Geen teruglevering", sub: `Verbruik > ${importThreshold} W`, cls: "import", icon: SVG_IMPORT };
+      if (running.length > 0) {
+        if (frozen.length > 0) {
+          const lastPrio = Math.max(...devices.map(d => d.priority ?? 1));
+          const lastDevice = running.find(d => (d.priority ?? 1) === lastPrio);
+          if (lastDevice && lastDevice.brightness >= 100) {
+            return { label: "Overcapaciteit", sub: `Alle ${frozen.length + 1} buffers op max capaciteit`, cls: "cascade", icon: SVG_PARTCLOUD };
+          }
+        }
+        return { label: "Actief", sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}${frozen.length > 0 ? ` · ${frozen.length} bevroren` : ""}`, cls: "running", icon: SVG_FIRE };
+      }
 
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
       if (power <= exportThreshold && started.length === 0) return { label: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
