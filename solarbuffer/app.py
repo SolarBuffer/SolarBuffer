@@ -1170,6 +1170,7 @@ def status_json():
         s = device_states.get(d["ip"], {})
         devices.append({
             "name": d["name"], "ip": d["ip"],
+            "priority": d.get("priority", 1),
             "on": s.get("on", False),
             "brightness": s.get("brightness", 0),
             "online": s.get("online", False),
@@ -2991,18 +2992,15 @@ def _system_status_label(devices_data, cfg):
     running = [d for d in devices_data if d.get("started") and not d.get("freeze")]
     if pending:
         return "Opstarten"
-    if frozen and running:
-        return "Overcapaciteit"
-    if frozen:
-        return "Bevroren"
     if running:
+        if frozen:
+            last_prio = max((d.get("priority", 1) for d in devices_data), default=1)
+            if any(d.get("priority", 1) == last_prio and d.get("power", 0) >= 100 for d in running):
+                return "Overcapaciteit"
         return "Actief"
     expert = cfg.get("expert_settings") or {}
-    import_threshold = int(expert.get("IMPORT_OFF_THRESHOLD", 300))
     export_threshold = int(expert.get("EXPORT_THRESHOLD", -50))
     started = [d for d in devices_data if d.get("started") or d.get("pending_start")]
-    if current_power >= import_threshold:
-        return "Geen teruglevering"
     if current_power <= export_threshold and not started:
         return "Wachten op teruglevering"
     return "Standby"
@@ -3117,6 +3115,7 @@ def _publish_mqtt_state(client, prefix, cfg):
         devices_data.append({
             "name": d.get("name"),
             "ip": ip,
+            "priority": d.get("priority", 1),
             "on": st.get("on", False),
             "power": round(st.get("brightness", 0)),
             "freeze": st.get("freeze", False),
