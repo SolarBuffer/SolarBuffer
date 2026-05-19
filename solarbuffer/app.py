@@ -4006,6 +4006,8 @@ def control_loop():
                             st["brightness"] = MIN_BRIGHTNESS
                         set_shelly(st["brightness"], True, ip)
                         mark_device_activity(d)
+                        offline_since_map.pop(ip, None)
+                        send_notification(f"☀️ <b>{d.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
 
             if measured_power <= EXPORT_THRESHOLD:
                 if export_start is None:
