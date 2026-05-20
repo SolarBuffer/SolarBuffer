@@ -51,6 +51,67 @@ DEFAULT_EXPERT_SETTINGS = {
     "BOOST_DURATION": 900
 }
 
+# ===== DYNAMIC PRICING =====
+_price_cache = {}          # {datetime(hour, utc): price_eur_kwh}
+_price_cache_lock = threading.Lock()
+_current_price_ct = None   # float ct/kWh, updated every hour
+
+
+def _update_price_cache():
+    global _current_price_ct
+    from datetime import datetime, timezone, timedelta
+    now_utc = datetime.now(timezone.utc)
+    from_dt = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+    till_dt = from_dt + timedelta(days=2) - timedelta(seconds=1)
+    try:
+        r = requests.get(
+            "https://api.energyzero.nl/v1/energyprices",
+            params={
+                "fromDate": from_dt.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "tillDate": till_dt.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "interval": 4,
+                "usageType": 1,
+                "inclBtw": "true",
+            },
+            timeout=10,
+        )
+        if r.status_code == 200:
+            prices = r.json().get("Prices", [])
+            new_cache = {}
+            for p in prices:
+                ts = p.get("readingDate", "")
+                price = p.get("price")
+                if ts and price is not None:
+                    try:
+                        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                        hour_key = dt.replace(minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
+                        new_cache[hour_key] = float(price)
+                    except Exception:
+                        pass
+            with _price_cache_lock:
+                _price_cache.clear()
+                _price_cache.update(new_cache)
+    except Exception:
+        pass
+    # update current price
+    _current_price_ct = get_current_price_ct()
+
+
+def get_current_price_ct():
+    from datetime import datetime, timezone
+    now_utc = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    with _price_cache_lock:
+        price_eur = _price_cache.get(now_utc)
+    if price_eur is None:
+        return None
+    return round(price_eur * 100, 2)
+
+
+def _price_fetch_loop():
+    while True:
+        _update_price_cache()
+        time.sleep(3600)
+
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -1113,6 +1174,15 @@ def settings_expert():
         old_cfg = load_config()
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
+        cfg["dynamic_pricing_enabled"] = request.form.get("dynamic_pricing_enabled") == "on"
+        try:
+            cfg["price_threshold_ct"] = float(request.form.get("price_threshold_ct", "5").replace(",", "."))
+        except ValueError:
+            cfg["price_threshold_ct"] = 5.0
+        try:
+            cfg["price_brightness"] = max(1, min(100, int(request.form.get("price_brightness", "100"))))
+        except ValueError:
+            cfg["price_brightness"] = 100
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
@@ -1189,6 +1259,7 @@ def status_json():
             "legionella_active": s.get("legionella_active", False),
             "legionella_start": s.get("legionella_start"),
             "boost_until": s.get("boost_until"),
+            "price_triggered": s.get("price_triggered", False),
             "energy_today_kwh": round(s.get("energy_today_kwh", 0.0), 3),
             "linked_temperatures": linked_temp_map.get(d["ip"], []),
         })
@@ -1240,6 +1311,9 @@ def status_json():
         vacation_mode=cfg.get("vacation_mode", False),
         vacation_until=cfg.get("vacation_until"),
         vacation_legionella=cfg.get("vacation_legionella", False),
+        current_price_ct=_current_price_ct,
+        dynamic_pricing_enabled=cfg.get("dynamic_pricing_enabled", False),
+        price_threshold_ct=float(cfg.get("price_threshold_ct", 5.0)),
     )
 
 
@@ -2852,6 +2926,7 @@ def init_device_states(devices):
                 "legionella_active": s.get("legionella_active", False),
                 "legionella_start": s.get("legionella_start"),
                 "boost_until": None,
+                "price_triggered": False,
                 "pre_schedule_started": None,
                 "pre_schedule_brightness": None,
                 "pre_schedule_freeze": None,
@@ -2997,6 +3072,8 @@ def _system_status_label(devices_data, cfg):
             last_prio = max((d.get("priority", 1) for d in devices_data), default=1)
             if any(d.get("priority", 1) == last_prio and d.get("power", 0) >= 100 for d in running):
                 return "Overcapaciteit"
+        if all(d.get("price_triggered") for d in running):
+            return "Goedkoop tarief"
         return "Actief"
     expert = cfg.get("expert_settings") or {}
     export_threshold = int(expert.get("EXPORT_THRESHOLD", -50))
@@ -3124,6 +3201,7 @@ def _publish_mqtt_state(client, prefix, cfg):
             "pending_start": st.get("pending_start", False),
             "waiting_for_power_socket": st.get("waiting_for_power_socket", False),
             "manual_override": st.get("manual_override", False),
+            "price_triggered": st.get("price_triggered", False),
             "status": status_label,
         })
         client.publish(f"{prefix}/device/{uid}/on", "ON" if st.get("on", False) else "OFF", retain=True)
@@ -3538,6 +3616,7 @@ def control_loop():
     offline_notified = set()
     prev_active_sched_id = None
     export_start = None
+    price_start = None
     import_unfreeze_start = None
     import_off_start = None
     prev_schedule_active_ips = set()
@@ -3573,6 +3652,9 @@ def control_loop():
             OFF_DELAY = settings["OFF_DELAY"]
             PID_NEUTRAL_LOW = settings["PID_NEUTRAL_LOW"]
             PID_NEUTRAL_HIGH = settings["PID_NEUTRAL_HIGH"]
+            DYNAMIC_PRICING = cfg.get("dynamic_pricing_enabled", False)
+            PRICE_THRESHOLD_CT = float(cfg.get("price_threshold_ct", 5.0))
+            PRICE_BRIGHTNESS = int(cfg.get("price_brightness", 100))
 
             if not p1_ip or not devices:
                 time.sleep(2)
@@ -4007,7 +4089,12 @@ def control_loop():
                         set_shelly(st["brightness"], True, ip)
                         mark_device_activity(d)
                         offline_since_map.pop(ip, None)
-                        send_notification(f"☀️ <b>{d.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
+                        if st.get("price_triggered"):
+                            price_ct_now = get_current_price_ct()
+                            price_label = f" ({price_ct_now:.1f} ct/kWh)" if price_ct_now is not None else ""
+                            send_notification(f"💶 <b>{d.get('name', ip)}</b> gestart op goedkoop stroomtarief{price_label}.", event_key="ntfy_notify_start")
+                        else:
+                            send_notification(f"☀️ <b>{d.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
 
             if measured_power <= EXPORT_THRESHOLD:
                 if export_start is None:
@@ -4058,7 +4145,67 @@ def control_loop():
                         send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
                         export_start = None
 
-            regulating_device = get_lowest_priority_running(non_legionella)
+            # === DYNAMISCH TARIEF ===
+            price_ct = get_current_price_ct()
+            price_cheap = (
+                DYNAMIC_PRICING
+                and price_ct is not None
+                and price_ct <= PRICE_THRESHOLD_CT
+            )
+
+            if price_cheap:
+                if price_start is None:
+                    price_start = now
+            else:
+                if price_start is not None:
+                    price_start = None
+                # Niet meer goedkoop: geef price-triggered apparaten terug aan PID
+                if not price_cheap:
+                    for d in non_legionella:
+                        st_d = device_states[d["ip"]]
+                        if st_d.get("price_triggered"):
+                            st_d["price_triggered"] = False
+
+            PRICE_START_DELAY = 30
+            if price_start is not None and (now - price_start) >= PRICE_START_DELAY:
+                next_dev = get_next_startable_device(non_legionella)
+                if next_dev:
+                    ip = next_dev["ip"]
+                    st = device_states[ip]
+                    if not st.get("pending_start"):
+                        b = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, PRICE_BRIGHTNESS))
+                        if has_power_socket(next_dev):
+                            st["brightness"] = b
+                            st["price_triggered"] = True
+                            ready = ensure_power_socket_on(next_dev)
+                            if ready:
+                                st["started"] = True
+                                st["pending_start"] = False
+                                st["on"] = True
+                                st["freeze"] = False
+                                st["saturated_since"] = None
+                                st["min_since"] = None
+                                set_shelly(b, True, ip)
+                                mark_device_activity(next_dev)
+                                offline_since_map.pop(ip, None)
+                                send_notification(f"💶 <b>{next_dev.get('name', ip)}</b> gestart op goedkoop stroomtarief ({price_ct:.1f} ct/kWh).", event_key="ntfy_notify_start")
+                        else:
+                            st["started"] = True
+                            st["pending_start"] = False
+                            st["on"] = True
+                            st["freeze"] = False
+                            st["saturated_since"] = None
+                            st["min_since"] = None
+                            st["brightness"] = b
+                            st["price_triggered"] = True
+                            set_shelly(b, True, ip)
+                            mark_device_activity(next_dev)
+                            offline_since_map.pop(ip, None)
+                            send_notification(f"💶 <b>{next_dev.get('name', ip)}</b> gestart op goedkoop stroomtarief ({price_ct:.1f} ct/kWh).", event_key="ntfy_notify_start")
+
+            # Price-triggered apparaten niet via PID regelen — houd op vast vermogen
+            non_price_regulated = [d for d in non_legionella if not device_states[d["ip"]].get("price_triggered")]
+            regulating_device = get_lowest_priority_running(non_price_regulated)
 
             for d in non_legionella:
                 ip = d["ip"]
@@ -4651,6 +4798,7 @@ if __name__ == "__main__":
     startup_sync_devices()
     threading.Thread(target=p1_poll_loop, daemon=True).start()
     threading.Thread(target=control_loop, daemon=True).start()
+    threading.Thread(target=_price_fetch_loop, daemon=True).start()
     threading.Thread(target=mqtt_loop, daemon=True).start()
     threading.Thread(target=accessory_poll_loop, daemon=True).start()
     threading.Thread(target=inverter_poll_loop, daemon=True).start()

@@ -1820,6 +1820,11 @@
             <span style="flex:1;color:hsl(220,10%,52%)">Opwekking</span>
             <span id="solarLivePower" style="font-weight:600">—</span>&thinsp;<span style="color:hsl(220,10%,52%)">W</span>
           </div>
+          <div id="priceRow" style="display:none; margin-top:0.3rem; font-size:0.78rem; align-items:center; gap:0.35rem;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" id="priceIcon" style="flex-shrink:0"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+            <span style="flex:1;color:hsl(220,10%,52%)">Stroomprijs</span>
+            <span id="priceValue" style="font-weight:600">—</span>&thinsp;<span style="color:hsl(220,10%,52%)">ct/kWh</span>
+          </div>
           <div id="solarEdgeRow" style="display:none; margin-top:0.35rem; font-size:0.78rem; color:hsl(220,10%,52%); align-items:center; gap:0.35rem;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
             <span id="solarEdgeLabel">Omvormer:</span> <span id="solarEdgeValue">—</span> W
@@ -1995,7 +2000,7 @@
 
           const bufferStatus = getBufferStatus(data);
           const badge = document.getElementById("buffer_status_badge");
-          badge.textContent = bufferStatus.label;
+          badge.textContent = bufferStatus.badge || bufferStatus.label;
           badge.className = `buffer-status-badge ${bufferStatus.cls}`;
 
           renderDevices(data.devices || []);
@@ -2041,6 +2046,29 @@
             solarKwhSpan.style.display = 'none';
           }
           updateSelfMetrics();
+
+          // Stroomprijs
+          const priceRow = document.getElementById('priceRow');
+          const priceVal = document.getElementById('priceValue');
+          const priceIcon = document.getElementById('priceIcon');
+          const priceCt = data.current_price_ct;
+          if (data.dynamic_pricing_enabled && priceCt !== null && priceCt !== undefined) {
+            priceVal.textContent = Number(priceCt).toFixed(1);
+            const threshold = data.price_threshold_ct ?? 5;
+            let priceColor, iconColor;
+            if (priceCt <= threshold) {
+              priceColor = 'hsl(145,50%,32%)'; iconColor = 'hsl(145,55%,36%)'; // groen — goedkoop
+            } else if (priceCt <= threshold * 2) {
+              priceColor = 'hsl(38,90%,38%)'; iconColor = 'hsl(38,90%,38%)';  // oranje — normaal
+            } else {
+              priceColor = 'hsl(0,65%,42%)'; iconColor = 'hsl(0,65%,42%)';    // rood — duur
+            }
+            priceVal.style.color = priceColor;
+            priceIcon.style.color = iconColor;
+            priceRow.style.display = 'flex';
+          } else {
+            priceRow.style.display = 'none';
+          }
         })
         .catch(err => console.error("Update error:", err));
     }
@@ -2275,20 +2303,27 @@
 
       if (data.vacation_mode) return { label: "Vakantiestand", sub: "Alle apparaten uitgeschakeld", cls: "off", icon: SVG_VACATION };
       if (!enabled) return { label: "Uitgeschakeld", sub: "Automatische regeling staat uit", cls: "off", icon: SVG_PAUSE };
-      if (pending.length > 0) return { label: "Opstarten", sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`, cls: "pending", icon: SVG_ROCKET };
+      const n = s => s > 1 ? "s" : "";
+      const devName = arr => arr.length === 1 ? arr[0].name : `${arr.length} SolarBuffers`;
+      const SVG_EURO = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>';
+      if (pending.length > 0) return { label: "Opstarten", badge: `Opstarten · ${devName(pending)}`, sub: `${pending.length} buffer${n(pending.length)} bezig met starten`, cls: "pending", icon: SVG_ROCKET };
       if (running.length > 0) {
         if (frozen.length > 0) {
           const lastPrio = Math.max(...devices.map(d => d.priority ?? 1));
           const lastDevice = running.find(d => (d.priority ?? 1) === lastPrio);
           if (lastDevice && lastDevice.brightness >= 100) {
-            return { label: "Overcapaciteit", sub: `Alle ${frozen.length + 1} buffers op max capaciteit`, cls: "cascade", icon: SVG_PARTCLOUD };
+            const total = running.length + frozen.length;
+            return { label: "Overcapaciteit", badge: `Overcapaciteit · ${lastDevice.name}`, sub: `Alle ${total} buffers op max capaciteit`, cls: "cascade", icon: SVG_PARTCLOUD };
           }
         }
-        return { label: "Actief", sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}${frozen.length > 0 ? ` · ${frozen.length} bevroren` : ""}`, cls: "running", icon: SVG_FIRE };
+        if (running.every(d => d.price_triggered)) {
+          return { label: "Goedkoop tarief", badge: `Goedkoop · ${devName(running)}`, sub: `Draait op voordelig stroomtarief`, cls: "waiting", icon: SVG_EURO };
+        }
+        return { label: "Actief", badge: `Actief · ${devName(running)}`, sub: `${running.length} actieve buffer${n(running.length)}${frozen.length > 0 ? ` · ${frozen.length} bevroren` : ""}`, cls: "running", icon: SVG_FIRE };
       }
 
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
-      if (power <= exportThreshold && started.length === 0) return { label: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
+      if (power <= exportThreshold && started.length === 0) return { label: "Wachten", badge: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
 
       return { label: "Standby", sub: "Geen actieve buffer nodig", cls: "standby", icon: SVG_SUN };
     }
@@ -2298,6 +2333,7 @@
       if (!d.online) return { label: "", cls: "", dot: "" };
       if (d.boost_until && Date.now() / 1000 < d.boost_until) return { label: "Boost", cls: "boost", dot: "active" };
       if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
+      if (d.started && d.on && d.price_triggered) return { label: "Goedkoop tarief", cls: "waiting", dot: "active" };
       if (d.started && d.on) return { label: "Actief", cls: "running", dot: "active" };
       return { label: "Uit", cls: "off", dot: "" };
     }

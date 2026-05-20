@@ -355,6 +355,38 @@
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-title">Dynamische tarieven</div>
+        <label class="toggle-row">
+          <input type="checkbox" name="dynamic_pricing_enabled"
+                 {% if config.dynamic_pricing_enabled %}checked{% endif %}>
+          Starten op goedkoop stroomtarief
+        </label>
+        <p style="font-size:0.8rem; color:hsl(220,10%,52%); margin-top:0.5rem; line-height:1.4;">
+          Start apparaten automatisch wanneer het huidige EPEX-uurtarief onder de drempelwaarde ligt, ook zonder teruglevering.
+        </p>
+        <div class="expert-grid" style="margin-top:1rem;">
+          <div class="field">
+            <span class="field-label">Prijsdrempel</span>
+            <span class="field-help">Start onder dit tarief</span>
+            <div class="input-with-unit">
+              <input type="number" name="price_threshold_ct" step="0.1" min="0"
+                     value="{{ config.price_threshold_ct | default(5.0) }}">
+              <span class="unit">ct/kWh</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Vermogen tarief</span>
+            <span class="field-help">Vast % tijdens goedkoop uur</span>
+            <div class="input-with-unit">
+              <input type="number" name="price_brightness" min="1" max="100"
+                     value="{{ config.price_brightness | default(100) }}">
+              <span class="unit">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="btn-row">
         <a href="/settings" class="btn-secondary">Annuleren</a>
         <button type="submit" class="btn-primary">Opslaan</button>
