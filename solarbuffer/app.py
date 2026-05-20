@@ -2169,34 +2169,43 @@ def _run_apt_upgrade_worker(username):
     global _hw_update_running, _hw_update_done, _hw_update_success
     env = {"DEBIAN_FRONTEND": "noninteractive", "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"}
     write_audit_log("system_upgrade_started", {"user": username})
-    try:
-        # Herstel eventueel onderbroken dpkg-configuratie
-        with _hw_update_cond:
-            _hw_update_log.append(">>> dpkg --configure -a")
-            _hw_update_cond.notify_all()
-        fix_proc = subprocess.Popen(
-            ["sudo", "dpkg", "--configure", "-a",
-             "-o", "Dpkg::Options::=--force-confdef",
-             "-o", "Dpkg::Options::=--force-confold"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1, env=env
-        )
-        _stream_proc(fix_proc)
 
-        # Volledige upgrade
+    def run_step(label, cmd):
         with _hw_update_cond:
-            _hw_update_log.append(">>> apt-get full-upgrade")
+            _hw_update_log.append(f">>> {label}")
             _hw_update_cond.notify_all()
         proc = subprocess.Popen(
-            ["sudo", "apt-get", "full-upgrade", "-y",
-             "-o", "Dpkg::Progress-Fancy=0",
-             "-o", "APT::Color=0",
-             "-o", "Dpkg::Options::=--force-confdef",
-             "-o", "Dpkg::Options::=--force-confold"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1, env=env
         )
-        returncode = _stream_proc(proc)
+        return _stream_proc(proc)
+
+    try:
+        # Stap 1: herstel onderbroken dpkg-configuratie
+        run_step("dpkg --configure -a", [
+            "sudo", "dpkg", "--configure", "-a",
+            "-o", "Dpkg::Options::=--force-confdef",
+            "-o", "Dpkg::Options::=--force-confold",
+        ])
+
+        # Stap 2: herstel kapotte afhankelijkheden
+        run_step("apt-get install -f", [
+            "sudo", "apt-get", "install", "-f", "-y",
+            "-o", "Dpkg::Options::=--force-confdef",
+            "-o", "Dpkg::Options::=--force-confold",
+        ])
+
+        # Stap 3: pakketlijsten vernieuwen
+        run_step("apt-get update", ["sudo", "apt-get", "update"])
+
+        # Stap 4: volledige upgrade
+        returncode = run_step("apt-get full-upgrade", [
+            "sudo", "apt-get", "full-upgrade", "-y",
+            "-o", "Dpkg::Progress-Fancy=0",
+            "-o", "APT::Color=0",
+            "-o", "Dpkg::Options::=--force-confdef",
+            "-o", "Dpkg::Options::=--force-confold",
+        ])
         success = returncode == 0
         write_audit_log("system_upgrade_run", {"returncode": returncode})
     except Exception as e:
