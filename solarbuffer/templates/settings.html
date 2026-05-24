@@ -50,6 +50,55 @@
     }
     .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
 
+    /* ===== SECTION TILES (main view) ===== */
+    .section-tiles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-tile {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.1);
+      padding: 1.1rem 1rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      text-align: left;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+    }
+    .section-tile:hover  { background: hsl(30, 25%, 97%); }
+    .section-tile:active { background: hsl(30, 20%, 94%); }
+
+    .tile-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: hsl(32, 100%, 95%);
+      color: hsl(32, 95%, 48%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tile-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: hsl(220, 20%, 14%);
+      margin-top: 0.1rem;
+    }
+    .tile-sub {
+      font-size: 0.72rem;
+      color: hsl(220, 10%, 50%);
+      line-height: 1.4;
+    }
+
+    /* ===== SETTINGS LIST ===== */
     .settings-list {
       background: white;
       border: 1px solid hsl(30, 15%, 88%);
@@ -71,38 +120,24 @@
       transition: background 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-
     .settings-item:last-child { border-bottom: none; }
-    .settings-item:hover { background: hsl(30, 25%, 97%); }
+    .settings-item:hover  { background: hsl(30, 25%, 97%); }
     .settings-item:active { background: hsl(30, 20%, 94%); }
 
     .settings-icon {
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       border-radius: 10px;
       background: hsl(32, 100%, 95%);
       color: hsl(32, 95%, 48%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
 
     .settings-text { flex: 1; min-width: 0; }
-    .settings-label {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-    .settings-sub {
-      font-size: 0.78rem;
-      color: hsl(220, 10%, 50%);
-      margin-top: 0.1rem;
-    }
+    .settings-label { font-weight: 600; font-size: 0.95rem; }
+    .settings-sub   { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; }
 
-    .settings-chevron {
-      color: hsl(220, 10%, 68%);
-      flex-shrink: 0;
-    }
+    .settings-chevron { color: hsl(220, 10%, 68%); flex-shrink: 0; }
 
     .section-title {
       font-size: 0.72rem;
@@ -113,6 +148,7 @@
       padding: 0 0.25rem;
       margin: 1.25rem 0 0.4rem;
     }
+    .section-view .section-title { margin-top: 0.25rem; }
 
     .back-btn {
       display: inline-flex;
@@ -124,11 +160,13 @@
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
+      font-family: 'Inter', sans-serif;
       color: hsl(220, 20%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       margin-bottom: 0.75rem;
+      cursor: pointer;
     }
     .back-btn:hover {
       background: hsl(32, 100%, 96%);
@@ -145,24 +183,10 @@
       border-bottom: 1px solid hsl(30, 15%, 91%);
     }
     .ctrl-row:last-child { border-bottom: none; }
-
     .ctrl-text { flex: 1; min-width: 0; }
-    .ctrl-label {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-    .ctrl-sub {
-      font-size: 0.78rem;
-      color: hsl(220, 10%, 50%);
-      margin-top: 0.1rem;
-    }
-
-    .ctrl-right {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      flex-shrink: 0;
-    }
+    .ctrl-label { font-weight: 600; font-size: 0.95rem; }
+    .ctrl-sub   { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; }
+    .ctrl-right { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
 
     .dot {
       width: 9px; height: 9px;
@@ -170,20 +194,10 @@
       background: hsl(220, 10%, 80%);
       flex-shrink: 0;
     }
-    .dot.active {
-      background: #22c55e;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.5; }
-    }
+    .dot.active { background: #22c55e; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-    .toggle {
-      position: relative;
-      width: 44px; height: 24px;
-      cursor: pointer; flex-shrink: 0;
-    }
+    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
     .toggle input { display: none; }
     .toggle .slider {
       position: absolute; inset: 0;
@@ -204,10 +218,6 @@
     }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
 
-    html[data-theme="dark"] .ctrl-row        { border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .ctrl-sub        { color: hsl(220, 8%, 55%); }
-    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(220, 8%, 42%); }
-
     .vacation-panel {
       display: none;
       padding: 0.9rem 1.1rem 1rem;
@@ -215,10 +225,6 @@
       background: hsl(37, 40%, 98%);
       flex-direction: column;
       gap: 0.75rem;
-    }
-    html[data-theme="dark"] .vacation-panel {
-      background: hsl(37, 12%, 22%);
-      border-color: hsl(220, 8%, 30%);
     }
     .vacation-field { display: flex; flex-direction: column; gap: 0.3rem; }
     .vacation-field label { font-size: 0.78rem; color: hsl(220,10%,52%); }
@@ -233,15 +239,8 @@
       padding-right: 1.4rem; cursor: pointer;
     }
     .vacation-date-selects select:focus { outline: none; border-color: hsl(32,90%,55%); }
-    html[data-theme="dark"] .vacation-date-selects select {
-      background-color: hsl(220,8%,26%); border-color: hsl(220,8%,38%);
-      color: hsl(220,10%,88%);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23aaa'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-    }
     .vacation-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.83rem; color: hsl(220,10%,40%); cursor: pointer; }
-    html[data-theme="dark"] .vacation-check { color: hsl(220,10%,62%); }
     .vacation-info-line { font-size: 0.82rem; color: hsl(220,10%,50%); }
-    html[data-theme="dark"] .vacation-info-line { color: hsl(220,8%,60%); }
     .vacation-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.1rem; }
     .vacation-save-btn {
       padding: 0.42rem 1rem; border-radius: 0.5rem; border: none;
@@ -255,28 +254,21 @@
       color: hsl(0, 65%, 45%); font-size: 0.83rem; cursor: pointer;
     }
     .vacation-deact-btn:hover { background: hsl(0, 60%, 96%); }
-    html[data-theme="dark"] .vacation-deact-btn { border-color: hsl(0,40%,42%); color: hsl(0,60%,65%); }
-    html[data-theme="dark"] .vacation-deact-btn:hover { background: hsl(0,20%,28%); }
     .vacation-cancel-btn {
       padding: 0.42rem 1rem; border-radius: 0.5rem;
       border: 1px solid hsl(220,12%,80%); background: transparent;
       color: hsl(220,10%,40%); font-size: 0.83rem; cursor: pointer;
     }
-    html[data-theme="dark"] .vacation-cancel-btn { border-color: hsl(220,8%,40%); color: hsl(220,10%,65%); }
 
-    /* ===== REMOTE TOEGANG ===== */
+    /* ===== VERBINDING ===== */
     .ts-badge {
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.15rem 0.55rem;
-      border-radius: 999px;
-      margin-left: auto;
-      margin-right: 0.4rem;
-      white-space: nowrap;
-      flex-shrink: 0;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 0.15rem 0.55rem; border-radius: 999px;
+      margin-left: auto; margin-right: 0.4rem;
+      white-space: nowrap; flex-shrink: 0;
     }
-    .ts-badge.on  { background: hsl(145, 55%, 90%); color: hsl(145, 55%, 30%); }
-    .ts-badge.off { background: hsl(220, 14%, 93%); color: hsl(220, 10%, 46%); }
+    .ts-badge.on      { background: hsl(145, 55%, 90%); color: hsl(145, 55%, 30%); }
+    .ts-badge.off     { background: hsl(220, 14%, 93%); color: hsl(220, 10%, 46%); }
     .ts-badge.pending { background: hsl(32, 100%, 92%); color: hsl(32, 90%, 38%); }
 
     .ts-panel {
@@ -285,7 +277,6 @@
       border-top: 1px solid hsl(30, 15%, 91%);
       background: hsl(30, 25%, 98%);
     }
-
     .ts-row {
       display: flex; align-items: center; justify-content: space-between;
       gap: 0.75rem; padding: 0.4rem 0;
@@ -295,18 +286,13 @@
     .ts-row-label { font-size: 0.8rem; color: hsl(220, 10%, 50%); }
     .ts-row-val   { font-size: 0.8rem; font-weight: 600; font-family: monospace;
                     color: hsl(220, 16%, 22%); text-align: right; word-break: break-all; }
-
     .ts-hint { font-size: 0.78rem; color: hsl(220, 10%, 56%); margin-bottom: 0.5rem; }
-
     .ts-url-row {
       display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
       padding: 0.45rem 0.6rem; border-radius: 0.5rem;
       background: hsl(220, 14%, 97%); border: 1px solid hsl(220, 10%, 90%);
     }
-    .ts-auth-link {
-      flex: 1; font-size: 0.72rem; color: hsl(220, 60%, 50%);
-      word-break: break-all; text-decoration: none;
-    }
+    .ts-auth-link { flex: 1; font-size: 0.72rem; color: hsl(220, 60%, 50%); word-break: break-all; text-decoration: none; }
     .ts-auth-link:hover { text-decoration: underline; }
     .ts-copy-btn {
       flex-shrink: 0; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 600;
@@ -315,14 +301,12 @@
       transition: background 0.15s; white-space: nowrap;
     }
     .ts-copy-btn:hover { background: hsl(220, 10%, 93%); }
-
     .ts-install-cmd {
       display: block; margin-top: 0.5rem; padding: 0.4rem 0.6rem;
       background: hsl(220, 12%, 15%); color: hsl(120, 50%, 68%);
       border-radius: 0.4rem; font-size: 0.73rem; font-family: monospace;
       user-select: all;
     }
-
     .ts-connect-btn {
       display: block; width: 100%; margin-top: 0.75rem;
       padding: 0.6rem; font-size: 0.88rem; font-weight: 600;
@@ -331,49 +315,8 @@
       border: none; border-radius: 0.5rem; cursor: pointer;
       transition: background 0.15s;
     }
-    .ts-connect-btn:hover { background: hsl(32, 90%, 45%); }
+    .ts-connect-btn:hover    { background: hsl(32, 90%, 45%); }
     .ts-connect-btn:disabled { opacity: 0.6; cursor: default; }
-
-    /* ===== DARK MODE ===== */
-    html[data-theme="dark"] body {
-      background: hsl(220, 8%, 18%);
-      color: hsl(220, 10%, 88%);
-    }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 55%); }
-
-    html[data-theme="dark"] .settings-list {
-      background: hsl(220, 8%, 24%);
-      border-color: hsl(220, 8%, 32%);
-      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.25);
-    }
-    html[data-theme="dark"] .settings-item {
-      border-bottom-color: hsl(220, 8%, 30%);
-    }
-    html[data-theme="dark"] .settings-item:hover  { background: hsl(220, 8%, 28%); }
-    html[data-theme="dark"] .settings-item:active { background: hsl(220, 8%, 31%); }
-    html[data-theme="dark"] .settings-icon {
-      background: hsl(32, 30%, 26%);
-      color: hsl(32, 80%, 62%);
-    }
-    html[data-theme="dark"] .settings-sub    { color: hsl(220, 8%, 55%); }
-    html[data-theme="dark"] .settings-chevron { color: hsl(220, 8%, 45%); }
-    html[data-theme="dark"] .section-title   { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-
-    html[data-theme="dark"] .ts-badge.on      { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
-    html[data-theme="dark"] .ts-badge.off     { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .ts-badge.pending { background: hsl(32, 30%, 24%); color: hsl(32, 80%, 60%); }
-    html[data-theme="dark"] .ts-panel         { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .ts-row           { border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .ts-row-label     { color: hsl(220, 8%, 54%); }
-    html[data-theme="dark"] .ts-row-val       { color: hsl(220, 8%, 82%); }
-    html[data-theme="dark"] .ts-hint          { color: hsl(220, 8%, 48%); }
-    html[data-theme="dark"] .ts-url-row       { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] .ts-auth-link     { color: hsl(210, 70%, 62%); }
-    html[data-theme="dark"] .ts-copy-btn      { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 70%); }
-    html[data-theme="dark"] .ts-copy-btn:hover { background: hsl(220, 8%, 38%); }
-    html[data-theme="dark"] .ts-install-cmd   { background: hsl(220, 12%, 12%); }
 
     /* ===== DARK MODE TOGGLE ===== */
     .settings-item.clickable { cursor: pointer; user-select: none; }
@@ -394,95 +337,127 @@
     }
     .dark-pill.on { background: hsl(32, 95%, 52%); }
     .dark-pill.on::after { transform: translateX(16px); }
-    html[data-theme="dark"] .dark-pill { background: hsl(220, 8%, 42%); }
-    html[data-theme="dark"] .dark-pill.on { background: hsl(32, 80%, 58%); }
 
-    /* ===== FACTORY RESET ===== */
+    /* ===== UPDATE BADGE & DANGER ===== */
     .update-badge {
-      font-size: 0.68rem;
-      font-weight: 700;
-      color: white;
-      background: hsl(32, 95%, 52%);
-      border-radius: 999px;
-      padding: 0.15rem 0.5rem;
-      white-space: nowrap;
-      flex-shrink: 0;
-      margin-right: 0.25rem;
+      font-size: 0.68rem; font-weight: 700;
+      color: white; background: hsl(32, 95%, 52%);
+      border-radius: 999px; padding: 0.15rem 0.5rem;
+      white-space: nowrap; flex-shrink: 0; margin-right: 0.25rem;
     }
-    html[data-theme="dark"] .update-badge {
-      background: hsl(32, 80%, 52%);
-    }
-
-    .settings-icon.danger {
-      background: hsl(0, 80%, 95%);
-      color: hsl(0, 70%, 50%);
-    }
+    .settings-icon.danger { background: hsl(0, 80%, 95%); color: hsl(0, 70%, 50%); }
     .settings-item.danger .settings-label { color: hsl(0, 65%, 42%); }
     .settings-item.danger:hover { background: hsl(0, 80%, 98%); }
 
+    /* ===== MODALS ===== */
     .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 100;
+      align-items: center; justify-content: center; padding: 1rem;
     }
     .modal-overlay.open { display: flex; }
     .modal {
-      background: white;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      width: 100%;
-      max-width: 380px;
+      background: white; border-radius: 1rem; padding: 1.5rem;
+      width: 100%; max-width: 380px;
       box-shadow: 0 20px 60px -10px rgba(0,0,0,0.3);
     }
     .modal-icon {
-      width: 52px; height: 52px;
-      border-radius: 50%;
-      background: hsl(0, 80%, 95%);
-      color: hsl(0, 65%, 48%);
+      width: 52px; height: 52px; border-radius: 50%;
+      background: hsl(0, 80%, 95%); color: hsl(0, 65%, 48%);
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 1rem;
-      font-size: 1.5rem;
+      margin: 0 auto 1rem; font-size: 1.5rem;
     }
-    .modal h2 {
-      font-size: 1.1rem; font-weight: 700;
-      text-align: center; margin-bottom: 0.5rem;
-    }
-    .modal p {
-      font-size: 0.85rem; color: hsl(220, 10%, 46%);
-      text-align: center; line-height: 1.55; margin-bottom: 1.25rem;
-    }
+    .modal h2 { font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; }
+    .modal p  { font-size: 0.85rem; color: hsl(220, 10%, 46%); text-align: center; line-height: 1.55; margin-bottom: 1.25rem; }
     .modal-btns { display: flex; gap: 0.75rem; }
     .btn-cancel {
       flex: 1; padding: 0.7rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
-      border-radius: 0.5rem; background: transparent;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600; font-size: 0.95rem;
-      cursor: pointer; transition: background 0.15s;
+      border: 1.5px solid hsl(30, 15%, 82%); border-radius: 0.5rem;
+      background: transparent; font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 0.95rem; cursor: pointer;
+      transition: background 0.15s;
     }
     .btn-cancel:hover { background: hsl(30, 15%, 94%); }
     .btn-reset {
       flex: 1; padding: 0.7rem;
-      background: hsl(0, 68%, 50%);
-      border: none; border-radius: 0.5rem; color: white;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700; font-size: 0.95rem;
-      cursor: pointer; transition: background 0.15s;
+      background: hsl(0, 68%, 50%); border: none; border-radius: 0.5rem;
+      color: white; font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700; font-size: 0.95rem; cursor: pointer;
+      transition: background 0.15s;
     }
-    .btn-reset:hover { background: hsl(0, 65%, 44%); }
+    .btn-reset:hover    { background: hsl(0, 65%, 44%); }
     .btn-reset:disabled { opacity: 0.6; cursor: default; }
+
+    /* ===== DARK MODE ===== */
+    html[data-theme="dark"] body {
+      background: hsl(220, 8%, 18%);
+      color: hsl(220, 10%, 88%);
+    }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 55%); }
+
+    html[data-theme="dark"] .section-tile {
+      background: hsl(220, 8%, 24%);
+      border-color: hsl(220, 8%, 32%);
+      box-shadow: 0 4px 16px -6px rgba(0,0,0,0.2);
+    }
+    html[data-theme="dark"] .section-tile:hover  { background: hsl(220, 8%, 28%); }
+    html[data-theme="dark"] .section-tile:active { background: hsl(220, 8%, 31%); }
+    html[data-theme="dark"] .tile-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .tile-label { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .tile-sub   { color: hsl(220, 8%, 55%); }
+
+    html[data-theme="dark"] .settings-list { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.25); }
+    html[data-theme="dark"] .settings-item { border-bottom-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .settings-item:hover  { background: hsl(220, 8%, 28%); }
+    html[data-theme="dark"] .settings-item:active { background: hsl(220, 8%, 31%); }
+    html[data-theme="dark"] .settings-icon  { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .settings-sub   { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .settings-chevron { color: hsl(220, 8%, 45%); }
+    html[data-theme="dark"] .section-title { color: hsl(220, 8%, 52%); }
+
+    html[data-theme="dark"] .back-btn       { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+
+    html[data-theme="dark"] .ctrl-row   { border-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .ctrl-sub   { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(220, 8%, 42%); }
+
+    html[data-theme="dark"] .vacation-panel      { background: hsl(37, 12%, 22%); border-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .vacation-field label { color: hsl(220,8%,55%); }
+    html[data-theme="dark"] .vacation-date-selects select {
+      background-color: hsl(220,8%,26%); border-color: hsl(220,8%,38%); color: hsl(220,10%,88%);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23aaa'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    }
+    html[data-theme="dark"] .vacation-check      { color: hsl(220,10%,62%); }
+    html[data-theme="dark"] .vacation-info-line  { color: hsl(220,8%,60%); }
+    html[data-theme="dark"] .vacation-cancel-btn { border-color: hsl(220,8%,40%); color: hsl(220,10%,65%); }
+    html[data-theme="dark"] .vacation-deact-btn  { border-color: hsl(0,40%,42%); color: hsl(0,60%,65%); }
+    html[data-theme="dark"] .vacation-deact-btn:hover { background: hsl(0,20%,28%); }
+
+    html[data-theme="dark"] .ts-badge.on      { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
+    html[data-theme="dark"] .ts-badge.off     { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .ts-badge.pending { background: hsl(32, 30%, 24%); color: hsl(32, 80%, 60%); }
+    html[data-theme="dark"] .ts-panel         { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .ts-row           { border-color: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .ts-row-label     { color: hsl(220, 8%, 54%); }
+    html[data-theme="dark"] .ts-row-val       { color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .ts-hint          { color: hsl(220, 8%, 48%); }
+    html[data-theme="dark"] .ts-url-row       { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .ts-auth-link     { color: hsl(210, 70%, 62%); }
+    html[data-theme="dark"] .ts-copy-btn      { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 70%); }
+    html[data-theme="dark"] .ts-copy-btn:hover { background: hsl(220, 8%, 38%); }
+    html[data-theme="dark"] .ts-install-cmd   { background: hsl(220, 12%, 12%); }
+
+    html[data-theme="dark"] .dark-pill    { background: hsl(220, 8%, 42%); }
+    html[data-theme="dark"] .dark-pill.on { background: hsl(32, 80%, 58%); }
+    html[data-theme="dark"] .update-badge { background: hsl(32, 80%, 52%); }
 
     html[data-theme="dark"] .settings-icon.danger { background: hsl(0, 40%, 22%); color: hsl(0, 70%, 62%); }
     html[data-theme="dark"] .settings-item.danger .settings-label { color: hsl(0, 65%, 62%); }
     html[data-theme="dark"] .settings-item.danger:hover { background: hsl(0, 20%, 22%); }
-    html[data-theme="dark"] .modal { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .modal   { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
     html[data-theme="dark"] .modal p { color: hsl(220, 8%, 56%); }
-    html[data-theme="dark"] .btn-cancel { border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 70%); }
+    html[data-theme="dark"] .btn-cancel       { border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 70%); }
     html[data-theme="dark"] .btn-cancel:hover { background: hsl(220, 8%, 30%); }
   </style>
 </head>
@@ -494,380 +469,487 @@
       <p>Instellingen</p>
     </div>
 
-    <a class="back-btn" href="/dashboard">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
-      Dashboard
-    </a>
-    <div class="section-title">Configuratie</div>
-    <div class="settings-list">
-
-      <a class="settings-item" href="/settings/p1">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1,9L3,11C7.97,6.03 16.03,6.03 21,11L23,9C16.93,2.93 7.08,2.93 1,9M9,17L12,20L15,17C13.35,15.34 10.66,15.34 9,17M5,13L7,15C9.76,12.24 14.24,12.24 17,15L19,13C15.14,9.14 8.87,9.14 5,13Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">P1-meter</div>
-          <div class="settings-sub">IP-adres van de HomeWizard P1-meter</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+    <!-- ===== MAIN VIEW ===== -->
+    <div id="mainView">
+      <a class="back-btn" href="/dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        Dashboard
       </a>
+      <div class="section-tiles">
 
-      <a class="settings-item" href="/settings/solarbuffers">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C14.67,4 17.07,5.17 18.67,7.07L7.07,18.67C5.17,17.07 4,14.67 4,12A8,8 0 0,1 12,4M12,20A8,8 0 0,1 4.93,15.14L15.14,4.93C18,5.86 20,8.72 20,12A8,8 0 0,1 12,20Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">SolarBuffers</div>
-          <div class="settings-sub">SolarBuffer-apparaten, prioriteit en power meter</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
+        <button class="section-tile" onclick="showSection('configuratie')">
+          <div class="tile-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V19H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"/></svg>
+          </div>
+          <div class="tile-label">Configuratie</div>
+          <div class="tile-sub">P1, SolarBuffers, netwerk &amp; meer</div>
+        </button>
 
-      <a class="settings-item" href="/settings/expert">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Expert instellingen</div>
-          <div class="settings-sub">Regelwaarden, drempelwaardes en timers</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
+        <button class="section-tile" onclick="showSection('accessories')">
+          <div class="tile-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg>
+          </div>
+          <div class="tile-label">Accessories</div>
+          <div class="tile-sub">Verbruikers &amp; IR-besturing</div>
+        </button>
 
-      <a class="settings-item" href="/settings/mqtt">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">MQTT / Home Assistant</div>
-          <div class="settings-sub">MQTT broker en HA auto-discovery</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
+        <button class="section-tile" onclick="showSection('besturing')">
+          <div class="tile-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8L10,17Z"/></svg>
+          </div>
+          <div class="tile-label">Besturing</div>
+          <div class="tile-sub">Sturing, schema's &amp; vakantie</div>
+        </button>
 
-      <a class="settings-item" href="/network">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1,9L3,11C7.97,6.03 16.03,6.03 21,11L23,9C16.93,2.93 7.08,2.93 1,9M9,17L12,20L15,17C13.35,15.34 10.66,15.34 9,17M5,13L7,15C9.76,12.24 14.24,12.24 17,15L19,13C15.14,9.14 8.87,9.14 5,13Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Netwerk &amp; WiFi</div>
-          <div class="settings-sub" id="wifiSubText">WiFi-netwerk wijzigen</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
+        <button class="section-tile" onclick="showSection('verbinding')">
+          <div class="tile-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21,19V20H3V19L5,17V11C5,7.9 7.03,5.17 10,4.29C10,4.19 10,4.1 10,4A2,2 0 0,1 12,2A2,2 0 0,1 14,4C14,4.1 14,4.19 14,4.29C16.97,5.17 19,7.9 19,11V17L21,19M14,21A2,2 0 0,1 12,23A2,2 0 0,1 10,21"/></svg>
+          </div>
+          <div class="tile-label">Verbinding</div>
+          <div class="tile-sub">Meldingen &amp; remote toegang</div>
+        </button>
 
-      <a class="settings-item" href="/location">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Locatie</div>
-          <div class="settings-sub">Coördinaten voor zonne-verwachting</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
+        <button class="section-tile" onclick="showSection('account')">
+          <div class="tile-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg>
+          </div>
+          <div class="tile-label">Account</div>
+          <div class="tile-sub">Gebruikers &amp; weergave</div>
+        </button>
 
-      <a class="settings-item" href="/updates">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.66 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L21,3V10.12Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Updates</div>
-          <div class="settings-sub" id="updateSettingsSub">Firmware, software &amp; hub updates</div>
-        </div>
-        <span class="update-badge" id="settingsUpdateBadge" style="display:none">Nieuw</span>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
+        <button class="section-tile" onclick="showSection('systeem')">
+          <div class="tile-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21,16H3V4H21M21,2H3C1.89,2 1,2.89 1,4V16A2,2 0 0,0 3,18H10V20H8V22H16V20H14V18H21A2,2 0 0,0 23,16V4C23,2.89 22.1,2 21,2Z"/></svg>
+          </div>
+          <div class="tile-label">Systeem</div>
+          <div class="tile-sub">Info, back-up &amp; herstel</div>
+        </button>
 
+      </div>
     </div>
 
-    <div class="section-title">Verbruikers</div>
-    <div class="settings-list">
-      <a class="settings-item" href="/accessories">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Voeg verbruikers toe</div>
-          <div class="settings-sub">Apparaten met alleen een vermogensmeter (bijv. wasmachine, droger)</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
+    <!-- ===== SUB-VIEW: Configuratie ===== -->
+    <div class="section-view" id="view-configuratie" style="display:none">
+      <button class="back-btn" onclick="showMain()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        Instellingen
+      </button>
+      <div class="section-title">Configuratie</div>
+      <div class="settings-list">
+
+        <a class="settings-item" href="/settings/p1">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1,9L3,11C7.97,6.03 16.03,6.03 21,11L23,9C16.93,2.93 7.08,2.93 1,9M9,17L12,20L15,17C13.35,15.34 10.66,15.34 9,17M5,13L7,15C9.76,12.24 14.24,12.24 17,15L19,13C15.14,9.14 8.87,9.14 5,13Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">P1-meter</div>
+            <div class="settings-sub">IP-adres van de HomeWizard P1-meter</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/settings/solarbuffers">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C14.67,4 17.07,5.17 18.67,7.07L7.07,18.67C5.17,17.07 4,14.67 4,12A8,8 0 0,1 12,4M12,20A8,8 0 0,1 4.93,15.14L15.14,4.93C18,5.86 20,8.72 20,12A8,8 0 0,1 12,20Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">SolarBuffers</div>
+            <div class="settings-sub">SolarBuffer-apparaten, prioriteit en power meter</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/settings/expert">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Expert instellingen</div>
+            <div class="settings-sub">Regelwaarden, drempelwaardes en timers</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/settings/mqtt">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">MQTT / Home Assistant</div>
+            <div class="settings-sub">MQTT broker en HA auto-discovery</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/network">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1,9L3,11C7.97,6.03 16.03,6.03 21,11L23,9C16.93,2.93 7.08,2.93 1,9M9,17L12,20L15,17C13.35,15.34 10.66,15.34 9,17M5,13L7,15C9.76,12.24 14.24,12.24 17,15L19,13C15.14,9.14 8.87,9.14 5,13Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Netwerk &amp; WiFi</div>
+            <div class="settings-sub" id="wifiSubText">WiFi-netwerk wijzigen</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/location">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Locatie</div>
+            <div class="settings-sub">Coördinaten voor zonne-verwachting</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/updates">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.66 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L21,3V10.12Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Updates</div>
+            <div class="settings-sub" id="updateSettingsSub">Firmware, software &amp; hub updates</div>
+          </div>
+          <span class="update-badge" id="settingsUpdateBadge" style="display:none">Nieuw</span>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+      </div>
     </div>
 
-    <div class="section-title">Besturing</div>
-    <div class="settings-list">
+    <!-- ===== SUB-VIEW: Accessories ===== -->
+    <div class="section-view" id="view-accessories" style="display:none">
+      <button class="back-btn" onclick="showMain()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        Instellingen
+      </button>
+      <div class="section-title">Accessories</div>
+      <div class="settings-list">
 
-      <div class="ctrl-row">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8L10,17Z"/></svg>
-        </div>
-        <div class="ctrl-text">
-          <div class="ctrl-label">Automatische besturing</div>
-          <div class="ctrl-sub" id="pid_sub">Laden…</div>
-        </div>
-        <div class="ctrl-right">
-          <div class="dot" id="pid_dot"></div>
-          <label class="toggle">
-            <input type="checkbox" id="pid_toggle" onchange="togglePID()"/>
-            <span class="slider"></span>
-          </label>
-        </div>
+        <a class="settings-item" href="/accessories">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Voeg verbruikers toe</div>
+            <div class="settings-sub">Apparaten met alleen een vermogensmeter (bijv. wasmachine, droger)</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/settings/broadlink">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19,14A7,7 0 0,0 12,7A7,7 0 0,0 5,14H7A5,5 0 0,1 12,9A5,5 0 0,1 17,14H19M15,14A3,3 0 0,0 12,11A3,3 0 0,0 9,14H11A1,1 0 0,1 12,13A1,1 0 0,1 13,14H15M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Broadlink IR-besturing</div>
+            <div class="settings-sub">IR-apparaten inleren en beheren (RM4, RM Pro)</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
       </div>
+    </div>
 
-      <div class="ctrl-row">
-        <div class="settings-icon">
-          <i class="mdi mdi-bacteria-outline" style="font-size:1.25rem;line-height:1"></i>
-        </div>
-        <div class="ctrl-text">
-          <div class="ctrl-label">Anti-Legionella</div>
-          <div class="ctrl-sub" id="legionella_sub">Laden…</div>
-        </div>
-        <div class="ctrl-right">
-          <div class="dot" id="legionella_dot"></div>
-          <label class="toggle">
-            <input type="checkbox" id="legionella_toggle" onchange="toggleAntiLegionella()"/>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
+    <!-- ===== SUB-VIEW: Besturing ===== -->
+    <div class="section-view" id="view-besturing" style="display:none">
+      <button class="back-btn" onclick="showMain()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        Instellingen
+      </button>
+      <div class="section-title">Besturing</div>
+      <div class="settings-list">
 
-      <div class="ctrl-row">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg>
+        <div class="ctrl-row">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8L10,17Z"/></svg>
+          </div>
+          <div class="ctrl-text">
+            <div class="ctrl-label">Automatische besturing</div>
+            <div class="ctrl-sub" id="pid_sub">Laden…</div>
+          </div>
+          <div class="ctrl-right">
+            <div class="dot" id="pid_dot"></div>
+            <label class="toggle">
+              <input type="checkbox" id="pid_toggle" onchange="togglePID()"/>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
-        <div class="ctrl-text">
-          <div class="ctrl-label">Tijdschema's</div>
-          <div class="ctrl-sub" id="schedules_sub">Laden…</div>
-        </div>
-        <div class="ctrl-right">
-          <div class="dot" id="schedules_dot"></div>
-          <label class="toggle">
-            <input type="checkbox" id="schedules_toggle" onchange="toggleSchedules()"/>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
 
-      <div class="ctrl-row" id="vacationCtrlRow">
-        <div class="settings-icon">
-          <i class="mdi mdi-palm-tree" style="font-size:1.25rem;line-height:1"></i>
+        <div class="ctrl-row">
+          <div class="settings-icon">
+            <i class="mdi mdi-bacteria-outline" style="font-size:1.25rem;line-height:1"></i>
+          </div>
+          <div class="ctrl-text">
+            <div class="ctrl-label">Anti-Legionella</div>
+            <div class="ctrl-sub" id="legionella_sub">Laden…</div>
+          </div>
+          <div class="ctrl-right">
+            <div class="dot" id="legionella_dot"></div>
+            <label class="toggle">
+              <input type="checkbox" id="legionella_toggle" onchange="toggleAntiLegionella()"/>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
-        <div class="ctrl-text">
-          <div class="ctrl-label">Vakantiestand</div>
-          <div class="ctrl-sub" id="vacation_sub">Uitgeschakeld</div>
-        </div>
-        <div class="ctrl-right">
-          <div class="dot" id="vacation_dot"></div>
-          <label class="toggle">
-            <input type="checkbox" id="vacation_toggle" onchange="onVacationToggle()"/>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
 
-      <div class="vacation-panel" id="vacationPanel">
-        <div id="vacationFormSection">
-          <div class="vacation-field">
-            <label>Terug thuis op</label>
-            <div class="vacation-date-selects">
-              <select id="vacationDay"></select>
-              <select id="vacationMonth">
-                <option value="1">Januari</option><option value="2">Februari</option>
-                <option value="3">Maart</option><option value="4">April</option>
-                <option value="5">Mei</option><option value="6">Juni</option>
-                <option value="7">Juli</option><option value="8">Augustus</option>
-                <option value="9">September</option><option value="10">Oktober</option>
-                <option value="11">November</option><option value="12">December</option>
-              </select>
-              <select id="vacationYear"></select>
+        <div class="ctrl-row">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg>
+          </div>
+          <div class="ctrl-text">
+            <div class="ctrl-label">Tijdschema's</div>
+            <div class="ctrl-sub" id="schedules_sub">Laden…</div>
+          </div>
+          <div class="ctrl-right">
+            <div class="dot" id="schedules_dot"></div>
+            <label class="toggle">
+              <input type="checkbox" id="schedules_toggle" onchange="toggleSchedules()"/>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="ctrl-row" id="vacationCtrlRow">
+          <div class="settings-icon">
+            <i class="mdi mdi-palm-tree" style="font-size:1.25rem;line-height:1"></i>
+          </div>
+          <div class="ctrl-text">
+            <div class="ctrl-label">Vakantiestand</div>
+            <div class="ctrl-sub" id="vacation_sub">Uitgeschakeld</div>
+          </div>
+          <div class="ctrl-right">
+            <div class="dot" id="vacation_dot"></div>
+            <label class="toggle">
+              <input type="checkbox" id="vacation_toggle" onchange="onVacationToggle()"/>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="vacation-panel" id="vacationPanel">
+          <div id="vacationFormSection">
+            <div class="vacation-field">
+              <label>Terug thuis op</label>
+              <div class="vacation-date-selects">
+                <select id="vacationDay"></select>
+                <select id="vacationMonth">
+                  <option value="1">Januari</option><option value="2">Februari</option>
+                  <option value="3">Maart</option><option value="4">April</option>
+                  <option value="5">Mei</option><option value="6">Juni</option>
+                  <option value="7">Juli</option><option value="8">Augustus</option>
+                  <option value="9">September</option><option value="10">Oktober</option>
+                  <option value="11">November</option><option value="12">December</option>
+                </select>
+                <select id="vacationYear"></select>
+              </div>
+            </div>
+            <div class="ctrl-row" style="padding:0.6rem 0; border-bottom:none;">
+              <div class="ctrl-text">
+                <div class="ctrl-label" style="font-size:0.88rem;">Anti-legionella</div>
+                <div class="ctrl-sub">Cyclus doorlopen tijdens vakantie</div>
+              </div>
+              <div class="ctrl-right">
+                <label class="toggle">
+                  <input type="checkbox" id="vacationLegInput"/>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            <div id="vacationDateError" style="display:none; font-size:0.78rem; color:hsl(0,65%,48%); margin-top:-0.25rem;"></div>
+            <div class="vacation-btn-row">
+              <button class="vacation-save-btn" onclick="saveVacation()">Opslaan</button>
+              <button class="vacation-cancel-btn" onclick="cancelVacation()">Annuleren</button>
             </div>
           </div>
-          <div class="ctrl-row" style="padding:0.6rem 0; border-bottom:none;">
-            <div class="ctrl-text">
-              <div class="ctrl-label" style="font-size:0.88rem;">Anti-legionella</div>
-              <div class="ctrl-sub">Cyclus doorlopen tijdens vakantie</div>
-            </div>
-            <div class="ctrl-right">
-              <label class="toggle">
-                <input type="checkbox" id="vacationLegInput"/>
-                <span class="slider"></span>
-              </label>
+
+          <div id="vacationActiveSection" style="display:none; flex-direction:column; gap:0.4rem;">
+            <div class="vacation-info-line" id="vacationUntilLine"></div>
+            <div class="vacation-info-line" id="vacationLegLine"></div>
+            <div class="vacation-btn-row" style="margin-top:0.25rem;">
+              <button class="vacation-deact-btn" onclick="deactivateVacation()">Vakantiestand uitschakelen</button>
             </div>
           </div>
-          <div id="vacationDateError" style="display:none; font-size:0.78rem; color:hsl(0,65%,48%); margin-top:-0.25rem;"></div>
-          <div class="vacation-btn-row">
-            <button class="vacation-save-btn" onclick="saveVacation()">Opslaan</button>
-            <button class="vacation-cancel-btn" onclick="cancelVacation()">Annuleren</button>
-          </div>
         </div>
 
-        <div id="vacationActiveSection" style="display:none; flex-direction:column; gap:0.4rem;">
-          <div class="vacation-info-line" id="vacationUntilLine"></div>
-          <div class="vacation-info-line" id="vacationLegLine"></div>
-          <div class="vacation-btn-row" style="margin-top:0.25rem;">
-            <button class="vacation-deact-btn" onclick="deactivateVacation()">Vakantiestand uitschakelen</button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="section-title">Verbinding</div>
-    <div class="settings-list">
-
-      <a class="settings-item" href="/settings/ntfy">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21,19V20H3V19L5,17V11C5,7.9 7.03,5.17 10,4.29C10,4.19 10,4.1 10,4A2,2 0 0,1 12,2A2,2 0 0,1 14,4C14,4.1 14,4.19 14,4.29C16.97,5.17 19,7.9 19,11V17L21,19M14,21A2,2 0 0,1 12,23A2,2 0 0,1 10,21"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Pushmeldingen</div>
-          <div class="settings-sub">{% set _cu = config.users | selectattr("username","equalto", session_username) | first | default(None) %}{% if _cu and _cu.ntfy_enabled %}Ingeschakeld{% else %}Pushmeldingen via ntfy{% endif %}</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
-
-      <div class="settings-item" id="tsToggleRow" onclick="tsTogglePanel()" style="cursor:pointer">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,15.97 6,15.41C6,13.82 8.71,12.5 12,12.5C15.29,12.5 18,13.82 18,15.41C17.76,15.97 17.47,16.5 17.13,17Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Remote Toegang</div>
-          <div class="settings-sub">Tailscale VPN-verbinding</div>
-        </div>
-        <span class="ts-badge off" id="tsBadge">Laden…</span>
-        <svg class="settings-chevron" id="tsChevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transition:transform 0.2s"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </div>
-
-      <div class="ts-panel" id="tsPanel">
-        <div id="tsNotInstalled" style="display:none">
-          <p class="ts-hint">Tailscale is niet geïnstalleerd. Voer dit uit op de server:</p>
-          <code class="ts-install-cmd">curl -fsSL https://tailscale.com/install.sh | sh</code>
-        </div>
-
-        <div id="tsAuthBox" style="display:none">
-          <p class="ts-hint">Open de link om in te loggen bij Tailscale:</p>
-          <div class="ts-url-row">
-            <a id="tsAuthUrl" class="ts-auth-link" href="#" target="_blank" rel="noopener">—</a>
-            <button class="ts-copy-btn" onclick="tsCopyUrl()"><span id="tsCopyLabel">Kopieer</span></button>
-          </div>
-        </div>
-
-        <div id="tsConnected" style="display:none">
-          <div class="ts-row">
-            <span class="ts-row-label">Tailscale IP</span>
-            <span class="ts-row-val" id="tsIpVal">—</span>
-          </div>
-          <div class="ts-row">
-            <span class="ts-row-label">Hostnaam</span>
-            <span class="ts-row-val">http://solarbuffer:5001</span>
-          </div>
-        </div>
-
-        <div id="tsDisconnected" style="display:none">
-          <button class="ts-connect-btn" id="tsConnectBtn" onclick="tsConnect()">Verbinden</button>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="section-title">Account</div>
-    <div class="settings-list">
-
-      <div class="settings-item clickable" onclick="toggleDarkMode()">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V5Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Donkere modus</div>
-          <div class="settings-sub">Schakel donkere modus in of uit</div>
-        </div>
-        <div class="dark-pill" id="darkPill"></div>
-      </div>
-
-      <a class="settings-item" href="/change_credentials">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,14A2,2 0 0,1 5,12A2,2 0 0,1 7,10A2,2 0 0,1 9,12A2,2 0 0,1 7,14M12.65,10C11.83,7.67 9.61,6 7,6A6,6 0 0,0 1,12A6,6 0 0,0 7,18C9.61,18 11.83,16.33 12.65,14H17V18H21V14H23V10H12.65Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Inloggegevens</div>
-          <div class="settings-sub">Gebruikersnaam en wachtwoord wijzigen</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
-
-      <a class="settings-item" href="/users">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Gebruikersbeheer</div>
-          <div class="settings-sub">Gebruikers toevoegen of verwijderen</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
-
-    </div>
-
-    <div class="section-title">Systeem</div>
-    <div class="settings-list">
-
-      <a class="settings-item" href="/config/backup">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Config back-up</div>
-          <div class="settings-sub">Exporteren of importeren</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
-
-      <a class="settings-item" href="/system">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21,16H3V4H21M21,2H3C1.89,2 1,2.89 1,4V16A2,2 0 0,0 3,18H10V20H8V22H16V20H14V18H21A2,2 0 0,0 23,16V4C23,2.89 22.1,2 21,2Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Systeeminfo</div>
-          <div class="settings-sub">Schijfruimte, geheugen, temperatuur &amp; uptime</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </a>
-
-      <div class="settings-item" onclick="openRestartModal()">
-        <div class="settings-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Herstart hub</div>
-          <div class="settings-sub">Start de SolarBuffer service opnieuw op</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </div>
-
-      <div class="settings-item danger" onclick="openHistoryResetModal()">
-        <div class="settings-icon danger">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13,2.05V4.05C17.39,4.59 20.5,8.58 19.96,12.97C19.5,16.61 16.64,19.5 13,19.93V21.93C18.5,21.38 22.5,16.5 21.95,11C21.5,6.25 17.73,2.5 13,2.05M11,2.06C9.05,2.25 7.19,3 5.67,4.26L7.1,5.74C8.22,4.84 9.57,4.26 11,4.06V2.06M4.26,5.67C3,7.19 2.25,9.04 2.05,11H4.05C4.24,9.58 4.8,8.23 5.69,7.1L4.26,5.67M2.06,13C2.26,14.96 3.03,16.81 4.27,18.33L5.69,16.9C4.81,15.77 4.24,14.42 4.06,13H2.06M7.1,18.37L5.67,19.74C7.18,21 9.04,21.79 11,22V20C9.58,19.82 8.23,19.25 7.1,18.37M12,7V12.41L15.28,15.7L16.7,14.29L14,11.59V7H12Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Grafiekgeschiedenis wissen</div>
-          <div class="settings-sub">Verwijdert alle opgeslagen grafiekdata</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
-      </div>
-
-      <div class="settings-item danger" onclick="openResetModal()">
-        <div class="settings-icon danger">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
-        </div>
-        <div class="settings-text">
-          <div class="settings-label">Factory reset</div>
-          <div class="settings-sub">Wist alle instellingen en start opnieuw</div>
-        </div>
-        <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
       </div>
     </div>
 
+    <!-- ===== SUB-VIEW: Verbinding ===== -->
+    <div class="section-view" id="view-verbinding" style="display:none">
+      <button class="back-btn" onclick="showMain()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        Instellingen
+      </button>
+      <div class="section-title">Verbinding</div>
+      <div class="settings-list">
+
+        <a class="settings-item" href="/settings/ntfy">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21,19V20H3V19L5,17V11C5,7.9 7.03,5.17 10,4.29C10,4.19 10,4.1 10,4A2,2 0 0,1 12,2A2,2 0 0,1 14,4C14,4.1 14,4.19 14,4.29C16.97,5.17 19,7.9 19,11V17L21,19M14,21A2,2 0 0,1 12,23A2,2 0 0,1 10,21"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Pushmeldingen</div>
+            <div class="settings-sub">{% set _cu = config.users | selectattr("username","equalto", session_username) | first | default(None) %}{% if _cu and _cu.ntfy_enabled %}Ingeschakeld{% else %}Pushmeldingen via ntfy{% endif %}</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <div class="settings-item" id="tsToggleRow" onclick="tsTogglePanel()" style="cursor:pointer">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,15.97 6,15.41C6,13.82 8.71,12.5 12,12.5C15.29,12.5 18,13.82 18,15.41C17.76,15.97 17.47,16.5 17.13,17Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Remote Toegang</div>
+            <div class="settings-sub">Tailscale VPN-verbinding</div>
+          </div>
+          <span class="ts-badge off" id="tsBadge">Laden…</span>
+          <svg class="settings-chevron" id="tsChevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transition:transform 0.2s"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </div>
+
+        <div class="ts-panel" id="tsPanel">
+          <div id="tsNotInstalled" style="display:none">
+            <p class="ts-hint">Tailscale is niet geïnstalleerd. Voer dit uit op de server:</p>
+            <code class="ts-install-cmd">curl -fsSL https://tailscale.com/install.sh | sh</code>
+          </div>
+          <div id="tsAuthBox" style="display:none">
+            <p class="ts-hint">Open de link om in te loggen bij Tailscale:</p>
+            <div class="ts-url-row">
+              <a id="tsAuthUrl" class="ts-auth-link" href="#" target="_blank" rel="noopener">—</a>
+              <button class="ts-copy-btn" onclick="tsCopyUrl()"><span id="tsCopyLabel">Kopieer</span></button>
+            </div>
+          </div>
+          <div id="tsConnected" style="display:none">
+            <div class="ts-row">
+              <span class="ts-row-label">Tailscale IP</span>
+              <span class="ts-row-val" id="tsIpVal">—</span>
+            </div>
+            <div class="ts-row">
+              <span class="ts-row-label">Hostnaam</span>
+              <span class="ts-row-val">http://solarbuffer:5001</span>
+            </div>
+          </div>
+          <div id="tsDisconnected" style="display:none">
+            <button class="ts-connect-btn" id="tsConnectBtn" onclick="tsConnect()">Verbinden</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== SUB-VIEW: Account ===== -->
+    <div class="section-view" id="view-account" style="display:none">
+      <button class="back-btn" onclick="showMain()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        Instellingen
+      </button>
+      <div class="section-title">Account</div>
+      <div class="settings-list">
+
+        <div class="settings-item clickable" onclick="toggleDarkMode()">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V5Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Donkere modus</div>
+            <div class="settings-sub">Schakel donkere modus in of uit</div>
+          </div>
+          <div class="dark-pill" id="darkPill"></div>
+        </div>
+
+        <a class="settings-item" href="/change_credentials">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,14A2,2 0 0,1 5,12A2,2 0 0,1 7,10A2,2 0 0,1 9,12A2,2 0 0,1 7,14M12.65,10C11.83,7.67 9.61,6 7,6A6,6 0 0,0 1,12A6,6 0 0,0 7,18C9.61,18 11.83,16.33 12.65,14H17V18H21V14H23V10H12.65Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Inloggegevens</div>
+            <div class="settings-sub">Gebruikersnaam en wachtwoord wijzigen</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/users">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Gebruikersbeheer</div>
+            <div class="settings-sub">Gebruikers toevoegen of verwijderen</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- ===== SUB-VIEW: Systeem ===== -->
+    <div class="section-view" id="view-systeem" style="display:none">
+      <button class="back-btn" onclick="showMain()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+        Instellingen
+      </button>
+      <div class="section-title">Systeem</div>
+      <div class="settings-list">
+
+        <a class="settings-item" href="/config/backup">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Config back-up</div>
+            <div class="settings-sub">Exporteren of importeren</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <a class="settings-item" href="/system">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21,16H3V4H21M21,2H3C1.89,2 1,2.89 1,4V16A2,2 0 0,0 3,18H10V20H8V22H16V20H14V18H21A2,2 0 0,0 23,16V4C23,2.89 22.1,2 21,2Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Systeeminfo</div>
+            <div class="settings-sub">Schijfruimte, geheugen, temperatuur &amp; uptime</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </a>
+
+        <div class="settings-item" onclick="openRestartModal()">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Herstart hub</div>
+            <div class="settings-sub">Start de SolarBuffer service opnieuw op</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </div>
+
+        <div class="settings-item danger" onclick="openHistoryResetModal()">
+          <div class="settings-icon danger">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13,2.05V4.05C17.39,4.59 20.5,8.58 19.96,12.97C19.5,16.61 16.64,19.5 13,19.93V21.93C18.5,21.38 22.5,16.5 21.95,11C21.5,6.25 17.73,2.5 13,2.05M11,2.06C9.05,2.25 7.19,3 5.67,4.26L7.1,5.74C8.22,4.84 9.57,4.26 11,4.06V2.06M4.26,5.67C3,7.19 2.25,9.04 2.05,11H4.05C4.24,9.58 4.8,8.23 5.69,7.1L4.26,5.67M2.06,13C2.26,14.96 3.03,16.81 4.27,18.33L5.69,16.9C4.81,15.77 4.24,14.42 4.06,13H2.06M7.1,18.37L5.67,19.74C7.18,21 9.04,21.79 11,22V20C9.58,19.82 8.23,19.25 7.1,18.37M12,7V12.41L15.28,15.7L16.7,14.29L14,11.59V7H12Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Grafiekgeschiedenis wissen</div>
+            <div class="settings-sub">Verwijdert alle opgeslagen grafiekdata</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </div>
+
+        <div class="settings-item danger" onclick="openResetModal()">
+          <div class="settings-icon danger">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
+          </div>
+          <div class="settings-text">
+            <div class="settings-label">Factory reset</div>
+            <div class="settings-sub">Wist alle instellingen en start opnieuw</div>
+          </div>
+          <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+        </div>
+
+      </div>
+    </div>
 
   </div>
 
@@ -917,6 +999,44 @@
   </div>
 
   <script>
+    // ===== NAVIGATION =====
+    function showSection(name) {
+      document.getElementById('mainView').style.display = 'none';
+      document.querySelectorAll('.section-view').forEach(v => v.style.display = 'none');
+      const view = document.getElementById('view-' + name);
+      if (view) view.style.display = '';
+      history.pushState({ section: name }, '', '#' + name);
+    }
+
+    function showMain() {
+      document.querySelectorAll('.section-view').forEach(v => v.style.display = 'none');
+      document.getElementById('mainView').style.display = '';
+      history.pushState({}, '', location.pathname);
+    }
+
+    window.addEventListener('popstate', function(e) {
+      if (e.state && e.state.section) {
+        document.getElementById('mainView').style.display = 'none';
+        document.querySelectorAll('.section-view').forEach(v => v.style.display = 'none');
+        const view = document.getElementById('view-' + e.state.section);
+        if (view) view.style.display = '';
+      } else {
+        document.querySelectorAll('.section-view').forEach(v => v.style.display = 'none');
+        document.getElementById('mainView').style.display = '';
+      }
+    });
+
+    (function() {
+      const hash = location.hash.slice(1);
+      if (hash && document.getElementById('view-' + hash)) {
+        document.getElementById('mainView').style.display = 'none';
+        document.getElementById('view-' + hash).style.display = '';
+        history.replaceState({ section: hash }, '', location.href);
+      } else {
+        history.replaceState({}, '', location.pathname);
+      }
+    })();
+
     // ===== NETWERK SUBTEKST =====
     fetch('/network/current').then(r => r.json()).then(data => {
       const el = document.getElementById('wifiSubText');
@@ -1003,15 +1123,9 @@
       }).catch(() => {});
     }
 
-    function togglePID() {
-      fetch('/toggle_pid').then(() => setTimeout(loadBesturing, 300));
-    }
-    function toggleAntiLegionella() {
-      fetch('/toggle_anti_legionella').then(() => setTimeout(loadBesturing, 300));
-    }
-    function toggleSchedules() {
-      fetch('/toggle_schedules').then(() => setTimeout(loadBesturing, 300));
-    }
+    function togglePID()            { fetch('/toggle_pid').then(() => setTimeout(loadBesturing, 300)); }
+    function toggleAntiLegionella() { fetch('/toggle_anti_legionella').then(() => setTimeout(loadBesturing, 300)); }
+    function toggleSchedules()      { fetch('/toggle_schedules').then(() => setTimeout(loadBesturing, 300)); }
 
     let _vacationFormOpen = false;
 
@@ -1033,7 +1147,7 @@
           yearEl.appendChild(o);
         }
       }
-      document.getElementById('vacationYear').onchange = _updateDateConstraints;
+      document.getElementById('vacationYear').onchange  = _updateDateConstraints;
       document.getElementById('vacationMonth').onchange = _updateDateConstraints;
     }
 
@@ -1044,13 +1158,9 @@
       const todayD = today.getDate();
       const selY = parseInt(document.getElementById('vacationYear').value);
       const selM = parseInt(document.getElementById('vacationMonth').value);
-
-      // Maanden: disable alleen échte verleden maanden (niet de huidige)
       document.querySelectorAll('#vacationMonth option').forEach(o => {
         o.disabled = (selY === todayY && parseInt(o.value) < todayM);
       });
-
-      // Dagen: disable verleden dagen alleen als huidig jaar én huidige maand gekozen
       const isCurrentYearMonth = (selY === todayY && selM === todayM);
       document.querySelectorAll('#vacationDay option').forEach(o => {
         o.disabled = isCurrentYearMonth && parseInt(o.value) <= todayD;
@@ -1058,9 +1168,9 @@
     }
 
     function _setDateSelects(date) {
-      document.getElementById('vacationDay').value = date.getDate();
+      document.getElementById('vacationDay').value   = date.getDate();
       document.getElementById('vacationMonth').value = date.getMonth() + 1;
-      document.getElementById('vacationYear').value = date.getFullYear();
+      document.getElementById('vacationYear').value  = date.getFullYear();
       _updateDateConstraints();
     }
 
@@ -1089,7 +1199,6 @@
         panel.style.display = 'none';
         document.getElementById('vacation_sub').textContent = 'Uitgeschakeld';
         document.getElementById('vacation_dot').className = 'dot';
-        // Als vakantiestand al actief was: direct uitschakelen via backend
         if (document.getElementById('vacationActiveSection').style.display !== 'none') {
           fetch('/vacation', {
             method: 'POST',
@@ -1157,14 +1266,14 @@
 
     function tsUpdateUI(data) {
       const badge = document.getElementById('tsBadge');
-      const notInstalled = document.getElementById('tsNotInstalled');
-      const authBox = document.getElementById('tsAuthBox');
-      const connectedBox = document.getElementById('tsConnected');
+      const notInstalled   = document.getElementById('tsNotInstalled');
+      const authBox        = document.getElementById('tsAuthBox');
+      const connectedBox   = document.getElementById('tsConnected');
       const disconnectedBox = document.getElementById('tsDisconnected');
 
-      notInstalled.style.display = 'none';
-      authBox.style.display = 'none';
-      connectedBox.style.display = 'none';
+      notInstalled.style.display   = 'none';
+      authBox.style.display        = 'none';
+      connectedBox.style.display   = 'none';
       disconnectedBox.style.display = 'none';
 
       if (!data.installed) {
@@ -1174,7 +1283,6 @@
         _tsWaitingForAuth = false;
         return;
       }
-
       if (data.connected) {
         badge.className = 'ts-badge on';
         badge.textContent = 'Verbonden';
@@ -1288,8 +1396,8 @@
         })
         .catch(() => { btn.disabled = false; btn.textContent = 'Resetten'; });
     }
-  </script>
-  <script>
+
+    // ===== DARK MODE =====
     function updateDarkModeUI() {
       const isDark = document.documentElement.getAttribute("data-theme") === "dark";
       document.getElementById("darkPill").classList.toggle("on", isDark);

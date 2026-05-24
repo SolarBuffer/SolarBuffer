@@ -1631,11 +1631,30 @@
     }
     .ir-cmd-btn:hover { background: hsl(32, 100%, 95%); border-color: hsl(32, 80%, 68%); color: hsl(25, 85%, 35%); }
     .ir-cmd-btn:active { background: hsl(32, 100%, 88%); }
+    .ir-cmd-btn.sending {
+      background: hsl(32, 95%, 52%);
+      border-color: hsl(32, 90%, 45%);
+      color: white;
+      cursor: default;
+    }
     .ir-cmd-btn:disabled { opacity: 0.5; cursor: default; }
+    .ir-power-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.5rem;
+      border-radius: 999px; margin-left: auto;
+    }
+    .ir-power-badge.on  { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .ir-power-badge.off { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 40%); }
+    .ir-power-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .ir-power-badge.on  .ir-power-dot { background: hsl(145, 60%, 38%); }
+    .ir-power-badge.off .ir-power-dot { background: hsl(220, 10%, 58%); }
+
     html[data-theme="dark"] .ir-widget { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); }
-    html[data-theme="dark"] .ir-widget-icon { background: hsl(260, 25%, 28%); color: hsl(260, 60%, 72%); }
+    html[data-theme="dark"] .ir-widget-icon { background: hsl(32, 25%, 26%); color: hsl(32, 80%, 62%); }
     html[data-theme="dark"] .ir-cmd-btn { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 82%); }
     html[data-theme="dark"] .ir-cmd-btn:hover { background: hsl(32, 18%, 28%); border-color: hsl(32, 50%, 42%); color: hsl(32, 80%, 68%); }
+    html[data-theme="dark"] .ir-power-badge.on  { background: hsl(145, 25%, 22%); color: hsl(145, 55%, 62%); }
+    html[data-theme="dark"] .ir-power-badge.off { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 56%); }
 
     /* ===== SOLAR FORECAST ===== */
     .forecast-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
@@ -1985,7 +2004,7 @@
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.4.2</div>
+    <div class="footer">Version 0.5.0</div>
   </div>
 
   <script>
@@ -2045,6 +2064,7 @@
 
           renderDevices(data.devices || []);
           renderAccessories(data.accessories || []);
+          renderBroadlinkWidgets(data.broadlink_ir_states || {});
           const gasBadge = document.getElementById('gasBadge');
           if (data.gas_enabled && data.gas_today_m3 !== null && data.gas_today_m3 !== undefined) {
             document.getElementById('gasValue').textContent = Number(data.gas_today_m3).toFixed(3);
@@ -2562,8 +2582,10 @@
 
     // ===== BROADLINK IR DASHBOARD =====
     let _blDevices = {{ config.broadlink_devices | tojson }};
+    let _irStates = {};
 
-    function renderBroadlinkWidgets() {
+    function renderBroadlinkWidgets(irStates) {
+      if (irStates !== undefined) _irStates = irStates || {};
       const card = document.getElementById('broadlinkCard');
       const list = document.getElementById('irWidgetList');
       const visible = [];
@@ -2576,35 +2598,43 @@
       });
       if (visible.length === 0) { card.style.display = 'none'; return; }
       card.style.display = '';
-      list.innerHTML = visible.map(({ bl, ir }) => `
-        <div class="ir-widget">
-          <div class="ir-widget-header">
-            <div class="ir-widget-icon"><i class="mdi ${escHtmlDash(ir.icon || 'mdi-remote')}"></i></div>
-            <div class="ir-widget-name">${escHtmlDash(ir.name)}</div>
-          </div>
-          <div class="ir-cmd-btns">
-            ${(ir.commands || []).map(cmd => `
-              <button class="ir-cmd-btn"
-                data-bl="${bl.id}" data-ir="${ir.id}" data-cmd="${cmd.id}"
-                onclick="dashSendIr(this, '${bl.id}', '${ir.id}', '${cmd.id}')">
-                ${escHtmlDash(cmd.name)}
-              </button>`).join('')}
-          </div>
-        </div>`).join('');
+      list.innerHTML = visible.map(({ bl, ir }) => {
+        const st = _irStates[ir.id];
+        const hasPower = !!ir.linked_accessory_id;
+        const isOn = hasPower && st && st.on;
+        const badgeHtml = hasPower
+          ? `<span class="ir-power-badge ${isOn ? 'on' : 'off'}">
+               <span class="ir-power-dot"></span>
+               ${isOn ? 'Aan' : 'Uit'}
+             </span>`
+          : '';
+        return `
+          <div class="ir-widget">
+            <div class="ir-widget-header">
+              <div class="ir-widget-icon"><i class="mdi ${escHtmlDash(ir.icon || 'mdi-remote')}"></i></div>
+              <div class="ir-widget-name">${escHtmlDash(ir.name)}</div>
+              ${badgeHtml}
+            </div>
+            <div class="ir-cmd-btns">
+              ${(ir.commands || []).map(cmd => `
+                <button class="ir-cmd-btn"
+                  onclick="dashSendIr(this, '${bl.id}', '${ir.id}', '${cmd.id}')">
+                  ${escHtmlDash(cmd.name)}
+                </button>`).join('')}
+            </div>
+          </div>`;
+      }).join('');
     }
 
     function dashSendIr(btn, blId, irId, cmdId) {
-      btn.disabled = true;
-      const orig = btn.innerHTML;
-      btn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i>';
+      btn.classList.add('sending');
       fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands/' + cmdId + '/send', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
-          btn.disabled = false;
-          btn.innerHTML = orig;
+          setTimeout(() => btn.classList.remove('sending'), 400);
           if (!data.success) console.warn('IR send failed:', data.error);
         })
-        .catch(() => { btn.disabled = false; btn.innerHTML = orig; });
+        .catch(() => btn.classList.remove('sending'));
     }
 
     function escHtmlDash(s) {

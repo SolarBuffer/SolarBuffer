@@ -312,6 +312,8 @@ def load_config():
                 ir["icon"] = "mdi-remote"
             if "show_on_dashboard" not in ir:
                 ir["show_on_dashboard"] = True
+            if "linked_accessory_id" not in ir:
+                ir["linked_accessory_id"] = ""
             if "commands" not in ir or not isinstance(ir["commands"], list):
                 ir["commands"] = []
             for cmd in ir["commands"]:
@@ -1341,6 +1343,18 @@ def status_json():
     if cfg.get("gas_enabled") and current_gas_m3 is not None and gas_day_start_m3 is not None:
         gas_today = round(max(0.0, current_gas_m3 - gas_day_start_m3), 3)
 
+    broadlink_ir_states = {}
+    for bl in cfg.get("broadlink_devices", []):
+        for ir in bl.get("ir_devices", []):
+            acc_id = ir.get("linked_accessory_id", "")
+            if acc_id:
+                st = accessory_states.get(acc_id, {})
+                power = st.get("power", 0.0)
+                broadlink_ir_states[ir["id"]] = {
+                    "power": round(power, 0),
+                    "on": power > 5,
+                }
+
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
         devices=devices, expert_mode=cfg.get("expert_mode", False),
@@ -1355,6 +1369,7 @@ def status_json():
         inverter_type=cfg.get("inverter_type", "solaredge"),
         inverter_power=inverter_power,
         inverter_online=inverter_online,
+        broadlink_ir_states=broadlink_ir_states,
         vacation_mode=cfg.get("vacation_mode", False),
         vacation_until=cfg.get("vacation_until"),
         vacation_legionella=cfg.get("vacation_legionella", False),
@@ -2725,9 +2740,15 @@ def settings_broadlink():
     if not require_login():
         return redirect("/login")
     cfg = load_config()
+    power_accessories = [
+        {"id": a["id"], "name": a["name"]}
+        for a in cfg.get("accessories", [])
+        if a.get("acc_type", "power") == "power" and not a.get("is_solar", False)
+    ]
     return render_template(
         "settings_broadlink.html",
         config=cfg,
+        power_accessories=power_accessories,
         broadlink_available=BROADLINK_AVAILABLE,
         dark_mode=get_user_dark_mode(),
     )
@@ -2817,11 +2838,13 @@ def broadlink_add_ir_device(bl_id):
         return jsonify(success=False, error="Naam is verplicht"), 400
     icon = (data.get("icon") or "mdi-remote").strip()
     show_on_dashboard = bool(data.get("show_on_dashboard", True))
+    linked_accessory_id = (data.get("linked_accessory_id") or "").strip()
     new_ir = {
         "id": str(uuid.uuid4()),
         "name": name,
         "icon": icon,
         "show_on_dashboard": show_on_dashboard,
+        "linked_accessory_id": linked_accessory_id,
         "commands": [],
     }
     bl["ir_devices"].append(new_ir)
@@ -2845,6 +2868,7 @@ def broadlink_update_ir_device(bl_id, ir_id):
     ir["name"] = (data.get("name") or ir["name"]).strip()
     ir["icon"] = (data.get("icon") or ir["icon"]).strip()
     ir["show_on_dashboard"] = bool(data.get("show_on_dashboard", ir.get("show_on_dashboard", True)))
+    ir["linked_accessory_id"] = (data.get("linked_accessory_id") or "").strip()
     save_config(cfg)
     return jsonify(success=True)
 
