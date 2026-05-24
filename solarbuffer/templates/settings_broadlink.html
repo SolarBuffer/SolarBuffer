@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Broadlink IR - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 520px; }
+
+    .header { text-align: center; margin-bottom: 1.75rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: white; border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px; padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem; font-weight: 600; color: hsl(220, 20%, 30%);
+      text-decoration: none; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s; margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem; box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
+      overflow: hidden; margin-bottom: 1rem;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1rem; border-bottom: 1px solid hsl(30, 15%, 91%);
+    }
+    .card-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: hsl(220, 10%, 52%);
+    }
+    .card-body { padding: 1rem; }
+
+    .section-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: hsl(220, 10%, 52%);
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    .bl-device-card {
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem; margin-bottom: 1rem; overflow: hidden;
+    }
+    .bl-device-header {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.85rem 1rem; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bl-device-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: hsl(260, 60%, 94%); color: hsl(260, 60%, 44%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 1.2rem;
+    }
+    .bl-device-info { flex: 1; min-width: 0; }
+    .bl-device-name { font-weight: 600; font-size: 0.95rem; }
+    .bl-device-sub { font-size: 0.76rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; font-family: monospace; }
+    .bl-device-actions { display: flex; gap: 0.4rem; }
+
+    .btn-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid hsl(30, 15%, 85%); background: transparent;
+      color: hsl(220, 10%, 46%); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-icon:hover { background: hsl(30, 15%, 93%); color: hsl(220, 20%, 20%); }
+    .btn-icon.danger:hover { background: hsl(0, 80%, 95%); color: hsl(0, 65%, 48%); border-color: hsl(0, 60%, 85%); }
+
+    .bl-device-body {
+      border-top: 1px solid hsl(30, 15%, 91%);
+      padding: 0.85rem 1rem;
+    }
+
+    .ir-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+
+    .ir-card {
+      background: hsl(30, 20%, 97%); border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.6rem; overflow: hidden;
+    }
+    .ir-header {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.6rem 0.75rem; cursor: pointer;
+    }
+    .ir-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: hsl(32, 100%, 93%); color: hsl(32, 90%, 44%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .ir-name { flex: 1; font-size: 0.88rem; font-weight: 600; }
+    .ir-cmd-count { font-size: 0.75rem; color: hsl(220, 10%, 54%); }
+    .ir-actions { display: flex; gap: 0.3rem; }
+    .btn-icon-sm {
+      width: 26px; height: 26px; border-radius: 6px;
+      border: 1px solid hsl(30, 15%, 85%); background: transparent;
+      color: hsl(220, 10%, 46%); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s; font-size: 0.8rem;
+    }
+    .btn-icon-sm:hover { background: white; }
+    .btn-icon-sm.danger:hover { background: hsl(0, 80%, 95%); color: hsl(0, 65%, 48%); border-color: hsl(0, 60%, 85%); }
+
+    .ir-body { padding: 0 0.75rem 0.75rem; }
+
+    .cmd-list { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.5rem; }
+    .cmd-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.4rem; padding: 0.4rem 0.65rem;
+    }
+    .cmd-name { flex: 1; font-size: 0.82rem; font-weight: 600; }
+    .cmd-send-btn {
+      padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 600;
+      border: 1px solid hsl(32, 80%, 72%); border-radius: 0.35rem;
+      background: hsl(32, 100%, 96%); color: hsl(25, 85%, 35%);
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+    }
+    .cmd-send-btn:hover { background: hsl(32, 100%, 90%); }
+    .cmd-send-btn.sending { opacity: 0.6; cursor: default; }
+
+    .learn-btn {
+      display: flex; align-items: center; gap: 0.4rem;
+      width: 100%; padding: 0.5rem 0.75rem;
+      border: 1.5px dashed hsl(32, 80%, 72%); border-radius: 0.45rem;
+      background: transparent; color: hsl(32, 85%, 42%);
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      justify-content: center;
+    }
+    .learn-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 80%, 60%); }
+    .learn-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .add-ir-btn {
+      display: flex; align-items: center; gap: 0.4rem;
+      width: 100%; padding: 0.55rem 0.75rem;
+      border: 1.5px dashed hsl(220, 10%, 75%); border-radius: 0.5rem;
+      background: transparent; color: hsl(220, 10%, 46%);
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s; justify-content: center;
+    }
+    .add-ir-btn:hover { background: hsl(30, 15%, 94%); }
+
+    .btn-primary {
+      display: block; width: 100%;
+      background: hsl(32, 95%, 52%); color: white;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      font-size: 0.95rem; padding: 0.65rem;
+      border: none; border-radius: 0.5rem; cursor: pointer;
+      transition: background 0.2s; text-align: center;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); }
+    .btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+    .btn-secondary {
+      display: block; width: 100%;
+      background: hsl(30, 15%, 95%); color: hsl(220, 20%, 30%);
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      font-size: 0.95rem; padding: 0.65rem;
+      border: 1px solid hsl(30, 15%, 84%); border-radius: 0.5rem;
+      cursor: pointer; text-align: center; transition: background 0.2s; text-decoration: none;
+    }
+    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+
+    .btn-row { display: flex; gap: 0.6rem; }
+    .btn-row .btn-primary, .btn-row .btn-secondary { flex: 1; }
+
+    .field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+    .field:last-child { margin-bottom: 0; }
+    .field-label { font-size: 0.82rem; font-weight: 600; color: hsl(220, 10%, 46%); }
+    .field input, .field select {
+      width: 100%; padding: 0.6rem 0.75rem;
+      border: 1.5px solid hsl(30, 15%, 82%); border-radius: 0.5rem;
+      font-size: 0.95rem; font-family: 'Inter', sans-serif;
+      background: white; color: hsl(220, 20%, 14%); outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus, .field select:focus { border-color: hsl(32, 85%, 55%); }
+
+    .scan-result-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
+    .scan-result-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      background: white; border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.5rem; padding: 0.65rem 0.85rem;
+    }
+    .scan-result-info { flex: 1; min-width: 0; }
+    .scan-result-name { font-size: 0.88rem; font-weight: 600; }
+    .scan-result-sub { font-size: 0.75rem; color: hsl(220, 10%, 50%); font-family: monospace; }
+    .scan-add-btn {
+      padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 600;
+      border: 1px solid hsl(32, 80%, 68%); border-radius: 0.4rem;
+      background: hsl(32, 100%, 96%); color: hsl(25, 85%, 35%); cursor: pointer;
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .scan-add-btn:hover { background: hsl(32, 100%, 88%); }
+    .scan-add-btn:disabled { opacity: 0.5; cursor: default; }
+
+    .learn-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .learn-overlay.open { display: flex; }
+    .learn-modal {
+      background: white; border-radius: 1rem;
+      padding: 1.75rem 1.5rem; width: 100%; max-width: 380px;
+      box-shadow: 0 20px 60px -10px rgba(0,0,0,0.3); text-align: center;
+    }
+    .learn-pulse {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: hsl(32, 100%, 92%); color: hsl(32, 95%, 44%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; margin: 0 auto 1rem;
+      animation: pulse-ring 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 hsla(32, 95%, 52%, 0.5); }
+      70%  { box-shadow: 0 0 0 14px hsla(32, 95%, 52%, 0); }
+      100% { box-shadow: 0 0 0 0 hsla(32, 95%, 52%, 0); }
+    }
+    .learn-modal h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
+    .learn-modal p { font-size: 0.85rem; color: hsl(220, 10%, 46%); line-height: 1.5; margin-bottom: 1.25rem; }
+    .learn-progress { font-size: 0.8rem; color: hsl(32, 80%, 42%); font-weight: 600; margin-bottom: 1rem; }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 200;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white; border-radius: 1rem;
+      padding: 1.5rem; width: 100%; max-width: 380px;
+      box-shadow: 0 20px 60px -10px rgba(0,0,0,0.3);
+    }
+    .modal h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      background: hsl(220, 20%, 16%); color: white;
+      padding: 0.6rem 1.2rem; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 600; white-space: nowrap;
+      opacity: 0; transition: opacity 0.2s; z-index: 300; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .toast.error { background: hsl(0, 65%, 48%); }
+    .toast.success { background: hsl(145, 60%, 36%); }
+
+    .unavailable-banner {
+      display: flex; align-items: center; gap: 0.65rem;
+      background: hsl(37, 90%, 92%); color: hsl(30, 80%, 28%);
+      border-radius: 0.6rem; padding: 0.75rem 0.9rem;
+      font-size: 0.84rem; font-weight: 500; margin-bottom: 1rem; line-height: 1.4;
+    }
+
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    }
+    .toggle-label { font-size: 0.88rem; font-weight: 500; }
+    .toggle {
+      position: relative; width: 40px; height: 24px; flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: hsl(30, 15%, 80%);
+      border-radius: 999px; transition: background 0.2s; cursor: pointer;
+    }
+    .slider::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%; background: white;
+      transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+    .toggle input:checked + .slider::after { transform: translateX(16px); }
+
+    .empty-state {
+      padding: 1.5rem; text-align: center;
+      color: hsl(220, 10%, 54%); font-size: 0.88rem;
+    }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .card-header { border-color: hsl(220, 8%, 32%); }
+    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .section-label { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .bl-device-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .bl-device-header { background: hsl(220, 8%, 26%); }
+    html[data-theme="dark"] .bl-device-body { border-color: hsl(220, 8%, 32%); }
+    html[data-theme="dark"] .bl-device-sub { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .bl-device-icon { background: hsl(260, 25%, 28%); color: hsl(260, 60%, 72%); }
+    html[data-theme="dark"] .ir-card { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); }
+    html[data-theme="dark"] .ir-icon { background: hsl(32, 25%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .ir-cmd-count { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .cmd-row { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 35%); }
+    html[data-theme="dark"] .btn-icon { border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 60%); }
+    html[data-theme="dark"] .btn-icon:hover { background: hsl(220, 8%, 32%); color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .btn-icon.danger:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 62%); border-color: hsl(0, 40%, 36%); }
+    html[data-theme="dark"] .btn-icon-sm { border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 60%); }
+    html[data-theme="dark"] .btn-icon-sm:hover { background: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .btn-icon-sm.danger:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 62%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .field input, html[data-theme="dark"] .field select { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .field input:focus, html[data-theme="dark"] .field select:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .modal, html[data-theme="dark"] .learn-modal { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .scan-result-item { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .scan-result-sub { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .add-ir-btn { border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 60%); }
+    html[data-theme="dark"] .add-ir-btn:hover { background: hsl(220, 8%, 28%); }
+    html[data-theme="dark"] .learn-btn { border-color: hsl(32, 50%, 42%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .learn-btn:hover { background: hsl(32, 18%, 26%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .learn-pulse { background: hsl(32, 35%, 26%); }
+    html[data-theme="dark"] .learn-modal p { color: hsl(220, 8%, 54%); }
+    html[data-theme="dark"] .ir-body { background: transparent; }
+    html[data-theme="dark"] .slider { background: hsl(220, 8%, 42%); }
+    html[data-theme="dark"] .empty-state { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .unavailable-banner { background: hsl(37, 25%, 24%); color: hsl(37, 80%, 70%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Broadlink IR-besturing</p>
+    </div>
+
+    <a class="back-btn" href="/settings/expert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Expert instellingen
+    </a>
+
+    {% if not broadlink_available %}
+    <div class="unavailable-banner">
+      <i class="mdi mdi-alert-outline" style="font-size:1.2rem;flex-shrink:0"></i>
+      <span>python-broadlink is niet geïnstalleerd. Voer <code>pip install broadlink</code> uit op de SolarBuffer om deze functie te gebruiken.</span>
+    </div>
+    {% endif %}
+
+    <!-- Scannen voor apparaten -->
+    <div class="section-label">Broadlink-apparaten</div>
+    <div class="card">
+      <div class="card-body">
+        <button class="btn-primary" id="scanBtn" onclick="scanDevices()" {% if not broadlink_available %}disabled{% endif %}>
+          <i class="mdi mdi-radar"></i> Zoek Broadlink-apparaten op netwerk
+        </button>
+        <div id="scanResults" style="display:none; margin-top:0.75rem;">
+          <div class="scan-result-list" id="scanResultList"></div>
+        </div>
+        <div style="margin-top:0.75rem; border-top:1px solid hsl(30,15%,90%); padding-top:0.75rem;">
+          <p style="font-size:0.8rem; color:hsl(220,10%,50%); margin-bottom:0.5rem;">Of voeg handmatig toe via IP-adres:</p>
+          <div style="display:flex; gap:0.5rem;">
+            <input type="text" id="manualIp" placeholder="192.168.1.x" style="flex:1; padding:0.55rem 0.7rem; border:1.5px solid hsl(30,15%,82%); border-radius:0.5rem; font-size:0.9rem; outline:none;">
+            <button class="btn-primary" style="width:auto; padding:0.55rem 1rem; white-space:nowrap;" onclick="addManual()" {% if not broadlink_available %}disabled{% endif %}>Toevoegen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bestaande Broadlink-apparaten -->
+    <div id="blDeviceList">
+      {% for bl in config.broadlink_devices %}
+      <div class="bl-device-card" id="bl-{{ bl.id }}">
+        <div class="bl-device-header" onclick="toggleBl('{{ bl.id }}')">
+          <div class="bl-device-icon"><i class="mdi mdi-remote-tv"></i></div>
+          <div class="bl-device-info">
+            <div class="bl-device-name">{{ bl.name }}</div>
+            <div class="bl-device-sub">{{ bl.ip }} · {{ bl.ir_devices|length }} IR-apparaat{% if bl.ir_devices|length != 1 %}en{% endif %}</div>
+          </div>
+          <div class="bl-device-actions" onclick="event.stopPropagation()">
+            <button class="btn-icon danger" title="Verwijder" onclick="deleteBlDevice('{{ bl.id }}', '{{ bl.name }}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+            </button>
+            <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);">
+              <i class="mdi mdi-chevron-down" id="bl-chevron-{{ bl.id }}"></i>
+            </div>
+          </div>
+        </div>
+        <div class="bl-device-body" id="bl-body-{{ bl.id }}" style="display:none;">
+          <div class="ir-list" id="ir-list-{{ bl.id }}">
+            {% for ir in bl.ir_devices %}
+            <div class="ir-card" id="ir-{{ ir.id }}">
+              <div class="ir-header" onclick="toggleIr('{{ ir.id }}')">
+                <div class="ir-icon"><i class="mdi {{ ir.icon }}"></i></div>
+                <div class="ir-name">{{ ir.name }}</div>
+                <div class="ir-cmd-count">{{ ir.commands|length }} cmd</div>
+                <div class="ir-actions" onclick="event.stopPropagation()">
+                  <button class="btn-icon-sm danger" title="Verwijder" onclick="deleteIrDevice('{{ bl.id }}', '{{ ir.id }}', '{{ ir.name }}')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+                  </button>
+                  <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);">
+                    <i class="mdi mdi-chevron-down" id="ir-chevron-{{ ir.id }}"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="ir-body" id="ir-body-{{ ir.id }}" style="display:none;">
+                <div class="cmd-list" id="cmd-list-{{ ir.id }}">
+                  {% for cmd in ir.commands %}
+                  <div class="cmd-row" id="cmd-{{ cmd.id }}">
+                    <span class="cmd-name">{{ cmd.name }}</span>
+                    <button class="cmd-send-btn" onclick="sendCommand('{{ bl.id }}', '{{ ir.id }}', '{{ cmd.id }}', this)">
+                      <i class="mdi mdi-send"></i> Stuur
+                    </button>
+                    <button class="btn-icon-sm danger" title="Verwijder commando" onclick="deleteCommand('{{ bl.id }}', '{{ ir.id }}', '{{ cmd.id }}')">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+                    </button>
+                  </div>
+                  {% endfor %}
+                </div>
+                <button class="learn-btn" onclick="startLearn('{{ bl.id }}', '{{ ir.id }}')" {% if not broadlink_available %}disabled{% endif %}>
+                  <i class="mdi mdi-record-circle-outline"></i> IR-commando inleren
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+            {% if not bl.ir_devices %}
+            <div class="empty-state" id="ir-empty-{{ bl.id }}">Nog geen IR-apparaten. Voeg er een toe.</div>
+            {% endif %}
+          </div>
+          <button class="add-ir-btn" onclick="showAddIrModal('{{ bl.id }}')">
+            <i class="mdi mdi-plus"></i> IR-apparaat toevoegen
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not config.broadlink_devices %}
+      <div class="empty-state" style="background:white;border:1px solid hsl(30,15%,88%);border-radius:0.875rem;margin-bottom:1rem;" id="blEmptyState">
+        Nog geen Broadlink-apparaten. Scan of voeg handmatig toe.
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- Modal: IR-apparaat toevoegen -->
+  <div class="modal-overlay" id="addIrModal">
+    <div class="modal">
+      <h3><i class="mdi mdi-remote" style="color:hsl(32,95%,52%)"></i> IR-apparaat toevoegen</h3>
+      <input type="hidden" id="addIrBlId">
+      <div class="field">
+        <label class="field-label">Naam (bijv. TV, Airco, Versterker)</label>
+        <input type="text" id="addIrName" placeholder="TV" maxlength="40">
+      </div>
+      <div class="field">
+        <label class="field-label">Icoon</label>
+        <select id="addIrIcon">
+          <option value="mdi-remote">Afstandsbediening</option>
+          <option value="mdi-television">TV</option>
+          <option value="mdi-air-conditioner">Airco</option>
+          <option value="mdi-speaker">Speaker / Versterker</option>
+          <option value="mdi-projector">Beamer</option>
+          <option value="mdi-television-box">Set-top box</option>
+          <option value="mdi-radiator">Verwarming</option>
+          <option value="mdi-fan">Ventilator</option>
+          <option value="mdi-lightbulb-outline">Lamp</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:1.1rem;">
+        <div class="toggle-row">
+          <span class="toggle-label">Tonen op dashboard</span>
+          <label class="toggle">
+            <input type="checkbox" id="addIrDashboard" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="closeModal('addIrModal')">Annuleren</button>
+        <button class="btn-primary" onclick="submitAddIr()">Toevoegen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: commando naam vragen na inleren -->
+  <div class="modal-overlay" id="saveLearnModal">
+    <div class="modal">
+      <h3><i class="mdi mdi-check-circle-outline" style="color:hsl(145,60%,36%)"></i> IR-signaal ontvangen</h3>
+      <input type="hidden" id="learnedCode">
+      <input type="hidden" id="learnedBlId">
+      <input type="hidden" id="learnedIrId">
+      <div class="field">
+        <label class="field-label">Naam van dit commando</label>
+        <input type="text" id="learnedCmdName" placeholder="Bijv. Aan/Uit, Volume +, Kanaal 1" maxlength="40" autofocus>
+      </div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="closeModal('saveLearnModal')">Annuleren</button>
+        <button class="btn-primary" onclick="submitSaveLearn()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leer-overlay -->
+  <div class="learn-overlay" id="learnOverlay">
+    <div class="learn-modal">
+      <div class="learn-pulse"><i class="mdi mdi-record-circle-outline"></i></div>
+      <h3>Wachten op IR-signaal…</h3>
+      <p>Richt de afstandsbediening op de Broadlink en druk op de knop die je wilt inleren.</p>
+      <div class="learn-progress" id="learnTimer">Nog 15 seconden</div>
+      <button class="btn-secondary" onclick="cancelLearn()">Annuleren</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var BROADLINK_AVAILABLE = {{ broadlink_available | tojson }};
+    var learnAbortController = null;
+    var learnTimerInterval = null;
+
+    // ===== COLLAPSE/EXPAND =====
+    function toggleBl(blId) {
+      var body = document.getElementById('bl-body-' + blId);
+      var chev = document.getElementById('bl-chevron-' + blId);
+      var open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chev.className = open ? 'mdi mdi-chevron-down' : 'mdi mdi-chevron-up';
+    }
+    function toggleIr(irId) {
+      var body = document.getElementById('ir-body-' + irId);
+      var chev = document.getElementById('ir-chevron-' + irId);
+      var open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chev.className = open ? 'mdi mdi-chevron-down' : 'mdi mdi-chevron-up';
+    }
+
+    // ===== TOAST =====
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + (type || '') + ' show';
+      setTimeout(function() { t.className = 'toast ' + (type || ''); }, 2800);
+    }
+
+    // ===== MODALS =====
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // ===== SCANNEN =====
+    function scanDevices() {
+      var btn = document.getElementById('scanBtn');
+      btn.disabled = true;
+      btn.textContent = 'Bezig met scannen…';
+      fetch('/api/broadlink/scan', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="mdi mdi-radar"></i> Zoek Broadlink-apparaten op netwerk';
+          if (!data.success) { showToast(data.error || 'Scan mislukt', 'error'); return; }
+          var list = document.getElementById('scanResultList');
+          var wrap = document.getElementById('scanResults');
+          list.innerHTML = '';
+          if (!data.devices || data.devices.length === 0) {
+            list.innerHTML = '<p style="font-size:0.84rem;color:hsl(220,10%,50%)">Geen Broadlink-apparaten gevonden op het netwerk.</p>';
+          } else {
+            data.devices.forEach(function(d) {
+              var alreadyAdded = !data.new_devices.some(function(nd) { return nd.ip === d.ip; });
+              var row = document.createElement('div');
+              row.className = 'scan-result-item';
+              row.innerHTML = '<div class="scan-result-info">' +
+                '<div class="scan-result-name">' + escHtml(d.type || d.model || 'Broadlink') + '</div>' +
+                '<div class="scan-result-sub">' + escHtml(d.ip) + ' · ' + escHtml(d.mac) + '</div>' +
+                '</div>' +
+                '<button class="scan-add-btn" ' + (alreadyAdded ? 'disabled title="Al toegevoegd"' : '') + ' onclick="addScanned(' + JSON.stringify(d) + ', this)">' +
+                (alreadyAdded ? 'Al toegevoegd' : '+ Toevoegen') + '</button>';
+              list.appendChild(row);
+            });
+          }
+          wrap.style.display = 'block';
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="mdi mdi-radar"></i> Zoek Broadlink-apparaten op netwerk';
+          showToast('Scanfout', 'error');
+        });
+    }
+
+    function addScanned(device, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Toevoegen…';
+      var name = device.type || device.model || 'Broadlink';
+      fetch('/api/broadlink/devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: device.ip, mac: device.mac, devtype: device.devtype, model: device.model || name, name: name })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Toevoegen mislukt', 'error'); btn.disabled = false; btn.textContent = '+ Toevoegen'; return; }
+          btn.textContent = 'Toegevoegd ✓';
+          addBlCardToPage(data.device);
+          showToast(name + ' toegevoegd', 'success');
+        })
+        .catch(function() { showToast('Fout bij toevoegen', 'error'); btn.disabled = false; btn.textContent = '+ Toevoegen'; });
+    }
+
+    function addManual() {
+      var ip = document.getElementById('manualIp').value.trim();
+      if (!ip) { showToast('Voer een IP-adres in', 'error'); return; }
+      fetch('/api/broadlink/devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: ip, mac: '', devtype: 0, model: 'Broadlink', name: 'Broadlink (' + ip + ')' })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Mislukt', 'error'); return; }
+          document.getElementById('manualIp').value = '';
+          addBlCardToPage(data.device);
+          showToast('Apparaat toegevoegd', 'success');
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    function addBlCardToPage(bl) {
+      var empty = document.getElementById('blEmptyState');
+      if (empty) empty.remove();
+      var list = document.getElementById('blDeviceList');
+      var div = document.createElement('div');
+      div.className = 'bl-device-card';
+      div.id = 'bl-' + bl.id;
+      div.innerHTML =
+        '<div class="bl-device-header" onclick="toggleBl(\'' + bl.id + '\')">' +
+          '<div class="bl-device-icon"><i class="mdi mdi-remote-tv"></i></div>' +
+          '<div class="bl-device-info">' +
+            '<div class="bl-device-name">' + escHtml(bl.name) + '</div>' +
+            '<div class="bl-device-sub">' + escHtml(bl.ip) + ' · 0 IR-apparaten</div>' +
+          '</div>' +
+          '<div class="bl-device-actions" onclick="event.stopPropagation()">' +
+            '<button class="btn-icon danger" title="Verwijder" onclick="deleteBlDevice(\'' + bl.id + '\', \'' + escHtml(bl.name) + '\')">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>' +
+            '</button>' +
+            '<div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);"><i class="mdi mdi-chevron-down" id="bl-chevron-' + bl.id + '"></i></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bl-device-body" id="bl-body-' + bl.id + '" style="display:none;">' +
+          '<div class="ir-list" id="ir-list-' + bl.id + '">' +
+            '<div class="empty-state" id="ir-empty-' + bl.id + '">Nog geen IR-apparaten. Voeg er een toe.</div>' +
+          '</div>' +
+          '<button class="add-ir-btn" onclick="showAddIrModal(\'' + bl.id + '\')">' +
+            '<i class="mdi mdi-plus"></i> IR-apparaat toevoegen' +
+          '</button>' +
+        '</div>';
+      list.appendChild(div);
+    }
+
+    // ===== BROADLINK DEVICE VERWIJDEREN =====
+    function deleteBlDevice(blId, name) {
+      if (!confirm('Verwijder "' + name + '" en alle gekoppelde IR-apparaten?')) return;
+      fetch('/api/broadlink/devices/' + blId, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Mislukt', 'error'); return; }
+          var el = document.getElementById('bl-' + blId);
+          if (el) el.remove();
+          showToast('Verwijderd', 'success');
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    // ===== IR APPARAAT TOEVOEGEN =====
+    function showAddIrModal(blId) {
+      document.getElementById('addIrBlId').value = blId;
+      document.getElementById('addIrName').value = '';
+      document.getElementById('addIrIcon').value = 'mdi-remote';
+      document.getElementById('addIrDashboard').checked = true;
+      document.getElementById('addIrModal').classList.add('open');
+      setTimeout(function() { document.getElementById('addIrName').focus(); }, 100);
+    }
+
+    function submitAddIr() {
+      var blId = document.getElementById('addIrBlId').value;
+      var name = document.getElementById('addIrName').value.trim();
+      var icon = document.getElementById('addIrIcon').value;
+      var dash = document.getElementById('addIrDashboard').checked;
+      if (!name) { showToast('Voer een naam in', 'error'); return; }
+      fetch('/api/broadlink/' + blId + '/ir_devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, icon: icon, show_on_dashboard: dash })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Mislukt', 'error'); return; }
+          closeModal('addIrModal');
+          addIrCardToPage(blId, data.ir_device);
+          showToast(name + ' toegevoegd', 'success');
+          var body = document.getElementById('bl-body-' + blId);
+          if (body) body.style.display = 'block';
+          var chev = document.getElementById('bl-chevron-' + blId);
+          if (chev) chev.className = 'mdi mdi-chevron-up';
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    function addIrCardToPage(blId, ir) {
+      var empty = document.getElementById('ir-empty-' + blId);
+      if (empty) empty.remove();
+      var list = document.getElementById('ir-list-' + blId);
+      var div = document.createElement('div');
+      div.className = 'ir-card';
+      div.id = 'ir-' + ir.id;
+      div.innerHTML =
+        '<div class="ir-header" onclick="toggleIr(\'' + ir.id + '\')">' +
+          '<div class="ir-icon"><i class="mdi ' + escHtml(ir.icon) + '"></i></div>' +
+          '<div class="ir-name">' + escHtml(ir.name) + '</div>' +
+          '<div class="ir-cmd-count">0 cmd</div>' +
+          '<div class="ir-actions" onclick="event.stopPropagation()">' +
+            '<button class="btn-icon-sm danger" title="Verwijder" onclick="deleteIrDevice(\'' + blId + '\', \'' + ir.id + '\', \'' + escHtml(ir.name) + '\')">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>' +
+            '</button>' +
+            '<div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);"><i class="mdi mdi-chevron-down" id="ir-chevron-' + ir.id + '"></i></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ir-body" id="ir-body-' + ir.id + '" style="display:none;">' +
+          '<div class="cmd-list" id="cmd-list-' + ir.id + '"></div>' +
+          '<button class="learn-btn" onclick="startLearn(\'' + blId + '\', \'' + ir.id + '\')" ' + (BROADLINK_AVAILABLE ? '' : 'disabled') + '>' +
+            '<i class="mdi mdi-record-circle-outline"></i> IR-commando inleren' +
+          '</button>' +
+        '</div>';
+      list.appendChild(div);
+      toggleIr(ir.id);
+    }
+
+    // ===== IR APPARAAT VERWIJDEREN =====
+    function deleteIrDevice(blId, irId, name) {
+      if (!confirm('Verwijder "' + name + '" en alle commando\'s?')) return;
+      fetch('/api/broadlink/' + blId + '/ir_devices/' + irId, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Mislukt', 'error'); return; }
+          var el = document.getElementById('ir-' + irId);
+          if (el) el.remove();
+          showToast('Verwijderd', 'success');
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    // ===== IR INLEREN =====
+    var currentLearnBlId = null;
+    var currentLearnIrId = null;
+
+    function startLearn(blId, irId) {
+      currentLearnBlId = blId;
+      currentLearnIrId = irId;
+      document.getElementById('learnOverlay').classList.add('open');
+      var secs = 15;
+      document.getElementById('learnTimer').textContent = 'Nog ' + secs + ' seconden';
+      learnTimerInterval = setInterval(function() {
+        secs--;
+        document.getElementById('learnTimer').textContent = secs > 0 ? 'Nog ' + secs + ' seconden' : 'Verwerken…';
+        if (secs <= 0) clearInterval(learnTimerInterval);
+      }, 1000);
+
+      fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/learn', {
+        method: 'POST',
+        signal: (learnAbortController = new AbortController()).signal
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          clearInterval(learnTimerInterval);
+          document.getElementById('learnOverlay').classList.remove('open');
+          if (!data.success) { showToast(data.error || 'Geen signaal ontvangen', 'error'); return; }
+          document.getElementById('learnedCode').value = data.code;
+          document.getElementById('learnedBlId').value = blId;
+          document.getElementById('learnedIrId').value = irId;
+          document.getElementById('learnedCmdName').value = '';
+          document.getElementById('saveLearnModal').classList.add('open');
+          setTimeout(function() { document.getElementById('learnedCmdName').focus(); }, 100);
+        })
+        .catch(function(e) {
+          clearInterval(learnTimerInterval);
+          document.getElementById('learnOverlay').classList.remove('open');
+          if (e.name !== 'AbortError') showToast('Fout bij inleren', 'error');
+        });
+    }
+
+    function cancelLearn() {
+      clearInterval(learnTimerInterval);
+      if (learnAbortController) learnAbortController.abort();
+      document.getElementById('learnOverlay').classList.remove('open');
+    }
+
+    // ===== COMMANDO OPSLAAN =====
+    function submitSaveLearn() {
+      var code = document.getElementById('learnedCode').value;
+      var blId = document.getElementById('learnedBlId').value;
+      var irId = document.getElementById('learnedIrId').value;
+      var name = document.getElementById('learnedCmdName').value.trim();
+      if (!name) { showToast('Voer een naam in', 'error'); return; }
+      fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, code: code })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Opslaan mislukt', 'error'); return; }
+          closeModal('saveLearnModal');
+          addCmdToPage(irId, blId, data.command);
+          showToast('"' + name + '" opgeslagen', 'success');
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    function addCmdToPage(irId, blId, cmd) {
+      var list = document.getElementById('cmd-list-' + irId);
+      var div = document.createElement('div');
+      div.className = 'cmd-row';
+      div.id = 'cmd-' + cmd.id;
+      div.innerHTML =
+        '<span class="cmd-name">' + escHtml(cmd.name) + '</span>' +
+        '<button class="cmd-send-btn" onclick="sendCommand(\'' + blId + '\', \'' + irId + '\', \'' + cmd.id + '\', this)">' +
+          '<i class="mdi mdi-send"></i> Stuur' +
+        '</button>' +
+        '<button class="btn-icon-sm danger" title="Verwijder commando" onclick="deleteCommand(\'' + blId + '\', \'' + irId + '\', \'' + cmd.id + '\')">' +
+          '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>' +
+        '</button>';
+      list.appendChild(div);
+      updateCmdCount(irId);
+    }
+
+    function updateCmdCount(irId) {
+      var list = document.getElementById('cmd-list-' + irId);
+      var count = list ? list.children.length : 0;
+      var header = document.querySelector('#ir-' + irId + ' .ir-cmd-count');
+      if (header) header.textContent = count + ' cmd';
+    }
+
+    // ===== COMMANDO VERWIJDEREN =====
+    function deleteCommand(blId, irId, cmdId) {
+      if (!confirm('Commando verwijderen?')) return;
+      fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands/' + cmdId, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Mislukt', 'error'); return; }
+          var el = document.getElementById('cmd-' + cmdId);
+          if (el) el.remove();
+          updateCmdCount(irId);
+          showToast('Commando verwijderd', 'success');
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    // ===== COMMANDO STUREN =====
+    function sendCommand(blId, irId, cmdId, btn) {
+      btn.disabled = true;
+      btn.classList.add('sending');
+      btn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i>';
+      fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands/' + cmdId + '/send', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.classList.remove('sending');
+          btn.innerHTML = '<i class="mdi mdi-send"></i> Stuur';
+          if (!data.success) { showToast(data.error || 'Sturen mislukt', 'error'); return; }
+          showToast('Signaal verstuurd', 'success');
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.classList.remove('sending');
+          btn.innerHTML = '<i class="mdi mdi-send"></i> Stuur';
+          showToast('Fout bij sturen', 'error');
+        });
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

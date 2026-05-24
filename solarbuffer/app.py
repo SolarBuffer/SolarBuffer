@@ -26,6 +26,18 @@ except ImportError:
     _mqtt_lib = None
     MQTT_AVAILABLE = False
 
+try:
+    import broadlink as _broadlink_lib
+    import base64 as _b64
+    BROADLINK_AVAILABLE = True
+except ImportError:
+    _broadlink_lib = None
+    _b64 = None
+    BROADLINK_AVAILABLE = False
+
+_broadlink_learn_lock = threading.Lock()
+_broadlink_learn_state = {}  # learn_id -> {status, code, error}
+
 # ================= CONFIG =================
 BASE_DIR = os.path.dirname(__file__)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
@@ -275,6 +287,41 @@ def load_config():
         normalized_devices.append(dev)
 
     cfg["shelly_devices"] = normalized_devices
+
+    if "broadlink_devices" not in cfg or not isinstance(cfg["broadlink_devices"], list):
+        cfg["broadlink_devices"] = []
+    for bl in cfg["broadlink_devices"]:
+        if "id" not in bl:
+            bl["id"] = str(uuid.uuid4())
+        if "name" not in bl:
+            bl["name"] = "Broadlink"
+        if "ip" not in bl:
+            bl["ip"] = ""
+        if "mac" not in bl:
+            bl["mac"] = ""
+        if "devtype" not in bl:
+            bl["devtype"] = 0
+        if "ir_devices" not in bl or not isinstance(bl["ir_devices"], list):
+            bl["ir_devices"] = []
+        for ir in bl["ir_devices"]:
+            if "id" not in ir:
+                ir["id"] = str(uuid.uuid4())
+            if "name" not in ir:
+                ir["name"] = "IR-apparaat"
+            if "icon" not in ir:
+                ir["icon"] = "mdi-remote"
+            if "show_on_dashboard" not in ir:
+                ir["show_on_dashboard"] = True
+            if "commands" not in ir or not isinstance(ir["commands"], list):
+                ir["commands"] = []
+            for cmd in ir["commands"]:
+                if "id" not in cmd:
+                    cmd["id"] = str(uuid.uuid4())
+                if "name" not in cmd:
+                    cmd["name"] = "Commando"
+                if "code" not in cmd:
+                    cmd["code"] = ""
+
     return cfg
 
 
@@ -2632,6 +2679,294 @@ def delete_accessory(acc_id):
     save_config(cfg)
     write_audit_log("accessory_deleted", {"id": acc_id})
     return jsonify(success=True)
+
+
+# ================= BROADLINK =================
+
+def _broadlink_connect(ip, mac_str, devtype):
+    if not BROADLINK_AVAILABLE:
+        return None
+    try:
+        mac_bytes = bytes.fromhex(mac_str.replace(":", "").replace("-", ""))
+        dev = _broadlink_lib.gendevice(devtype, (ip, 80), mac_bytes)
+        dev.auth()
+        return dev
+    except Exception:
+        return None
+
+
+def _broadlink_discover_once(timeout=5):
+    if not BROADLINK_AVAILABLE:
+        return []
+    try:
+        devices = _broadlink_lib.discover(timeout=timeout)
+        result = []
+        for d in devices:
+            try:
+                d.auth()
+                ip = d.host[0]
+                mac = ":".join(f"{b:02x}" for b in d.mac)
+                result.append({
+                    "ip": ip,
+                    "mac": mac,
+                    "devtype": d.devtype,
+                    "model": getattr(d, "model", str(d.devtype)),
+                    "type": getattr(d, "type", "Unknown"),
+                })
+            except Exception:
+                pass
+        return result
+    except Exception:
+        return []
+
+
+@app.route("/settings/broadlink")
+def settings_broadlink():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    return render_template(
+        "settings_broadlink.html",
+        config=cfg,
+        broadlink_available=BROADLINK_AVAILABLE,
+        dark_mode=get_user_dark_mode(),
+    )
+
+
+@app.route("/api/broadlink/scan", methods=["POST"])
+def broadlink_scan():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not BROADLINK_AVAILABLE:
+        return jsonify(success=False, error="python-broadlink niet geïnstalleerd"), 503
+    found = _broadlink_discover_once(timeout=5)
+    cfg = load_config()
+    existing_ips = {bl["ip"] for bl in cfg.get("broadlink_devices", [])}
+    new_devices = [d for d in found if d["ip"] not in existing_ips]
+    return jsonify(success=True, devices=found, new_devices=new_devices)
+
+
+@app.route("/api/broadlink/devices", methods=["POST"])
+def broadlink_add_device():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    ip = (data.get("ip") or "").strip()
+    mac = (data.get("mac") or "").strip()
+    devtype = int(data.get("devtype") or 0)
+    model = (data.get("model") or "Broadlink").strip()
+    name = (data.get("name") or model).strip()
+    if not ip:
+        return jsonify(success=False, error="IP-adres is verplicht"), 400
+    cfg = load_config()
+    if any(bl["ip"] == ip for bl in cfg.get("broadlink_devices", [])):
+        return jsonify(success=False, error="Apparaat al toegevoegd"), 409
+    new_bl = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "ip": ip,
+        "mac": mac,
+        "devtype": devtype,
+        "ir_devices": [],
+    }
+    cfg["broadlink_devices"].append(new_bl)
+    save_config(cfg)
+    write_audit_log("broadlink_device_added", {"ip": ip, "name": name})
+    return jsonify(success=True, device=new_bl)
+
+
+@app.route("/api/broadlink/devices/<bl_id>", methods=["PUT"])
+def broadlink_update_device(bl_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    bl["name"] = (data.get("name") or bl["name"]).strip()
+    save_config(cfg)
+    return jsonify(success=True)
+
+
+@app.route("/api/broadlink/devices/<bl_id>", methods=["DELETE"])
+def broadlink_delete_device(bl_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    before = len(cfg.get("broadlink_devices", []))
+    cfg["broadlink_devices"] = [b for b in cfg.get("broadlink_devices", []) if b["id"] != bl_id]
+    if len(cfg["broadlink_devices"]) == before:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    save_config(cfg)
+    write_audit_log("broadlink_device_deleted", {"id": bl_id})
+    return jsonify(success=True)
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices", methods=["POST"])
+def broadlink_add_ir_device(bl_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Broadlink-apparaat niet gevonden"), 404
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify(success=False, error="Naam is verplicht"), 400
+    icon = (data.get("icon") or "mdi-remote").strip()
+    show_on_dashboard = bool(data.get("show_on_dashboard", True))
+    new_ir = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "icon": icon,
+        "show_on_dashboard": show_on_dashboard,
+        "commands": [],
+    }
+    bl["ir_devices"].append(new_ir)
+    save_config(cfg)
+    write_audit_log("broadlink_ir_device_added", {"bl_id": bl_id, "name": name})
+    return jsonify(success=True, ir_device=new_ir)
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>", methods=["PUT"])
+def broadlink_update_ir_device(bl_id, ir_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    ir = next((d for d in bl["ir_devices"] if d["id"] == ir_id), None)
+    if not ir:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    ir["name"] = (data.get("name") or ir["name"]).strip()
+    ir["icon"] = (data.get("icon") or ir["icon"]).strip()
+    ir["show_on_dashboard"] = bool(data.get("show_on_dashboard", ir.get("show_on_dashboard", True)))
+    save_config(cfg)
+    return jsonify(success=True)
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>", methods=["DELETE"])
+def broadlink_delete_ir_device(bl_id, ir_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    before = len(bl["ir_devices"])
+    bl["ir_devices"] = [d for d in bl["ir_devices"] if d["id"] != ir_id]
+    if len(bl["ir_devices"]) == before:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    save_config(cfg)
+    write_audit_log("broadlink_ir_device_deleted", {"bl_id": bl_id, "ir_id": ir_id})
+    return jsonify(success=True)
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>/learn", methods=["POST"])
+def broadlink_learn(bl_id, ir_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not BROADLINK_AVAILABLE:
+        return jsonify(success=False, error="python-broadlink niet geïnstalleerd"), 503
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Broadlink-apparaat niet gevonden"), 404
+    dev = _broadlink_connect(bl["ip"], bl["mac"], bl["devtype"])
+    if not dev:
+        return jsonify(success=False, error="Kan geen verbinding maken met apparaat"), 502
+    try:
+        dev.enter_learning()
+        deadline = time.time() + 15
+        code_bytes = None
+        while time.time() < deadline:
+            time.sleep(1)
+            try:
+                code_bytes = dev.check_data()
+                if code_bytes:
+                    break
+            except Exception:
+                pass
+        if not code_bytes:
+            return jsonify(success=False, error="Geen IR-signaal ontvangen binnen 15 seconden"), 408
+        import base64
+        code_b64 = base64.b64encode(code_bytes).decode()
+        return jsonify(success=True, code=code_b64)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>/commands", methods=["POST"])
+def broadlink_add_command(bl_id, ir_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    ir = next((d for d in bl["ir_devices"] if d["id"] == ir_id), None)
+    if not ir:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    name = (data.get("name") or "").strip()
+    code = (data.get("code") or "").strip()
+    if not name or not code:
+        return jsonify(success=False, error="Naam en IR-code zijn verplicht"), 400
+    new_cmd = {"id": str(uuid.uuid4()), "name": name, "code": code}
+    ir["commands"].append(new_cmd)
+    save_config(cfg)
+    write_audit_log("broadlink_command_added", {"bl_id": bl_id, "ir_id": ir_id, "name": name})
+    return jsonify(success=True, command=new_cmd)
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>/commands/<cmd_id>", methods=["DELETE"])
+def broadlink_delete_command(bl_id, ir_id, cmd_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    ir = next((d for d in bl["ir_devices"] if d["id"] == ir_id), None)
+    if not ir:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    before = len(ir["commands"])
+    ir["commands"] = [c for c in ir["commands"] if c["id"] != cmd_id]
+    if len(ir["commands"]) == before:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    save_config(cfg)
+    return jsonify(success=True)
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>/commands/<cmd_id>/send", methods=["POST"])
+def broadlink_send_command(bl_id, ir_id, cmd_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not BROADLINK_AVAILABLE:
+        return jsonify(success=False, error="python-broadlink niet geïnstalleerd"), 503
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    ir = next((d for d in bl["ir_devices"] if d["id"] == ir_id), None)
+    if not ir:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    cmd = next((c for c in ir["commands"] if c["id"] == cmd_id), None)
+    if not cmd:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    dev = _broadlink_connect(bl["ip"], bl["mac"], bl["devtype"])
+    if not dev:
+        return jsonify(success=False, error="Kan geen verbinding maken met apparaat"), 502
+    try:
+        import base64
+        dev.send_data(base64.b64decode(cmd["code"]))
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
 
 
 @app.route("/set_gas_enabled", methods=["POST"])
