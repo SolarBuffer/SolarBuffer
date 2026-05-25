@@ -54,12 +54,12 @@ DEFAULT_EXPERT_SETTINGS = {
     "FREEZE_CONFIRM": 5,
     "IMPORT_UNFREEZE_THRESHOLD": 200,
     "UNFREEZE_DELAY": 5,
-    "IMPORT_OFF_THRESHOLD": 250,
+    "IMPORT_OFF_THRESHOLD": 275,
     "OFF_DELAY": 120,
     "PID_NEUTRAL_LOW": -5,
     "PID_NEUTRAL_HIGH": 45,
     "POWER_SOCKET_DELAY": 5,
-    "POWER_SOCKET_HOLD_SECONDS": 600,
+    "POWER_SOCKET_HOLD_SECONDS": 60,
     "BOOST_DURATION": 900
 }
 
@@ -324,6 +324,17 @@ def load_config():
                 if "code" not in cmd:
                     cmd["code"] = ""
 
+    if "battery_enabled" not in cfg:
+        cfg["battery_enabled"] = False
+    if "battery_ip" not in cfg:
+        cfg["battery_ip"] = ""
+    if "battery_token" not in cfg:
+        cfg["battery_token"] = ""
+    if "battery_priority" not in cfg:
+        cfg["battery_priority"] = "boiler"
+    if "battery_soc_threshold" not in cfg:
+        cfg["battery_soc_threshold"] = 95
+
     return cfg
 
 
@@ -556,6 +567,12 @@ device_states = {}
 accessory_states = {}
 inverter_power = None
 inverter_online = False
+battery_state = {
+    "soc": None, "power_w": None, "voltage_v": None, "current_a": None,
+    "frequency_hz": None, "energy_import_kwh": None, "energy_export_kwh": None,
+    "cycles": None, "mode": None, "permissions": None, "online": False,
+}
+_last_battery_permissions = None
 current_power = 0
 current_brightness = 0
 current_gas_m3 = None      # meest recente meterstand (m³)
@@ -1184,9 +1201,14 @@ def settings_p1():
     if request.method == "POST":
         old_cfg = load_config()
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
-        cfg["inverter_enabled"] = "inverter_enabled" in request.form
-        cfg["inverter_ip"] = request.form.get("inverter_ip", "").strip()
-        cfg["inverter_type"] = request.form.get("inverter_type", "solaredge")
+        cfg["battery_enabled"] = "battery_enabled" in request.form
+        cfg["battery_ip"] = request.form.get("battery_ip", "").strip()
+        cfg["battery_token"] = request.form.get("battery_token", "").strip()
+        cfg["battery_priority"] = request.form.get("battery_priority", "boiler")
+        try:
+            cfg["battery_soc_threshold"] = int(request.form.get("battery_soc_threshold", 95))
+        except (ValueError, TypeError):
+            cfg["battery_soc_threshold"] = 95
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
@@ -1376,6 +1398,10 @@ def status_json():
         current_price_ct=_current_price_ct,
         dynamic_pricing_enabled=cfg.get("dynamic_pricing_enabled", False),
         price_threshold_ct=float(cfg.get("price_threshold_ct", 5.0)),
+        battery_enabled=cfg.get("battery_enabled", False),
+        battery_priority=cfg.get("battery_priority", "boiler"),
+        battery_soc_threshold=cfg.get("battery_soc_threshold", 95),
+        battery=battery_state if cfg.get("battery_enabled") else None,
     )
 
 
@@ -4472,7 +4498,75 @@ def control_loop():
 
             non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled and d["ip"] not in boost_handled and d["ip"] not in schedule_handled]
 
-            if export_start is not None and (now - export_start) >= EXPORT_DELAY:
+            # ================= BATTERIJ PRIORITEIT =================
+            battery_blocks_start = False
+            _bat_cfg_enabled = cfg.get("battery_enabled", False)
+            if _bat_cfg_enabled:
+                _bat_token = cfg.get("battery_token", "").strip()
+                _bat_control_ip = p1_ip
+                _bat_priority = cfg.get("battery_priority", "boiler")
+                _bat_soc_thr = cfg.get("battery_soc_threshold", 95)
+                _bat_soc = battery_state.get("soc")
+
+                if not battery_state.get("online"):
+                    # Batterij niet bereikbaar → normale besturing, reset cache
+                    global _last_battery_permissions
+                    _last_battery_permissions = None
+                    # battery_blocks_start blijft False, geen permissies sturen
+
+                else:
+                    _any_sb_active = any(device_states[d["ip"]].get("started") for d in non_legionella)
+                    _legionella_active = bool(legionella_handled)
+                    _schedule_active = active_sched is not None
+                    _price_active = any(device_states[d["ip"]].get("price_triggered") for d in devices_sorted)
+                    _force_no_discharge = _legionella_active or _schedule_active or _price_active
+                    _has_export = measured_power < 0
+                    _pid_at_max = current_brightness >= MAX_BRIGHTNESS
+                    _sb_can_run = (
+                        enabled
+                        and bool(non_legionella)
+                        and any(device_states[d["ip"]].get("online") for d in non_legionella)
+                    )
+
+                    if _bat_priority == "battery":
+                        if not _sb_can_run:
+                            _desired_perms = ["charge_allowed", "discharge_allowed"]
+                        elif _bat_soc is not None and _bat_soc < _bat_soc_thr:
+                            battery_blocks_start = True
+                            for _bd in non_legionella:
+                                _bst = device_states[_bd["ip"]]
+                                if _bst.get("started") and not _bst.get("freeze") and not _bst.get("legionella_active"):
+                                    reset_device_to_off(_bd["ip"])
+                            _desired_perms = ["charge_allowed", "discharge_allowed"]
+                        elif _force_no_discharge:
+                            _desired_perms = []
+                        elif _any_sb_active:
+                            _desired_perms = ["charge_allowed"] if _pid_at_max else []
+                        elif _has_export:
+                            _desired_perms = []
+                        else:
+                            _desired_perms = ["discharge_allowed"]
+                    else:  # solarbuffer eerst
+                        if not _sb_can_run:
+                            _desired_perms = ["charge_allowed", "discharge_allowed"]
+                        elif _force_no_discharge:
+                            _desired_perms = []
+                        elif _any_sb_active:
+                            _desired_perms = ["charge_allowed"] if _pid_at_max else []
+                        elif _has_export:
+                            _desired_perms = []
+                        else:
+                            _desired_perms = ["discharge_allowed"]
+
+                if _bat_token and _bat_control_ip and battery_state.get("online") and sorted(_desired_perms) != (_last_battery_permissions or []):
+                    threading.Thread(
+                        target=set_battery_permissions,
+                        args=(_bat_control_ip, _bat_token, _desired_perms),
+                        daemon=True,
+                    ).start()
+            # ================= EINDE BATTERIJ PRIORITEIT =================
+
+            if export_start is not None and (now - export_start) >= EXPORT_DELAY and not battery_blocks_start:
                 next_dev = get_next_startable_device(non_legionella)
                 if next_dev:
                     ip = next_dev["ip"]
@@ -4535,7 +4629,7 @@ def control_loop():
                             st_d["price_triggered"] = False
 
             PRICE_START_DELAY = 30
-            if price_start is not None and (now - price_start) >= PRICE_START_DELAY:
+            if price_start is not None and (now - price_start) >= PRICE_START_DELAY and not battery_blocks_start:
                 next_dev = get_next_startable_device(non_legionella)
                 if next_dev:
                     ip = next_dev["ip"]
@@ -4861,6 +4955,94 @@ def inverter_poll_loop():
         time.sleep(5)
 
 
+# ================= BATTERIJ (HomeWizard HWE-BAT v2) =================
+try:
+    import urllib3 as _urllib3
+    _urllib3.disable_warnings(_urllib3.exceptions.InsecureRequestWarning)
+except Exception:
+    pass
+
+
+def _hw_v2_headers(token):
+    return {"Authorization": f"Bearer {token}", "X-Api-Version": "2"}
+
+
+def get_battery_measurement(ip, token):
+    r = requests.get(
+        f"https://{ip}/api/measurement",
+        headers=_hw_v2_headers(token), timeout=3, verify=False,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def get_battery_control(control_ip, token):
+    r = requests.get(
+        f"https://{control_ip}/api/batteries",
+        headers=_hw_v2_headers(token), timeout=3, verify=False,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def set_battery_permissions(control_ip, token, permissions):
+    global _last_battery_permissions
+    desired = sorted(permissions)
+    if _last_battery_permissions == desired:
+        return True
+    try:
+        r = requests.put(
+            f"https://{control_ip}/api/batteries",
+            headers={**_hw_v2_headers(token), "Content-Type": "application/json"},
+            json={"permissions": permissions},
+            timeout=3, verify=False,
+        )
+        if r.status_code == 200:
+            _last_battery_permissions = desired
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def battery_poll_loop():
+    global battery_state
+    while True:
+        try:
+            cfg = load_config()
+            if cfg.get("battery_enabled") and cfg.get("battery_ip") and cfg.get("battery_token"):
+                ip = cfg["battery_ip"]
+                token = cfg["battery_token"]
+                try:
+                    data = get_battery_measurement(ip, token)
+                    battery_state.update({
+                        "soc": data.get("state_of_charge_pct"),
+                        "power_w": data.get("power_w"),
+                        "voltage_v": data.get("voltage_v"),
+                        "current_a": data.get("current_a"),
+                        "frequency_hz": data.get("frequency_hz"),
+                        "energy_import_kwh": data.get("energy_import_kwh"),
+                        "energy_export_kwh": data.get("energy_export_kwh"),
+                        "cycles": data.get("cycles"),
+                        "online": True,
+                    })
+                except Exception:
+                    battery_state["online"] = False
+                control_ip = cfg.get("p1_ip", "")
+                if control_ip:
+                    try:
+                        ctrl = get_battery_control(control_ip, token)
+                        battery_state["mode"] = ctrl.get("mode")
+                        battery_state["permissions"] = ctrl.get("permissions")
+                    except Exception:
+                        pass
+            else:
+                battery_state["online"] = False
+        except Exception:
+            battery_state["online"] = False
+        time.sleep(5)
+
+
 # ================= HISTORY DB =================
 HISTORY_DB = os.path.join(BASE_DIR, "history.db")
 
@@ -5170,6 +5352,7 @@ if __name__ == "__main__":
     threading.Thread(target=mqtt_loop, daemon=True).start()
     threading.Thread(target=accessory_poll_loop, daemon=True).start()
     threading.Thread(target=inverter_poll_loop, daemon=True).start()
+    threading.Thread(target=battery_poll_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):

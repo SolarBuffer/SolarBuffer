@@ -1385,6 +1385,9 @@
     html[data-theme="dark"] .stat-card .value { color: hsl(220, 10%, 90%); }
     html[data-theme="dark"] .stat-card .unit  { color: hsl(220, 8%, 58%); }
     html[data-theme="dark"] .power-reading .power-unit { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] #batteryCard { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] #batteryCard [style*="hsl(30,20%,96%)"] { background: hsl(220, 8%, 22%) !important; }
+    html[data-theme="dark"] #batteryCard [style*="hsl(220,15%,90%)"] { background: hsl(220, 8%, 30%) !important; }
 
     html[data-theme="dark"] .status-card.neutral {
       background: hsl(220, 8%, 28%);
@@ -1893,6 +1896,48 @@
         </div>
     </div>
 
+    <div class="card" id="batteryCard" style="display:none; margin-bottom:1rem; padding:1rem 1.1rem;">
+      <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.65rem;">
+        <div style="width:34px;height:34px;border-radius:10px;background:hsl(145,55%,94%);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="hsl(145,55%,36%)"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:0.95rem;">Batterij</div>
+          <div id="batStatusLabel" style="font-size:0.75rem;color:hsl(220,10%,52%);">Laden…</div>
+        </div>
+        <div id="batOnlineDot" style="width:8px;height:8px;border-radius:50%;background:hsl(145,55%,50%);flex-shrink:0;"></div>
+      </div>
+
+      <div style="margin-bottom:0.55rem;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.25rem;">
+          <span style="font-size:0.75rem;color:hsl(220,10%,52%);">Laadtoestand</span>
+          <span id="batSocText" style="font-size:0.88rem;font-weight:700;">—%</span>
+        </div>
+        <div style="height:8px;background:hsl(220,15%,90%);border-radius:999px;overflow:hidden;">
+          <div id="batSocBar" style="height:100%;width:0%;background:hsl(145,55%,50%);border-radius:999px;transition:width 0.5s;"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;">
+        <div style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
+          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Vermogen</div>
+          <div style="display:flex;align-items:center;gap:0.2rem;">
+            <span id="batPowerArrow" style="font-size:0.8rem;"></span>
+            <span id="batPowerVal" style="font-weight:700;font-size:0.88rem;">—</span>
+            <span style="font-size:0.7rem;color:hsl(220,10%,52%);">W</span>
+          </div>
+        </div>
+        <div style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
+          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Spanning</div>
+          <div><span id="batVoltVal" style="font-weight:700;font-size:0.88rem;">—</span><span style="font-size:0.7rem;color:hsl(220,10%,52%);"> V</span></div>
+        </div>
+        <div style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
+          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Cycli</div>
+          <div><span id="batCyclesVal" style="font-weight:700;font-size:0.88rem;">—</span></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card control-card">
       <div class="control-card-header">
         <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
@@ -2004,7 +2049,7 @@
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.5.0</div>
+    <div class="footer">Version 0.5.1</div>
   </div>
 
   <script>
@@ -2077,6 +2122,52 @@
           }
           renderSchedules(data.schedules || [], data.active_schedule || null);
           renderVacationStatus(data);
+
+          // ---- Batterij widget ----
+          const batCard = document.getElementById('batteryCard');
+          if (data.battery_enabled && data.battery) {
+            batCard.style.display = '';
+            const bat = data.battery;
+            const batOnline = bat.online;
+            document.getElementById('batOnlineDot').style.background =
+              batOnline ? 'hsl(145,55%,50%)' : 'hsl(0,60%,60%)';
+
+            const perms = bat.permissions || [];
+            const canCharge = perms.includes('charge_allowed');
+            const canDischarge = perms.includes('discharge_allowed');
+            let permLabel = '';
+            if (canCharge && canDischarge) permLabel = 'Laden & ontladen';
+            else if (canCharge) permLabel = 'Alleen laden';
+            else if (canDischarge) permLabel = 'Alleen ontladen';
+            else permLabel = 'Geblokkeerd';
+            const prio = data.battery_priority === 'battery' ? 'Batterij-prio' : 'Boiler-prio';
+            document.getElementById('batStatusLabel').textContent =
+              batOnline ? `${prio} · ${permLabel}` : 'Offline';
+
+            const soc = bat.soc;
+            if (soc !== null && soc !== undefined) {
+              document.getElementById('batSocText').textContent = Number(soc).toFixed(0) + '%';
+              const bar = document.getElementById('batSocBar');
+              bar.style.width = Number(soc).toFixed(0) + '%';
+              const thr = data.battery_soc_threshold || 95;
+              bar.style.background = soc >= 80 ? 'hsl(145,55%,50%)' : soc >= 20 ? 'hsl(38,90%,52%)' : 'hsl(0,65%,52%)';
+            }
+
+            const pw = bat.power_w;
+            if (pw !== null && pw !== undefined) {
+              document.getElementById('batPowerVal').textContent = Math.abs(pw).toFixed(0);
+              document.getElementById('batPowerArrow').textContent = pw > 5 ? '↑' : pw < -5 ? '↓' : '·';
+              document.getElementById('batPowerArrow').style.color =
+                pw > 5 ? 'hsl(145,55%,40%)' : pw < -5 ? 'hsl(32,90%,48%)' : 'hsl(220,10%,60%)';
+            }
+            const vv = bat.voltage_v;
+            document.getElementById('batVoltVal').textContent = vv !== null && vv !== undefined ? Number(vv).toFixed(1) : '—';
+            const cy = bat.cycles;
+            document.getElementById('batCyclesVal').textContent = cy !== null && cy !== undefined ? cy : '—';
+          } else {
+            batCard.style.display = 'none';
+          }
+          // ---- Einde batterij widget ----
 
           const seRow = document.getElementById('solarEdgeRow');
           if (data.inverter_enabled && data.inverter_online && data.inverter_power !== null) {

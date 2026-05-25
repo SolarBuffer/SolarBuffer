@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>P1-meter - SolarBuffer</title>
+  <title>P1 &amp; Batterij - SolarBuffer</title>
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
@@ -191,6 +191,7 @@
     .toggle-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 0.65rem;
       font-weight: 600;
       font-size: 0.95rem;
@@ -202,8 +203,95 @@
       accent-color: hsl(32, 95%, 52%);
       cursor: pointer;
     }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .toggle input { display: none; }
+    .toggle .slider {
+      position: absolute;
+      inset: 0;
+      background: hsl(30, 15%, 80%);
+      border-radius: 12px;
+      transition: background 0.25s;
+    }
+    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+    .toggle .slider::before {
+      content: "";
+      position: absolute;
+      width: 20px; height: 20px;
+      left: 2px; top: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      transition: transform 0.25s;
+    }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
+    html[data-theme="dark"] .toggle .slider { background: hsl(220, 8%, 42%); }
+    html[data-theme="dark"] .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
     .solaredge-fields { margin-top: 1rem; }
     html[data-theme="dark"] .toggle-row { color: hsl(220, 10%, 88%); }
+
+    .prio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .prio-option { display: none; }
+    .prio-grid .prio-card {
+      display: block !important;
+      padding: 1rem 0.75rem;
+      border: 2px solid hsl(220, 12%, 82%);
+      border-radius: 0.9rem;
+      background: hsl(220, 20%, 98%);
+      cursor: pointer;
+      text-align: center !important;
+      user-select: none;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 0 !important;
+    }
+    .prio-grid .prio-card:hover { border-color: hsl(32, 80%, 60%); background: hsl(32, 100%, 97%); }
+    .prio-option:checked + .prio-card {
+      border-color: hsl(32, 92%, 50%);
+      background: hsl(32, 100%, 96%);
+    }
+    .prio-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: hsl(220, 14%, 88%);
+      color: hsl(220, 15%, 40%);
+      margin: 0 auto 0.5rem;
+    }
+    .prio-icon svg { display: block; }
+    .prio-option:checked + .prio-card .prio-icon {
+      background: hsl(32, 92%, 50%);
+      color: #fff;
+    }
+    .prio-label {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: hsl(220, 15%, 18%);
+      margin-bottom: 0.15rem;
+    }
+    .prio-sub {
+      display: block;
+      font-size: 0.70rem;
+      color: hsl(220, 10%, 52%);
+      line-height: 1.35;
+    }
+    html[data-theme="dark"] .prio-grid .prio-card { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .prio-grid .prio-card:hover { border-color: hsl(32, 70%, 48%); background: hsl(220, 8%, 24%); }
+    html[data-theme="dark"] .prio-option:checked + .prio-card { border-color: hsl(32, 85%, 54%); background: hsl(220, 8%, 26%); }
+    html[data-theme="dark"] .prio-icon { background: hsl(220, 8%, 30%); color: hsl(220, 10%, 70%); }
+    html[data-theme="dark"] .prio-option:checked + .prio-card .prio-icon { background: hsl(32, 85%, 50%); color: #fff; }
+    html[data-theme="dark"] .prio-label { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .prio-sub   { color: hsl(220, 8%, 56%); }
     .select-field {
       width: 100%;
       padding: 0.65rem 0.85rem;
@@ -227,7 +315,7 @@
   <div class="container">
     <div class="header">
       <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>P1-meter</p>
+      <p>P1 &amp; Batterij</p>
     </div>
 
     <a class="back-btn" href="/settings">
@@ -251,35 +339,63 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Omvormer</div>
-        <label class="toggle-row">
-          <input type="checkbox" id="inverterEnabled" name="inverter_enabled"
-                 {% if config.inverter_enabled %}checked{% endif %}>
-          Omvormer koppelen via Modbus TCP
-        </label>
-        <div id="inverterFields" class="solaredge-fields" style="display:none;">
-          <div class="field-group" style="margin-top:0.85rem;">
-            <label for="inverter_type">Merk</label>
-            <select id="inverter_type" name="inverter_type" class="select-field">
-              {% set types = [
-                ('solaredge','SolarEdge'),('fronius','Fronius'),('sma','SMA'),
-                ('abb','ABB / FIMER'),('kostal','Kostal'),('huawei','Huawei SUN2000'),
-                ('growatt','Growatt'),('sungrow','Sungrow'),('goodwe','GoodWe')
-              ] %}
-              {% for val, lbl in types %}
-              <option value="{{ val }}" {% if config.inverter_type == val %}selected{% endif %}>{{ lbl }}</option>
-              {% endfor %}
-            </select>
+        <div class="card-title">Batterij (HomeWizard HWE-BAT)</div>
+        <div class="toggle-row" style="margin-bottom:0.75rem;">
+          <label for="batteryEnabled" style="cursor:pointer;font-weight:600;">Batterij koppelen via lokale API</label>
+          <label class="toggle">
+            <input type="checkbox" id="batteryEnabled" name="battery_enabled"
+                   {% if config.battery_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="batteryFields" style="display:none;">
+          <div class="field-group">
+            <label for="battery_ip">IP-adres HWE-BAT (sensor)</label>
+            <input type="text" id="battery_ip" name="battery_ip"
+                   placeholder="Bijv. 192.168.178.50"
+                   value="{{ config.battery_ip or '' }}">
           </div>
           <div class="field-group">
-            <label for="inverter_ip">IP-adres omvormer</label>
-            <input type="text" id="inverter_ip" name="inverter_ip"
-                   placeholder="Bijv. 192.168.178.30"
-                   value="{{ config.inverter_ip or '' }}">
+            <label for="battery_token">API-token</label>
+            <input type="text" id="battery_token" name="battery_token"
+                   placeholder="Token uit HomeWizard Energy-app"
+                   value="{{ config.battery_token or '' }}"
+                   autocomplete="off">
           </div>
-          <p style="font-size:0.78rem; color:hsl(220,10%,52%); margin-top:0.5rem; line-height:1.4;">
-            Modbus TCP moet ingeschakeld zijn in de omvormer.
-          </p>
+          <div class="field-group">
+            <label>Prioriteit</label>
+            <div class="prio-grid">
+              <input type="radio" class="prio-option" id="prio_battery" name="battery_priority" value="battery"
+                     {% if config.battery_priority == 'battery' %}checked{% endif %}>
+              <label class="prio-card" for="prio_battery">
+                <div class="prio-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M15.67,4H14V2H10V4H8.33A1.33,1.33 0 0,0 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67A1.33,1.33 0 0,0 17,20.67V5.33C17,4.6 16.4,4 15.67,4M13,18V13H11L13,8V13H15L13,18Z"/>
+                  </svg>
+                </div>
+                <span class="prio-label">Batterij eerst</span>
+                <span class="prio-sub">Laad tot SoC-drempel, dan SolarBuffer</span>
+              </label>
+
+              <input type="radio" class="prio-option" id="prio_boiler" name="battery_priority" value="boiler"
+                     {% if config.battery_priority != 'battery' %}checked{% endif %}>
+              <label class="prio-card" for="prio_boiler">
+                <div class="prio-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.22 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.5,14.79 5.93,15.5C6.36,16.22 6.9,16.85 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.5,9.22 18.07,8.5C17.64,7.78 17.1,7.16 16.5,6.65L20.65,7M20.64,17L16.5,17.37C17.1,16.85 17.64,16.22 18.07,15.5C18.5,14.79 18.74,14 18.88,13.23L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.86,19 13.67,18.83 14.41,18.56L12,22Z"/>
+                  </svg>
+                </div>
+                <span class="prio-label">SolarBuffer eerst</span>
+                <span class="prio-sub">SolarBuffer heeft voorrang, batterij volgt</span>
+              </label>
+            </div>
+          </div>
+          <div class="field-group" id="socThresholdGroup">
+            <label for="battery_soc_threshold">SoC-drempel voor batterij-prioriteit (%)</label>
+            <input type="number" id="battery_soc_threshold" name="battery_soc_threshold"
+                   min="50" max="100" step="1"
+                   value="{{ config.battery_soc_threshold or 95 }}">
+          </div>
         </div>
       </div>
 
@@ -296,8 +412,8 @@
     }
 
     (function() {
-      const cb = document.getElementById('inverterEnabled');
-      const fields = document.getElementById('inverterFields');
+      const cb = document.getElementById('batteryEnabled');
+      const fields = document.getElementById('batteryFields');
       function update() { fields.style.display = cb.checked ? 'block' : 'none'; }
       cb.addEventListener('change', update);
       update();
