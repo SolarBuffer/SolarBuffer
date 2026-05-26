@@ -594,7 +594,7 @@ _hw_update_log = []
 _hw_update_cond = threading.Condition()
 
 # ================= CONTROL CONSTANTS =================
-MIN_BRIGHTNESS = 34
+MIN_BRIGHTNESS = 30
 MAX_BRIGHTNESS = 100
 
 # ================= ANTI-LEGIONELLA =================
@@ -2023,7 +2023,7 @@ def toggle_shelly(ip):
         st["freeze"] = False
         st["saturated_since"] = None
         st["min_since"] = None
-        st["brightness"] = 34
+        st["brightness"] = MIN_BRIGHTNESS
         set_shelly(st["brightness"], True, ip)
         mark_device_activity(device)
     else:
@@ -3693,7 +3693,7 @@ def _handle_mqtt_command(prefix, topic, payload):
             st["saturated_since"] = None
             st["min_since"] = None
             if st["brightness"] == 0:
-                st["brightness"] = 34
+                st["brightness"] = MIN_BRIGHTNESS
             set_shelly(st["brightness"], True, ip)
             mark_device_activity(device)
         else:
