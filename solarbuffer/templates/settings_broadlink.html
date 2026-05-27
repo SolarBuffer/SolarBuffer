@@ -671,7 +671,7 @@
                 '<div class="scan-result-name">' + escHtml(d.type || d.model || 'Broadlink') + '</div>' +
                 '<div class="scan-result-sub">' + escHtml(d.ip) + ' · ' + escHtml(d.mac) + '</div>' +
                 '</div>' +
-                '<button class="scan-add-btn" ' + (alreadyAdded ? 'disabled title="Al toegevoegd"' : '') + ' onclick="addScanned(' + JSON.stringify(d) + ', this)">' +
+                '<button class="scan-add-btn" ' + (alreadyAdded ? 'disabled title="Al toegevoegd"' : '') + ' onclick="addScanned(' + escHtml(JSON.stringify(d)) + ', this)">' +
                 (alreadyAdded ? 'Al toegevoegd' : '+ Toevoegen') + '</button>';
               list.appendChild(row);
             });
