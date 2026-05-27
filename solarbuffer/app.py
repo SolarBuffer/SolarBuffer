@@ -5060,7 +5060,8 @@ def broadlink_poll_loop():
         try:
             cfg = load_config()
             for bl in cfg.get("broadlink_devices", []):
-                _broadlink_online[bl["id"]] = _is_host_reachable(bl["ip"], port=80, timeout=1.0)
+                dev = _broadlink_connect(bl["ip"], bl.get("mac", ""), bl.get("devtype", 0))
+                _broadlink_online[bl["id"]] = dev is not None
         except Exception:
             pass
         time.sleep(15)
