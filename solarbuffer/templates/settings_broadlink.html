@@ -93,7 +93,10 @@
     }
     .bl-device-info { flex: 1; min-width: 0; }
     .bl-device-name { font-weight: 600; font-size: 0.95rem; }
-    .bl-device-sub { font-size: 0.76rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; font-family: monospace; }
+    .bl-device-sub { font-size: 0.76rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; font-family: monospace; display: flex; align-items: center; gap: 0.35rem; }
+    .bl-online-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: hsl(220, 8%, 72%); }
+    .bl-online-dot.online { background: hsl(142, 60%, 42%); }
+    .bl-online-dot.offline { background: hsl(0, 65%, 55%); }
     .bl-device-actions { display: flex; gap: 0.4rem; }
 
     .btn-icon {
@@ -433,7 +436,10 @@
           <div class="bl-device-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19,14A7,7 0 0,0 12,7A7,7 0 0,0 5,14H7A5,5 0 0,1 12,9A5,5 0 0,1 17,14H19M15,14A3,3 0 0,0 12,11A3,3 0 0,0 9,14H11A1,1 0 0,1 12,13A1,1 0 0,1 13,14H15M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15Z"/></svg></div>
           <div class="bl-device-info">
             <div class="bl-device-name">{{ bl.name }}</div>
-            <div class="bl-device-sub">{{ bl.ip }} · {{ bl.ir_devices|length }} IR-apparaat{% if bl.ir_devices|length != 1 %}en{% endif %}</div>
+            <div class="bl-device-sub">
+              <span class="bl-online-dot" id="dot-{{ bl.id }}"></span>
+              {{ bl.ip }} · {{ bl.ir_devices|length }} IR-apparaat{% if bl.ir_devices|length != 1 %}en{% endif %}
+            </div>
           </div>
           <div class="bl-device-actions" onclick="event.stopPropagation()">
             <button class="btn-icon danger" title="Verwijder" onclick="deleteBlDevice('{{ bl.id }}', '{{ bl.name }}')">
@@ -756,7 +762,7 @@
           '<div class="bl-device-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19,14A7,7 0 0,0 12,7A7,7 0 0,0 5,14H7A5,5 0 0,1 12,9A5,5 0 0,1 17,14H19M15,14A3,3 0 0,0 12,11A3,3 0 0,0 9,14H11A1,1 0 0,1 12,13A1,1 0 0,1 13,14H15M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15Z"/></svg></div>' +
           '<div class="bl-device-info">' +
             '<div class="bl-device-name">' + escHtml(bl.name) + '</div>' +
-            '<div class="bl-device-sub">' + escHtml(bl.ip) + ' · 0 IR-apparaten</div>' +
+            '<div class="bl-device-sub"><span class="bl-online-dot" id="dot-' + bl.id + '"></span>' + escHtml(bl.ip) + ' · 0 IR-apparaten</div>' +
           '</div>' +
           '<div class="bl-device-actions" onclick="event.stopPropagation()">' +
             '<button class="btn-icon danger" title="Verwijder" onclick="deleteBlDevice(\'' + bl.id + '\', \'' + escHtml(bl.name) + '\')">' +
@@ -1030,6 +1036,25 @@
     function escHtml(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
+
+    function refreshOnlineStatus() {
+      fetch('/api/broadlink/online')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) return;
+          Object.keys(data.online).forEach(function(id) {
+            var dot = document.getElementById('dot-' + id);
+            if (!dot) return;
+            dot.classList.remove('online', 'offline');
+            dot.classList.add(data.online[id] ? 'online' : 'offline');
+            dot.title = data.online[id] ? 'Online' : 'Offline';
+          });
+        })
+        .catch(function() {});
+    }
+
+    refreshOnlineStatus();
+    setInterval(refreshOnlineStatus, 15000);
   </script>
 </body>
 </html>

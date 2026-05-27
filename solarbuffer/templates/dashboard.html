@@ -1611,39 +1611,55 @@
     html[data-theme="dark"] .footer { color: hsl(220, 8%, 52%); }
 
     /* ===== BROADLINK IR ===== */
-    .ir-widget-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .ir-widget-list { display: flex; flex-direction: column; gap: 0.75rem; }
     .ir-widget {
       background: hsl(30, 20%, 97%); border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.6rem; padding: 0.65rem 0.85rem;
+      border-radius: 0.75rem; padding: 0.75rem 0.9rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
-    .ir-widget-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+    .ir-widget-header { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.65rem; }
     .ir-widget-icon {
-      width: 28px; height: 28px; border-radius: 7px;
+      width: 32px; height: 32px; border-radius: 8px;
       background: hsl(260, 60%, 94%); color: hsl(260, 60%, 44%);
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.95rem; flex-shrink: 0;
+      font-size: 1rem; flex-shrink: 0;
     }
-    .ir-widget-name { font-size: 0.88rem; font-weight: 600; }
-    .ir-cmd-btns { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .ir-widget-name { font-size: 0.9rem; font-weight: 700; flex: 1; }
+    .ir-cmd-btns {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 0.45rem;
+    }
     .ir-cmd-btn {
-      padding: 0.3rem 0.75rem; font-size: 0.8rem; font-weight: 600;
-      border: 1px solid hsl(30, 15%, 82%); border-radius: 999px;
-      background: white; color: hsl(220, 20%, 20%); cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      display: inline-flex; align-items: center; gap: 0.3rem;
+      min-height: 44px;
+      padding: 0.5rem 0.65rem;
+      font-size: 0.82rem; font-weight: 600;
+      border: 1.5px solid hsl(30, 15%, 82%); border-radius: 0.6rem;
+      background: white; color: hsl(220, 20%, 22%); cursor: pointer;
+      transition: background 0.13s, border-color 0.13s, box-shadow 0.13s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      line-height: 1.2;
     }
-    .ir-cmd-btn:hover { background: hsl(32, 100%, 95%); border-color: hsl(32, 80%, 68%); color: hsl(25, 85%, 35%); }
-    .ir-cmd-btn:active { background: hsl(32, 100%, 88%); }
+    .ir-cmd-btn:hover {
+      background: hsl(32, 100%, 94%);
+      border-color: hsl(32, 80%, 65%);
+      color: hsl(25, 85%, 32%);
+      box-shadow: 0 2px 6px rgba(200, 100, 0, 0.13);
+    }
+    .ir-cmd-btn:active { transform: scale(0.95); background: hsl(32, 100%, 87%); }
     .ir-cmd-btn.sending {
       background: hsl(32, 95%, 52%);
-      border-color: hsl(32, 90%, 45%);
+      border-color: hsl(32, 90%, 44%);
       color: white;
       cursor: default;
+      box-shadow: 0 2px 8px rgba(200, 100, 0, 0.28);
+      transform: scale(0.97);
     }
-    .ir-cmd-btn:disabled { opacity: 0.5; cursor: default; }
+    .ir-cmd-btn:disabled { opacity: 0.45; cursor: default; }
     .ir-power-badge {
       display: inline-flex; align-items: center; gap: 0.3rem;
-      font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.5rem;
+      font-size: 0.72rem; font-weight: 600; padding: 0.18rem 0.55rem;
       border-radius: 999px; margin-left: auto;
     }
     .ir-power-badge.on  { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
@@ -1652,10 +1668,11 @@
     .ir-power-badge.on  .ir-power-dot { background: hsl(145, 60%, 38%); }
     .ir-power-badge.off .ir-power-dot { background: hsl(220, 10%, 58%); }
 
-    html[data-theme="dark"] .ir-widget { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); }
-    html[data-theme="dark"] .ir-widget-icon { background: hsl(32, 25%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .ir-cmd-btn { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 82%); }
-    html[data-theme="dark"] .ir-cmd-btn:hover { background: hsl(32, 18%, 28%); border-color: hsl(32, 50%, 42%); color: hsl(32, 80%, 68%); }
+    html[data-theme="dark"] .ir-widget { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 30%); box-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+    html[data-theme="dark"] .ir-widget-icon { background: hsl(260, 20%, 28%); color: hsl(260, 60%, 72%); }
+    html[data-theme="dark"] .ir-cmd-btn { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 85%); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+    html[data-theme="dark"] .ir-cmd-btn:hover { background: hsl(32, 18%, 28%); border-color: hsl(32, 50%, 44%); color: hsl(32, 80%, 70%); box-shadow: 0 2px 6px rgba(200,100,0,0.18); }
+    html[data-theme="dark"] .ir-cmd-btn.sending { background: hsl(32, 90%, 46%); }
     html[data-theme="dark"] .ir-power-badge.on  { background: hsl(145, 25%, 22%); color: hsl(145, 55%, 62%); }
     html[data-theme="dark"] .ir-power-badge.off { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 56%); }
 
