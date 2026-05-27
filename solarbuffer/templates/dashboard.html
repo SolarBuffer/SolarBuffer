@@ -1625,6 +1625,9 @@
       font-size: 1rem; flex-shrink: 0;
     }
     .ir-widget-name { font-size: 0.9rem; font-weight: 700; flex: 1; }
+    .ir-online-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .ir-online-dot.online  { background: hsl(142, 60%, 42%); }
+    .ir-online-dot.offline { background: hsl(0, 65%, 55%); }
     .ir-cmd-btns {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
@@ -2126,6 +2129,9 @@
 
           renderDevices(data.devices || []);
           renderAccessories(data.accessories || []);
+          if ((_blDevices || []).length > 0) {
+            fetch('/api/broadlink/online').then(r => r.json()).then(d => { if (d.success) { _blOnline = d.online; renderBroadlinkWidgets(); } }).catch(() => {});
+          }
           renderBroadlinkWidgets(data.broadlink_ir_states || {});
           const gasBadge = document.getElementById('gasBadge');
           if (data.gas_enabled && data.gas_today_m3 !== null && data.gas_today_m3 !== undefined) {
@@ -2691,6 +2697,7 @@
     // ===== BROADLINK IR DASHBOARD =====
     let _blDevices = {{ config.broadlink_devices | tojson }};
     let _irStates = {};
+    let _blOnline = {};
 
     function renderBroadlinkWidgets(irStates) {
       if (irStates !== undefined) _irStates = irStates || {};
@@ -2716,11 +2723,18 @@
                ${isOn ? 'Aan' : 'Uit'}
              </span>`
           : '';
+        const blOnline = _blOnline[bl.id];
+        const onlineDot = blOnline === true
+          ? `<span class="ir-online-dot online" title="Online"></span>`
+          : blOnline === false
+            ? `<span class="ir-online-dot offline" title="Offline"></span>`
+            : '';
         return `
           <div class="ir-widget">
             <div class="ir-widget-header">
               <div class="ir-widget-icon"><i class="mdi ${escHtmlDash(ir.icon || 'mdi-remote')}"></i></div>
               <div class="ir-widget-name">${escHtmlDash(ir.name)}</div>
+              ${onlineDot}
               ${badgeHtml}
             </div>
             <div class="ir-cmd-btns">
