@@ -1917,15 +1917,13 @@
     </div>
 
     <div class="card" id="batteryCard" style="display:none; margin-bottom:1rem; padding:1rem 1.1rem;">
-      <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.65rem;">
-        <div style="width:34px;height:34px;border-radius:10px;background:hsl(145,55%,94%);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="hsl(145,55%,36%)"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg>
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:0.95rem;">Batterij</div>
-          <div id="batStatusLabel" style="font-size:0.75rem;color:hsl(220,10%,52%);">Laden…</div>
-        </div>
-        <div id="batOnlineDot" style="width:8px;height:8px;border-radius:50%;background:hsl(145,55%,50%);flex-shrink:0;"></div>
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
+        <h2 style="margin:0; display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0;">
+          <span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span>
+          Batterij
+        </h2>
+        <div id="batStatusLabel" style="font-size:0.75rem;color:hsl(220,10%,52%);white-space:nowrap;">Laden…</div>
+        <div id="batOnlineDot" style="width:8px;height:8px;border-radius:50%;background:hsl(145,55%,50%);flex-shrink:0;margin-left:0.25rem;"></div>
       </div>
 
       <div style="margin-bottom:0.55rem;">
