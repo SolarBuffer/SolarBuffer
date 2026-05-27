@@ -362,6 +362,28 @@
     html[data-theme="dark"] .slider { background: hsl(220, 8%, 42%); }
     html[data-theme="dark"] .empty-state { color: hsl(220, 8%, 52%); }
     html[data-theme="dark"] .unavailable-banner { background: hsl(37, 25%, 24%); color: hsl(37, 80%, 70%); }
+
+    @media (max-width: 600px) {
+      .btn-icon-sm {
+        width: 40px; height: 40px; border-radius: 8px; font-size: 1rem;
+      }
+      .btn-icon {
+        width: 40px; height: 40px;
+      }
+      .cmd-row {
+        padding: 0.6rem 0.75rem; gap: 0.65rem;
+      }
+      .cmd-name { font-size: 0.9rem; }
+      .cmd-send-btn {
+        padding: 0.5rem 0.85rem; font-size: 0.85rem;
+        min-height: 40px;
+      }
+      .learn-btn {
+        min-height: 44px; font-size: 0.9rem;
+      }
+      .ir-actions { gap: 0.5rem; }
+      .ir-header { padding: 0.75rem; }
+    }
   </style>
 </head>
 <body>
