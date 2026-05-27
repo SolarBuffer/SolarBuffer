@@ -1917,18 +1917,18 @@
     </div>
 
     <div class="card" id="batteryCard" style="display:none; margin-bottom:1rem; padding:1rem 1.1rem;">
-      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
-        <h2 style="margin:0; display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0;">
-          <span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span>
-          Batterij
-        </h2>
-        <div id="batStatusLabel" style="font-size:0.75rem;color:hsl(220,10%,52%);white-space:nowrap;">Laden…</div>
-        <div id="batOnlineDot" style="width:8px;height:8px;border-radius:50%;background:hsl(145,55%,50%);flex-shrink:0;margin-left:0.25rem;"></div>
+      <div class="control-card-header">
+        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span> Batterij</h2>
+        <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
+          <span id="batPrioLabel" class="buffer-status-badge" style="display:none;"></span>
+          <span id="batPermLabel" class="buffer-status-badge" style="display:none;"></span>
+          <div id="batOnlineDot" style="width:8px;height:8px;border-radius:50%;background:hsl(145,55%,50%);flex-shrink:0;margin-left:0.1rem;"></div>
+        </div>
       </div>
 
       <div style="margin-bottom:0.55rem;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.25rem;">
-          <span style="font-size:0.75rem;color:hsl(220,10%,52%);">Laadtoestand</span>
+          <span style="font-size:0.75rem;color:hsl(220,10%,52%);">SoC</span>
           <span id="batSocText" style="font-size:0.88rem;font-weight:700;">—%</span>
         </div>
         <div style="height:8px;background:hsl(220,15%,90%);border-radius:999px;overflow:hidden;">
@@ -2161,9 +2161,21 @@
             else if (canCharge) permLabel = 'Alleen laden';
             else if (canDischarge) permLabel = 'Alleen ontladen';
             else permLabel = 'Geblokkeerd';
-            const prio = data.battery_priority === 'battery' ? 'Batterij-prio' : 'Boiler-prio';
-            document.getElementById('batStatusLabel').textContent =
-              batOnline ? `${prio} · ${permLabel}` : 'Offline';
+            const prioEl = document.getElementById('batPrioLabel');
+            const permEl = document.getElementById('batPermLabel');
+            if (batOnline) {
+              prioEl.textContent = data.battery_priority === 'battery' ? 'Batterij-prio' : 'Boiler-prio';
+              prioEl.className = 'buffer-status-badge ' + (data.battery_priority === 'battery' ? 'freeze' : 'standby');
+              prioEl.style.display = '';
+              permEl.textContent = permLabel;
+              permEl.className = 'buffer-status-badge ' + (canCharge && canDischarge ? 'running' : canCharge || canDischarge ? 'pending' : 'import');
+              permEl.style.display = '';
+            } else {
+              prioEl.style.display = 'none';
+              permEl.textContent = 'Offline';
+              permEl.className = 'buffer-status-badge off';
+              permEl.style.display = '';
+            }
 
             const soc = bat.soc;
             if (soc !== null && soc !== undefined) {
