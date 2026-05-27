@@ -2744,18 +2744,21 @@ def _broadlink_discover_once(timeout=5):
         result = []
         for d in devices:
             try:
-                d.auth()
                 ip = d.host[0]
                 mac = ":".join(f"{b:02x}" for b in d.mac)
-                result.append({
-                    "ip": ip,
-                    "mac": mac,
-                    "devtype": d.devtype,
-                    "model": getattr(d, "model", str(d.devtype)),
-                    "type": getattr(d, "type", "Unknown"),
-                })
+            except Exception:
+                continue
+            try:
+                d.auth()
             except Exception:
                 pass
+            result.append({
+                "ip": ip,
+                "mac": mac,
+                "devtype": d.devtype,
+                "model": getattr(d, "model", str(d.devtype)),
+                "type": getattr(d, "type", "Unknown"),
+            })
         return result
     except Exception:
         return []
