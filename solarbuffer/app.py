@@ -1218,6 +1218,35 @@ def settings_p1():
     return render_template("settings_p1.html", config=cfg, dark_mode=get_user_dark_mode())
 
 
+@app.route("/api/battery/pair", methods=["POST"])
+def battery_pair():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    ip = (data.get("ip") or "").strip()
+    if not ip:
+        return jsonify(success=False, error="IP-adres is verplicht"), 400
+    try:
+        r = requests.post(
+            f"https://{ip}/api/user",
+            headers={"X-Api-Version": "2", "Content-Type": "application/json"},
+            json={"name": "local/solarbuffer"},
+            timeout=4,
+            verify=False,
+        )
+        if r.status_code == 200:
+            token = r.json().get("token", "")
+            return jsonify(success=True, token=token)
+        elif r.status_code == 403:
+            return jsonify(success=False, waiting=True)
+        else:
+            return jsonify(success=False, error=f"Onverwacht antwoord: {r.status_code}")
+    except requests.exceptions.ConnectionError:
+        return jsonify(success=False, error="Apparaat niet bereikbaar op dit IP-adres")
+    except Exception as e:
+        return jsonify(success=False, error=str(e))
+
+
 @app.route("/settings/solarbuffers", methods=["GET", "POST"])
 def settings_solarbuffers():
     if not require_login():
