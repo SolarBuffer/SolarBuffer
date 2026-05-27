@@ -573,6 +573,7 @@ battery_state = {
     "cycles": None, "mode": None, "permissions": None, "online": False,
 }
 _last_battery_permissions = None
+_broadlink_online = {}  # bl_id -> bool
 current_power = 0
 current_brightness = 0
 current_gas_m3 = None      # meest recente meterstand (m³)
@@ -2794,6 +2795,13 @@ def broadlink_scan():
     existing_ips = {bl["ip"] for bl in cfg.get("broadlink_devices", [])}
     new_devices = [d for d in found if d["ip"] not in existing_ips]
     return jsonify(success=True, devices=found, new_devices=new_devices)
+
+
+@app.route("/api/broadlink/online", methods=["GET"])
+def broadlink_online_status():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(success=True, online=_broadlink_online)
 
 
 @app.route("/api/broadlink/devices", methods=["POST"])
@@ -5046,6 +5054,18 @@ def battery_poll_loop():
         time.sleep(5)
 
 
+def broadlink_poll_loop():
+    global _broadlink_online
+    while True:
+        try:
+            cfg = load_config()
+            for bl in cfg.get("broadlink_devices", []):
+                _broadlink_online[bl["id"]] = _is_host_reachable(bl["ip"], port=80, timeout=1.0)
+        except Exception:
+            pass
+        time.sleep(15)
+
+
 # ================= HISTORY DB =================
 HISTORY_DB = os.path.join(BASE_DIR, "history.db")
 
@@ -5356,6 +5376,7 @@ if __name__ == "__main__":
     threading.Thread(target=accessory_poll_loop, daemon=True).start()
     threading.Thread(target=inverter_poll_loop, daemon=True).start()
     threading.Thread(target=battery_poll_loop, daemon=True).start()
+    threading.Thread(target=broadlink_poll_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
