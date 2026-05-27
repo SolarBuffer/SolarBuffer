@@ -4579,7 +4579,7 @@ def control_loop():
                                     reset_device_to_off(_bd["ip"])
                             _desired_perms = ["charge_allowed", "discharge_allowed"]
                         elif _force_no_discharge:
-                            _desired_perms = []
+                            _desired_perms = ["charge_allowed"]
                         elif _any_sb_active:
                             _desired_perms = ["charge_allowed"] if _pid_at_max else []
                         elif _has_export:
@@ -4590,7 +4590,7 @@ def control_loop():
                         if not _sb_can_run:
                             _desired_perms = ["charge_allowed", "discharge_allowed"]
                         elif _force_no_discharge:
-                            _desired_perms = []
+                            _desired_perms = ["charge_allowed"]
                         elif _any_sb_active:
                             _desired_perms = ["charge_allowed"] if _pid_at_max else []
                         elif _has_export:
