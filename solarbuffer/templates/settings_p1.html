@@ -20,6 +20,7 @@
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -350,15 +351,26 @@
         </div>
         <div id="batteryFields" style="display:none;">
           <div class="field-group">
-            <label for="battery_ip">IP-adres HWE-BAT (sensor)</label>
-            <input type="text" id="battery_ip" name="battery_ip"
-                   placeholder="Bijv. 192.168.178.50"
-                   value="{{ config.battery_ip or '' }}">
+            <label for="battery_ip">IP-adres HWE-BAT</label>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <input type="text" id="battery_ip" name="battery_ip"
+                     placeholder="Bijv. 192.168.178.50"
+                     value="{{ config.battery_ip or '' }}" style="flex:1;">
+              <button type="button" class="btn-secondary" id="pairBtn" onclick="startPairing()" style="white-space:nowrap; padding:0.55rem 1rem;">
+                Koppelen
+              </button>
+            </div>
           </div>
+
+          <!-- Koppelstatus -->
+          <div id="pairStatus" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
+            <div id="pairStatusText"></div>
+          </div>
+
           <div class="field-group">
             <label for="battery_token">API-token</label>
             <input type="text" id="battery_token" name="battery_token"
-                   placeholder="Token uit HomeWizard Energy-app"
+                   placeholder="Klik op Koppelen om automatisch op te halen"
                    value="{{ config.battery_token or '' }}"
                    autocomplete="off">
           </div>
@@ -418,6 +430,71 @@
       cb.addEventListener('change', update);
       update();
     })();
+
+    var _pairInterval = null;
+    var _pairCountdown = 0;
+
+    function setPairStatus(msg, type) {
+      var el = document.getElementById('pairStatus');
+      var txt = document.getElementById('pairStatusText');
+      txt.innerHTML = msg;
+      el.style.display = msg ? 'block' : 'none';
+      el.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
+      el.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
+      el.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
+    }
+
+    function stopPairing() {
+      if (_pairInterval) { clearInterval(_pairInterval); _pairInterval = null; }
+      document.getElementById('pairBtn').textContent = 'Koppelen';
+      document.getElementById('pairBtn').disabled = false;
+    }
+
+    function startPairing() {
+      var ip = document.getElementById('battery_ip').value.trim();
+      if (!ip) { setPairStatus('Vul eerst een IP-adres in.', 'error'); return; }
+      stopPairing();
+      document.getElementById('pairBtn').disabled = true;
+      document.getElementById('pairBtn').textContent = 'Bezig…';
+      setPairStatus('<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Verbinding maken met apparaat…</span>', 'wait');
+      _pairCountdown = 0;
+      sendPairRequest(ip);
+      _pairInterval = setInterval(function() {
+        _pairCountdown++;
+        if (_pairCountdown >= 30) {
+          stopPairing();
+          setPairStatus('Timeout — knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
+          return;
+        }
+        sendPairRequest(ip);
+      }, 2000);
+    }
+
+    function sendPairRequest(ip) {
+      fetch('/api/battery/pair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: ip })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success && data.token) {
+            stopPairing();
+            document.getElementById('battery_token').value = data.token;
+            setPairStatus('✓ Apparaat gekoppeld! Token is automatisch ingevuld. Sla de instellingen op om te bevestigen.', 'success');
+          } else if (data.waiting) {
+            var secs = 30 - _pairCountdown * 2;
+            setPairStatus('<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Druk op de knop op het HWE-BAT apparaat… (' + Math.max(0, secs) + 's resterend)</span>', 'wait');
+          } else if (data.error) {
+            stopPairing();
+            setPairStatus('Fout: ' + data.error, 'error');
+          }
+        })
+        .catch(function() {
+          stopPairing();
+          setPairStatus('Verbindingsfout — controleer het IP-adres.', 'error');
+        });
+    }
 
     async function doScan() {
       const btn = document.getElementById('scanBtn');
