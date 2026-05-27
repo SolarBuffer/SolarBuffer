@@ -2029,7 +2029,7 @@
         <div>
           <label>Vermogen: <span id="schedBrightnessVal">50</span>%</label>
           <div class="sched-brightness-row">
-            <input type="range" id="schedBrightness" min="34" max="100" value="50"
+            <input type="range" id="schedBrightness" min="30" max="100" value="50"
               oninput="document.getElementById('schedBrightnessVal').textContent=this.value">
           </div>
         </div>
@@ -2425,7 +2425,7 @@
     }
 
     function getVisualBrightness(brightness) {
-      const min = 34, max = 100;
+      const min = 30, max = 100;
       const v = Number(brightness || 0);
       if (v <= min) return 0;
       if (v >= max) return 100;
