@@ -351,28 +351,39 @@
         </div>
         <div id="batteryFields" style="display:none;">
           <div class="field-group">
-            <label for="battery_ip">IP-adres HWE-BAT</label>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-              <input type="text" id="battery_ip" name="battery_ip"
-                     placeholder="Bijv. 192.168.178.50"
-                     value="{{ config.battery_ip or '' }}" style="flex:1;">
-              <button type="button" class="btn-secondary" id="pairBtn" onclick="startPairing()" style="white-space:nowrap; padding:0.55rem 1rem;">
+            <label>IP-adres(sen) HWE-BAT <span style="font-weight:400;color:hsl(220,10%,55%);font-size:0.78rem;">(max. 4)</span></label>
+            <div id="batteryIpsList">
+              {% for ip in (config.battery_ips if config.battery_ips else ['']) %}
+              <div class="battery-ip-row" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;">
+                <input type="text" name="battery_ip[]"
+                       placeholder="Bijv. 192.168.178.50"
+                       value="{{ ip }}" style="flex:1;">
+                <button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>
+              </div>
+              {% endfor %}
+            </div>
+            <button type="button" id="addIpBtn" onclick="addIpRow()" style="margin-top:0.25rem;background:none;border:1.5px dashed hsl(30,15%,78%);border-radius:0.5rem;color:hsl(220,10%,50%);font-size:0.85rem;padding:0.45rem 0.75rem;cursor:pointer;width:100%;">
+              + Accu toevoegen
+            </button>
+          </div>
+
+          <div class="field-group">
+            <label for="battery_token">API-token</label>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <input type="text" id="battery_token" name="battery_token"
+                     placeholder="Klik op Koppelen om automatisch op te halen"
+                     value="{{ config.battery_token or '' }}"
+                     autocomplete="off" style="flex:1;">
+              <button type="button" class="btn-secondary" id="pairBtn" onclick="startPairing()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
                 Koppelen
               </button>
             </div>
+            <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Koppel met één accu — token werkt voor alle accu's</div>
           </div>
 
           <!-- Koppelstatus -->
           <div id="pairStatus" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
             <div id="pairStatusText"></div>
-          </div>
-
-          <div class="field-group">
-            <label for="battery_token">API-token</label>
-            <input type="text" id="battery_token" name="battery_token"
-                   placeholder="Klik op Koppelen om automatisch op te halen"
-                   value="{{ config.battery_token or '' }}"
-                   autocomplete="off">
           </div>
           <div class="field-group">
             <label>Prioriteit</label>
@@ -451,7 +462,12 @@
     }
 
     function startPairing() {
-      var ip = document.getElementById('battery_ip').value.trim();
+      var inputs = document.querySelectorAll('#batteryIpsList input[name="battery_ip[]"]');
+      var ip = '';
+      for (var i = 0; i < inputs.length; i++) {
+        var v = inputs[i].value.trim();
+        if (v) { ip = v; break; }
+      }
       if (!ip) { setPairStatus('Vul eerst een IP-adres in.', 'error'); return; }
       stopPairing();
       document.getElementById('pairBtn').disabled = true;
@@ -494,6 +510,31 @@
           stopPairing();
           setPairStatus('Verbindingsfout — controleer het IP-adres.', 'error');
         });
+    }
+
+    function addIpRow() {
+      var list = document.getElementById('batteryIpsList');
+      if (list.querySelectorAll('.battery-ip-row').length >= 4) return;
+      var row = document.createElement('div');
+      row.className = 'battery-ip-row';
+      row.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;';
+      row.innerHTML = '<input type="text" name="battery_ip[]" placeholder="Bijv. 192.168.178.50" style="flex:1;">'
+        + '<button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>';
+      list.appendChild(row);
+      updateAddBtn();
+    }
+
+    function removeIpRow(btn) {
+      var list = document.getElementById('batteryIpsList');
+      if (list.querySelectorAll('.battery-ip-row').length <= 1) return;
+      btn.closest('.battery-ip-row').remove();
+      updateAddBtn();
+    }
+
+    function updateAddBtn() {
+      var list = document.getElementById('batteryIpsList');
+      var btn = document.getElementById('addIpBtn');
+      btn.style.display = list.querySelectorAll('.battery-ip-row').length >= 4 ? 'none' : '';
     }
 
     async function doScan() {

@@ -1921,7 +1921,7 @@
 
       <div style="margin-bottom:0.55rem;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.25rem;">
-          <span style="font-size:0.75rem;color:hsl(220,10%,52%);">SoC</span>
+          <span id="batSocLabel" style="font-size:0.75rem;color:hsl(220,10%,52%);">SoC</span>
           <span id="batSocText" style="font-size:0.88rem;font-weight:700;">—%</span>
         </div>
         <div style="height:8px;background:hsl(220,15%,90%);border-radius:999px;overflow:hidden;">
@@ -2169,6 +2169,9 @@
               permEl.className = 'buffer-status-badge off';
               permEl.style.display = '';
             }
+
+            const batCount = data.battery_count || 1;
+            document.getElementById('batSocLabel').textContent = batCount > 1 ? 'SoC (gemiddeld)' : 'SoC';
 
             const soc = bat.soc;
             if (soc !== null && soc !== undefined) {
