@@ -378,7 +378,7 @@
                 Koppelen
               </button>
             </div>
-            <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Koppel met één accu — token werkt voor alle accu's</div>
+            <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Token werkt voor alle accu's — druk de knop in op: <span id="pairIpHint" style="font-weight:600;">—</span></div>
           </div>
 
           <!-- Koppelstatus -->
@@ -434,12 +434,24 @@
       return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
 
+    function updatePairIpHint() {
+      var inputs = document.querySelectorAll('#batteryIpsList input[name="battery_ip[]"]');
+      var ip = '';
+      for (var i = 0; i < inputs.length; i++) {
+        var v = inputs[i].value.trim();
+        if (v) { ip = v; break; }
+      }
+      document.getElementById('pairIpHint').textContent = ip || '—';
+    }
+
     (function() {
       const cb = document.getElementById('batteryEnabled');
       const fields = document.getElementById('batteryFields');
       function update() { fields.style.display = cb.checked ? 'block' : 'none'; }
       cb.addEventListener('change', update);
       update();
+      document.getElementById('batteryIpsList').addEventListener('input', updatePairIpHint);
+      updatePairIpHint();
     })();
 
     var _pairInterval = null;
@@ -521,6 +533,7 @@
       row.innerHTML = '<input type="text" name="battery_ip[]" placeholder="Bijv. 192.168.178.50" style="flex:1;">'
         + '<button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>';
       list.appendChild(row);
+      row.querySelector('input').addEventListener('input', updatePairIpHint);
       updateAddBtn();
     }
 
@@ -529,6 +542,7 @@
       if (list.querySelectorAll('.battery-ip-row').length <= 1) return;
       btn.closest('.battery-ip-row').remove();
       updateAddBtn();
+      updatePairIpHint();
     }
 
     function updateAddBtn() {
