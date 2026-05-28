@@ -326,8 +326,13 @@ def load_config():
 
     if "battery_enabled" not in cfg:
         cfg["battery_enabled"] = False
-    if "battery_ip" not in cfg:
-        cfg["battery_ip"] = ""
+    # Migreer oud battery_ip (string) → battery_ips (lijst)
+    if "battery_ips" not in cfg:
+        old_ip = cfg.pop("battery_ip", "").strip()
+        cfg["battery_ips"] = [old_ip] if old_ip else []
+    else:
+        cfg.pop("battery_ip", None)
+    cfg["battery_ips"] = [ip for ip in cfg["battery_ips"] if ip.strip()]
     if "battery_token" not in cfg:
         cfg["battery_token"] = ""
     if "battery_priority" not in cfg:
@@ -1203,7 +1208,9 @@ def settings_p1():
         old_cfg = load_config()
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
         cfg["battery_enabled"] = "battery_enabled" in request.form
-        cfg["battery_ip"] = request.form.get("battery_ip", "").strip()
+        raw_ips = request.form.getlist("battery_ip[]")
+        cfg["battery_ips"] = [ip.strip() for ip in raw_ips if ip.strip()][:4]
+        cfg.pop("battery_ip", None)
         cfg["battery_token"] = request.form.get("battery_token", "").strip()
         cfg["battery_priority"] = request.form.get("battery_priority", "boiler")
         try:
@@ -1431,6 +1438,7 @@ def status_json():
         battery_enabled=cfg.get("battery_enabled", False),
         battery_priority=cfg.get("battery_priority", "boiler"),
         battery_soc_threshold=cfg.get("battery_soc_threshold", 95),
+        battery_count=len(cfg.get("battery_ips") or []) if cfg.get("battery_enabled") else 0,
         battery=battery_state if cfg.get("battery_enabled") else None,
     )
 
@@ -4572,12 +4580,19 @@ def control_loop():
                         if not _sb_can_run:
                             _desired_perms = ["charge_allowed", "discharge_allowed"]
                         elif _bat_soc is not None and _bat_soc < _bat_soc_thr:
-                            battery_blocks_start = True
-                            for _bd in non_legionella:
-                                _bst = device_states[_bd["ip"]]
-                                if _bst.get("started") and not _bst.get("freeze") and not _bst.get("legionella_active"):
-                                    reset_device_to_off(_bd["ip"])
-                            _desired_perms = ["charge_allowed", "discharge_allowed"]
+                            _bat_pw = battery_state.get("power_w")
+                            _bat_charging = _bat_pw is not None and _bat_pw < -10
+                            if _bat_charging:
+                                # Accu laadt al (op maximale capaciteit); boiler mag overschot absorberen
+                                battery_blocks_start = False
+                                _desired_perms = ["charge_allowed", "discharge_allowed"]
+                            else:
+                                battery_blocks_start = True
+                                for _bd in non_legionella:
+                                    _bst = device_states[_bd["ip"]]
+                                    if _bst.get("started") and not _bst.get("freeze") and not _bst.get("legionella_active"):
+                                        reset_device_to_off(_bd["ip"])
+                                _desired_perms = ["charge_allowed", "discharge_allowed"]
                         elif _force_no_discharge:
                             _desired_perms = ["charge_allowed"]
                         elif _any_sb_active:
@@ -5050,23 +5065,43 @@ def battery_poll_loop():
     while True:
         try:
             cfg = load_config()
-            if cfg.get("battery_enabled") and cfg.get("battery_ip") and cfg.get("battery_token"):
-                ip = cfg["battery_ip"]
-                token = cfg["battery_token"]
-                try:
-                    data = get_battery_measurement(ip, token)
+            ips = cfg.get("battery_ips") or []
+            token = cfg.get("battery_token", "").strip()
+            if cfg.get("battery_enabled") and ips and token:
+                soc_list, power_total, voltage_list = [], 0.0, []
+                cycles_total = 0
+                any_online = False
+                for ip in ips:
+                    try:
+                        data = get_battery_measurement(ip, token)
+                        any_online = True
+                        soc = data.get("state_of_charge_pct")
+                        pw = data.get("power_w")
+                        vv = data.get("voltage_v")
+                        cy = data.get("cycles")
+                        if soc is not None:
+                            soc_list.append(float(soc))
+                        if pw is not None:
+                            power_total += float(pw)
+                        if vv is not None:
+                            voltage_list.append(float(vv))
+                        if cy is not None:
+                            cycles_total += int(cy)
+                    except Exception:
+                        pass
+                if any_online:
                     battery_state.update({
-                        "soc": data.get("state_of_charge_pct"),
-                        "power_w": data.get("power_w"),
-                        "voltage_v": data.get("voltage_v"),
-                        "current_a": data.get("current_a"),
-                        "frequency_hz": data.get("frequency_hz"),
-                        "energy_import_kwh": data.get("energy_import_kwh"),
-                        "energy_export_kwh": data.get("energy_export_kwh"),
-                        "cycles": data.get("cycles"),
+                        "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
+                        "power_w": round(power_total, 1),
+                        "voltage_v": round(sum(voltage_list) / len(voltage_list), 1) if voltage_list else None,
+                        "current_a": None,
+                        "frequency_hz": None,
+                        "energy_import_kwh": None,
+                        "energy_export_kwh": None,
+                        "cycles": cycles_total if soc_list else None,
                         "online": True,
                     })
-                except Exception:
+                else:
                     battery_state["online"] = False
                 control_ip = cfg.get("p1_ip", "")
                 if control_ip:
