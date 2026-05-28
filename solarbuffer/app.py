@@ -576,8 +576,10 @@ battery_state = {
     "soc": None, "power_w": None, "voltage_v": None, "current_a": None,
     "frequency_hz": None, "energy_import_kwh": None, "energy_export_kwh": None,
     "cycles": None, "mode": None, "permissions": None, "online": False,
+    "max_consumption_w": 0, "max_production_w": 0,
 }
 _last_battery_permissions = None
+_last_battery_mode = None
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
 current_brightness = 0
@@ -4062,6 +4064,7 @@ def control_loop():
     import_unfreeze_start = None
     import_off_start = None
     prev_schedule_active_ips = set()
+    _bat_tofull_active = False  # to_full mode actief voor accu-eerst bij max lading + boiler aan
 
     while True:
         try:
@@ -4577,31 +4580,65 @@ def control_loop():
                     )
 
                     if _bat_priority == "battery":
+                        _desired_mode = "zero"
                         if not _sb_can_run:
                             _desired_perms = ["charge_allowed", "discharge_allowed"]
                         elif _bat_soc is not None and _bat_soc < _bat_soc_thr:
                             _bat_pw = battery_state.get("power_w")
-                            _bat_charging = _bat_pw is not None and _bat_pw < -10
-                            if _bat_charging:
-                                # Accu laadt al (op maximale capaciteit); boiler mag overschot absorberen
-                                battery_blocks_start = False
-                                _desired_perms = ["charge_allowed", "discharge_allowed"]
+                            _num_bats = max(len(cfg.get("battery_ips") or []), 1)
+                            # Gebruik max_consumption_w uit API als beschikbaar, anders 800W per accu
+                            _api_max = battery_state.get("max_consumption_w") or 0
+                            _total_max_charge = _api_max if _api_max > 0 else _num_bats * 800
+                            _bat_at_max = (
+                                _bat_pw is not None and
+                                _bat_pw <= -(_total_max_charge - 50 * _num_bats)
+                            )
+                            _bat_charging_any = _bat_pw is not None and _bat_pw < -10
+
+                            # to_full state machine
+                            if _bat_tofull_active:
+                                # Uitschakelconditie: boiler uit EN P1 > +50W (stop grid-import)
+                                if not _any_sb_active and measured_power > 50:
+                                    _bat_tofull_active = False
                             else:
+                                # Inschakelconditie: accu OP MAX en boiler draait.
+                                # Geen P1-check op ingang: schakelt direct als boiler start terwijl
+                                # accu al op max zit — zo absorbeert de accu de startpiek niet weg.
+                                if _bat_at_max and _any_sb_active:
+                                    _bat_tofull_active = True
+
+                            if _bat_tofull_active:
+                                # to_full: accu laadt vast op max, boiler is de enige regelaar
+                                battery_blocks_start = False
+                                _desired_mode = "to_full"
+                                _desired_perms = []  # read-only in to_full, wordt genegeerd
+                            elif _bat_at_max:
+                                # Max bereikt maar to_full nog niet actief (boiler nog niet gestart)
+                                battery_blocks_start = False
+                                _desired_perms = ["charge_allowed"]
+                            elif _bat_charging_any:
+                                # Laadt maar niet op max → accu regelt, boiler wacht
+                                battery_blocks_start = True
+                                _desired_perms = ["charge_allowed"]
+                            else:
+                                # Laadt niet (geen zon) → boiler stoppen
                                 battery_blocks_start = True
                                 for _bd in non_legionella:
                                     _bst = device_states[_bd["ip"]]
                                     if _bst.get("started") and not _bst.get("freeze") and not _bst.get("legionella_active"):
                                         reset_device_to_off(_bd["ip"])
                                 _desired_perms = ["charge_allowed", "discharge_allowed"]
-                        elif _force_no_discharge:
-                            _desired_perms = ["charge_allowed"]
-                        elif _any_sb_active:
-                            _desired_perms = ["charge_allowed"] if _pid_at_max else []
-                        elif _has_export:
-                            _desired_perms = []
                         else:
-                            _desired_perms = ["discharge_allowed"]
+                            # SoC-drempel bereikt → accu volledig passief.
+                            # Geen laden (drempel bereikt) én geen ontladen (anders haalt de boiler
+                            # nooit IMPORT_OFF_THRESHOLD om uit te schakelen).
+                            _bat_tofull_active = False
+                            if _force_no_discharge:
+                                _desired_perms = ["charge_allowed"]
+                            else:
+                                _desired_perms = []
                     else:  # solarbuffer eerst
+                        _desired_mode = "zero"
                         if not _sb_can_run:
                             _desired_perms = ["discharge_allowed"]
                         elif _force_no_discharge:
@@ -4611,10 +4648,13 @@ def control_loop():
                         else:
                             _desired_perms = ["discharge_allowed"]
 
-                if _bat_token and _bat_control_ip and battery_state.get("online") and sorted(_desired_perms) != (_last_battery_permissions or []):
+                if _bat_token and _bat_control_ip and battery_state.get("online") and (
+                    sorted(_desired_perms) != (_last_battery_permissions or []) or
+                    _desired_mode != _last_battery_mode
+                ):
                     threading.Thread(
-                        target=set_battery_permissions,
-                        args=(_bat_control_ip, _bat_token, _desired_perms),
+                        target=set_battery_control,
+                        args=(_bat_control_ip, _bat_token, _desired_mode, _desired_perms),
                         daemon=True,
                     ).start()
             # ================= EINDE BATTERIJ PRIORITEIT =================
@@ -4749,8 +4789,19 @@ def control_loop():
                 if regulating_device and ip == regulating_device["ip"]:
                     b_pid = device_pids[ip](pid_power)
                     b_pid = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, b_pid))
+                    # In boiler-eerst modus: zolang de accu actief laadt (>10W) bevriest de boiler op
+                    # huidig vermogen en laat de accu als eerste afregelen. Pas als de accu <10W laadt
+                    # hervat de PID de normale regeling.
+                    _bat_holds_boiler = (
+                        cfg.get("battery_enabled") and
+                        cfg.get("battery_priority") == "boiler" and
+                        battery_state.get("online") and
+                        (battery_state.get("power_w") or 0) < -10
+                    )
                     # teruglevering (negatief) → mag alleen omhoog; importerend (positief) → mag alleen omlaag
-                    if measured_power > 0:
+                    if measured_power > 0 and _bat_holds_boiler:
+                        b = st["brightness"]  # accu regelt, boiler bevriest
+                    elif measured_power > 0:
                         b = min(b_pid, st["brightness"])
                     elif measured_power < 0:
                         b = max(b_pid, st["brightness"])
@@ -5039,19 +5090,27 @@ def get_battery_control(control_ip, token):
 
 
 def set_battery_permissions(control_ip, token, permissions):
-    global _last_battery_permissions
-    desired = sorted(permissions)
-    if _last_battery_permissions == desired:
+    return set_battery_control(control_ip, token, "zero", permissions)
+
+
+def set_battery_control(control_ip, token, mode, permissions):
+    global _last_battery_permissions, _last_battery_mode
+    desired_perms = sorted(permissions)
+    if _last_battery_permissions == desired_perms and _last_battery_mode == mode:
         return True
+    payload = {"mode": mode}
+    if mode != "to_full":
+        payload["permissions"] = permissions
     try:
         r = requests.put(
             f"https://{control_ip}/api/batteries",
             headers={**_hw_v2_headers(token), "Content-Type": "application/json"},
-            json={"permissions": permissions},
+            json=payload,
             timeout=3, verify=False,
         )
         if r.status_code == 200:
-            _last_battery_permissions = desired
+            _last_battery_permissions = desired_perms
+            _last_battery_mode = mode
             return True
     except Exception:
         pass
@@ -5107,6 +5166,8 @@ def battery_poll_loop():
                         ctrl = get_battery_control(control_ip, token)
                         battery_state["mode"] = ctrl.get("mode")
                         battery_state["permissions"] = ctrl.get("permissions")
+                        battery_state["max_consumption_w"] = ctrl.get("max_consumption_w", 0) or 0
+                        battery_state["max_production_w"] = ctrl.get("max_production_w", 0) or 0
                     except Exception:
                         pass
             else:
