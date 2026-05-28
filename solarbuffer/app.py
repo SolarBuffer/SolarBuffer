@@ -4603,13 +4603,11 @@ def control_loop():
                             _desired_perms = ["discharge_allowed"]
                     else:  # solarbuffer eerst
                         if not _sb_can_run:
-                            _desired_perms = ["charge_allowed", "discharge_allowed"]
+                            _desired_perms = ["discharge_allowed"]
                         elif _force_no_discharge:
                             _desired_perms = ["charge_allowed"]
                         elif _any_sb_active:
                             _desired_perms = ["charge_allowed"] if _pid_at_max else []
-                        elif _has_export:
-                            _desired_perms = []
                         else:
                             _desired_perms = ["discharge_allowed"]
 
