@@ -4150,6 +4150,7 @@ def control_loop():
                 offline_for = now - offline_since_map.get(ip, now)
                 if (offline_for >= 30
                         and st.get("started")
+                        and not st.get("pending_start")
                         and not st.get("freeze")
                         and not st.get("legionella_active")):
                     print(f"Watchdog: {ip} al {int(offline_for)}s offline terwijl gestart → gereset")
