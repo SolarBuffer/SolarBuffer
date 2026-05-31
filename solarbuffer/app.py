@@ -2064,6 +2064,7 @@ def toggle_shelly(ip):
         st["saturated_since"] = None
         st["min_since"] = None
         st["brightness"] = MIN_BRIGHTNESS
+        st["_reset_offline_timer"] = True
         set_shelly(st["brightness"], True, ip)
         mark_device_activity(device)
     else:
@@ -2127,6 +2128,7 @@ def set_brightness_manual(ip):
         st["on"] = True
         st["started"] = True
         st["pending_start"] = False
+        st["_reset_offline_timer"] = True
         mark_device_activity(device)
     else:
         st["brightness"] = 0
@@ -4143,6 +4145,8 @@ def control_loop():
             for d in devices:
                 ip = d["ip"]
                 st = device_states[ip]
+                if st.pop("_reset_offline_timer", False):
+                    offline_since_map.pop(ip, None)
                 offline_for = now - offline_since_map.get(ip, now)
                 if (offline_for >= 30
                         and st.get("started")
