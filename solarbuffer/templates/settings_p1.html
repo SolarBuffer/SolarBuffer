@@ -293,6 +293,11 @@
     html[data-theme="dark"] .prio-option:checked + .prio-card .prio-icon { background: hsl(32, 85%, 50%); color: #fff; }
     html[data-theme="dark"] .prio-label { color: hsl(220, 10%, 88%); }
     html[data-theme="dark"] .prio-sub   { color: hsl(220, 8%, 56%); }
+    .bat-type-grid .prio-icon { background: transparent !important; width: auto; height: auto; border-radius: 0; }
+    .bat-type-grid .prio-icon img { border-radius: 50%; display: block; }
+    .bat-type-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
+    html[data-theme="dark"] .bat-type-grid .prio-icon { background: transparent !important; border-radius: 0; }
+    html[data-theme="dark"] .bat-type-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
     .select-field {
       width: 100%;
       padding: 0.65rem 0.85rem;
@@ -340,7 +345,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Batterij (HomeWizard HWE-BAT)</div>
+        <div class="card-title">Batterij</div>
         <div class="toggle-row" style="margin-bottom:0.75rem;">
           <label for="batteryEnabled" style="cursor:pointer;font-weight:600;">Batterij koppelen via lokale API</label>
           <label class="toggle">
@@ -350,8 +355,38 @@
           </label>
         </div>
         <div id="batteryFields" style="display:none;">
+
+          <!-- Batterij type -->
           <div class="field-group">
-            <label>IP-adres(sen) HWE-BAT <span style="font-weight:400;color:hsl(220,10%,55%);font-size:0.78rem;">(max. 4)</span></label>
+            <label>Batterijtype</label>
+            <div class="prio-grid bat-type-grid">
+              <input type="radio" class="prio-option" name="battery_type" value="homewizard" id="bt_hw"
+                     {% if config.battery_type != 'marstek' %}checked{% endif %}
+                     onchange="updateBatteryType()">
+              <label class="prio-card" for="bt_hw">
+                <div class="prio-icon">
+                  <img src="/static/icons/battery-homewizard.png" width="44" height="44" alt="HomeWizard">
+                </div>
+                <span class="prio-label">HomeWizard</span>
+                <span class="prio-sub">HWE-BAT via lokale API</span>
+              </label>
+
+              <input type="radio" class="prio-option" name="battery_type" value="marstek" id="bt_marstek"
+                     {% if config.battery_type == 'marstek' %}checked{% endif %}
+                     onchange="updateBatteryType()">
+              <label class="prio-card" for="bt_marstek">
+                <div class="prio-icon">
+                  <img src="/static/icons/battery-marstek.png" width="44" height="44" alt="Marstek">
+                </div>
+                <span class="prio-label">Marstek</span>
+                <span class="prio-sub">Venus via UDP Open API</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Gedeelde IP-lijst (voor beide typen) -->
+          <div class="field-group">
+            <label id="batteryIpsLabel">IP-adres(sen) batterij <span style="font-weight:400;color:hsl(220,10%,55%);font-size:0.78rem;">(max. 4)</span></label>
             <div id="batteryIpsList">
               {% for ip in (config.battery_ips if config.battery_ips else ['']) %}
               <div class="battery-ip-row" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;">
@@ -367,23 +402,47 @@
             </button>
           </div>
 
-          <div class="field-group">
-            <label for="battery_token">API-token</label>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
-              <input type="text" id="battery_token" name="battery_token"
-                     placeholder="Klik op Koppelen om automatisch op te halen"
-                     value="{{ config.battery_token or '' }}"
-                     autocomplete="off" style="flex:1;">
-              <button type="button" class="btn-secondary" id="pairBtn" onclick="startPairing()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
-                Koppelen
-              </button>
+          <!-- HomeWizard-specifieke velden -->
+          <div id="hwFields">
+            <div class="field-group">
+              <label for="battery_token">API-token</label>
+              <div style="display:flex;gap:0.5rem;align-items:center;">
+                <input type="text" id="battery_token" name="battery_token"
+                       placeholder="Klik op Koppelen om automatisch op te halen"
+                       value="{{ config.battery_token or '' }}"
+                       autocomplete="off" style="flex:1;">
+                <button type="button" class="btn-secondary" id="pairBtn" onclick="startPairing()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
+                  Koppelen
+                </button>
+              </div>
+              <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Token werkt voor alle accu's — druk de knop in op: <span id="pairIpHint" style="font-weight:600;">—</span></div>
             </div>
-            <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Token werkt voor alle accu's — druk de knop in op: <span id="pairIpHint" style="font-weight:600;">—</span></div>
+            <div id="pairStatus" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
+              <div id="pairStatusText"></div>
+            </div>
           </div>
 
-          <!-- Koppelstatus -->
-          <div id="pairStatus" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
-            <div id="pairStatusText"></div>
+          <!-- Marstek-specifieke velden -->
+          <div id="marstekFields" style="display:none;">
+            <div style="display:flex;gap:1rem;">
+              <div class="field-group" style="flex:1;">
+                <label for="marstek_port">UDP-poort</label>
+                <input type="number" id="marstek_port" name="marstek_port"
+                       min="1024" max="65535" step="1"
+                       value="{{ config.marstek_port or 30000 }}">
+                <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.25rem;">Stel in via de Marstek app (standaard 30000)</div>
+              </div>
+              <div class="field-group" style="flex:1;">
+                <label for="marstek_max_power">Max. vermogen (W)</label>
+                <input type="number" id="marstek_max_power" name="marstek_max_power"
+                       min="100" max="10000" step="100"
+                       value="{{ config.marstek_max_power or 2000 }}">
+                <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.25rem;">Max. laad- én ontlaadvermogen van je accu</div>
+              </div>
+            </div>
+            <div style="font-size:0.82rem;color:hsl(220,10%,50%);padding:0.6rem 0.75rem;background:hsl(220,15%,96%);border-radius:0.5rem;margin-bottom:0.75rem;">
+              Stel de Open API in via de Marstek app en configureer een statisch IP-adres voor je accu.
+            </div>
           </div>
           <div class="field-group">
             <label>Prioriteit</label>
@@ -444,12 +503,21 @@
       document.getElementById('pairIpHint').textContent = ip || '—';
     }
 
+    function updateBatteryType() {
+      var isMarstek = document.getElementById('bt_marstek').checked;
+      document.getElementById('hwFields').style.display = isMarstek ? 'none' : 'block';
+      document.getElementById('marstekFields').style.display = isMarstek ? 'block' : 'none';
+      document.getElementById('batteryIpsLabel').firstChild.textContent =
+        isMarstek ? 'IP-adres(sen) Marstek  ' : 'IP-adres(sen) HWE-BAT  ';
+    }
+
     (function() {
       const cb = document.getElementById('batteryEnabled');
       const fields = document.getElementById('batteryFields');
       function update() { fields.style.display = cb.checked ? 'block' : 'none'; }
       cb.addEventListener('change', update);
       update();
+      updateBatteryType();
       document.getElementById('batteryIpsList').addEventListener('input', updatePairIpHint);
       updatePairIpHint();
     })();

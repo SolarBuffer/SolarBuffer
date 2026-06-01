@@ -136,10 +136,6 @@ def load_config():
         cfg["shelly_devices"] = []
     if "p1_ip" not in cfg:
         cfg["p1_ip"] = ""
-    if "username" not in cfg:
-        cfg["username"] = "solarbuffer"
-    if "password_hash" not in cfg:
-        cfg["password_hash"] = ""
     if "expert_mode" not in cfg:
         cfg["expert_mode"] = False
     if "expert_settings" not in cfg or not isinstance(cfg["expert_settings"], dict):
@@ -326,6 +322,8 @@ def load_config():
 
     if "battery_enabled" not in cfg:
         cfg["battery_enabled"] = False
+    if "battery_type" not in cfg:
+        cfg["battery_type"] = "homewizard"
     # Migreer oud battery_ip (string) → battery_ips (lijst)
     if "battery_ips" not in cfg:
         old_ip = cfg.pop("battery_ip", "").strip()
@@ -335,6 +333,10 @@ def load_config():
     cfg["battery_ips"] = [ip for ip in cfg["battery_ips"] if ip.strip()]
     if "battery_token" not in cfg:
         cfg["battery_token"] = ""
+    if "marstek_port" not in cfg:
+        cfg["marstek_port"] = 30000
+    if "marstek_max_power" not in cfg:
+        cfg["marstek_max_power"] = 2000
     if "battery_priority" not in cfg:
         cfg["battery_priority"] = "boiler"
     if "battery_soc_threshold" not in cfg:
@@ -580,6 +582,8 @@ battery_state = {
 }
 _last_battery_permissions = None
 _last_battery_mode = None
+_last_marstek_send = 0.0
+_last_marstek_power = None
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
 current_brightness = 0
@@ -1210,10 +1214,19 @@ def settings_p1():
         old_cfg = load_config()
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
         cfg["battery_enabled"] = "battery_enabled" in request.form
+        cfg["battery_type"] = request.form.get("battery_type", "homewizard")
         raw_ips = request.form.getlist("battery_ip[]")
         cfg["battery_ips"] = [ip.strip() for ip in raw_ips if ip.strip()][:4]
         cfg.pop("battery_ip", None)
         cfg["battery_token"] = request.form.get("battery_token", "").strip()
+        try:
+            cfg["marstek_port"] = int(request.form.get("marstek_port", 30000))
+        except (ValueError, TypeError):
+            cfg["marstek_port"] = 30000
+        try:
+            cfg["marstek_max_power"] = int(request.form.get("marstek_max_power", 2000))
+        except (ValueError, TypeError):
+            cfg["marstek_max_power"] = 2000
         cfg["battery_priority"] = request.form.get("battery_priority", "boiler")
         try:
             cfg["battery_soc_threshold"] = int(request.form.get("battery_soc_threshold", 95))
@@ -1438,6 +1451,7 @@ def status_json():
         dynamic_pricing_enabled=cfg.get("dynamic_pricing_enabled", False),
         price_threshold_ct=float(cfg.get("price_threshold_ct", 5.0)),
         battery_enabled=cfg.get("battery_enabled", False),
+        battery_type=cfg.get("battery_type", "homewizard"),
         battery_priority=cfg.get("battery_priority", "boiler"),
         battery_soc_threshold=cfg.get("battery_soc_threshold", 95),
         battery_count=len(cfg.get("battery_ips") or []) if cfg.get("battery_enabled") else 0,
@@ -4653,15 +4667,28 @@ def control_loop():
                         else:
                             _desired_perms = ["discharge_allowed"]
 
-                if _bat_token and _bat_control_ip and battery_state.get("online") and (
-                    sorted(_desired_perms) != (_last_battery_permissions or []) or
-                    _desired_mode != _last_battery_mode
-                ):
-                    threading.Thread(
-                        target=set_battery_control,
-                        args=(_bat_control_ip, _bat_token, _desired_mode, _desired_perms),
-                        daemon=True,
-                    ).start()
+                _bat_type = cfg.get("battery_type", "homewizard")
+                if battery_state.get("online"):
+                    if _bat_type == "marstek":
+                        _marstek_ips = cfg.get("battery_ips") or []
+                        _marstek_port = int(cfg.get("marstek_port") or 30000)
+                        _marstek_max = int(cfg.get("marstek_max_power") or 2000)
+                        if _marstek_ips:
+                            threading.Thread(
+                                target=set_marstek_control,
+                                args=(_marstek_ips[0], _marstek_port, _desired_mode,
+                                      _desired_perms, measured_power, _marstek_max),
+                                daemon=True,
+                            ).start()
+                    elif _bat_token and _bat_control_ip and (
+                        sorted(_desired_perms) != (_last_battery_permissions or []) or
+                        _desired_mode != _last_battery_mode
+                    ):
+                        threading.Thread(
+                            target=set_battery_control,
+                            args=(_bat_control_ip, _bat_token, _desired_mode, _desired_perms),
+                            daemon=True,
+                        ).start()
             # ================= EINDE BATTERIJ PRIORITEIT =================
 
             if export_start is not None and (now - export_start) >= EXPORT_DELAY and not battery_blocks_start:
@@ -5072,6 +5099,76 @@ except Exception:
     pass
 
 
+# ================= MARSTEK UDP API =================
+
+def marstek_udp(ip, port, method, params=None, timeout=3):
+    payload = json.dumps({"id": 1, "method": method, "params": params or {"id": 0}}).encode()
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.settimeout(timeout)
+        sock.sendto(payload, (ip, int(port)))
+        data, _ = sock.recvfrom(4096)
+        return json.loads(data.decode())
+
+
+def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000):
+    """Send a Passive-mode power setpoint to the Marstek battery.
+
+    Setpoint is derived from mode+perms and the current P1 reading (measured_power):
+    - to_full          → charge at max_power (battery locks at max, boiler regulates)
+    - charge_only      → charge only from solar export: SP = max(0, -P1); standby on import
+    - no perms         → standby (0 W)
+    - discharge_only   → discharge proportional to grid import: SP = -min(P1, max); no charge
+    - both perms       → balance grid to 0 via SP = -P1 (charge on export, discharge on import)
+    """
+    global _last_battery_permissions, _last_battery_mode, _last_marstek_send, _last_marstek_power
+
+    now = time.time()
+    desired_perms = sorted(perms)
+    max_power = int(max_power or 2000)
+
+    charge_only = (desired_perms == ["charge_allowed"])
+    discharge_only = (desired_perms == ["discharge_allowed"])
+
+    if mode == "to_full":
+        # Battery locked at max charge power; boiler is the regulating device.
+        target_power = max_power
+    elif charge_only:
+        # Charge from solar export only — no grid charging, no discharge.
+        # SP = clamp(-P1, 0, max): export (P1<0) → charge at |P1|, import (P1>0) → standby.
+        target_power = int(max(0, min(max_power, -measured_power)))
+    elif not perms:
+        target_power = 0
+    elif discharge_only:
+        # Discharge proportional to grid import; no charging.
+        # SP = -clamp(P1, 0, max): import (P1>0) → discharge at P1, export → standby.
+        target_power = -int(max(0, min(max_power, measured_power)))
+    else:
+        # Both permissions: balance grid to 0 via SP = -P1.
+        target_power = int(max(-max_power, min(max_power, -measured_power)))
+
+    mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
+    power_changed = abs(target_power - (_last_marstek_power or 0)) > 50
+    needs_refresh = (now - _last_marstek_send) > 240
+
+    if not mode_changed and not power_changed and not needs_refresh:
+        return True
+
+    try:
+        cfg_obj = {"mode": "Passive", "passive_cfg": {"power": target_power, "cd_time": 300}}
+        result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": cfg_obj})
+        if result.get("result", {}).get("set_result"):
+            _last_battery_permissions = desired_perms
+            _last_battery_mode = mode
+            _last_marstek_power = target_power
+            _last_marstek_send = now
+            return True
+    except Exception as e:
+        print(f"Marstek control error ({ip}:{port}): {e}")
+    return False
+
+
+# ================= HOMEWIZARD BATTERY API =================
+
 def _hw_v2_headers(token):
     return {"Authorization": f"Bearer {token}", "X-Api-Version": "2"}
 
@@ -5128,8 +5225,70 @@ def battery_poll_loop():
         try:
             cfg = load_config()
             ips = cfg.get("battery_ips") or []
-            token = cfg.get("battery_token", "").strip()
-            if cfg.get("battery_enabled") and ips and token:
+            bat_type = cfg.get("battery_type", "homewizard")
+
+            if not cfg.get("battery_enabled") or not ips:
+                battery_state["online"] = False
+                time.sleep(5)
+                continue
+
+            if bat_type == "marstek":
+                port = int(cfg.get("marstek_port") or 30000)
+                max_power = int(cfg.get("marstek_max_power") or 2000)
+                soc_list, power_list = [], []
+                any_online = False
+                for ip in ips:
+                    try:
+                        r = marstek_udp(ip, port, "ES.GetStatus")
+                        data = r.get("result", {})
+                        any_online = True
+                        soc = data.get("bat_soc")
+                        bp = data.get("bat_power")
+                        if soc is not None:
+                            soc_list.append(float(soc))
+                        if bp is not None:
+                            # Marstek: positive = charging → negate to match HomeWizard convention
+                            # (power_w < 0 = charging in SolarBuffer)
+                            power_list.append(-float(bp))
+                        else:
+                            # bat_power not in ES.GetStatus for this model — try Bat.GetStatus.
+                            # charg_flag=True + bat_capacity increasing → charging; we use the
+                            # configured max_power as a proxy so priority logic still functions.
+                            try:
+                                br = marstek_udp(ip, port, "Bat.GetStatus")
+                                bd = br.get("result", {})
+                                if bd.get("charg_flag") is True:
+                                    power_list.append(-float(max_power))
+                                elif bd.get("dischrg_flag") is True:
+                                    power_list.append(float(max_power))
+                                else:
+                                    power_list.append(0.0)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                if any_online:
+                    battery_state.update({
+                        "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
+                        "power_w": round(sum(power_list), 1) if power_list else None,
+                        "voltage_v": None,
+                        "current_a": None,
+                        "cycles": None,
+                        "mode": "Passive",
+                        "permissions": None,
+                        "max_consumption_w": max_power,
+                        "max_production_w": max_power,
+                        "online": True,
+                    })
+                else:
+                    battery_state["online"] = False
+
+            else:  # homewizard
+                token = cfg.get("battery_token", "").strip()
+                if not token:
+                    battery_state["online"] = False
+                    time.sleep(5)
+                    continue
                 soc_list, power_total, voltage_list = [], 0.0, []
                 cycles_total = 0
                 any_online = False
@@ -5175,8 +5334,7 @@ def battery_poll_loop():
                         battery_state["max_production_w"] = ctrl.get("max_production_w", 0) or 0
                     except Exception:
                         pass
-            else:
-                battery_state["online"] = False
+
         except Exception:
             battery_state["online"] = False
         time.sleep(5)

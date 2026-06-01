@@ -517,6 +517,18 @@
       vertical-align: middle;
       margin-bottom: 2px;
     }
+    .control-card h2 .ctrl-icon img {
+      display: block;
+      background: transparent;
+      border-radius: 50%;
+      vertical-align: middle;
+    }
+    #batBrandIcon {
+      display: inline-flex;
+      align-items: center;
+      background: transparent !important;
+      line-height: 0;
+    }
 
     .control-row {
       display: flex;
@@ -1911,7 +1923,7 @@
 
     <div class="card control-card" id="batteryCard" style="display:none;">
       <div class="control-card-header">
-        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span> Batterij</h2>
+        <h2><span class="ctrl-icon" id="batBrandIcon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span> Batterij</h2>
         <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
           <span id="batPrioLabel" class="buffer-status-badge" style="display:none;"></span>
           <span id="batPermLabel" class="buffer-status-badge" style="display:none;"></span>
@@ -1938,11 +1950,11 @@
             <span style="font-size:0.7rem;color:hsl(220,10%,52%);">W</span>
           </div>
         </div>
-        <div style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
+        <div id="batVoltRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
           <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Spanning</div>
           <div><span id="batVoltVal" style="font-weight:700;font-size:0.88rem;">—</span><span style="font-size:0.7rem;color:hsl(220,10%,52%);"> V</span></div>
         </div>
-        <div style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
+        <div id="batCyclesRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
           <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Cycli</div>
           <div><span id="batCyclesVal" style="font-weight:700;font-size:0.88rem;">—</span></div>
         </div>
@@ -2060,7 +2072,7 @@
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.5.1</div>
+    <div class="footer">Version 0.5.2</div>
   </div>
 
   <script>
@@ -2188,6 +2200,15 @@
               document.getElementById('batPowerArrow').textContent = pw > 5 ? '↑' : pw < -5 ? '↓' : '·';
               document.getElementById('batPowerArrow').style.color =
                 pw > 5 ? 'hsl(145,55%,40%)' : pw < -5 ? 'hsl(32,90%,48%)' : 'hsl(220,10%,60%)';
+            }
+            const isMarstek = data.battery_type === 'marstek';
+            document.getElementById('batVoltRow').style.display = isMarstek ? 'none' : '';
+            document.getElementById('batCyclesRow').style.display = isMarstek ? 'none' : '';
+            const batIconEl = document.getElementById('batBrandIcon');
+            const batLogoSrc = isMarstek ? '/static/icons/battery-marstek.png' : '/static/icons/battery-homewizard.png';
+            const existingImg = batIconEl.querySelector('img');
+            if (!existingImg || existingImg.src !== location.origin + batLogoSrc) {
+              batIconEl.innerHTML = `<img src="${batLogoSrc}" width="22" height="22" alt="">`;
             }
             const vv = bat.voltage_v;
             document.getElementById('batVoltVal').textContent = vv !== null && vv !== undefined ? Number(vv).toFixed(1) : '—';

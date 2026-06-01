@@ -400,16 +400,28 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.5.1</span>
+          <span class="version-badge new">v0.5.2</span>
+          <span class="update-date-small">1 jun</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Marstek batterijintegratie &amp; bugfixes watchdog</div>
+          <div class="update-body">Marstek Venus-accu's zijn nu te koppelen via de lokale UDP Open API. SolarBuffer berekent het laad- of ontlaadsetpoint zelf op basis van de P1-meting, zonder aparte CT-configuratie. Prioriteitslogica (batterij of boiler eerst) werkt identiek aan de HomeWizard-integratie. Het batterijtype is instelbaar via een merkkaart met logo, ook zichtbaar in de dashboard-widget. Daarnaast zijn twee watchdog-bugs opgelost waarbij handmatig gestartte apparaten direct werden uitgeschakeld.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.2" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.5.1</span>
           <span class="update-date-small">25 mei</span>
         </div>
         <div class="update-divider"></div>
         <div class="update-right">
           <span class="update-tag tag-feature">Nieuw</span>
           <div class="update-title">HomeWizard batterijintegratie (HWE-BAT)</div>
-          <div class="update-body">
-            Koppel een HomeWizard HWE-BAT batterij via de lokale REST API v2. Stel in of de batterij of de SolarBuffer voorrang heeft. Bij <em>Batterij eerst</em> laadt de accu tot een instelbare SoC-drempel voordat de boiler start; bij <em>SolarBuffer eerst</em> regelt de boiler en mag de accu pas laden als de PID op 100% staat. Laad- en ontlaadrechten worden automatisch bijgestuurd op basis van actieve besturing, legionellarun, tijdschema's en dynamische tarieven. Het dashboard toont een live batterijwidget met SoC, vermogen, spanning en cycli.
-          </div>
+          <div class="update-body">Koppel een HomeWizard HWE-BAT via de lokale REST API v2. Stel in of de batterij of de boiler voorrang heeft op het zonnestroom. Bij <em>Batterij eerst</em> laadt de accu tot een instelbare SoC-drempel voordat de boiler start. Laad- en ontlaadrechten worden automatisch bijgestuurd op basis van legionellarun, tijdschema's en dynamische tarieven. Het dashboard toont een live batterijwidget met SoC en vermogen.</div>
           <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.1" target="_blank" rel="noopener">→ Release notes</a>
         </div>
       </div>
@@ -423,9 +435,7 @@
         <div class="update-right">
           <span class="update-tag tag-feature">Nieuw</span>
           <div class="update-title">Broadlink IR-besturing &amp; instellingen heringedeeld</div>
-          <div class="update-body">
-            Broadlink RM4/RM Pro apparaten kunnen nu worden gekoppeld en aangestuurd vanuit de app. IR-commando's inleren via de app, opslaan en versturen. IR-apparaten zijn zichtbaar op het dashboard met knoppen per commando en een passieve aan/uit-indicator via een gekoppelde vermogensmeter. De instellingenpagina is heringedeeld in zes sectietegels (Configuratie, Accessories, Besturing, Verbinding, Account en Systeem) voor een overzichtelijker navigatie.
-          </div>
+          <div class="update-body">Broadlink RM4 en RM Pro apparaten zijn nu te koppelen en aan te sturen vanuit de app. IR-commando's inleren, opslaan en versturen via het dashboard. IR-apparaten tonen een aan/uit-indicator via een gekoppelde vermogensmeter. De instellingenpagina is heringedeeld in zes sectietegels voor een overzichtelijker navigatie.</div>
           <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.0" target="_blank" rel="noopener">→ Release notes</a>
         </div>
       </div>
