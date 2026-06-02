@@ -181,3 +181,5 @@ test
 ## Verbruikers
 
 ## Geschiedenisgrafieken
+
+## Batterij koppelingen
