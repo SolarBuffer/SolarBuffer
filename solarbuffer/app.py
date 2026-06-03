@@ -5357,7 +5357,11 @@ def set_battery_control(control_ip, token, mode, permissions):
 
 
 def battery_poll_loop():
-    global battery_state
+    global battery_state, _bat_day_date, _bat_charge_start_kwh, _bat_discharge_start_kwh
+    bl = load_energy_baselines().get("__battery__", {})
+    _bat_day_date = bl.get("date")
+    _bat_charge_start_kwh = bl.get("charge_start_kwh")
+    _bat_discharge_start_kwh = bl.get("discharge_start_kwh")
     while True:
         try:
             cfg = load_config()
@@ -5458,12 +5462,17 @@ def battery_poll_loop():
                     except Exception:
                         pass
                 if any_online:
-                    global _bat_day_date, _bat_charge_start_kwh, _bat_discharge_start_kwh
                     today = datetime.now().strftime('%Y-%m-%d')
                     if _bat_day_date != today or _bat_charge_start_kwh is None:
                         _bat_day_date = today
                         _bat_charge_start_kwh = import_total
                         _bat_discharge_start_kwh = export_total
+                        _energy_baselines["__battery__"] = {
+                            "date": today,
+                            "charge_start_kwh": import_total,
+                            "discharge_start_kwh": export_total,
+                        }
+                        save_energy_baselines()
                     charge_today = round(max(0.0, import_total - _bat_charge_start_kwh), 2)
                     discharge_today = round(max(0.0, export_total - _bat_discharge_start_kwh), 2)
                     battery_state.update({
