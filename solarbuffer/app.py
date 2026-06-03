@@ -331,8 +331,17 @@ def load_config():
     else:
         cfg.pop("battery_ip", None)
     cfg["battery_ips"] = [ip for ip in cfg["battery_ips"] if ip.strip()]
-    if "battery_token" not in cfg:
-        cfg["battery_token"] = ""
+    # Migreer battery_token (enkelvoud) → battery_tokens (lijst, één per accu)
+    if "battery_tokens" not in cfg:
+        old_token = cfg.pop("battery_token", "")
+        cfg["battery_tokens"] = [old_token] if old_token else []
+    else:
+        cfg.pop("battery_token", None)
+    # Sync lengte met battery_ips
+    _n_bats = max(len(cfg.get("battery_ips", [])), 1)
+    while len(cfg["battery_tokens"]) < _n_bats:
+        cfg["battery_tokens"].append("")
+    cfg["battery_tokens"] = cfg["battery_tokens"][:_n_bats]
     if "battery_control_token" not in cfg:
         cfg["battery_control_token"] = ""
     if "marstek_port" not in cfg:
@@ -582,6 +591,7 @@ battery_state = {
     "cycles": None, "mode": None, "permissions": None, "online": False,
     "max_consumption_w": 0, "max_production_w": 0,
 }
+_battery_blocks_start = False
 _last_battery_permissions = None
 _last_battery_mode = None
 _last_marstek_send = 0.0
@@ -1221,7 +1231,12 @@ def settings_p1():
         raw_ips = request.form.getlist("battery_ip[]")
         cfg["battery_ips"] = [ip.strip() for ip in raw_ips if ip.strip()][:4]
         cfg.pop("battery_ip", None)
-        cfg["battery_token"] = request.form.get("battery_token", "").strip()
+        raw_tokens = request.form.getlist("battery_token[]")
+        cfg["battery_tokens"] = [t.strip() for t in raw_tokens]
+        cfg.pop("battery_token", None)
+        # Sync lengte met battery_ips
+        while len(cfg["battery_tokens"]) < len(cfg["battery_ips"]):
+            cfg["battery_tokens"].append("")
         cfg["battery_control_token"] = request.form.get("battery_control_token", "").strip()
         try:
             cfg["marstek_port"] = int(request.form.get("marstek_port", 30000))
@@ -1509,6 +1524,7 @@ def status_json():
         battery_soc_threshold=cfg.get("battery_soc_threshold", 95),
         battery_count=len(cfg.get("battery_ips") or []) if cfg.get("battery_enabled") else 0,
         battery=battery_state if cfg.get("battery_enabled") else None,
+        battery_blocks_start=_battery_blocks_start if cfg.get("battery_enabled") else False,
     )
 
 
@@ -4750,6 +4766,8 @@ def control_loop():
                             daemon=True,
                         ).start()
             # ================= EINDE BATTERIJ PRIORITEIT =================
+            global _battery_blocks_start
+            _battery_blocks_start = battery_blocks_start
 
             if export_start is not None and (now - export_start) >= EXPORT_DELAY and not battery_blocks_start:
                 next_dev = get_next_startable_device(non_legionella)
@@ -5361,15 +5379,18 @@ def battery_poll_loop():
                     battery_state["online"] = False
 
             else:  # homewizard
-                token = cfg.get("battery_token", "").strip()
-                if not token:
+                tokens = cfg.get("battery_tokens", [])
+                if not any(t for t in tokens):
                     battery_state["online"] = False
                     time.sleep(5)
                     continue
                 soc_list, power_total, voltage_list = [], 0.0, []
                 cycles_total = 0
                 any_online = False
-                for ip in ips:
+                for i, ip in enumerate(ips):
+                    token = tokens[i] if i < len(tokens) else ""
+                    if not token:
+                        continue
                     try:
                         data = get_battery_measurement(ip, token)
                         any_online = True
