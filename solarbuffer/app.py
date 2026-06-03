@@ -586,6 +586,7 @@ _last_marstek_send = 0.0
 _last_marstek_power = None
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
+_p1_online = False
 current_brightness = 0
 current_gas_m3 = None      # meest recente meterstand (m³)
 gas_day_start_m3 = None    # meterstand bij start van vandaag
@@ -4695,7 +4696,7 @@ def control_loop():
                         _marstek_port = int(cfg.get("marstek_port") or 30000)
                         _marstek_max = int(cfg.get("marstek_max_power") or 2000)
                         if _marstek_ips:
-                            if not enabled:
+                            if not enabled or not _p1_online:
                                 threading.Thread(
                                     target=release_marstek_to_auto,
                                     args=(_marstek_ips[0], _marstek_port),
@@ -5145,7 +5146,7 @@ def release_marstek_to_auto(ip, port):
     if _last_battery_mode == "auto" and (now - _last_marstek_send) < 240:
         return True
     try:
-        result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto"}})
+        result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
         if result.get("result", {}).get("set_result"):
             _last_battery_permissions = None
             _last_battery_mode = "auto"
@@ -5298,24 +5299,18 @@ def battery_poll_loop():
                             # (power_w < 0 = charging in SolarBuffer)
                             power_list.append(-float(bp))
                         else:
-                            # bat_power missing — try bat_vol * bat_cur first (more accurate)
-                            bv = data.get("bat_vol")
-                            bc = data.get("bat_cur")
-                            if bv is not None and bc is not None:
-                                power_list.append(-float(bv) * float(bc))
-                            else:
-                                # Last resort: Bat.GetStatus flags with max_power as proxy
-                                try:
-                                    br = marstek_udp(ip, port, "Bat.GetStatus")
-                                    bd = br.get("result", {})
-                                    if bd.get("charg_flag") is True:
-                                        power_list.append(-float(max_power))
-                                    elif bd.get("dischrg_flag") is True:
-                                        power_list.append(float(max_power))
-                                    else:
-                                        power_list.append(0.0)
-                                except Exception:
+                            # bat_power missing for this model — use Bat.GetStatus flags as proxy
+                            try:
+                                br = marstek_udp(ip, port, "Bat.GetStatus")
+                                bd = br.get("result", {})
+                                if bd.get("charg_flag") is True:
+                                    power_list.append(-float(max_power))
+                                elif bd.get("dischrg_flag") is True:
+                                    power_list.append(float(max_power))
+                                else:
                                     power_list.append(0.0)
+                            except Exception:
+                                power_list.append(0.0)
                     except Exception:
                         pass
                 if any_online:
@@ -5598,7 +5593,7 @@ def history_metrics_api():
 
 # ================= P1 POLL =================
 def p1_poll_loop():
-    global current_power, current_gas_m3, gas_day_start_m3, gas_day_date
+    global current_power, _p1_online, current_gas_m3, gas_day_start_m3, gas_day_date
     saved = load_state()
     gas_info = saved.get("__gas__", {})
     gas_day_start_m3 = gas_info.get("gas_day_start_m3")
@@ -5610,6 +5605,7 @@ def p1_poll_loop():
             if p1_ip:
                 data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
                 current_power = float(data.get("active_power_w", 0) or 0)
+                _p1_online = True
                 if cfg.get("gas_enabled"):
                     gas_raw = data.get("total_gas_m3")
                     if gas_raw is not None:
@@ -5620,7 +5616,7 @@ def p1_poll_loop():
                             gas_day_start_m3 = current_gas_m3
                             save_state(force=True)
         except Exception:
-            pass
+            _p1_online = False
         time.sleep(1)
 
 
