@@ -333,6 +333,8 @@ def load_config():
     cfg["battery_ips"] = [ip for ip in cfg["battery_ips"] if ip.strip()]
     if "battery_token" not in cfg:
         cfg["battery_token"] = ""
+    if "battery_control_token" not in cfg:
+        cfg["battery_control_token"] = ""
     if "marstek_port" not in cfg:
         cfg["marstek_port"] = 30000
     if "marstek_max_power" not in cfg:
@@ -1220,6 +1222,7 @@ def settings_p1():
         cfg["battery_ips"] = [ip.strip() for ip in raw_ips if ip.strip()][:4]
         cfg.pop("battery_ip", None)
         cfg["battery_token"] = request.form.get("battery_token", "").strip()
+        cfg["battery_control_token"] = request.form.get("battery_control_token", "").strip()
         try:
             cfg["marstek_port"] = int(request.form.get("marstek_port", 30000))
         except (ValueError, TypeError):
@@ -1262,6 +1265,17 @@ def battery_debug():
     return jsonify(results)
 
 
+def _hw_pair_with_ip(ip):
+    r = requests.post(
+        f"https://{ip}/api/user",
+        headers={"X-Api-Version": "2", "Content-Type": "application/json"},
+        json={"name": "local/solarbuffer"},
+        timeout=4,
+        verify=False,
+    )
+    return r
+
+
 @app.route("/api/battery/pair", methods=["POST"])
 def battery_pair():
     if not require_login():
@@ -1271,13 +1285,7 @@ def battery_pair():
     if not ip:
         return jsonify(success=False, error="IP-adres is verplicht"), 400
     try:
-        r = requests.post(
-            f"https://{ip}/api/user",
-            headers={"X-Api-Version": "2", "Content-Type": "application/json"},
-            json={"name": "local/solarbuffer"},
-            timeout=4,
-            verify=False,
-        )
+        r = _hw_pair_with_ip(ip)
         if r.status_code == 200:
             token = r.json().get("token", "")
             return jsonify(success=True, token=token)
@@ -1287,6 +1295,29 @@ def battery_pair():
             return jsonify(success=False, error=f"Onverwacht antwoord: {r.status_code}")
     except requests.exceptions.ConnectionError:
         return jsonify(success=False, error="Apparaat niet bereikbaar op dit IP-adres")
+    except Exception as e:
+        return jsonify(success=False, error=str(e))
+
+
+@app.route("/api/battery/pair_p1", methods=["POST"])
+def battery_pair_p1():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    p1_ip = cfg.get("p1_ip", "").strip()
+    if not p1_ip:
+        return jsonify(success=False, error="P1 IP-adres niet geconfigureerd"), 400
+    try:
+        r = _hw_pair_with_ip(p1_ip)
+        if r.status_code == 200:
+            token = r.json().get("token", "")
+            return jsonify(success=True, token=token)
+        elif r.status_code == 403:
+            return jsonify(success=False, waiting=True)
+        else:
+            return jsonify(success=False, error=f"Onverwacht antwoord: {r.status_code}")
+    except requests.exceptions.ConnectionError:
+        return jsonify(success=False, error=f"P1 meter ({p1_ip}) niet bereikbaar")
     except Exception as e:
         return jsonify(success=False, error=str(e))
 
@@ -4594,7 +4625,7 @@ def control_loop():
             battery_blocks_start = False
             _bat_cfg_enabled = cfg.get("battery_enabled", False)
             if _bat_cfg_enabled:
-                _bat_token = cfg.get("battery_token", "").strip()
+                _bat_token = cfg.get("battery_control_token", "").strip()
                 _bat_control_ip = p1_ip
                 _bat_priority = cfg.get("battery_priority", "boiler")
                 _bat_soc_thr = cfg.get("battery_soc_threshold", 95)
@@ -5371,9 +5402,10 @@ def battery_poll_loop():
                 else:
                     battery_state["online"] = False
                 control_ip = cfg.get("p1_ip", "")
-                if control_ip:
+                control_token = cfg.get("battery_control_token", "").strip()
+                if control_ip and control_token:
                     try:
-                        ctrl = get_battery_control(control_ip, token)
+                        ctrl = get_battery_control(control_ip, control_token)
                         battery_state["mode"] = ctrl.get("mode")
                         battery_state["permissions"] = ctrl.get("permissions")
                         battery_state["max_consumption_w"] = ctrl.get("max_consumption_w", 0) or 0
