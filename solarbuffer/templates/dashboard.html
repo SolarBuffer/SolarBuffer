@@ -1955,7 +1955,7 @@
           <div><span id="batVoltVal" style="font-weight:700;font-size:0.88rem;">—</span><span style="font-size:0.7rem;color:hsl(220,10%,52%);"> V</span></div>
         </div>
         <div id="batCyclesRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
-          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Cycli</div>
+          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Modus</div>
           <div><span id="batCyclesVal" style="font-weight:700;font-size:0.88rem;">—</span></div>
         </div>
       </div>
@@ -2214,8 +2214,9 @@
             }
             const vv = bat.voltage_v;
             document.getElementById('batVoltVal').textContent = vv !== null && vv !== undefined ? Number(vv).toFixed(1) : '—';
-            const cy = bat.cycles;
-            document.getElementById('batCyclesVal').textContent = cy !== null && cy !== undefined ? cy : '—';
+            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
+            const md = bat.mode;
+            document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
           } else {
             batCard.style.display = 'none';
           }
