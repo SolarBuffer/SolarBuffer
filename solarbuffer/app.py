@@ -4721,14 +4721,17 @@ def control_loop():
                                         reset_device_to_off(_bd["ip"])
                                 _desired_perms = ["charge_allowed", "discharge_allowed"]
                         else:
-                            # SoC-drempel bereikt → accu volledig passief.
-                            # Geen laden (drempel bereikt) én geen ontladen (anders haalt de boiler
-                            # nooit IMPORT_OFF_THRESHOLD om uit te schakelen).
+                            # SoC-drempel bereikt → boiler mag starten.
                             _bat_tofull_active = False
                             if _force_no_discharge:
                                 _desired_perms = ["charge_allowed"]
-                            else:
+                            elif _any_sb_active:
+                                # Boiler actief: accu volledig passief zodat boiler
+                                # IMPORT_OFF_THRESHOLD kan halen om uit te schakelen.
                                 _desired_perms = []
+                            else:
+                                # Boiler nog uit: accu vrij in zero mode
+                                _desired_perms = ["charge_allowed", "discharge_allowed"]
                     else:  # solarbuffer eerst
                         _desired_mode = "zero"
                         if not _sb_can_run:
