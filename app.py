@@ -1240,6 +1240,27 @@ def settings_p1():
     return render_template("settings_p1.html", config=cfg, dark_mode=get_user_dark_mode())
 
 
+@app.route("/api/battery/debug")
+def battery_debug():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    if cfg.get("battery_type") != "marstek":
+        return jsonify({"error": "Alleen beschikbaar voor Marstek"}), 400
+    ips = cfg.get("battery_ips") or []
+    port = int(cfg.get("marstek_port") or 30000)
+    results = {}
+    for ip in ips:
+        entry = {}
+        for method in ("ES.GetStatus", "Bat.GetStatus"):
+            try:
+                entry[method] = marstek_udp(ip, port, method).get("result", {})
+            except Exception as e:
+                entry[method] = {"error": str(e)}
+        results[ip] = entry
+    return jsonify(results)
+
+
 @app.route("/api/battery/pair", methods=["POST"])
 def battery_pair():
     if not require_login():
@@ -5173,7 +5194,7 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000)
         target_power = int(max(-max_power, min(max_power, -measured_power)))
 
     mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
-    power_changed = abs(target_power - (_last_marstek_power or 0)) > 50
+    power_changed = abs(target_power - (_last_marstek_power or 0)) > 25
     needs_refresh = (now - _last_marstek_send) > 240
 
     if not mode_changed and not power_changed and not needs_refresh:
@@ -5277,20 +5298,24 @@ def battery_poll_loop():
                             # (power_w < 0 = charging in SolarBuffer)
                             power_list.append(-float(bp))
                         else:
-                            # bat_power not in ES.GetStatus for this model — try Bat.GetStatus.
-                            # charg_flag=True + bat_capacity increasing → charging; we use the
-                            # configured max_power as a proxy so priority logic still functions.
-                            try:
-                                br = marstek_udp(ip, port, "Bat.GetStatus")
-                                bd = br.get("result", {})
-                                if bd.get("charg_flag") is True:
-                                    power_list.append(-float(max_power))
-                                elif bd.get("dischrg_flag") is True:
-                                    power_list.append(float(max_power))
-                                else:
+                            # bat_power missing — try bat_vol * bat_cur first (more accurate)
+                            bv = data.get("bat_vol")
+                            bc = data.get("bat_cur")
+                            if bv is not None and bc is not None:
+                                power_list.append(-float(bv) * float(bc))
+                            else:
+                                # Last resort: Bat.GetStatus flags with max_power as proxy
+                                try:
+                                    br = marstek_udp(ip, port, "Bat.GetStatus")
+                                    bd = br.get("result", {})
+                                    if bd.get("charg_flag") is True:
+                                        power_list.append(-float(max_power))
+                                    elif bd.get("dischrg_flag") is True:
+                                        power_list.append(float(max_power))
+                                    else:
+                                        power_list.append(0.0)
+                                except Exception:
                                     power_list.append(0.0)
-                            except Exception:
-                                pass
                     except Exception:
                         pass
                 if any_online:
