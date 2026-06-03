@@ -405,7 +405,7 @@
           <!-- HomeWizard-specifieke velden -->
           <div id="hwFields">
             <div class="field-group">
-              <label for="battery_token">API-token</label>
+              <label for="battery_token">API-token accu (meting)</label>
               <div style="display:flex;gap:0.5rem;align-items:center;">
                 <input type="text" id="battery_token" name="battery_token"
                        placeholder="Klik op Koppelen om automatisch op te halen"
@@ -415,10 +415,26 @@
                   Koppelen
                 </button>
               </div>
-              <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Token werkt voor alle accu's — druk de knop in op: <span id="pairIpHint" style="font-weight:600;">—</span></div>
+              <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Druk de knop in op de accu zelf: <span id="pairIpHint" style="font-weight:600;">—</span></div>
             </div>
             <div id="pairStatus" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
               <div id="pairStatusText"></div>
+            </div>
+            <div class="field-group">
+              <label for="battery_control_token">API-token P1 meter (aansturen)</label>
+              <div style="display:flex;gap:0.5rem;align-items:center;">
+                <input type="text" id="battery_control_token" name="battery_control_token"
+                       placeholder="Klik op Koppelen om automatisch op te halen"
+                       value="{{ config.battery_control_token or '' }}"
+                       autocomplete="off" style="flex:1;">
+                <button type="button" class="btn-secondary" id="pairP1Btn" onclick="startPairingP1()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
+                  Koppelen
+                </button>
+              </div>
+              <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Druk de knop in op de P1 meter — dit token gebruikt SolarBuffer om de accu aan te sturen.</div>
+            </div>
+            <div id="pairP1Status" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
+              <div id="pairP1StatusText"></div>
             </div>
           </div>
 
@@ -589,6 +605,65 @@
         .catch(function() {
           stopPairing();
           setPairStatus('Verbindingsfout — controleer het IP-adres.', 'error');
+        });
+    }
+
+    var _pairP1Interval = null;
+    var _pairP1Countdown = 0;
+
+    function setPairP1Status(msg, type) {
+      var el = document.getElementById('pairP1Status');
+      var txt = document.getElementById('pairP1StatusText');
+      txt.innerHTML = msg;
+      el.style.display = msg ? 'block' : 'none';
+      el.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
+      el.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
+      el.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
+    }
+
+    function stopPairingP1() {
+      if (_pairP1Interval) { clearInterval(_pairP1Interval); _pairP1Interval = null; }
+      document.getElementById('pairP1Btn').textContent = 'Koppelen';
+      document.getElementById('pairP1Btn').disabled = false;
+    }
+
+    function startPairingP1() {
+      stopPairingP1();
+      document.getElementById('pairP1Btn').disabled = true;
+      document.getElementById('pairP1Btn').textContent = 'Bezig…';
+      setPairP1Status('<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Verbinding maken met P1 meter…</span>', 'wait');
+      _pairP1Countdown = 0;
+      sendPairP1Request();
+      _pairP1Interval = setInterval(function() {
+        _pairP1Countdown++;
+        if (_pairP1Countdown >= 30) {
+          stopPairingP1();
+          setPairP1Status('Timeout — knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
+          return;
+        }
+        sendPairP1Request();
+      }, 2000);
+    }
+
+    function sendPairP1Request() {
+      fetch('/api/battery/pair_p1', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success && data.token) {
+            stopPairingP1();
+            document.getElementById('battery_control_token').value = data.token;
+            setPairP1Status('✓ P1 meter gekoppeld! Token is automatisch ingevuld. Sla de instellingen op om te bevestigen.', 'success');
+          } else if (data.waiting) {
+            var secs = 30 - _pairP1Countdown * 2;
+            setPairP1Status('<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Druk op de knop op de P1 meter… (' + Math.max(0, secs) + 's resterend)</span>', 'wait');
+          } else if (data.error) {
+            stopPairingP1();
+            setPairP1Status('Fout: ' + data.error, 'error');
+          }
+        })
+        .catch(function() {
+          stopPairingP1();
+          setPairP1Status('Verbindingsfout — controleer het P1 IP-adres.', 'error');
         });
     }
 
