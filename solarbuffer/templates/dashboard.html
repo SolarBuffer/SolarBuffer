@@ -2265,7 +2265,7 @@
             const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
-            const isToFull = bat.mode === 'to_full' || !!data.battery_force_tofull;
+            const isToFull = !!data.battery_force_tofull;
             if (!_tofullPending) document.getElementById('batForceTofullToggle').checked = isToFull;
           } else {
             batCard.style.display = 'none';
