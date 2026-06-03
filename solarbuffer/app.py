@@ -1339,16 +1339,25 @@ def battery_pair_p1():
         return jsonify(success=False, error=str(e))
 
 
-@app.route("/api/battery/force_tofull", methods=["POST"])
-def toggle_battery_force_tofull():
+@app.route("/api/battery/set_mode", methods=["POST"])
+def battery_set_mode():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    mode = data.get("mode", "zero")
+    if mode not in ("to_full", "zero"):
+        return jsonify(success=False, error="Ongeldige modus"), 400
     cfg = load_config()
-    new_val = not cfg.get("battery_force_tofull", False)
-    cfg["battery_force_tofull"] = new_val
+    cfg["battery_force_tofull"] = (mode == "to_full")
     save_config(cfg)
-    write_audit_log("battery_force_tofull_toggled", {"active": new_val})
-    return jsonify(success=True, active=new_val)
+    token = cfg.get("battery_control_token", "").strip()
+    p1_ip = cfg.get("p1_ip", "").strip()
+    sent = False
+    if token and p1_ip:
+        perms = [] if mode == "to_full" else ["charge_allowed", "discharge_allowed"]
+        sent = set_battery_control(p1_ip, token, mode, perms)
+    write_audit_log("battery_mode_set", {"mode": mode, "sent": sent})
+    return jsonify(success=True, mode=mode, sent=sent)
 
 
 @app.route("/settings/solarbuffers", methods=["GET", "POST"])
@@ -5337,8 +5346,9 @@ def set_battery_control(control_ip, token, mode, permissions):
             _last_battery_permissions = desired_perms
             _last_battery_mode = mode
             return True
-    except Exception:
-        pass
+        print(f"[BAT] set_battery_control mislukt: HTTP {r.status_code} → {r.text[:200]}")
+    except Exception as e:
+        print(f"[BAT] set_battery_control fout: {e}")
     return False
 
 
