@@ -5380,8 +5380,8 @@ def battery_poll_loop():
                         if soc is not None:
                             soc_list.append(float(soc))
                         if bp is not None:
-                            # Marstek: positive = charging → negate to match HomeWizard convention
-                            # (power_w < 0 = charging in SolarBuffer)
+                            # Marstek: positive = charging → negate to match SolarBuffer convention
+                            # (power_w < 0 = charging, power_w > 0 = discharging)
                             power_list.append(-float(bp))
                         else:
                             # bat_power missing for this model — use Bat.GetStatus flags as proxy
@@ -5437,7 +5437,9 @@ def battery_poll_loop():
                         if soc is not None:
                             soc_list.append(float(soc))
                         if pw is not None:
-                            power_total += float(pw)
+                            # HWE-BAT: positive = charging, negative = discharging
+                            # Negate to match SolarBuffer convention (power_w < 0 = charging)
+                            power_total -= float(pw)
                         if vv is not None:
                             voltage_list.append(float(vv))
                         if cy is not None:
