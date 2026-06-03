@@ -4685,8 +4685,6 @@ def control_loop():
                                 _bat_pw is not None and
                                 _bat_pw <= -(_total_max_charge - 50 * _num_bats)
                             )
-                            _bat_charging_any = _bat_pw is not None and _bat_pw < -10
-
                             # to_full state machine
                             if _bat_tofull_active:
                                 # Uitschakelconditie: boiler uit EN P1 > +50W (stop grid-import)
@@ -4694,8 +4692,6 @@ def control_loop():
                                     _bat_tofull_active = False
                             else:
                                 # Inschakelconditie: accu OP MAX en boiler draait.
-                                # Geen P1-check op ingang: schakelt direct als boiler start terwijl
-                                # accu al op max zit — zo absorbeert de accu de startpiek niet weg.
                                 if _bat_at_max and _any_sb_active:
                                     _bat_tofull_active = True
 
@@ -4705,15 +4701,11 @@ def control_loop():
                                 _desired_mode = "to_full"
                                 _desired_perms = []  # read-only in to_full, wordt genegeerd
                             elif _bat_at_max:
-                                # Max bereikt maar to_full nog niet actief (boiler nog niet gestart)
+                                # Max vermogen bereikt maar to_full nog niet actief → boiler mag starten
                                 battery_blocks_start = False
                                 _desired_perms = ["charge_allowed"]
-                            elif _bat_charging_any:
-                                # Laadt maar niet op max → accu regelt, boiler wacht
-                                battery_blocks_start = True
-                                _desired_perms = ["charge_allowed"]
                             else:
-                                # Laadt niet (geen zon) → boiler stoppen
+                                # Nog niet op max → accu vrij in zero mode, boiler wacht
                                 battery_blocks_start = True
                                 for _bd in non_legionella:
                                     _bst = device_states[_bd["ip"]]
