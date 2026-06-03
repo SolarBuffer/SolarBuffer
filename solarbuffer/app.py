@@ -5459,7 +5459,7 @@ def battery_poll_loop():
                         pass
                 if any_online:
                     global _bat_day_date, _bat_charge_start_kwh, _bat_discharge_start_kwh
-                    today = datetime.date.today().isoformat()
+                    today = datetime.now().strftime('%Y-%m-%d')
                     if _bat_day_date != today or _bat_charge_start_kwh is None:
                         _bat_day_date = today
                         _bat_charge_start_kwh = import_total
