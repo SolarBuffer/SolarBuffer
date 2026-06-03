@@ -592,10 +592,14 @@ battery_state = {
     "frequency_hz": None, "energy_import_kwh": None, "energy_export_kwh": None,
     "cycles": None, "mode": None, "permissions": None, "online": False,
     "max_consumption_w": 0, "max_production_w": 0,
+    "charge_today_kwh": None, "discharge_today_kwh": None,
 }
 _battery_blocks_start = False
 _last_battery_permissions = None
 _last_battery_mode = None
+_bat_day_date = None
+_bat_charge_start_kwh = None
+_bat_discharge_start_kwh = None
 _last_marstek_send = 0.0
 _last_marstek_power = None
 _broadlink_online = {}  # bl_id -> bool
@@ -5421,6 +5425,7 @@ def battery_poll_loop():
                     time.sleep(5)
                     continue
                 soc_list, power_total, voltage_list = [], 0.0, []
+                import_total, export_total = 0.0, 0.0
                 cycles_total = 0
                 any_online = False
                 for i, ip in enumerate(ips):
@@ -5434,6 +5439,8 @@ def battery_poll_loop():
                         pw = data.get("power_w")
                         vv = data.get("voltage_v")
                         cy = data.get("cycles")
+                        ei = data.get("energy_import_kwh")
+                        ee = data.get("energy_export_kwh")
                         if soc is not None:
                             soc_list.append(float(soc))
                         if pw is not None:
@@ -5444,9 +5451,21 @@ def battery_poll_loop():
                             voltage_list.append(float(vv))
                         if cy is not None:
                             cycles_total += int(cy)
+                        if ei is not None:
+                            import_total += float(ei)
+                        if ee is not None:
+                            export_total += float(ee)
                     except Exception:
                         pass
                 if any_online:
+                    global _bat_day_date, _bat_charge_start_kwh, _bat_discharge_start_kwh
+                    today = datetime.date.today().isoformat()
+                    if _bat_day_date != today or _bat_charge_start_kwh is None:
+                        _bat_day_date = today
+                        _bat_charge_start_kwh = import_total
+                        _bat_discharge_start_kwh = export_total
+                    charge_today = round(max(0.0, import_total - _bat_charge_start_kwh), 2)
+                    discharge_today = round(max(0.0, export_total - _bat_discharge_start_kwh), 2)
                     battery_state.update({
                         "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
                         "power_w": round(power_total, 1),
@@ -5457,6 +5476,8 @@ def battery_poll_loop():
                         "energy_export_kwh": None,
                         "cycles": cycles_total if soc_list else None,
                         "online": True,
+                        "charge_today_kwh": charge_today,
+                        "discharge_today_kwh": discharge_today,
                     })
                 else:
                     battery_state["online"] = False
