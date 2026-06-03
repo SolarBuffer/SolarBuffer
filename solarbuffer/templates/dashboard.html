@@ -2251,7 +2251,7 @@
             const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
-            document.getElementById('batForceTofullToggle').checked = !!data.battery_force_tofull;
+            document.getElementById('batForceTofullToggle').checked = (bat.mode === 'to_full');
           } else {
             batCard.style.display = 'none';
           }
@@ -2461,13 +2461,17 @@
 
 
     function toggleForceTofull() {
-      fetch('/api/battery/force_tofull', { method: 'POST' })
-        .then(r => r.json())
-        .then(d => {
-          if (d.success) {
-            document.getElementById('batForceTofullToggle').checked = d.active;
-          }
-        });
+      const toggle = document.getElementById('batForceTofullToggle');
+      const wasOn = toggle.checked;
+      const newMode = wasOn ? 'zero' : 'to_full';
+      toggle.checked = !wasOn;
+      fetch('/api/battery/set_mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode })
+      }).then(r => r.json()).then(d => {
+        if (!d.success) toggle.checked = wasOn;
+      }).catch(() => { toggle.checked = wasOn; });
     }
 
     function toggleDevice(ip) {
