@@ -2235,9 +2235,9 @@
             const pw = bat.power_w;
             if (pw !== null && pw !== undefined) {
               document.getElementById('batPowerVal').textContent = Math.abs(pw).toFixed(0);
-              document.getElementById('batPowerArrow').textContent = pw > 5 ? '↑' : pw < -5 ? '↓' : '·';
+              document.getElementById('batPowerArrow').textContent = pw < -5 ? '↑' : pw > 5 ? '↓' : '·';
               document.getElementById('batPowerArrow').style.color =
-                pw > 5 ? 'hsl(145,55%,40%)' : pw < -5 ? 'hsl(32,90%,48%)' : 'hsl(220,10%,60%)';
+                pw < -5 ? 'hsl(145,55%,40%)' : pw > 5 ? 'hsl(32,90%,48%)' : 'hsl(220,10%,60%)';
             }
             const isMarstek = data.battery_type === 'marstek';
             document.getElementById('batVoltRow').style.display = isMarstek ? 'none' : '';
