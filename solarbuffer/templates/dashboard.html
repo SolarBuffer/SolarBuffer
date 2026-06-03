@@ -629,6 +629,37 @@
       transform: translateX(20px);
     }
 
+    .toggle-mini {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+    .toggle-mini input { display: none; }
+    .toggle-mini .slider {
+      position: absolute;
+      inset: 0;
+      background: hsl(30, 15%, 80%);
+      border-radius: 9px;
+      transition: background 0.3s;
+    }
+    .toggle-mini input:checked + .slider { background: hsl(32, 95%, 52%); }
+    .toggle-mini .slider::before {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.3s;
+    }
+    .toggle-mini input:checked + .slider::before { transform: translateX(16px); }
+
     .footer {
       text-align: center;
       font-size: 0.75rem;
@@ -1954,9 +1985,12 @@
           <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Modus</div>
           <div><span id="batCyclesVal" style="font-weight:700;font-size:0.88rem;">—</span></div>
         </div>
-        <div id="batForceTofullRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;cursor:pointer;transition:background 0.2s,color 0.2s;" onclick="toggleForceTofull()">
-          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Volladen</div>
-          <div style="font-weight:700;font-size:0.88rem;" id="batForceTofullLabel">Uit</div>
+        <div id="batForceTofullRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;cursor:pointer;" onclick="toggleForceTofull()">
+          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.25rem;">Volladen</div>
+          <label class="toggle-mini">
+            <input type="checkbox" id="batForceTofullToggle">
+            <span class="slider"></span>
+          </label>
         </div>
       </div>
     </div>
@@ -2205,7 +2239,7 @@
             }
             const isMarstek = data.battery_type === 'marstek';
             document.getElementById('batVoltRow').style.display = isMarstek ? 'none' : '';
-            document.getElementById('batCyclesRow').style.display = isMarstek ? 'none' : '';
+            document.getElementById('batForceTofullRow').style.display = isMarstek ? 'none' : '';
             const batIconEl = document.getElementById('batBrandIcon');
             const batLogoSrc = isMarstek ? '/static/icons/battery-marstek.png' : '/static/icons/battery-homewizard.png';
             const existingImg = batIconEl.querySelector('img');
@@ -2215,11 +2249,7 @@
             const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
-            const forceTofull = !!data.battery_force_tofull;
-            const ftRow = document.getElementById('batForceTofullRow');
-            document.getElementById('batForceTofullLabel').textContent = forceTofull ? 'Aan' : 'Uit';
-            ftRow.style.background = forceTofull ? 'hsl(32,95%,88%)' : 'hsl(30,20%,96%)';
-            ftRow.style.color = forceTofull ? 'hsl(30,80%,28%)' : '';
+            document.getElementById('batForceTofullToggle').checked = !!data.battery_force_tofull;
           } else {
             batCard.style.display = 'none';
           }
@@ -2433,10 +2463,7 @@
         .then(r => r.json())
         .then(d => {
           if (d.success) {
-            const ftRow = document.getElementById('batForceTofullRow');
-            document.getElementById('batForceTofullLabel').textContent = d.active ? 'Aan' : 'Uit';
-            ftRow.style.background = d.active ? 'hsl(32,95%,88%)' : 'hsl(30,20%,96%)';
-            ftRow.style.color = d.active ? 'hsl(30,80%,28%)' : '';
+            document.getElementById('batForceTofullToggle').checked = d.active;
           }
         });
     }
