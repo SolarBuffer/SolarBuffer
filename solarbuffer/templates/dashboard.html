@@ -2114,6 +2114,7 @@
 
     // ===== GLOBALE STATUS =====
     let pidEnabled = true;
+    let batteryBlocksStart = false;
     let solarKwhToday = null;
 
     // ===== STATUS =====
@@ -2122,6 +2123,7 @@
         .then(r => r.json())
         .then(data => {
           pidEnabled = !!data.enabled;
+          batteryBlocksStart = !!data.battery_blocks_start;
 
           document.getElementById("current_power").textContent = Number(data.power || 0).toFixed(1);
 
@@ -2584,7 +2586,7 @@
       });
 
       cont.innerHTML = devices.map(d => {
-        const state = getDeviceState(d, data.battery_blocks_start);
+        const state = getDeviceState(d, batteryBlocksStart);
         const socket = getSocketState(d);
         const powerMeter = getPowerMeterState(d);
         const available = isDeviceAvailable(d);
