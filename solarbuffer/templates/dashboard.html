@@ -1954,12 +1954,9 @@
           <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Modus</div>
           <div><span id="batCyclesVal" style="font-weight:700;font-size:0.88rem;">—</span></div>
         </div>
-        <div id="batForceTofullRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;cursor:pointer;" onclick="toggleForceTofull()">
-          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.25rem;">Volladen</div>
-          <label class="toggle" style="pointer-events:none;">
-            <input type="checkbox" id="batForceTofullToggle">
-            <span class="slider"></span>
-          </label>
+        <div id="batForceTofullRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;cursor:pointer;transition:background 0.2s,color 0.2s;" onclick="toggleForceTofull()">
+          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Volladen</div>
+          <div style="font-weight:700;font-size:0.88rem;" id="batForceTofullLabel">Uit</div>
         </div>
       </div>
     </div>
@@ -2215,12 +2212,14 @@
             if (!existingImg || existingImg.src !== location.origin + batLogoSrc) {
               batIconEl.innerHTML = `<img src="${batLogoSrc}" width="22" height="22" alt="">`;
             }
-            const vv = bat.voltage_v;
-            document.getElementById('batVoltVal').textContent = vv !== null && vv !== undefined ? Number(vv).toFixed(1) : '—';
             const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
-            document.getElementById('batForceTofullToggle').checked = !!data.battery_force_tofull;
+            const forceTofull = !!data.battery_force_tofull;
+            const ftRow = document.getElementById('batForceTofullRow');
+            document.getElementById('batForceTofullLabel').textContent = forceTofull ? 'Aan' : 'Uit';
+            ftRow.style.background = forceTofull ? 'hsl(32,95%,88%)' : 'hsl(30,20%,96%)';
+            ftRow.style.color = forceTofull ? 'hsl(30,80%,28%)' : '';
           } else {
             batCard.style.display = 'none';
           }
@@ -2434,7 +2433,10 @@
         .then(r => r.json())
         .then(d => {
           if (d.success) {
-            document.getElementById('batForceTofullToggle').checked = d.active;
+            const ftRow = document.getElementById('batForceTofullRow');
+            document.getElementById('batForceTofullLabel').textContent = d.active ? 'Aan' : 'Uit';
+            ftRow.style.background = d.active ? 'hsl(32,95%,88%)' : 'hsl(30,20%,96%)';
+            ftRow.style.color = d.active ? 'hsl(30,80%,28%)' : '';
           }
         });
     }
