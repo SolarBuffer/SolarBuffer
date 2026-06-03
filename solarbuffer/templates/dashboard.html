@@ -1991,7 +1991,7 @@
         </div>
         <div id="batForceTofullRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;cursor:pointer;" onclick="toggleForceTofull()">
           <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.25rem;">Volladen</div>
-          <label class="toggle-mini">
+          <label class="toggle-mini" style="pointer-events:none;">
             <input type="checkbox" id="batForceTofullToggle">
             <span class="slider"></span>
           </label>
@@ -2265,8 +2265,8 @@
             const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
-            const isToFull = bat.mode === 'to_full' || (bat.mode == null && !!data.battery_force_tofull);
-            document.getElementById('batForceTofullToggle').checked = isToFull;
+            const isToFull = bat.mode === 'to_full' || !!data.battery_force_tofull;
+            if (!_tofullPending) document.getElementById('batForceTofullToggle').checked = isToFull;
           } else {
             batCard.style.display = 'none';
           }
@@ -2475,18 +2475,22 @@
 
 
 
+    let _tofullPending = false;
     function toggleForceTofull() {
+      if (_tofullPending) return;
       const toggle = document.getElementById('batForceTofullToggle');
       const wasOn = toggle.checked;
       const newMode = wasOn ? 'zero' : 'to_full';
       toggle.checked = !wasOn;
+      _tofullPending = true;
       fetch('/api/battery/set_mode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: newMode })
       }).then(r => r.json()).then(d => {
+        _tofullPending = false;
         if (!d.success) toggle.checked = wasOn;
-      }).catch(() => { toggle.checked = wasOn; });
+      }).catch(() => { _tofullPending = false; toggle.checked = wasOn; });
     }
 
     function toggleDevice(ip) {
