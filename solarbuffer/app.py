@@ -4664,7 +4664,11 @@ def control_loop():
                     _sb_can_run = (
                         enabled
                         and bool(non_legionella)
-                        and any(device_states[d["ip"]].get("online") for d in non_legionella)
+                        and any(
+                            device_states[d["ip"]].get("online") or
+                            device_states[d["ip"]].get("power_socket_online")
+                            for d in non_legionella
+                        )
                     )
 
                     if _bat_priority == "battery":
