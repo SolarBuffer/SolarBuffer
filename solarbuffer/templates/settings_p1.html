@@ -388,12 +388,25 @@
           <div class="field-group">
             <label id="batteryIpsLabel">IP-adres(sen) batterij <span style="font-weight:400;color:hsl(220,10%,55%);font-size:0.78rem;">(max. 4)</span></label>
             <div id="batteryIpsList">
+              {% set tokens = config.battery_tokens if config.battery_tokens else [] %}
               {% for ip in (config.battery_ips if config.battery_ips else ['']) %}
-              <div class="battery-ip-row" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;">
-                <input type="text" name="battery_ip[]"
-                       placeholder="Bijv. 192.168.178.50"
-                       value="{{ ip }}" style="flex:1;">
-                <button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>
+              {% set tok = tokens[loop.index0] if loop.index0 < tokens|length else '' %}
+              <div class="battery-ip-row" style="border:1px solid hsl(220,13%,88%);border-radius:0.5rem;padding:0.6rem 0.75rem;margin-bottom:0.5rem;">
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">
+                  <input type="text" name="battery_ip[]"
+                         placeholder="Bijv. 192.168.178.50"
+                         value="{{ ip }}" style="flex:1;">
+                  <button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>
+                </div>
+                <div id="hwTokenRow" style="display:flex;gap:0.5rem;align-items:center;">
+                  <input type="text" name="battery_token[]"
+                         placeholder="Token — klik op Koppelen"
+                         value="{{ tok }}" autocomplete="off" style="flex:1;font-size:0.82rem;">
+                  <button type="button" class="btn-secondary" onclick="pairRow(this)" style="white-space:nowrap;padding:0.45rem 0.65rem;flex-shrink:0;font-size:0.82rem;">
+                    Koppelen
+                  </button>
+                </div>
+                <div class="row-pair-status" style="display:none;margin-top:0.4rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
               </div>
               {% endfor %}
             </div>
@@ -404,22 +417,6 @@
 
           <!-- HomeWizard-specifieke velden -->
           <div id="hwFields">
-            <div class="field-group">
-              <label for="battery_token">API-token accu (meting)</label>
-              <div style="display:flex;gap:0.5rem;align-items:center;">
-                <input type="text" id="battery_token" name="battery_token"
-                       placeholder="Klik op Koppelen om automatisch op te halen"
-                       value="{{ config.battery_token or '' }}"
-                       autocomplete="off" style="flex:1;">
-                <button type="button" class="btn-secondary" id="pairBtn" onclick="startPairing()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
-                  Koppelen
-                </button>
-              </div>
-              <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Druk de knop in op de accu zelf: <span id="pairIpHint" style="font-weight:600;">—</span></div>
-            </div>
-            <div id="pairStatus" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
-              <div id="pairStatusText"></div>
-            </div>
             <div class="field-group">
               <label for="battery_control_token">API-token P1 meter (aansturen)</label>
               <div style="display:flex;gap:0.5rem;align-items:center;">
@@ -510,6 +507,7 @@
     }
 
     function updatePairIpHint() {
+      // legacy stub — no longer used
       var inputs = document.querySelectorAll('#batteryIpsList input[name="battery_ip[]"]');
       var ip = '';
       for (var i = 0; i < inputs.length; i++) {
@@ -523,6 +521,9 @@
       var isMarstek = document.getElementById('bt_marstek').checked;
       document.getElementById('hwFields').style.display = isMarstek ? 'none' : 'block';
       document.getElementById('marstekFields').style.display = isMarstek ? 'block' : 'none';
+      document.querySelectorAll('#batteryIpsList #hwTokenRow').forEach(function(el) {
+        el.style.display = isMarstek ? 'none' : 'flex';
+      });
       document.getElementById('batteryIpsLabel').firstChild.textContent =
         isMarstek ? 'IP-adres(sen) Marstek  ' : 'IP-adres(sen) HWE-BAT  ';
     }
@@ -538,75 +539,79 @@
       updatePairIpHint();
     })();
 
-    var _pairInterval = null;
-    var _pairCountdown = 0;
+    var _rowPairTimers = new WeakMap();
 
-    function setPairStatus(msg, type) {
-      var el = document.getElementById('pairStatus');
-      var txt = document.getElementById('pairStatusText');
-      txt.innerHTML = msg;
-      el.style.display = msg ? 'block' : 'none';
-      el.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
-      el.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
-      el.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
+    function setRowStatus(statusEl, msg, type) {
+      statusEl.innerHTML = msg;
+      statusEl.style.display = msg ? 'block' : 'none';
+      statusEl.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
+      statusEl.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
+      statusEl.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
     }
 
-    function stopPairing() {
-      if (_pairInterval) { clearInterval(_pairInterval); _pairInterval = null; }
-      document.getElementById('pairBtn').textContent = 'Koppelen';
-      document.getElementById('pairBtn').disabled = false;
-    }
+    function pairRow(btn) {
+      var row = btn.closest('.battery-ip-row');
+      var ipInput = row.querySelector('input[name="battery_ip[]"]');
+      var tokenInput = row.querySelector('input[name="battery_token[]"]');
+      var statusEl = row.querySelector('.row-pair-status');
+      var ip = ipInput.value.trim();
+      if (!ip) { setRowStatus(statusEl, 'Vul eerst een IP-adres in.', 'error'); return; }
 
-    function startPairing() {
-      var inputs = document.querySelectorAll('#batteryIpsList input[name="battery_ip[]"]');
-      var ip = '';
-      for (var i = 0; i < inputs.length; i++) {
-        var v = inputs[i].value.trim();
-        if (v) { ip = v; break; }
+      var timer = _rowPairTimers.get(row);
+      if (timer) { clearInterval(timer.interval); }
+
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      setRowStatus(statusEl, '<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Verbinding maken…</span>', 'wait');
+
+      var countdown = 0;
+      function doRequest() {
+        fetch('/api/battery/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip: ip })
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.success && data.token) {
+              clearInterval(_rowPairTimers.get(row).interval);
+              _rowPairTimers.delete(row);
+              btn.disabled = false; btn.textContent = 'Koppelen';
+              tokenInput.value = data.token;
+              setRowStatus(statusEl, '✓ Gekoppeld! Sla op om te bevestigen.', 'success');
+            } else if (data.waiting) {
+              var secs = 30 - countdown * 2;
+              setRowStatus(statusEl, '<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Druk op de knop op het HWE-BAT apparaat… (' + Math.max(0, secs) + 's resterend)</span>', 'wait');
+            } else if (data.error) {
+              clearInterval(_rowPairTimers.get(row).interval);
+              _rowPairTimers.delete(row);
+              btn.disabled = false; btn.textContent = 'Koppelen';
+              setRowStatus(statusEl, 'Fout: ' + data.error, 'error');
+            }
+          })
+          .catch(function() {
+            clearInterval(_rowPairTimers.get(row).interval);
+            _rowPairTimers.delete(row);
+            btn.disabled = false; btn.textContent = 'Koppelen';
+            setRowStatus(statusEl, 'Verbindingsfout — controleer het IP-adres.', 'error');
+          });
       }
-      if (!ip) { setPairStatus('Vul eerst een IP-adres in.', 'error'); return; }
-      stopPairing();
-      document.getElementById('pairBtn').disabled = true;
-      document.getElementById('pairBtn').textContent = 'Bezig…';
-      setPairStatus('<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Verbinding maken met apparaat…</span>', 'wait');
-      _pairCountdown = 0;
-      sendPairRequest(ip);
-      _pairInterval = setInterval(function() {
-        _pairCountdown++;
-        if (_pairCountdown >= 30) {
-          stopPairing();
-          setPairStatus('Timeout — knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
+
+      doRequest();
+      var interval = setInterval(function() {
+        countdown++;
+        if (countdown >= 30) {
+          clearInterval(interval);
+          _rowPairTimers.delete(row);
+          btn.disabled = false; btn.textContent = 'Koppelen';
+          setRowStatus(statusEl, 'Timeout — knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
           return;
         }
-        sendPairRequest(ip);
+        doRequest();
       }, 2000);
+      _rowPairTimers.set(row, { interval: interval });
     }
 
-    function sendPairRequest(ip) {
-      fetch('/api/battery/pair', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip: ip })
-      })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.success && data.token) {
-            stopPairing();
-            document.getElementById('battery_token').value = data.token;
-            setPairStatus('✓ Apparaat gekoppeld! Token is automatisch ingevuld. Sla de instellingen op om te bevestigen.', 'success');
-          } else if (data.waiting) {
-            var secs = 30 - _pairCountdown * 2;
-            setPairStatus('<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Druk op de knop op het HWE-BAT apparaat… (' + Math.max(0, secs) + 's resterend)</span>', 'wait');
-          } else if (data.error) {
-            stopPairing();
-            setPairStatus('Fout: ' + data.error, 'error');
-          }
-        })
-        .catch(function() {
-          stopPairing();
-          setPairStatus('Verbindingsfout — controleer het IP-adres.', 'error');
-        });
-    }
 
     var _pairP1Interval = null;
     var _pairP1Countdown = 0;
@@ -672,11 +677,17 @@
       if (list.querySelectorAll('.battery-ip-row').length >= 4) return;
       var row = document.createElement('div');
       row.className = 'battery-ip-row';
-      row.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;';
-      row.innerHTML = '<input type="text" name="battery_ip[]" placeholder="Bijv. 192.168.178.50" style="flex:1;">'
-        + '<button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>';
+      row.style.cssText = 'border:1px solid hsl(220,13%,88%);border-radius:0.5rem;padding:0.6rem 0.75rem;margin-bottom:0.5rem;';
+      row.innerHTML = '<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">'
+        + '<input type="text" name="battery_ip[]" placeholder="Bijv. 192.168.178.50" style="flex:1;">'
+        + '<button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>'
+        + '</div>'
+        + '<div id="hwTokenRow" style="display:flex;gap:0.5rem;align-items:center;">'
+        + '<input type="text" name="battery_token[]" placeholder="Token — klik op Koppelen" autocomplete="off" style="flex:1;font-size:0.82rem;">'
+        + '<button type="button" class="btn-secondary" onclick="pairRow(this)" style="white-space:nowrap;padding:0.45rem 0.65rem;flex-shrink:0;font-size:0.82rem;">Koppelen</button>'
+        + '</div>'
+        + '<div class="row-pair-status" style="display:none;margin-top:0.4rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>';
       list.appendChild(row);
-      row.querySelector('input').addEventListener('input', updatePairIpHint);
       updateAddBtn();
     }
 
