@@ -2524,18 +2524,21 @@
       }
 
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
+      const SVG_BATTERY_BLOCK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67,4H14V2H10V4H8.33A1.33,1.33 0 0,0 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67A1.33,1.33 0 0,0 17,20.67V5.33C17,4.6 16.4,4 15.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg>';
+      if (data.battery_blocks_start && started.length === 0) return { label: "Geblokkeerd", badge: "Geblokkeerd · Accu laadt eerst", sub: "Wacht tot accu op maximaal vermogen laadt", cls: "import", icon: SVG_BATTERY_BLOCK };
       if (power <= exportThreshold && started.length === 0) return { label: "Wachten", badge: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
 
       return { label: "Standby", sub: "Geen actieve buffer nodig", cls: "standby", icon: SVG_SUN };
     }
 
-    function getDeviceState(d) {
+    function getDeviceState(d, batteryBlocksStart) {
       if (d.pending_start || d.waiting_for_power_socket) return { label: "Opstarten", cls: "pending", dot: "pending" };
       if (!d.online) return { label: "", cls: "", dot: "" };
       if (d.boost_until && Date.now() / 1000 < d.boost_until) return { label: "Boost", cls: "boost", dot: "active" };
       if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
       if (d.started && d.on && d.price_triggered) return { label: "Goedkoop tarief", cls: "waiting", dot: "active" };
       if (d.started && d.on) return { label: "Actief", cls: "running", dot: "active" };
+      if (batteryBlocksStart) return { label: "Geblokkeerd", cls: "import", dot: "" };
       return { label: "Uit", cls: "off", dot: "" };
     }
 
@@ -2581,7 +2584,7 @@
       });
 
       cont.innerHTML = devices.map(d => {
-        const state = getDeviceState(d);
+        const state = getDeviceState(d, data.battery_blocks_start);
         const socket = getSocketState(d);
         const powerMeter = getPowerMeterState(d);
         const available = isDeviceAvailable(d);
