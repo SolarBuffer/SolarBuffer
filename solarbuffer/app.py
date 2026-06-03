@@ -352,6 +352,8 @@ def load_config():
         cfg["battery_priority"] = "boiler"
     if "battery_soc_threshold" not in cfg:
         cfg["battery_soc_threshold"] = 95
+    if "battery_force_tofull" not in cfg:
+        cfg["battery_force_tofull"] = False
 
     return cfg
 
@@ -1337,6 +1339,18 @@ def battery_pair_p1():
         return jsonify(success=False, error=str(e))
 
 
+@app.route("/api/battery/force_tofull", methods=["POST"])
+def toggle_battery_force_tofull():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    new_val = not cfg.get("battery_force_tofull", False)
+    cfg["battery_force_tofull"] = new_val
+    save_config(cfg)
+    write_audit_log("battery_force_tofull_toggled", {"active": new_val})
+    return jsonify(success=True, active=new_val)
+
+
 @app.route("/settings/solarbuffers", methods=["GET", "POST"])
 def settings_solarbuffers():
     if not require_login():
@@ -1525,6 +1539,7 @@ def status_json():
         battery_count=len(cfg.get("battery_ips") or []) if cfg.get("battery_enabled") else 0,
         battery=battery_state if cfg.get("battery_enabled") else None,
         battery_blocks_start=_battery_blocks_start if cfg.get("battery_enabled") else False,
+        battery_force_tofull=cfg.get("battery_force_tofull", False),
     )
 
 
@@ -4671,7 +4686,19 @@ def control_loop():
                         )
                     )
 
-                    if _bat_priority == "battery":
+                    _force_tofull = cfg.get("battery_force_tofull", False)
+                    # Auto-uitschakelen als SoC 100% bereikt
+                    if _force_tofull and _bat_soc is not None and _bat_soc >= 100:
+                        cfg["battery_force_tofull"] = False
+                        save_config(cfg)
+                        _force_tofull = False
+                        write_audit_log("battery_force_tofull_auto_off", {"soc": _bat_soc})
+
+                    if _force_tofull:
+                        _desired_mode = "to_full"
+                        _desired_perms = []
+                        battery_blocks_start = False
+                    elif _bat_priority == "battery":
                         _desired_mode = "zero"
                         if not _sb_can_run:
                             _desired_perms = ["charge_allowed", "discharge_allowed"]
