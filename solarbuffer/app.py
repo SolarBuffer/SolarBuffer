@@ -1939,7 +1939,7 @@ def network_connect():
     return jsonify(success=True)
 
 
-_forecast_cache = {"data": None, "ts": 0}
+_forecast_cache = {"data": None, "ts": 0, "error": None, "error_ts": 0}
 
 @app.route("/solar_forecast")
 def solar_forecast():
@@ -1951,43 +1951,66 @@ def solar_forecast():
     if not lat or not lon:
         return jsonify(error="no_location")
     global _forecast_cache
-    if time.time() - _forecast_cache["ts"] < 3600 and _forecast_cache["data"]:
+    now = time.time()
+    if now - _forecast_cache["ts"] < 3600 and _forecast_cache["data"]:
         return jsonify(_forecast_cache["data"])
-    try:
-        url = (
-            f"https://api.open-meteo.com/v1/forecast"
-            f"?latitude={lat}&longitude={lon}"
-            f"&hourly=shortwave_radiation"
-            f"&forecast_days=2&timezone=auto"
-        )
-        resp = requests.get(url, timeout=10)
-        if not resp.ok:
-            print(f"Solar forecast HTTP {resp.status_code}: {resp.text[:300]}", flush=True)
-        resp.raise_for_status()
-        raw = resp.json()
-        if "hourly" not in raw:
-            print(f"Solar forecast onverwacht antwoord: {str(raw)[:300]}", flush=True)
-            return jsonify(error=f"Onverwacht API-antwoord: {str(raw)[:200]}")
-        times = raw["hourly"]["time"]
-        radiation = raw["hourly"].get("shortwave_radiation")
-        if radiation is None:
-            beschikbare_keys = list(raw["hourly"].keys())
-            print(f"Solar forecast: shortwave_radiation ontbreekt, beschikbaar: {beschikbare_keys}", flush=True)
-            return jsonify(error=f"shortwave_radiation niet beschikbaar. Beschikbaar: {beschikbare_keys}")
-        today = datetime.now().strftime("%Y-%m-%d")
-        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-        result = {"today": [], "tomorrow": [], "today_date": today, "tomorrow_date": tomorrow}
-        for t, r in zip(times, radiation):
-            hour = int(t[11:13])
-            if t.startswith(today):
-                result["today"].append({"hour": hour, "radiation": r or 0})
-            elif t.startswith(tomorrow):
-                result["tomorrow"].append({"hour": hour, "radiation": r or 0})
-        _forecast_cache = {"data": result, "ts": time.time()}
-        return jsonify(result)
-    except Exception as e:
-        print(f"Solar forecast fout: {e}", flush=True)
-        return jsonify(error=str(e))
+    # Geef gecachte fout terug als de API kortgeleden al faalde (5 min)
+    if now - _forecast_cache["error_ts"] < 300 and _forecast_cache["error"]:
+        return jsonify(error=_forecast_cache["error"])
+    url = (
+        f"https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lon}"
+        f"&hourly=shortwave_radiation"
+        f"&forecast_days=2&timezone=auto"
+    )
+    for poging in range(3):
+        try:
+            resp = requests.get(url, timeout=10)
+            if resp.status_code >= 500 and poging < 2:
+                print(f"Solar forecast HTTP {resp.status_code}, poging {poging + 1}/3…", flush=True)
+                time.sleep(2)
+                continue
+            if not resp.ok:
+                print(f"Solar forecast HTTP {resp.status_code}: {resp.text[:300]}", flush=True)
+                fout = f"Open-Meteo tijdelijk niet beschikbaar (HTTP {resp.status_code})"
+                _forecast_cache["error"] = fout
+                _forecast_cache["error_ts"] = now
+                return jsonify(error=fout)
+            raw = resp.json()
+            if "hourly" not in raw:
+                print(f"Solar forecast onverwacht antwoord: {str(raw)[:300]}", flush=True)
+                fout = f"Onverwacht API-antwoord: {str(raw)[:200]}"
+                _forecast_cache["error"] = fout
+                _forecast_cache["error_ts"] = now
+                return jsonify(error=fout)
+            times = raw["hourly"]["time"]
+            radiation = raw["hourly"].get("shortwave_radiation")
+            if radiation is None:
+                beschikbare_keys = list(raw["hourly"].keys())
+                print(f"Solar forecast: shortwave_radiation ontbreekt, beschikbaar: {beschikbare_keys}", flush=True)
+                fout = f"shortwave_radiation niet beschikbaar. Beschikbaar: {beschikbare_keys}"
+                _forecast_cache["error"] = fout
+                _forecast_cache["error_ts"] = now
+                return jsonify(error=fout)
+            today = datetime.now().strftime("%Y-%m-%d")
+            tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+            result = {"today": [], "tomorrow": [], "today_date": today, "tomorrow_date": tomorrow}
+            for t, r in zip(times, radiation):
+                hour = int(t[11:13])
+                if t.startswith(today):
+                    result["today"].append({"hour": hour, "radiation": r or 0})
+                elif t.startswith(tomorrow):
+                    result["tomorrow"].append({"hour": hour, "radiation": r or 0})
+            _forecast_cache = {"data": result, "ts": now, "error": None, "error_ts": 0}
+            return jsonify(result)
+        except Exception as e:
+            print(f"Solar forecast fout (poging {poging + 1}/3): {e}", flush=True)
+            if poging < 2:
+                time.sleep(2)
+                continue
+            _forecast_cache["error"] = str(e)
+            _forecast_cache["error_ts"] = now
+            return jsonify(error=str(e))
 
 
 @app.route("/location/detect")
