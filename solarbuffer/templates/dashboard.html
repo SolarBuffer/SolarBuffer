@@ -3063,8 +3063,9 @@
             return;
           }
           if (data.error) {
+            console.error('Solar forecast fout:', data.error);
             document.getElementById('forecastContent').innerHTML =
-              '<div class="forecast-no-location">Kon verwachting niet ophalen.</div>';
+              `<div class="forecast-no-location">Kon verwachting niet ophalen.<br><small style="opacity:0.6;font-size:0.8em">${data.error}</small></div>`;
             return;
           }
           _forecastData = data;
