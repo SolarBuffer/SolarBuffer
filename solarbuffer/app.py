@@ -1961,10 +1961,19 @@ def solar_forecast():
             f"&forecast_days=2&timezone=auto"
         )
         resp = requests.get(url, timeout=10)
+        if not resp.ok:
+            print(f"Solar forecast HTTP {resp.status_code}: {resp.text[:300]}", flush=True)
         resp.raise_for_status()
         raw = resp.json()
+        if "hourly" not in raw:
+            print(f"Solar forecast onverwacht antwoord: {str(raw)[:300]}", flush=True)
+            return jsonify(error=f"Onverwacht API-antwoord: {str(raw)[:200]}")
         times = raw["hourly"]["time"]
-        radiation = raw["hourly"]["shortwave_radiation"]
+        radiation = raw["hourly"].get("shortwave_radiation")
+        if radiation is None:
+            beschikbare_keys = list(raw["hourly"].keys())
+            print(f"Solar forecast: shortwave_radiation ontbreekt, beschikbaar: {beschikbare_keys}", flush=True)
+            return jsonify(error=f"shortwave_radiation niet beschikbaar. Beschikbaar: {beschikbare_keys}")
         today = datetime.now().strftime("%Y-%m-%d")
         tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         result = {"today": [], "tomorrow": [], "today_date": today, "tomorrow_date": tomorrow}
@@ -1977,6 +1986,7 @@ def solar_forecast():
         _forecast_cache = {"data": result, "ts": time.time()}
         return jsonify(result)
     except Exception as e:
+        print(f"Solar forecast fout: {e}", flush=True)
         return jsonify(error=str(e))
 
 
