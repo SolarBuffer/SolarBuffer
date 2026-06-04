@@ -4760,7 +4760,8 @@ def control_loop():
                             elif _any_sb_active:
                                 # Boiler actief: accu volledig passief zodat boiler
                                 # IMPORT_OFF_THRESHOLD kan halen om uit te schakelen.
-                                _desired_perms = []
+                                # Uitzondering: boiler op max vermogen (100%) → accu mag laden.
+                                _desired_perms = ["charge_allowed"] if _pid_at_max else []
                             else:
                                 # Boiler nog uit: accu vrij in zero mode
                                 _desired_perms = ["charge_allowed", "discharge_allowed"]
