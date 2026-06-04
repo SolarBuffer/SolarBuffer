@@ -4786,18 +4786,18 @@ def control_loop():
                                         reset_device_to_off(_bd["ip"])
                                 _desired_perms = ["charge_allowed", "discharge_allowed"]
                         else:
-                            # SoC-drempel bereikt → boiler mag starten.
+                            # SoC-drempel bereikt: accu standby, boiler is primaire regelaar.
                             _bat_tofull_active = False
-                            if _force_no_discharge:
+                            if not _sb_can_run:
+                                _desired_perms = ["discharge_allowed"]
+                            elif _force_no_discharge:
                                 _desired_perms = ["charge_allowed"]
-                            elif _any_sb_active:
-                                # Boiler actief: accu volledig passief zodat boiler
-                                # IMPORT_OFF_THRESHOLD kan halen om uit te schakelen.
-                                # Uitzondering: boiler op max vermogen (100%) → accu mag laden.
-                                _desired_perms = ["charge_allowed"] if _pid_at_max else []
+                            elif _any_sb_active and _pid_at_max:
+                                # Boiler op 100%: accu absorbeert restoverschot
+                                _desired_perms = ["charge_allowed"]
                             else:
-                                # Boiler nog uit: accu vrij in zero mode
-                                _desired_perms = ["charge_allowed", "discharge_allowed"]
+                                # Boiler regelt (of nog uit): accu standby
+                                _desired_perms = []
                     else:  # solarbuffer eerst
                         _desired_mode = "zero"
                         if not _sb_can_run:
@@ -4972,14 +4972,22 @@ def control_loop():
                 if regulating_device and ip == regulating_device["ip"]:
                     b_pid = device_pids[ip](pid_power)
                     b_pid = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, b_pid))
-                    # In boiler-eerst modus: zolang de accu actief laadt (>10W) bevriest de boiler op
-                    # huidig vermogen en laat de accu als eerste afregelen. Pas als de accu <10W laadt
+                    # Zolang de accu actief laadt (>10W) bevriest de boiler op huidig vermogen
+                    # en laat de accu als eerste afregelen. Pas als de accu <10W laadt
                     # hervat de PID de normale regeling.
+                    # Geldt voor boiler-eerst én battery-eerst wanneer SoC-drempel bereikt is.
                     _bat_holds_boiler = (
                         cfg.get("battery_enabled") and
-                        cfg.get("battery_priority") == "boiler" and
                         battery_state.get("online") and
-                        (battery_state.get("power_w") or 0) < -10
+                        (battery_state.get("power_w") or 0) < -10 and
+                        (
+                            cfg.get("battery_priority") == "boiler" or
+                            (
+                                cfg.get("battery_priority") == "battery" and
+                                battery_state.get("soc") is not None and
+                                battery_state.get("soc") >= cfg.get("battery_soc_threshold", 95)
+                            )
+                        )
                     )
                     # teruglevering (negatief) → mag alleen omhoog; importerend (positief) → mag alleen omlaag
                     if measured_power > 0 and _bat_holds_boiler:
