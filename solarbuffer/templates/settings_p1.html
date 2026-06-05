@@ -373,13 +373,13 @@
 
               <input type="radio" class="prio-option" name="battery_type" value="marstek" id="bt_marstek"
                      {% if config.battery_type == 'marstek' %}checked{% endif %}
-                     onchange="updateBatteryType()">
-              <label class="prio-card" for="bt_marstek">
+                     onchange="updateBatteryType()" disabled>
+              <label class="prio-card" for="bt_marstek" style="opacity:0.45;cursor:not-allowed;pointer-events:none;">
                 <div class="prio-icon">
                   <img src="/static/icons/battery-marstek.png" width="44" height="44" alt="Marstek">
                 </div>
                 <span class="prio-label">Marstek</span>
-                <span class="prio-sub">Venus via UDP Open API</span>
+                <span class="prio-sub">Tijdelijk niet beschikbaar</span>
               </label>
             </div>
           </div>
