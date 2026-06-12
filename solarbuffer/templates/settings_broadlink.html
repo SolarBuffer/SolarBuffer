@@ -1064,7 +1064,8 @@
         return r.json();
       }).then(function(data) {
         if (!data) return;
-        if (!data.success) showToast(data.error || 'Opslaan mislukt', 'error');
+        if (data.success) { showToast('Volgorde opgeslagen', 'success'); }
+        else { showToast(data.error || 'Opslaan mislukt', 'error'); }
       }).catch(function() { showToast('Verbindingsfout bij opslaan', 'error'); });
     }
 

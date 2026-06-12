@@ -2175,10 +2175,13 @@
 
           renderDevices(data.devices || []);
           renderAccessories(data.accessories || []);
+          if (data.broadlink_devices) _blDevices = data.broadlink_devices;
+          const _irStatesNext = data.broadlink_ir_states || {};
           if ((_blDevices || []).length > 0) {
-            fetch('/api/broadlink/online').then(r => r.json()).then(d => { if (d.success) { _blOnline = d.online; renderBroadlinkWidgets(); } }).catch(() => {});
+            fetch('/api/broadlink/online').then(r => r.json()).then(d => { if (d.success) { _blOnline = d.online; } renderBroadlinkWidgets(_irStatesNext); }).catch(() => { renderBroadlinkWidgets(_irStatesNext); });
+          } else {
+            renderBroadlinkWidgets(_irStatesNext);
           }
-          renderBroadlinkWidgets(data.broadlink_ir_states || {});
           const gasBadge = document.getElementById('gasBadge');
           if (data.gas_enabled && data.gas_today_m3 !== null && data.gas_today_m3 !== undefined) {
             document.getElementById('gasValue').textContent = Number(data.gas_today_m3).toFixed(3);
@@ -2805,6 +2808,7 @@
 
     function renderBroadlinkWidgets(irStates) {
       if (irStates !== undefined) _irStates = irStates || {};
+      if (document.querySelector('.ir-cmd-btn.sending')) return;
       const card = document.getElementById('broadlinkCard');
       const list = document.getElementById('irWidgetList');
       const visible = [];
