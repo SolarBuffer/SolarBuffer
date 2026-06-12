@@ -151,6 +151,18 @@
       background: white; border: 1px solid hsl(30, 15%, 88%);
       border-radius: 0.4rem; padding: 0.4rem 0.65rem;
     }
+    .cmd-order-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+    .cmd-order-btn {
+      width: 20px; height: 18px; border: 1px solid hsl(30, 15%, 82%);
+      border-radius: 3px; background: hsl(30, 20%, 96%); color: hsl(220, 12%, 44%);
+      cursor: pointer; font-size: 0.6rem; line-height: 1; display: flex;
+      align-items: center; justify-content: center; padding: 0;
+      transition: background 0.12s, color 0.12s;
+    }
+    .cmd-order-btn:hover { background: hsl(32, 100%, 90%); color: hsl(25, 85%, 32%); border-color: hsl(32, 80%, 65%); }
+    .cmd-order-btn:active { background: hsl(32, 95%, 80%); }
+    html[data-theme="dark"] .cmd-order-btn { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 60%); }
+    html[data-theme="dark"] .cmd-order-btn:hover { background: hsl(32, 20%, 30%); color: hsl(32, 80%, 70%); }
     .cmd-name { flex: 1; font-size: 0.82rem; font-weight: 600; }
     .cmd-send-btn {
       padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 600;
@@ -473,7 +485,11 @@
               <div class="ir-body" id="ir-body-{{ ir.id }}" style="display:none;">
                 <div class="cmd-list" id="cmd-list-{{ ir.id }}">
                   {% for cmd in ir.commands %}
-                  <div class="cmd-row" id="cmd-{{ cmd.id }}">
+                  <div class="cmd-row" id="cmd-{{ cmd.id }}" data-cmd-id="{{ cmd.id }}" data-bl-id="{{ bl.id }}" data-ir-id="{{ ir.id }}">
+                    <div class="cmd-order-btns">
+                      <button class="cmd-order-btn" onclick="moveCommand('{{ bl.id }}', '{{ ir.id }}', '{{ cmd.id }}', -1)" title="Omhoog">▲</button>
+                      <button class="cmd-order-btn" onclick="moveCommand('{{ bl.id }}', '{{ ir.id }}', '{{ cmd.id }}', 1)" title="Omlaag">▼</button>
+                    </div>
                     <span class="cmd-name">{{ cmd.name }}</span>
                     <button class="cmd-send-btn" onclick="sendCommand('{{ bl.id }}', '{{ ir.id }}', '{{ cmd.id }}', this)">
                       <i class="mdi mdi-send"></i> Stuur
@@ -983,7 +999,14 @@
       var div = document.createElement('div');
       div.className = 'cmd-row';
       div.id = 'cmd-' + cmd.id;
+      div.dataset.cmdId = cmd.id;
+      div.dataset.blId = blId;
+      div.dataset.irId = irId;
       div.innerHTML =
+        '<div class="cmd-order-btns">' +
+          '<button class="cmd-order-btn" onclick="moveCommand(\'' + blId + '\', \'' + irId + '\', \'' + cmd.id + '\', -1)" title="Omhoog">▲</button>' +
+          '<button class="cmd-order-btn" onclick="moveCommand(\'' + blId + '\', \'' + irId + '\', \'' + cmd.id + '\', 1)" title="Omlaag">▼</button>' +
+        '</div>' +
         '<span class="cmd-name">' + escHtml(cmd.name) + '</span>' +
         '<button class="cmd-send-btn" onclick="sendCommand(\'' + blId + '\', \'' + irId + '\', \'' + cmd.id + '\', this)">' +
           '<i class="mdi mdi-send"></i> Stuur' +
@@ -1015,6 +1038,26 @@
           showToast('Commando verwijderd', 'success');
         })
         .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    // ===== COMMANDO HERORDENEN =====
+    function moveCommand(blId, irId, cmdId, direction) {
+      var list = document.getElementById('cmd-list-' + irId);
+      var row = document.getElementById('cmd-' + cmdId);
+      if (!list || !row) return;
+      if (direction === -1 && row.previousElementSibling) {
+        list.insertBefore(row, row.previousElementSibling);
+      } else if (direction === 1 && row.nextElementSibling) {
+        list.insertBefore(row.nextElementSibling, row);
+      } else {
+        return;
+      }
+      var order = Array.from(list.children).map(function(el) { return el.dataset.cmdId; });
+      fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: order })
+      }).catch(function() { showToast('Volgorde opslaan mislukt', 'error'); });
     }
 
     // ===== COMMANDO STUREN =====
