@@ -2878,7 +2878,7 @@
 
     function dashSendIr(btn, blId, irId, cmdId) {
       btn.classList.add('sending');
-      const reset = () => btn.classList.remove('sending');
+      const reset = () => { btn.classList.remove('sending'); btn.blur(); };
       const fallback = setTimeout(reset, 5000);
       fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands/' + cmdId + '/send', { method: 'POST' })
         .then(r => r.json())
