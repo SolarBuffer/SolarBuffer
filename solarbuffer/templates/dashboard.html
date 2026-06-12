@@ -2808,7 +2808,6 @@
 
     function renderBroadlinkWidgets(irStates) {
       if (irStates !== undefined) _irStates = irStates || {};
-      if (document.querySelector('.ir-cmd-btn.sending')) return;
       const card = document.getElementById('broadlinkCard');
       const list = document.getElementById('irWidgetList');
       const visible = [];
@@ -2821,29 +2820,21 @@
       });
       if (visible.length === 0) { card.style.display = 'none'; return; }
       card.style.display = '';
-      list.innerHTML = visible.map(({ bl, ir }) => {
-        const st = _irStates[ir.id];
-        const hasPower = !!ir.linked_accessory_id;
-        const isOn = hasPower && st && st.on;
-        const badgeHtml = hasPower
-          ? `<span class="ir-power-badge ${isOn ? 'on' : 'off'}">
-               <span class="ir-power-dot"></span>
-               ${isOn ? 'Aan' : 'Uit'}
-             </span>`
-          : '';
-        const blOnline = _blOnline[bl.id];
-        const onlineDot = blOnline === true
-          ? `<span class="ir-online-dot online" title="Online"></span>`
-          : blOnline === false
-            ? `<span class="ir-online-dot offline" title="Offline"></span>`
-            : '';
-        return `
+
+      // Only rebuild the button DOM when the structure actually changes
+      const structKey = visible.map(({ bl, ir }) =>
+        bl.id + '|' + ir.id + '|' + ir.name + '|' + (ir.icon || '') + '|' +
+        (ir.commands || []).map(c => c.id + ':' + c.name).join(',')
+      ).join(';');
+      if (list.dataset.structKey !== structKey) {
+        list.dataset.structKey = structKey;
+        list.innerHTML = visible.map(({ bl, ir }) => `
           <div class="ir-widget">
             <div class="ir-widget-header">
               <div class="ir-widget-icon"><i class="mdi ${escHtmlDash(ir.icon || 'mdi-remote')}"></i></div>
               <div class="ir-widget-name">${escHtmlDash(ir.name)}</div>
-              ${onlineDot}
-              ${badgeHtml}
+              <span class="ir-online-slot" data-bl="${escHtmlDash(bl.id)}"></span>
+              <span class="ir-badge-slot" data-ir="${escHtmlDash(ir.id)}"></span>
             </div>
             <div class="ir-cmd-btns">
               ${(ir.commands || []).map(cmd => `
@@ -2852,19 +2843,51 @@
                   ${escHtmlDash(cmd.name)}
                 </button>`).join('')}
             </div>
-          </div>`;
-      }).join('');
+          </div>`).join('');
+      }
+
+      // Always update online dots and power badges in-place — buttons are never touched
+      visible.forEach(({ bl, ir }) => {
+        const blOnline = _blOnline[bl.id];
+        const dotSlot = list.querySelector(`.ir-online-slot[data-bl="${bl.id}"]`);
+        if (dotSlot) {
+          const cls = blOnline === true ? 'online' : blOnline === false ? 'offline' : '';
+          const cur = dotSlot.firstElementChild;
+          if (!cur || cur.className !== `ir-online-dot ${cls}`.trim()) {
+            dotSlot.innerHTML = cls ? `<span class="ir-online-dot ${cls}"></span>` : '';
+          }
+        }
+        const st = _irStates[ir.id];
+        const hasPower = !!ir.linked_accessory_id;
+        const isOn = hasPower && st && st.on;
+        const badgeSlot = list.querySelector(`.ir-badge-slot[data-ir="${ir.id}"]`);
+        if (badgeSlot) {
+          const wantCls = hasPower ? (isOn ? 'on' : 'off') : '';
+          const cur = badgeSlot.firstElementChild;
+          if (!cur && !wantCls) return;
+          if (!cur || cur.dataset.state !== wantCls) {
+            badgeSlot.innerHTML = hasPower
+              ? `<span class="ir-power-badge ${wantCls}" data-state="${wantCls}">
+                   <span class="ir-power-dot"></span>${isOn ? 'Aan' : 'Uit'}
+                 </span>`
+              : '';
+          }
+        }
+      });
     }
 
     function dashSendIr(btn, blId, irId, cmdId) {
       btn.classList.add('sending');
+      const reset = () => btn.classList.remove('sending');
+      const fallback = setTimeout(reset, 5000);
       fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands/' + cmdId + '/send', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
-          setTimeout(() => btn.classList.remove('sending'), 400);
+          clearTimeout(fallback);
+          setTimeout(reset, 400);
           if (!data.success) console.warn('IR send failed:', data.error);
         })
-        .catch(() => btn.classList.remove('sending'));
+        .catch(() => { clearTimeout(fallback); reset(); });
     }
 
     function escHtmlDash(s) {
