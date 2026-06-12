@@ -1539,6 +1539,7 @@ def status_json():
         inverter_power=inverter_power,
         inverter_online=inverter_online,
         broadlink_ir_states=broadlink_ir_states,
+        broadlink_devices=cfg.get("broadlink_devices", []),
         vacation_mode=cfg.get("vacation_mode", False),
         vacation_until=cfg.get("vacation_until"),
         vacation_legionella=cfg.get("vacation_legionella", False),
@@ -3167,6 +3168,25 @@ def broadlink_add_command(bl_id, ir_id):
     save_config(cfg)
     write_audit_log("broadlink_command_added", {"bl_id": bl_id, "ir_id": ir_id, "name": name})
     return jsonify(success=True, command=new_cmd)
+
+
+@app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>/commands/reorder", methods=["PUT"])
+def broadlink_reorder_commands(bl_id, ir_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    order = data.get("order", [])
+    cfg = load_config()
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
+    if not bl:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    ir = next((d for d in bl["ir_devices"] if d["id"] == ir_id), None)
+    if not ir:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    id_map = {cmd["id"]: cmd for cmd in ir["commands"]}
+    ir["commands"] = [id_map[cid] for cid in order if cid in id_map]
+    save_config(cfg)
+    return jsonify(success=True)
 
 
 @app.route("/api/broadlink/<bl_id>/ir_devices/<ir_id>/commands/<cmd_id>", methods=["DELETE"])
