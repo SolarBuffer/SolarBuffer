@@ -4306,6 +4306,17 @@ def control_loop():
                     offline_since_map.pop(ip, None)
 
             # --- Watchdog: started + offline >30s → reset so next priority can take over ---
+            # Bepaal welke IPs vallen onder het actieve tijdschema: de watchdog
+            # mag deze niet resetten — het schema herstart het device zodra het
+            # weer online komt.
+            _wd_sched = get_active_schedule(cfg.get("schedules", [])) if schedules_enabled else None
+            _wd_sched_ips = set()
+            if _wd_sched:
+                _wd_sched_dev_ips = set(_wd_sched.get("device_ips") or [])
+                for _wd_d in devices:
+                    if not _wd_sched_dev_ips or _wd_d["ip"] in _wd_sched_dev_ips:
+                        _wd_sched_ips.add(_wd_d["ip"])
+
             for d in devices:
                 ip = d["ip"]
                 st = device_states[ip]
@@ -4316,7 +4327,8 @@ def control_loop():
                         and st.get("started")
                         and not st.get("pending_start")
                         and not st.get("freeze")
-                        and not st.get("legionella_active")):
+                        and not st.get("legionella_active")
+                        and ip not in _wd_sched_ips):
                     print(f"Watchdog: {ip} al {int(offline_for)}s offline terwijl gestart → gereset")
                     if ip not in offline_notified:
                         send_notification(f"⚠️ <b>{d.get('name', ip)}</b> is niet bereikbaar en wordt uitgeschakeld.", event_key="ntfy_notify_offline")
