@@ -2406,6 +2406,35 @@ def firmware_update_device(ip):
         return jsonify(success=False, error=str(e)), 500
 
 
+@app.route("/shelly_factory_reset")
+def shelly_factory_reset_page():
+    if not require_login():
+        return redirect("/login")
+    return render_template("shelly_factory_reset.html", dark_mode=get_user_dark_mode())
+
+
+@app.route("/api/shelly/factory_reset/<path:ip>", methods=["POST"])
+def shelly_factory_reset(ip):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+    if not device:
+        return jsonify(success=False, error="Apparaat niet gevonden"), 404
+    try:
+        r = requests.post(f"http://{ip}/rpc/Shelly.FactoryReset", timeout=5)
+        write_audit_log("shelly_factory_reset", {"device_ip": ip, "device_name": device.get("name")})
+        if r.status_code == 200:
+            return jsonify(success=True)
+        return jsonify(success=False, error=f"HTTP {r.status_code}"), 500
+    except requests.exceptions.Timeout:
+        # Apparaat herstart direct na factory reset — timeout geldt als succes
+        write_audit_log("shelly_factory_reset", {"device_ip": ip, "device_name": device.get("name")})
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
 @app.route("/system_updates_check")
 def system_updates_check():
     if not require_login():
