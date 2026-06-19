@@ -2422,7 +2422,7 @@ def shelly_factory_reset(ip):
     if not device:
         return jsonify(success=False, error="Apparaat niet gevonden"), 404
     try:
-        requests.post(f"http://{ip}/rpc/Shelly.FactoryReset", timeout=5)
+        requests.get(f"http://{ip}/rpc/Shelly.FactoryReset", timeout=5)
         write_audit_log("shelly_factory_reset", {"device_ip": ip, "device_name": device.get("name")})
         return jsonify(success=True)
     except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
