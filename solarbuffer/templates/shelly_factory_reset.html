@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+  <title>Shelly factory reset - SolarBuffer</title>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <script>
+    (function () {
+      var dark = {{ dark_mode | tojson }};
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      if (dark) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+      }
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: hsl(30, 25%, 97%);
+      color: hsl(220, 20%, 14%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    .container { width: 100%; max-width: 480px; }
+
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(30, 15%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 1rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    /* Info banner */
+    .info-banner {
+      background: hsl(32, 100%, 96%);
+      border: 1px solid hsl(32, 90%, 80%);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.83rem;
+      color: hsl(32, 80%, 30%);
+      line-height: 1.5;
+      display: flex;
+      gap: 0.65rem;
+      align-items: flex-start;
+    }
+    .info-banner svg { flex-shrink: 0; margin-top: 0.1rem; color: hsl(32, 90%, 48%); }
+
+    /* Device cards */
+    .device-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+    .device-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.08);
+      padding: 1rem 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .device-card.offline { opacity: 0.55; }
+
+    .device-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: hsl(32, 100%, 95%);
+      color: hsl(32, 95%, 48%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .device-card.offline .device-icon { background: hsl(220, 10%, 94%); color: hsl(220, 10%, 58%); }
+
+    .device-info { flex: 1; min-width: 0; }
+    .device-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .device-meta { font-size: 0.75rem; color: hsl(220, 10%, 52%); margin-top: 0.15rem; display: flex; align-items: center; gap: 0.45rem; }
+
+    .online-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .online-dot.on  { background: hsl(145, 60%, 44%); }
+    .online-dot.off { background: hsl(220, 10%, 72%); }
+
+    .btn-reset {
+      padding: 0.45rem 0.9rem;
+      background: transparent;
+      color: hsl(0, 65%, 50%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 0.83rem;
+      border: 1.5px solid hsl(0, 65%, 72%);
+      border-radius: 0.5rem;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .btn-reset:hover  { background: hsl(0, 60%, 96%); border-color: hsl(0, 65%, 55%); }
+    .btn-reset:active { transform: scale(0.96); }
+    .btn-reset:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    /* Placeholder */
+    .placeholder {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: hsl(220, 10%, 56%);
+      font-size: 0.85rem;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 100;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white; border-radius: 1rem; padding: 1.5rem;
+      width: 100%; max-width: 380px;
+      box-shadow: 0 20px 60px -10px rgba(0,0,0,0.3);
+    }
+    .modal-icon {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: hsl(0, 80%, 95%); color: hsl(0, 65%, 48%);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem;
+    }
+    .modal h2 { font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; }
+    .modal p  { font-size: 0.85rem; color: hsl(220, 10%, 46%); text-align: center; line-height: 1.55; margin-bottom: 1.25rem; }
+    .modal-btns { display: flex; gap: 0.75rem; }
+    .btn-cancel {
+      flex: 1; padding: 0.7rem;
+      border: 1.5px solid hsl(30, 15%, 82%); border-radius: 0.5rem;
+      background: transparent; font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 0.95rem; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-cancel:hover { background: hsl(30, 15%, 94%); }
+    .btn-confirm {
+      flex: 1; padding: 0.7rem;
+      background: hsl(0, 68%, 50%); border: none; border-radius: 0.5rem;
+      color: white; font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700; font-size: 0.95rem; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-confirm:hover    { background: hsl(0, 65%, 44%); }
+    .btn-confirm:disabled { opacity: 0.6; cursor: default; }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .info-banner { background: hsl(32, 20%, 22%); border-color: hsl(32, 40%, 38%); color: hsl(32, 70%, 70%); }
+    html[data-theme="dark"] .info-banner svg { color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .device-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
+    html[data-theme="dark"] .device-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .device-card.offline .device-icon { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .device-meta { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .online-dot.off { background: hsl(220, 8%, 46%); }
+    html[data-theme="dark"] .btn-reset { color: hsl(0, 60%, 65%); border-color: hsl(0, 40%, 44%); }
+    html[data-theme="dark"] .btn-reset:hover { background: hsl(0, 20%, 28%); border-color: hsl(0, 60%, 55%); }
+    html[data-theme="dark"] .placeholder { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .modal { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .modal p { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .modal-icon { background: hsl(0, 40%, 22%); color: hsl(0, 70%, 62%); }
+    html[data-theme="dark"] .btn-cancel { border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 70%); }
+    html[data-theme="dark"] .btn-cancel:hover { background: hsl(220, 8%, 30%); }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1><span class="solar">Solar</span>Buffer</h1>
+      <p>Shelly factory reset</p>
+    </div>
+
+    <a class="back-btn" href="/settings#systeem">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <div class="info-banner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>
+      <span>Zorg dat de SolarBuffer dimmer <strong>ingeschakeld en bereikbaar</strong> is op het netwerk. Na een factory reset verliest het apparaat zijn WiFi-verbinding en moet opnieuw worden gekoppeld.</span>
+    </div>
+
+    <div class="device-list" id="deviceList">
+      <div class="placeholder" id="loadingPlaceholder">Apparaten laden…</div>
+    </div>
+
+  </div>
+
+  <!-- Bevestigingsdialoog -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal">
+      <div class="modal-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
+      </div>
+      <h2>Factory reset</h2>
+      <p id="confirmText">Weet je het zeker?</p>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeConfirm()">Annuleren</button>
+        <button class="btn-confirm" id="confirmBtn" onclick="doReset()">Resetten</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var _resetIp = null;
+    var _resetTriggerBtn = null;
+
+    var deviceIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C14.67,4 17.07,5.17 18.67,7.07L7.07,18.67C5.17,17.07 4,14.67 4,12A8,8 0 0,1 12,4M12,20A8,8 0 0,1 4.93,15.14L15.14,4.93C18,5.86 20,8.72 20,12A8,8 0 0,1 12,20Z"/></svg>';
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function loadDevices() {
+      fetch('/status_json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var list = document.getElementById('deviceList');
+          var devices = data.devices || [];
+          list.innerHTML = '';
+
+          if (devices.length === 0) {
+            list.innerHTML = '<div class="placeholder">Geen SolarBuffer apparaten geconfigureerd.</div>';
+            return;
+          }
+
+          devices.forEach(function(dev) {
+            var online = !!dev.online;
+            var card = document.createElement('div');
+            card.className = 'device-card' + (online ? '' : ' offline');
+            card.innerHTML =
+              '<div class="device-icon">' + deviceIcon + '</div>' +
+              '<div class="device-info">' +
+                '<div class="device-name">' + esc(dev.name) + '</div>' +
+                '<div class="device-meta">' +
+                  '<span class="online-dot ' + (online ? 'on' : 'off') + '"></span>' +
+                  (online ? 'Online' : 'Offline') +
+                  ' &middot; ' + esc(dev.ip) +
+                '</div>' +
+              '</div>' +
+              '<button class="btn-reset"' + (online ? '' : ' disabled') +
+              ' onclick="openConfirm(\'' + esc(dev.ip) + '\',\'' + esc(dev.name) + '\',this)">Factory reset</button>';
+            list.appendChild(card);
+          });
+        })
+        .catch(function() {
+          document.getElementById('deviceList').innerHTML =
+            '<div class="placeholder">Kan apparaten niet ophalen — controleer de verbinding.</div>';
+        });
+    }
+
+    function openConfirm(ip, name, btn) {
+      _resetIp = ip;
+      _resetTriggerBtn = btn;
+      document.getElementById('confirmText').innerHTML =
+        '<strong>' + esc(name) + '</strong> wordt volledig gereset: alle instellingen gaan verloren. Het apparaat herstart in AP-modus.<br><br>' +
+        '<strong>Dit kan niet ongedaan worden gemaakt.</strong>';
+      var confirmBtn = document.getElementById('confirmBtn');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Resetten';
+      document.getElementById('confirmModal').classList.add('open');
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirmModal').classList.remove('open');
+    }
+
+    function doReset() {
+      if (!_resetIp) return;
+      var confirmBtn = document.getElementById('confirmBtn');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Bezig…';
+      if (_resetTriggerBtn) { _resetTriggerBtn.disabled = true; _resetTriggerBtn.textContent = 'Bezig…'; }
+
+      fetch('/api/shelly/factory_reset/' + _resetIp, { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          closeConfirm();
+          if (_resetTriggerBtn) {
+            _resetTriggerBtn.textContent = data.success ? 'Reset ✓' : 'Fout';
+            if (!data.success) _resetTriggerBtn.disabled = false;
+          }
+        })
+        .catch(function() {
+          closeConfirm();
+          if (_resetTriggerBtn) { _resetTriggerBtn.disabled = false; _resetTriggerBtn.textContent = 'Fout'; }
+        });
+    }
+
+    document.getElementById('confirmModal').addEventListener('click', function(e) {
+      if (e.target === this) closeConfirm();
+    });
+
+    loadDevices();
+  </script>
+</body>
+</html>
