@@ -2423,14 +2423,23 @@ def shelly_factory_reset(ip):
         return jsonify(success=False, error="Apparaat niet gevonden"), 404
     try:
         requests.get(f"http://{ip}/rpc/Shelly.FactoryReset", timeout=5)
-        write_audit_log("shelly_factory_reset", {"device_ip": ip, "device_name": device.get("name")})
-        return jsonify(success=True)
     except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-        # Apparaat herstart direct na factory reset — verbinding valt weg vóór antwoord
-        write_audit_log("shelly_factory_reset", {"device_ip": ip, "device_name": device.get("name")})
-        return jsonify(success=True)
+        pass  # Apparaat herstart direct — verbinding valt weg vóór antwoord, dat is normaal
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+    # Verwijder apparaat uit config en herstel prioriteiten
+    removed_prio = device.get("priority", 1)
+    cfg["shelly_devices"] = [d for d in cfg["shelly_devices"] if d["ip"] != ip]
+    for d in cfg["shelly_devices"]:
+        if d.get("priority", 1) > removed_prio:
+            d["priority"] -= 1
+    save_config(cfg)
+    device_states.pop(ip, None)
+    device_pids.pop(ip, None)
+
+    write_audit_log("shelly_factory_reset", {"device_ip": ip, "device_name": device.get("name")})
+    return jsonify(success=True)
 
 
 @app.route("/system_updates_check")
