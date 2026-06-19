@@ -313,9 +313,10 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
           closeConfirm();
-          if (_resetTriggerBtn) {
-            _resetTriggerBtn.textContent = data.success ? 'Reset ✓' : 'Fout';
-            if (!data.success) _resetTriggerBtn.disabled = false;
+          if (data.success) {
+            loadDevices();
+          } else {
+            if (_resetTriggerBtn) { _resetTriggerBtn.disabled = false; _resetTriggerBtn.textContent = 'Fout'; }
           }
         })
         .catch(function() {
