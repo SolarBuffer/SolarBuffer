@@ -475,6 +475,7 @@
       </a>
       <div class="section-tiles">
 
+        {% if is_admin %}
         <button class="section-tile" onclick="showSection('configuratie')">
           <div class="tile-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V19H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"/></svg>
@@ -498,6 +499,7 @@
           <div class="tile-label">Besturing</div>
           <div class="tile-sub">Sturing, schema's &amp; vakantie</div>
         </button>
+        {% endif %}
 
         <button class="section-tile" onclick="showSection('verbinding')">
           <div class="tile-icon">
@@ -512,9 +514,10 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg>
           </div>
           <div class="tile-label">Account</div>
-          <div class="tile-sub">Gebruikers &amp; weergave</div>
+          <div class="tile-sub">{% if is_admin %}Gebruikers &amp; weergave{% else %}Weergave &amp; meldingen{% endif %}</div>
         </button>
 
+        {% if is_admin %}
         <button class="section-tile" onclick="showSection('systeem')">
           <div class="tile-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21,16H3V4H21M21,2H3C1.89,2 1,2.89 1,4V16A2,2 0 0,0 3,18H10V20H8V22H16V20H14V18H21A2,2 0 0,0 23,16V4C23,2.89 22.1,2 21,2Z"/></svg>
@@ -522,10 +525,12 @@
           <div class="tile-label">Systeem</div>
           <div class="tile-sub">Info, back-up &amp; herstel</div>
         </button>
+        {% endif %}
 
       </div>
     </div>
 
+    {% if is_admin %}
     <!-- ===== SUB-VIEW: Configuratie ===== -->
     <div class="section-view" id="view-configuratie" style="display:none">
       <button class="back-btn" onclick="showMain()">
@@ -615,7 +620,9 @@
 
       </div>
     </div>
+    {% endif %}
 
+    {% if is_admin %}
     <!-- ===== SUB-VIEW: Accessories ===== -->
     <div class="section-view" id="view-accessories" style="display:none">
       <button class="back-btn" onclick="showMain()">
@@ -649,7 +656,9 @@
 
       </div>
     </div>
+    {% endif %}
 
+    {% if is_admin %}
     <!-- ===== SUB-VIEW: Besturing ===== -->
     <div class="section-view" id="view-besturing" style="display:none">
       <button class="back-btn" onclick="showMain()">
@@ -774,6 +783,7 @@
 
       </div>
     </div>
+    {% endif %}
 
     <!-- ===== SUB-VIEW: Verbinding ===== -->
     <div class="section-view" id="view-verbinding" style="display:none">
@@ -868,6 +878,7 @@
           <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
         </a>
 
+        {% if is_admin %}
         <a class="settings-item" href="/users">
           <div class="settings-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z"/></svg>
@@ -878,10 +889,12 @@
           </div>
           <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
         </a>
+        {% endif %}
 
       </div>
     </div>
 
+    {% if is_admin %}
     <!-- ===== SUB-VIEW: Systeem ===== -->
     <div class="section-view" id="view-systeem" style="display:none">
       <button class="back-btn" onclick="showMain()">
@@ -961,7 +974,9 @@
     </div>
 
   </div>
+  {% endif %}
 
+  {% if is_admin %}
   <!-- Herstart modal -->
   <div class="modal-overlay" id="restartModal">
     <div class="modal">
@@ -1006,6 +1021,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
   <script>
     // ===== NAVIGATION =====
@@ -1046,6 +1062,7 @@
       }
     })();
 
+    {% if is_admin %}
     // ===== NETWERK SUBTEKST =====
     fetch('/network/current').then(r => r.json()).then(data => {
       const el = document.getElementById('wifiSubText');
@@ -1062,7 +1079,9 @@
         sub.textContent = available ? 'Nieuwe versie beschikbaar!' : 'Firmware, software & hub updates';
       })
       .catch(() => {});
+    {% endif %}
 
+    {% if is_admin %}
     // ===== BESTURING =====
     function loadBesturing() {
       fetch('/status_json').then(r => r.json()).then(data => {
@@ -1261,6 +1280,7 @@
     }
 
     loadBesturing();
+    {% endif %}
 
     // ===== TAILSCALE =====
     let _tsWaitingForAuth = false;
@@ -1346,6 +1366,7 @@
     tsFetchStatus();
     setInterval(() => { if (_tsWaitingForAuth && _tsPanelOpen) tsFetchStatus(); }, 3000);
 
+    {% if is_admin %}
     // ===== HERSTART =====
     function openRestartModal()  { document.getElementById('restartModal').classList.add('open'); }
     function closeRestartModal() { document.getElementById('restartModal').classList.remove('open'); }
@@ -1405,6 +1426,7 @@
         })
         .catch(() => { btn.disabled = false; btn.textContent = 'Resetten'; });
     }
+    {% endif %}
 
     // ===== DARK MODE =====
     function updateDarkModeUI() {
