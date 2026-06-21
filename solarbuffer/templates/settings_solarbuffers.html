@@ -163,7 +163,7 @@
       gap: 0.75rem;
     }
 
-    /* Subsectie labels (Power meter, Socket, Anti-legionella) */
+    /* Subsectie labels (Slimme stekker, Vermogensmeter, Anti-legionella) */
     .subsection {
       border-top: 1px solid hsl(30, 15%, 91%);
       margin-top: 1.1rem;
@@ -176,6 +176,12 @@
       letter-spacing: 0.07em;
       color: hsl(220, 10%, 52%);
       margin-bottom: 0.85rem;
+    }
+    .subsection-hint {
+      font-size: 0.75rem;
+      color: hsl(220, 10%, 52%);
+      margin-bottom: 0.75rem;
+      line-height: 1.45;
     }
 
     .input-with-unit {
@@ -313,6 +319,7 @@
     html[data-theme="dark"] .field-group input:read-only { background: hsl(220, 8%, 28%); color: hsl(220, 8%, 50%); }
     html[data-theme="dark"] .subsection { border-color: hsl(220, 8%, 34%); }
     html[data-theme="dark"] .subsection-title { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .subsection-hint  { color: hsl(220, 8%, 50%); }
     html[data-theme="dark"] .input-with-unit { border-color: hsl(220, 8%, 36%); }
     html[data-theme="dark"] .input-with-unit:focus-within { border-color: hsl(32, 75%, 52%); }
     html[data-theme="dark"] .input-with-unit input { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
@@ -378,8 +385,8 @@
 
     function createPowerSocketOptions(selected) {
       return `<option value="" ${selected === "" ? 'selected' : ''}>Geen</option>
-              <option value="shelly" ${selected === "shelly" ? 'selected' : ''}>Shelly Plug</option>
-              <option value="homewizard" ${selected === "homewizard" ? 'selected' : ''}>HomeWizard Energy Socket</option>`;
+              <option value="shelly" ${selected === "shelly" ? 'selected' : ''}>Shelly</option>
+              <option value="homewizard" ${selected === "homewizard" ? 'selected' : ''}>HomeWizard</option>`;
     }
 
     function getNextPriority() {
@@ -477,21 +484,7 @@
         </div>
 
         <div class="subsection">
-          <div class="subsection-title">Power meter</div>
-          <div class="two-col">
-            <div class="field-group" style="margin-bottom:0;">
-              <label>Type</label>
-              <select name="power_meter[]">${createPowerMeterOptions(power_meter)}</select>
-            </div>
-            <div class="field-group" style="margin-bottom:0;">
-              <label>IP-adres</label>
-              <input type="text" name="power_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
-            </div>
-          </div>
-        </div>
-
-        <div class="subsection">
-          <div class="subsection-title">Power socket</div>
+          <div class="subsection-title">Slimme stekker</div>
           <div class="two-col">
             <div class="field-group" style="margin-bottom:0;">
               <label>Type</label>
@@ -500,6 +493,21 @@
             <div class="field-group" style="margin-bottom:0;">
               <label>IP-adres</label>
               <input type="text" name="power_socket_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-title">Vermogensmeter</div>
+          <div class="subsection-hint">Geen externe vermogensmeter? Vul dan het IP-adres van de Slimme stekker in.</div>
+          <div class="two-col">
+            <div class="field-group" style="margin-bottom:0;">
+              <label>Type</label>
+              <select name="power_meter[]">${createPowerMeterOptions(power_meter)}</select>
+            </div>
+            <div class="field-group" style="margin-bottom:0;">
+              <label>IP-adres</label>
+              <input type="text" name="power_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
             </div>
           </div>
         </div>
