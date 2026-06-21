@@ -266,6 +266,8 @@ def load_config():
             user["ntfy_notify_schedule"] = True
         if "ntfy_notify_offline" not in user:
             user["ntfy_notify_offline"] = True
+        if "role" not in user:
+            user["role"] = "admin"
 
     for key, value in DEFAULT_EXPERT_SETTINGS.items():
         if key not in cfg["expert_settings"]:
@@ -672,6 +674,15 @@ def get_user_dark_mode():
     return bool(user.get("dark_mode", False)) if user else False
 
 
+def is_current_user_admin():
+    username = session.get("username") or _get_bearer_username()
+    if not username:
+        return False
+    cfg = load_config()
+    user = next((u for u in cfg.get("users", []) if u.get("username") == username), None)
+    return user is not None and user.get("role", "admin") == "admin"
+
+
 # ================= NETWORK SCAN HELPERS =================
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -927,7 +938,7 @@ def first_boot_user():
             error = "Wachtwoorden komen niet overeen"
         if not error:
             cfg = load_config()
-            cfg["users"] = [{"username": username, "password_hash": generate_password_hash(password), "dark_mode": False}]
+            cfg["users"] = [{"username": username, "password_hash": generate_password_hash(password), "dark_mode": False, "role": "admin"}]
             save_config(cfg)
             session["logged_in"] = True
             session["username"] = username
@@ -1228,6 +1239,8 @@ def wizard_forced():
 def settings_p1():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     if request.method == "POST":
         old_cfg = load_config()
@@ -1368,6 +1381,8 @@ def battery_set_mode():
 def settings_solarbuffers():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     if request.method == "POST":
         old_cfg = load_config()
@@ -1387,6 +1402,8 @@ def settings_solarbuffers():
 def settings_expert():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     if request.method == "POST":
         old_cfg = load_config()
@@ -1413,6 +1430,8 @@ def settings_expert():
 def settings_mqtt():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     if request.method == "POST":
         old_cfg = load_config()
@@ -1562,6 +1581,8 @@ def toggle_pid():
     global enabled
     if not require_login():
         return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
     enabled = not enabled
     cfg = load_config()
     cfg["pid_enabled"] = enabled
@@ -1575,6 +1596,8 @@ def toggle_schedules():
     global schedules_enabled
     if not require_login():
         return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
     schedules_enabled = not schedules_enabled
     cfg = load_config()
     cfg["schedules_enabled"] = schedules_enabled
@@ -1588,6 +1611,8 @@ def toggle_anti_legionella():
     global anti_legionella_enabled
     if not require_login():
         return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
     anti_legionella_enabled = not anti_legionella_enabled
     cfg = load_config()
     cfg["anti_legionella_enabled"] = anti_legionella_enabled
@@ -1601,6 +1626,8 @@ def set_vacation_mode():
     global vacation_mode
     if not require_login():
         return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
     data = request.json or {}
     active = bool(data.get("active", False))
     until_iso = data.get("until") or None
@@ -1655,6 +1682,8 @@ def service_worker():
 def updates():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     return render_template("updates.html", dark_mode=get_user_dark_mode())
 
 
@@ -1664,13 +1693,16 @@ def settings():
         return redirect("/login")
     cfg = load_config()
     return render_template("settings.html", config=cfg, dark_mode=get_user_dark_mode(),
-                           session_username=session.get("username", ""))
+                           session_username=session.get("username", ""),
+                           is_admin=is_current_user_admin())
 
 
 @app.route("/system")
 def system_page():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     return render_template("system.html", dark_mode=get_user_dark_mode())
 
 
@@ -1678,6 +1710,8 @@ def system_page():
 def system_info():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
 
     info = {}
 
@@ -1887,6 +1921,8 @@ def _wifi_connect_and_reboot(ssid, password):
 def network_page():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     return render_template("network.html", dark_mode=get_user_dark_mode())
 
 
@@ -2056,6 +2092,8 @@ def location_geocode():
 def location():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     error = ""
     if request.method == "POST":
@@ -2084,6 +2122,8 @@ def location():
 def restart():
     if not require_login():
         return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
     write_audit_log("manual_restart", {"user": safe_session_username()})
     def _do_restart():
         cfg = load_config()
@@ -2099,6 +2139,8 @@ def restart():
 def factory_reset():
     if not require_login():
         return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
     cfg = load_config()
     threading.Thread(target=sync_configured_devices_off, args=(cfg.get("shelly_devices", []),), daemon=True).start()
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -2116,6 +2158,8 @@ def factory_reset():
 def config_backup():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     success = request.args.get("success", "")
     error = request.args.get("error", "")
     return render_template("config_backup.html", dark_mode=get_user_dark_mode(),
@@ -2410,6 +2454,8 @@ def firmware_update_device(ip):
 def shelly_factory_reset_page():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     return render_template("shelly_factory_reset.html", dark_mode=get_user_dark_mode())
 
 
@@ -2417,6 +2463,8 @@ def shelly_factory_reset_page():
 def shelly_factory_reset(ip):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     cfg = load_config()
     device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
     if not device:
@@ -2678,6 +2726,8 @@ def create_schedule():
     try:
         if not require_login():
             return jsonify({"error": "unauthorized"}), 401
+        if not is_current_user_admin():
+            return jsonify({"error": "Geen toegang"}), 403
         data = request.get_json(silent=True) or {}
         days = data.get("days", [])
         start_time = str(data.get("start_time", ""))
@@ -2722,6 +2772,8 @@ def update_schedule(sched_id):
     try:
         if not require_login():
             return jsonify({"error": "unauthorized"}), 401
+        if not is_current_user_admin():
+            return jsonify({"error": "Geen toegang"}), 403
         data = request.get_json(silent=True) or {}
         cfg = load_config()
         schedules = cfg.get("schedules", [])
@@ -2763,6 +2815,8 @@ def update_schedule(sched_id):
 def delete_schedule(sched_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     cfg = load_config()
     schedules = cfg.get("schedules", [])
     new_schedules = [s for s in schedules if s.get("id") != sched_id]
@@ -2833,6 +2887,8 @@ def charts_page():
 def accessories_page():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     return render_template("accessories.html", accessories=cfg.get("accessories", []),
                            shelly_devices=cfg.get("shelly_devices", []), gas_enabled=cfg.get("gas_enabled", False), dark_mode=get_user_dark_mode())
@@ -2842,6 +2898,8 @@ def accessories_page():
 def add_accessory():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     name = (data.get("name") or "").strip()
     acc_type = (data.get("acc_type") or "power").strip().lower()
@@ -2884,6 +2942,8 @@ def add_accessory():
 def update_accessory(acc_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     cfg = load_config()
     acc = next((a for a in cfg["accessories"] if a["id"] == acc_id), None)
@@ -2934,6 +2994,8 @@ def update_accessory(acc_id):
 def delete_accessory(acc_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     cfg = load_config()
     before = len(cfg["accessories"])
     cfg["accessories"] = [a for a in cfg["accessories"] if a["id"] != acc_id]
@@ -2991,6 +3053,8 @@ def _broadlink_discover_once(timeout=5):
 def settings_broadlink():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     power_accessories = [
         {"id": a["id"], "name": a["name"]}
@@ -3010,6 +3074,8 @@ def settings_broadlink():
 def broadlink_scan():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     if not BROADLINK_AVAILABLE:
         return jsonify(success=False, error="python-broadlink niet geïnstalleerd"), 503
     found = _broadlink_discover_once(timeout=5)
@@ -3030,6 +3096,8 @@ def broadlink_online_status():
 def broadlink_add_device():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     ip = (data.get("ip") or "").strip()
     mac = (data.get("mac") or "").strip()
@@ -3059,6 +3127,8 @@ def broadlink_add_device():
 def broadlink_update_device(bl_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     cfg = load_config()
     bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
@@ -3087,6 +3157,8 @@ def broadlink_delete_device(bl_id):
 def broadlink_add_ir_device(bl_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     cfg = load_config()
     bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
@@ -3116,6 +3188,8 @@ def broadlink_add_ir_device(bl_id):
 def broadlink_update_ir_device(bl_id, ir_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     cfg = load_config()
     bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
@@ -3136,6 +3210,8 @@ def broadlink_update_ir_device(bl_id, ir_id):
 def broadlink_delete_ir_device(bl_id, ir_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     cfg = load_config()
     bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
     if not bl:
@@ -3153,6 +3229,8 @@ def broadlink_delete_ir_device(bl_id, ir_id):
 def broadlink_learn(bl_id, ir_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     if not BROADLINK_AVAILABLE:
         return jsonify(success=False, error="python-broadlink niet geïnstalleerd"), 503
     cfg = load_config()
@@ -3187,6 +3265,8 @@ def broadlink_learn(bl_id, ir_id):
 def broadlink_add_command(bl_id, ir_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     cfg = load_config()
     bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
@@ -3210,6 +3290,8 @@ def broadlink_add_command(bl_id, ir_id):
 def broadlink_reorder_commands(bl_id, ir_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     data = request.get_json(force=True) or {}
     order = data.get("order", [])
     cfg = load_config()
@@ -3229,6 +3311,8 @@ def broadlink_reorder_commands(bl_id, ir_id):
 def broadlink_delete_command(bl_id, ir_id, cmd_id):
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     cfg = load_config()
     bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == bl_id), None)
     if not bl:
@@ -3292,17 +3376,26 @@ def set_gas_enabled():
 def users_page():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     cfg = load_config()
     error = request.args.get("error", "")
-    return render_template("users.html", users=cfg.get("users", []), error=error, dark_mode=get_user_dark_mode())
+    current_user = session.get("username", "")
+    return render_template("users.html", users=cfg.get("users", []), error=error,
+                           dark_mode=get_user_dark_mode(), current_user=current_user)
 
 
 @app.route("/users/add", methods=["POST"])
 def users_add():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
+    role = request.form.get("role", "viewer")
+    if role not in ("admin", "viewer"):
+        role = "viewer"
     if not username or not password:
         return redirect("/users?error=Vul alle velden in")
     if len(password) < 6:
@@ -3311,10 +3404,10 @@ def users_add():
     users = cfg.get("users", [])
     if any(u["username"].lower() == username.lower() for u in users):
         return redirect("/users?error=Gebruikersnaam bestaat al")
-    users.append({"username": username, "password_hash": generate_password_hash(password)})
+    users.append({"username": username, "password_hash": generate_password_hash(password), "role": role})
     cfg["users"] = users
     save_config(cfg)
-    write_audit_log("user_added", {"new_username": username})
+    write_audit_log("user_added", {"new_username": username, "role": role})
     return redirect("/users")
 
 
@@ -3322,6 +3415,8 @@ def users_add():
 def users_delete():
     if not require_login():
         return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
     username = request.form.get("username", "").strip()
     current_user = session.get("username", "")
     cfg = load_config()
@@ -3336,10 +3431,39 @@ def users_delete():
     return redirect("/users")
 
 
+@app.route("/users/set_role", methods=["POST"])
+def users_set_role():
+    if not require_login():
+        return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
+    username = request.form.get("username", "").strip()
+    role = request.form.get("role", "viewer")
+    if role not in ("admin", "viewer"):
+        return redirect("/users?error=Ongeldig rol")
+    current_user = session.get("username", "")
+    cfg = load_config()
+    users = cfg.get("users", [])
+    admins = [u for u in users if u.get("role", "admin") == "admin"]
+    target = next((u for u in users if u["username"] == username), None)
+    if not target:
+        return redirect("/users?error=Gebruiker niet gevonden")
+    if username == current_user and role != "admin":
+        return redirect("/users?error=Je kunt je eigen admin-rol niet verwijderen")
+    if target.get("role", "admin") == "admin" and role == "viewer" and len(admins) <= 1:
+        return redirect("/users?error=Er moet minimaal één admin zijn")
+    target["role"] = role
+    save_config(cfg)
+    write_audit_log("user_role_changed", {"username": username, "role": role})
+    return redirect("/users")
+
+
 @app.route("/scan_devices", methods=["GET"])
 def scan_devices():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     try:
         result = scan_network_for_devices()
         write_audit_log("network_scan", {
@@ -5774,6 +5898,8 @@ def history_api():
 def history_reset_api():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
     conn = sqlite3.connect(HISTORY_DB)
     try:
         for table in HISTORY_RETENTION:
