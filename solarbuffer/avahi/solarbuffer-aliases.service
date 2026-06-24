@@ -1,0 +1,27 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+
+<!--
+  Avahi mDNS aliassen voor SolarBuffer subdomains.
+  Installeren: sudo cp solarbuffer-aliases.service /etc/avahi/services/
+  Avahi herlaadt automatisch, anders: sudo systemctl restart avahi-daemon
+-->
+
+<service-group>
+  <name>SolarBuffer</name>
+
+  <!-- app.solarbuffer.local verwijst naar deze Pi -->
+  <service protocol="ipv4">
+    <type>_http._tcp</type>
+    <port>80</port>
+    <host-name>app.solarbuffer.local</host-name>
+  </service>
+
+  <!-- wifi.solarbuffer.local verwijst naar deze Pi -->
+  <service protocol="ipv4">
+    <type>_http._tcp</type>
+    <port>80</port>
+    <host-name>wifi.solarbuffer.local</host-name>
+  </service>
+
+</service-group>

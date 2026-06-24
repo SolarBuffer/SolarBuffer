@@ -28,14 +28,13 @@
       color: hsl(220, 20%, 14%);
       min-height: 100vh;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
       padding: 1rem;
     }
     h1, h2 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 480px; padding-bottom: 2rem; }
+    .container { width: 100%; max-width: 480px; }
 
-    /* Header */
     .header { text-align: center; margin-bottom: 1.5rem; }
     .header h1 { font-size: 1.75rem; font-weight: 700; }
     .header h1 .solar {
@@ -45,7 +44,130 @@
     }
     .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
 
-    /* Back button */
+    /* Update check card */
+    .check-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.875rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .check-card.update-available {
+      background: hsl(32, 100%, 97%);
+      border-color: hsl(32, 90%, 72%);
+    }
+    .check-card.update-available .check-card-title { color: hsl(32, 90%, 38%); }
+    .check-card.update-available .check-card-sub   { color: hsl(32, 80%, 50%); }
+    .check-card-text { flex: 1; }
+    .check-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem; }
+    .check-card-sub { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.15rem; }
+    .btn-update {
+      padding: 0.5rem 1.1rem;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.88rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-update:hover { background: hsl(32, 90%, 45%); }
+    .btn-update:active { transform: scale(0.96); }
+    .btn-update:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+    .update-result {
+      margin-top: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.4rem;
+      font-size: 0.78rem;
+      display: none;
+    }
+    .update-result.success { background: hsl(145, 55%, 92%); color: hsl(145, 60%, 24%); display: block; }
+    .update-result.error   { background: hsl(0, 60%, 93%);  color: hsl(0, 65%, 38%);   display: block; }
+
+    /* Release cards */
+    .update-card {
+      background: white;
+      border: 1px solid hsl(30, 15%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.08);
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+    }
+    .update-card:last-child { margin-bottom: 0; }
+
+    .update-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+    .version-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .version-badge.new { background: hsl(32, 95%, 90%);  color: hsl(32, 95%, 32%); }
+    .version-badge.mid { background: hsl(215, 80%, 91%); color: hsl(215, 70%, 36%); }
+    .version-badge.old { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
+
+    .update-date-small { font-size: 0.67rem; color: hsl(220, 10%, 54%); white-space: nowrap; }
+
+    .update-divider { width: 1px; flex-shrink: 0; background: hsl(30, 15%, 90%); align-self: stretch; }
+
+    .update-right { flex: 1; min-width: 0; }
+    .update-tag {
+      display: inline-block;
+      font-size: 0.64rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      letter-spacing: 0.04em;
+    }
+    .tag-feature { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
+    .tag-fix     { background: hsl(0, 60%, 93%);   color: hsl(0, 65%, 38%); }
+    .tag-ui      { background: hsl(280, 60%, 93%); color: hsl(280, 60%, 35%); }
+
+    .update-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: hsl(220, 20%, 14%);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .update-body {
+      font-size: 0.81rem;
+      color: hsl(220, 10%, 44%);
+      line-height: 1.5;
+    }
+    .update-notes-link {
+      display: inline-block;
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: hsl(32, 95%, 42%);
+      text-decoration: none;
+    }
+    .update-notes-link:hover { text-decoration: underline; }
+
     .back-btn {
       display: inline-flex;
       align-items: center;
@@ -60,286 +182,28 @@
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
-      margin-bottom: 1rem;
-    }
-    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
-
-    /* Tab bar */
-    .tab-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.875rem;
-      padding: 0.3rem;
-      gap: 0.2rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.08);
-    }
-    .tab-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.2rem;
-      padding: 0.55rem 0.25rem;
-      border: none;
-      background: transparent;
-      border-radius: 0.6rem;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: hsl(220, 10%, 52%);
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-      position: relative;
-    }
-    .tab-btn svg { opacity: 0.6; transition: opacity 0.15s; }
-    .tab-btn:hover { background: hsl(30, 20%, 96%); color: hsl(220, 15%, 30%); }
-    .tab-btn.active {
-      background: hsl(32, 95%, 52%);
-      color: white;
-    }
-    .tab-btn.active svg { opacity: 1; }
-
-    /* Badge dot op tab (update beschikbaar) */
-    .tab-dot {
-      position: absolute;
-      top: 0.3rem; right: 0.55rem;
-      width: 7px; height: 7px;
-      background: hsl(0, 75%, 58%);
-      border-radius: 50%;
-      border: 1.5px solid white;
-      display: none;
-    }
-    .tab-btn.active .tab-dot { border-color: hsl(32, 95%, 52%); }
-
-    /* Tab panels */
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-
-    /* Check / action card */
-    .check-card {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.875rem;
-      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.12);
-      padding: 1.1rem 1.25rem;
       margin-bottom: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      transition: border-color 0.3s, background 0.3s;
     }
-    .check-card.update-available { background: hsl(32, 100%, 97%); border-color: hsl(32, 90%, 72%); }
-    .check-card.update-available .check-card-title { color: hsl(32, 90%, 38%); }
-    .check-card.update-available .check-card-sub   { color: hsl(32, 80%, 50%); }
-    .check-card-text { flex: 1; }
-    .check-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem; }
-    .check-card-sub { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.15rem; }
-
-    .btn-action {
-      padding: 0.5rem 1.1rem;
-      background: hsl(32, 95%, 52%);
-      color: white;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 0.88rem;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: background 0.15s, transform 0.1s;
-    }
-    .btn-action:hover { background: hsl(32, 90%, 45%); }
-    .btn-action:active { transform: scale(0.96); }
-    .btn-action:disabled { opacity: 0.6; cursor: default; transform: none; }
-
-    .action-result {
-      margin-top: 0.6rem;
-      padding: 0.5rem 0.75rem;
-      border-radius: 0.4rem;
-      font-size: 0.78rem;
-      display: none;
-    }
-    .action-result.success { background: hsl(145, 55%, 92%); color: hsl(145, 60%, 24%); display: block; }
-    .action-result.error   { background: hsl(0, 60%, 93%);  color: hsl(0, 65%, 38%);   display: block; }
-
-    /* ---- Firmware cards ---- */
-    .fw-list { display: flex; flex-direction: column; gap: 0.5rem; }
-
-    .fw-card {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.75rem;
-      padding: 0.85rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.07);
-    }
-    .fw-card.has-update { border-color: hsl(32, 90%, 72%); background: hsl(32, 100%, 98%); }
-    .fw-card.offline { opacity: 0.55; }
-
-    .fw-icon {
-      width: 36px; height: 36px;
-      border-radius: 9px;
-      background: hsl(32, 100%, 95%);
-      color: hsl(32, 95%, 48%);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .fw-card.offline .fw-icon { background: hsl(220, 10%, 94%); color: hsl(220, 10%, 60%); }
-
-    .fw-info { flex: 1; min-width: 0; }
-    .fw-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fw-ver  { font-size: 0.75rem; color: hsl(220, 10%, 52%); margin-top: 0.15rem; }
-    .fw-ver .arrow { color: hsl(32, 90%, 50%); font-weight: 700; margin: 0 0.2em; }
-
-    .fw-badge {
-      font-size: 0.68rem; font-weight: 700;
-      padding: 3px 8px; border-radius: 999px;
-      white-space: nowrap; flex-shrink: 0;
-    }
-    .fw-badge.ok      { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
-    .fw-badge.update  { background: hsl(32, 95%, 90%);  color: hsl(32, 95%, 32%); }
-    .fw-badge.offline { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 44%); }
-
-    .btn-fw-update {
-      padding: 0.35rem 0.75rem;
-      background: hsl(32, 95%, 52%);
-      color: white;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 600; font-size: 0.78rem;
-      border: none; border-radius: 0.4rem;
-      cursor: pointer; white-space: nowrap; flex-shrink: 0;
-      transition: background 0.15s, transform 0.1s;
-    }
-    .btn-fw-update:hover  { background: hsl(32, 90%, 45%); }
-    .btn-fw-update:active { transform: scale(0.96); }
-    .btn-fw-update:disabled { opacity: 0.6; cursor: default; transform: none; }
-
-    .fw-placeholder {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.75rem;
-      padding: 1rem 1.25rem;
-      font-size: 0.83rem;
-      color: hsl(220, 10%, 55%);
-      text-align: center;
+    .back-btn:hover {
+      background: hsl(32, 100%, 96%);
+      border-color: hsl(32, 85%, 60%);
+      color: hsl(32, 90%, 40%);
     }
 
-    /* ---- Software version cards ---- */
-    .update-card {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.75rem;
-      box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.08);
-      padding: 0.9rem 1rem;
-      margin-bottom: 0.6rem;
-      display: flex;
-      gap: 0.85rem;
-      align-items: flex-start;
-    }
-    .update-card:last-child { margin-bottom: 0; }
-
-    .update-left { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; padding-top: 2px; }
-    .version-badge {
-      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
-      padding: 3px 8px; border-radius: 999px; white-space: nowrap;
-    }
-    .version-badge.new { background: hsl(32, 95%, 90%);  color: hsl(32, 95%, 32%); }
-    .version-badge.mid { background: hsl(215, 80%, 91%); color: hsl(215, 70%, 36%); }
-    .version-badge.old { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
-    .update-date-small { font-size: 0.67rem; color: hsl(220, 10%, 54%); white-space: nowrap; }
-    .update-divider { width: 1px; flex-shrink: 0; background: hsl(30, 15%, 90%); align-self: stretch; }
-    .update-right { flex: 1; min-width: 0; }
-    .update-tag {
-      display: inline-block; font-size: 0.64rem; font-weight: 600;
-      padding: 2px 6px; border-radius: 4px; margin-bottom: 5px; letter-spacing: 0.04em;
-    }
-    .tag-feature { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
-    .tag-fix     { background: hsl(0, 60%, 93%);   color: hsl(0, 65%, 38%); }
-    .tag-ui      { background: hsl(280, 60%, 93%); color: hsl(280, 60%, 35%); }
-    .update-title { font-size: 0.88rem; font-weight: 600; color: hsl(220, 20%, 14%); margin-bottom: 4px; line-height: 1.3; }
-    .update-body  { font-size: 0.81rem; color: hsl(220, 10%, 44%); line-height: 1.5; }
-    .update-notes-link {
-      display: inline-block; margin-top: 0.4rem; font-size: 0.75rem;
-      font-weight: 600; color: hsl(32, 95%, 42%); text-decoration: none;
-    }
-    .update-notes-link:hover { text-decoration: underline; }
-
-    /* ---- Hardware package list ---- */
-    .pkg-list {
-      margin-top: 0.5rem; font-size: 0.74rem;
-      color: hsl(220, 10%, 45%); line-height: 1.6;
-      max-height: 120px; overflow-y: auto;
-    }
-
-    /* ---- Update log terminal ---- */
-    .update-log-wrap {
-      margin-top: 0.75rem;
-      background: hsl(220, 16%, 14%);
-      border-radius: 0.75rem;
-      overflow: hidden;
-      display: none;
-    }
-    .update-log-wrap.visible { display: block; }
-    .update-log-bar {
-      display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.5rem 0.85rem;
-      background: hsl(220, 16%, 18%);
-      border-bottom: 1px solid hsl(220, 16%, 22%);
-    }
-    .log-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .log-dot.red    { background: hsl(0, 70%, 58%); }
-    .log-dot.yellow { background: hsl(42, 90%, 56%); }
-    .log-dot.green  { background: hsl(130, 60%, 50%); }
-    .update-log-bar span {
-      font-size: 0.72rem; color: hsl(220, 10%, 52%);
-      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
-      margin-left: auto;
-    }
-    .update-log {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 0.72rem;
-      line-height: 1.55;
-      color: hsl(130, 40%, 72%);
-      padding: 0.75rem 0.9rem;
-      max-height: 260px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    .update-log .log-dim  { color: hsl(220, 10%, 48%); }
-    .update-log .log-done { color: hsl(130, 60%, 60%); font-weight: bold; }
-    .update-log .log-err  { color: hsl(0, 70%, 65%); }
-
-    /* ---- DARK MODE ---- */
+    /* DARK MODE */
     html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
     html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .tab-bar { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
-    html[data-theme="dark"] .tab-btn { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .tab-btn:hover { background: hsl(220, 8%, 32%); color: hsl(220, 10%, 78%); }
-    html[data-theme="dark"] .tab-btn.active { background: hsl(32, 85%, 48%); color: white; }
     html[data-theme="dark"] .check-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
     html[data-theme="dark"] .check-card-sub { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .check-card.update-available { background: hsl(32, 20%, 24%); border-color: hsl(32, 70%, 45%); }
-    html[data-theme="dark"] .fw-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
-    html[data-theme="dark"] .fw-card.has-update { background: hsl(32, 15%, 24%); border-color: hsl(32, 70%, 42%); }
-    html[data-theme="dark"] .fw-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .fw-ver { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .fw-placeholder { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); color: hsl(220, 8%, 50%); }
     html[data-theme="dark"] .update-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
     html[data-theme="dark"] .update-divider { background: hsl(220, 8%, 34%); }
     html[data-theme="dark"] .update-date-small { color: hsl(220, 8%, 50%); }
     html[data-theme="dark"] .update-title { color: hsl(220, 10%, 88%); }
     html[data-theme="dark"] .update-body { color: hsl(220, 8%, 56%); }
-    html[data-theme="dark"] .action-result.success { background: hsl(145, 25%, 24%); color: hsl(145, 55%, 68%); }
-    html[data-theme="dark"] .action-result.error   { background: hsl(0, 20%, 28%);   color: hsl(0, 60%, 70%); }
-    html[data-theme="dark"] .pkg-list { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .update-result.success { background: hsl(145, 25%, 24%); color: hsl(145, 55%, 68%); }
+    html[data-theme="dark"] .update-result.error   { background: hsl(0, 20%, 28%);   color: hsl(0, 60%, 70%); }
+    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
   </style>
 </head>
 <body>
@@ -347,606 +211,149 @@
 
     <div class="header">
       <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Updates</p>
+      <p>Versiegeschiedenis</p>
     </div>
 
     <a class="back-btn" href="/settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
     </a>
-
-    <!-- Tab bar -->
-    <div class="tab-bar">
-      <button class="tab-btn active" id="tabFirmware" onclick="switchTab('firmware')">
-        <span class="tab-dot" id="dotFirmware"></span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/></svg>
-        Firmware
-      </button>
-      <button class="tab-btn" id="tabSoftware" onclick="switchTab('software')">
-        <span class="tab-dot" id="dotSoftware"></span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4M11,17H13V11H11V17M11,9H13V7H11V9Z"/></svg>
-        Software
-      </button>
-      <button class="tab-btn" id="tabHardware" onclick="switchTab('hardware')">
-        <span class="tab-dot" id="dotHardware"></span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17,17H7V7H17M21,11V9H19V7C19,5.89 18.1,5 17,5H15V3H13V5H11V3H9V5H7C5.89,5 5,5.89 5,7V9H3V11H5V13H3V15H5V17A2,2 0 0,0 7,19H9V21H11V19H13V21H15V19H17A2,2 0 0,0 19,17V15H21V13H19V11H21Z"/></svg>
-        Hardware
-      </button>
+    <div class="check-card" id="checkCard">
+      <div class="check-card-text">
+        <div class="check-card-title" id="checkTitle">Software update</div>
+        <div class="check-card-sub" id="checkSub">Controleer of er een nieuwe versie beschikbaar is</div>
+        <div class="update-result" id="updateResult"></div>
+      </div>
+      <button class="btn-update" id="updateBtn" onclick="runUpdateCheck()">Update</button>
     </div>
 
-    <!-- ===== TAB: FIRMWARE ===== -->
-    <div class="tab-panel active" id="panelFirmware">
-      <div class="check-card" id="fwCheckCard">
-        <div class="check-card-text">
-          <div class="check-card-title" id="fwCheckTitle">Apparaatfirmware</div>
-          <div class="check-card-sub" id="fwCheckSub">Controleer de firmware van je SolarBuffer apparaten</div>
-          <div class="action-result" id="fwResult"></div>
-        </div>
-        <button class="btn-action" id="fwCheckBtn" onclick="checkFirmware()">Controleer</button>
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge new">v0.3.1</span>
+        <span class="update-date-small">3 mei</span>
       </div>
-      <div class="fw-list" id="fwList"></div>
-    </div>
-
-    <!-- ===== TAB: SOFTWARE ===== -->
-    <div class="tab-panel" id="panelSoftware">
-      <div class="check-card" id="swCheckCard">
-        <div class="check-card-text">
-          <div class="check-card-title" id="swCheckTitle">SolarBuffer update</div>
-          <div class="check-card-sub" id="swCheckSub">Controleer of er een nieuwe versie beschikbaar is</div>
-          <div class="action-result" id="swResult"></div>
-        </div>
-        <button class="btn-action" id="swUpdateBtn" onclick="runSoftwareUpdate()">Update</button>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge new">v0.5.3</span>
-          <span class="update-date-small">19 jun</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">SolarBuffer factory reset vanuit de app</div>
-          <div class="update-body">SolarBuffer dimmers kunnen nu volledig worden gereset via de app, zonder de Shelly-app te openen. Ga naar Instellingen → Systeem → Factory reset SolarBuffers om een apparaat te selecteren en te resetten. De hub factory reset is hernoemd naar "Factory reset Hub" voor meer duidelijkheid.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.3" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.5.2</span>
-          <span class="update-date-small">1 jun</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Marstek batterijintegratie &amp; bugfixes watchdog</div>
-          <div class="update-body">Marstek Venus-accu's zijn nu te koppelen via de lokale UDP Open API. SolarBuffer berekent het laad- of ontlaadsetpoint zelf op basis van de P1-meting, zonder aparte CT-configuratie. Prioriteitslogica (batterij of boiler eerst) werkt identiek aan de HomeWizard-integratie. Het batterijtype is instelbaar via een merkkaart met logo, ook zichtbaar in de dashboard-widget. Daarnaast zijn twee watchdog-bugs opgelost waarbij handmatig gestartte apparaten direct werden uitgeschakeld.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.2" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.5.1</span>
-          <span class="update-date-small">25 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">HomeWizard batterijintegratie (HWE-BAT)</div>
-          <div class="update-body">Koppel een HomeWizard HWE-BAT via de lokale REST API v2. Stel in of de batterij of de boiler voorrang heeft op het zonnestroom. Bij <em>Batterij eerst</em> laadt de accu tot een instelbare SoC-drempel voordat de boiler start. Laad- en ontlaadrechten worden automatisch bijgestuurd op basis van legionellarun, tijdschema's en dynamische tarieven. Het dashboard toont een live batterijwidget met SoC en vermogen.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.1" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.5.0</span>
-          <span class="update-date-small">25 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Broadlink IR-besturing &amp; instellingen heringedeeld</div>
-          <div class="update-body">Broadlink RM4 en RM Pro apparaten zijn nu te koppelen en aan te sturen vanuit de app. IR-commando's inleren, opslaan en versturen via het dashboard. IR-apparaten tonen een aan/uit-indicator via een gekoppelde vermogensmeter. De instellingenpagina is heringedeeld in zes sectietegels voor een overzichtelijker navigatie.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.0" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.4.2</span>
-          <span class="update-date-small">18 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Zonnepanelen &amp; zelfverbruik</div>
-          <div class="update-body">
-            Verbruikers kunnen nu worden aangemerkt als zonnepanelenmeter. De vermogenstegel toont dan live opwekking (W), dagelijkse opbrengst (kWh) naast import en export, en berekent automatisch Zelfverbruik en Zelfvoorziening (%). De zonnepanelen-meter verdwijnt uit de verbruikerslijst en wordt alleen in de vermogenstegel getoond.
-          </div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.4.2" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.4.1</span>
-          <span class="update-date-small">9 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Vakantiestand</div>
-          <div class="update-body">Vakantiestand toegevoegd onder Instellingen → Besturing. Stel een terugkeerdatum in en kies of anti-legionella actief blijft.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.4.1" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.4.0</span>
-          <span class="update-date-small">8 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Grafieken &amp; energiehistoriek</div>
-          <div class="update-body">Nieuwe grafieken­pagina met historiek van netvermogen en verbruikers. Per verbruiker instelbaar of vermogen of temperatuur wordt opgeslagen. Het dashboard toont nu ook de dagelijkse import en teruglevering (kWh) direct in de netvermogens­tegel.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.4.0" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.3.4</span>
-          <span class="update-date-small">7 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Firmware- &amp; systeemupdates</div>
-          <div class="update-body">Nieuwe updatepagina met drie tabbladen: Firmware (per apparaat de huidige versie controleren en direct bijwerken via Shelly OTA), Software (SolarBuffer zelf) en Hardware (hub-pakketupdates via apt). Beschikbare updates worden gemarkeerd met een rode stip op het tabblad.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.4" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.3.3</span>
-          <span class="update-date-small">6 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-ui">UI</span>
-          <div class="update-title">Instellingen herontworpen</div>
-          <div class="update-body">De instellingenpagina is opgesplitst in vier overzichtelijke sub-pagina's: P1 meter, SolarBuffers, Expert instellingen en MQTT / Home Assistant. Apparaatkaarten hebben een nieuw design met secties en twee-koloms layout, ook toegepast in de wizard. Donkere modus toggle verplaatst naar de instellingen onder Account.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.3" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.3.2</span>
-          <span class="update-date-small">4 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-fix">Verbetering</span>
-          <div class="update-title">PID-stabiliteit &amp; systeeminfo</div>
-          <div class="update-body">PID-integrator wordt nu altijd correct gereset bij het opstarten van een nieuwe prioriteit, waardoor directe uitschieters naar 100% worden voorkomen. Nieuwe systeeminfo-pagina in de instellingen met live schijfruimte, geheugengebruik, CPU-temperatuur en uptime.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.2" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.3.1</span>
-          <span class="update-date-small">3 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-fix">Verbetering</span>
-          <div class="update-title">Betrouwbaardere regeling &amp; slimme overdracht</div>
-          <div class="update-body">Zachte uitschakel, toestandherstel na tijdschema en legionellarun, naadloze hervatting van de regeling, offline-watchdog en automatische fallback bij een onbereikbare schakelstekker.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.1" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.3.0</span>
-          <span class="update-date-small">2 mei</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Verbruikers dashboard</div>
-          <div class="update-body">Voeg apparaten toe die alleen een vermogensmeter hebben, zoals een wasmachine, droger of vaatwasser. Live verbruik per apparaat zichtbaar op het dashboard. Kies een eigen icoon uit een catalogus van veelgebruikte apparaten. Meerdere meters per verbruiker combineren voor apparaten met meerdere groepen. Automatisch scannen op Shelly PM en HomeWizard meters in het netwerk.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.0" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge mid">v0.2.3</span>
-          <span class="update-date-small">30 apr</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Zonne-verwachting, PWA &amp; Installatie</div>
-          <div class="update-body">Zonne-verwachting via Open-Meteo op het dashboard met balkgrafiek per uur voor vandaag en morgen. Locatie automatisch invullen via plaatsnaam of automatisch. Volledige PWA-ondersteuning met service worker. Keuze tussen schone installatie of back-up importeren bij eerste opstart.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.3" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge old">v0.2.2</span>
-          <span class="update-date-small">29 apr</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Boost, Config back-up &amp; Instellingen</div>
-          <div class="update-body">Boost-knop per apparaat voor tijdelijk 100% vermogen (instelbaar via expert-instellingen). Config exporteren en importeren via een aparte back-uppagina. Nieuw instellingenmenu met navigatie naar wizard, account en back-up.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.2" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
-      </div>
-
-      <div class="update-card">
-        <div class="update-left">
-          <span class="version-badge old">v0.2.1</span>
-          <span class="update-date-small">27 apr</span>
-        </div>
-        <div class="update-divider"></div>
-        <div class="update-right">
-          <span class="update-tag tag-feature">Nieuw</span>
-          <div class="update-title">Tailscale</div>
-          <div class="update-body">Op het dashboard staat een nieuwe tegel voor Remote Acces. Door verbinding te maken met Tailscale kan je op afstand inloggen in SolarBuffer.</div>
-          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.1" target="_blank" rel="noopener">→ Release notes</a>
-        </div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-fix">Verbetering</span>
+        <div class="update-title">Betrouwbaardere regeling &amp; slimme overdracht</div>
+        <div class="update-body">Zachte uitschakel, toestandherstel na tijdschema en legionellarun, naadloze hervatting van de regeling, offline-watchdog en automatische fallback bij een onbereikbare schakelstekker.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.1" target="_blank" rel="noopener">→ Release notes</a>
       </div>
     </div>
 
-    <!-- ===== TAB: HARDWARE ===== -->
-    <div class="tab-panel" id="panelHardware">
-      <div class="check-card" id="hwCheckCard">
-        <div class="check-card-text">
-          <div class="check-card-title" id="hwCheckTitle">Hub updates</div>
-          <div class="check-card-sub" id="hwCheckSub">Controleer beschikbare systeem- en beveiligingsupdates</div>
-          <div class="action-result" id="hwResult"></div>
-        </div>
-        <button class="btn-action" id="hwCheckBtn" onclick="checkHardwareUpdates()">Controleer</button>
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge mid">v0.3.0</span>
+        <span class="update-date-small">2 mei</span>
       </div>
-
-      <div class="update-log-wrap" id="hwLogWrap">
-        <div class="update-log-bar">
-          <div class="log-dot red"></div>
-          <div class="log-dot yellow"></div>
-          <div class="log-dot green"></div>
-          <span id="hwLogStatus">Bezig…</span>
-        </div>
-        <div class="update-log" id="hwLog"></div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-feature">Nieuw</span>
+        <div class="update-title">Verbruikers dashboard</div>
+        <div class="update-body">Voeg apparaten toe die alleen een vermogensmeter hebben, zoals een wasmachine, droger of vaatwasser. Live verbruik per apparaat zichtbaar op het dashboard. Kies een eigen icoon uit een catalogus van veelgebruikte apparaten. Meerdere meters per verbruiker combineren voor apparaten met meerdere groepen (bijv. twee strings zonnepanelen). Automatisch scannen op Shelly PM en HomeWizard meters in het netwerk.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.0" target="_blank" rel="noopener">→ Release notes</a>
       </div>
     </div>
+
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge mid">v0.2.3</span>
+        <span class="update-date-small">30 apr</span>
+      </div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-feature">Nieuw</span>
+        <div class="update-title">Zonne-verwachting, PWA &amp; Installatie</div>
+        <div class="update-body">Zonne-verwachting via Open-Meteo op het dashboard met balkgrafiek per uur voor vandaag en morgen. Locatie automatisch invullen via plaatsnaam of automatisch. Volledige PWA-ondersteuning met service worker. Keuze tussen schone installatie of back-up importeren bij eerste opstart.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.3" target="_blank" rel="noopener">→ Release notes</a>
+      </div>
+    </div>
+
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge old">v0.2.2</span>
+        <span class="update-date-small">29 apr</span>
+      </div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-feature">Nieuw</span>
+        <div class="update-title">Boost, Config back-up &amp; Instellingen</div>
+        <div class="update-body">Boost-knop per apparaat voor tijdelijk 100% vermogen (instelbaar via expert-instellingen). Config exporteren en importeren via een aparte back-uppagina. Nieuw instellingenmenu met navigatie naar wizard, account en back-up.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.2" target="_blank" rel="noopener">→ Release notes</a>
+      </div>
+    </div>
+
+    <div class="update-card">
+      <div class="update-left">
+        <span class="version-badge old">v0.2.1</span>
+        <span class="update-date-small">27 apr</span>
+      </div>
+      <div class="update-divider"></div>
+      <div class="update-right">
+        <span class="update-tag tag-feature">Nieuw</span>
+        <div class="update-title">Tailscale</div>
+        <div class="update-body">Op het dashboard staat een nieuwe tegel voor Remote Acces. Door verbinding te maken met Tailscale kan je op afstand inloggen in SolarBuffer.</div>
+        <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.1" target="_blank" rel="noopener">→ Release notes</a>
+      </div>
+    </div>
+
 
   </div>
 
   <script>
-    /* ---- Tab switching ---- */
-    function switchTab(name) {
-      ['firmware','software','hardware'].forEach(function(t) {
-        document.getElementById('tab' + cap(t)).classList.toggle('active', t === name);
-        document.getElementById('panel' + cap(t)).classList.toggle('active', t === name);
-      });
-      if (name === 'hardware') checkHardwareAutoResume();
-    }
-    function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-
-    /* Check on page load if hardware tab is active or an update is in progress */
-    (function() {
-      fetch("/system_update_status")
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.running || (d.done && d.log_count > 0)) {
-            document.getElementById("dotHardware").style.display = "block";
-            if (document.getElementById("panelHardware").classList.contains("active")) {
-              resumeHardwareLog(d);
-            }
-          }
-        })
-        .catch(function() {});
-    })();
-
-    function checkHardwareAutoResume() {
-      fetch("/system_update_status")
-        .then(function(r) { return r.json(); })
-        .then(function(d) { if (d.running || (d.done && d.log_count > 0)) resumeHardwareLog(d); })
-        .catch(function() {});
-    }
-
-    function resumeHardwareLog(status) {
-      var logWrap = document.getElementById("hwLogWrap");
-      var log     = document.getElementById("hwLog");
-      var btn     = document.getElementById("hwCheckBtn");
-      logWrap.classList.add("visible");
-      log.innerHTML = "";
-      if (status.running) {
-        document.getElementById("hwLogStatus").textContent = "Bezig…";
-        btn.disabled = true;
-        btn.textContent = "Bezig…";
-      }
-      connectHardwareSSE();
-    }
-
-    /* ---- Firmware ---- */
-    function checkFirmware() {
-      var btn  = document.getElementById("fwCheckBtn");
-      var res  = document.getElementById("fwResult");
-      var list = document.getElementById("fwList");
-      var sub  = document.getElementById("fwCheckSub");
-      btn.disabled = true;
-      btn.textContent = "Bezig…";
-      res.className = "action-result";
-      list.innerHTML = "";
-
-      fetch("/firmware_check")
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          btn.disabled = false;
-          btn.textContent = "Controleer";
-
-          if (!data.devices || data.devices.length === 0) {
-            list.innerHTML = '<div class="fw-placeholder">Geen SolarBuffer apparaten geconfigureerd.</div>';
-            sub.textContent = "Geen apparaten gevonden";
-            return;
-          }
-
-          var needsUpdate = data.devices.filter(function(d) { return d.has_update; }).length;
-          if (needsUpdate > 0) {
-            document.getElementById("fwCheckCard").classList.add("update-available");
-            document.getElementById("fwCheckTitle").textContent = "Firmware-updates beschikbaar!";
-            sub.textContent = needsUpdate + " apparaat" + (needsUpdate > 1 ? "en hebben" : " heeft") + " een update beschikbaar";
-            document.getElementById("dotFirmware").style.display = "block";
-          } else {
-            sub.textContent = "Alle apparaten draaien de nieuwste firmware";
-          }
-
-          data.devices.forEach(function(dev) {
-            var card = document.createElement("div");
-            card.className = "fw-card" + (dev.has_update ? " has-update" : "") + (!dev.online ? " offline" : "");
-
-            var iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/></svg>';
-            var badgeHtml, rightHtml;
-
-            if (!dev.online) {
-              badgeHtml = '<span class="fw-badge offline">Offline</span>';
-              rightHtml = "";
-            } else if (dev.has_update) {
-              badgeHtml = '<span class="fw-badge update">Update</span>';
-              rightHtml = '<button class="btn-fw-update" onclick="updateFirmware(\'' + escHtml(dev.ip) + '\', this)">Installeer</button>';
-            } else {
-              badgeHtml = '<span class="fw-badge ok">Up-to-date</span>';
-              rightHtml = "";
-            }
-
-            var verText = dev.has_update
-              ? escHtml(dev.current_ver) + '<span class="arrow"> → </span>' + escHtml(dev.latest_ver)
-              : escHtml(dev.current_ver);
-
-            card.innerHTML =
-              '<div class="fw-icon">' + iconSvg + '</div>' +
-              '<div class="fw-info">' +
-                '<div class="fw-name">' + escHtml(dev.name) + '</div>' +
-                '<div class="fw-ver">' + verText + '</div>' +
-              '</div>' +
-              badgeHtml + rightHtml;
-
-            list.appendChild(card);
-          });
-        })
-        .catch(function() {
-          btn.disabled = false;
-          btn.textContent = "Controleer";
-          res.className = "action-result error";
-          res.textContent = "Verbindingsfout — probeer opnieuw";
-        });
-    }
-
-    function updateFirmware(ip, btn) {
-      btn.disabled = true;
-      btn.textContent = "Bezig…";
-      fetch("/firmware_update/" + ip, { method: "POST" })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          btn.textContent = data.success ? "Gestart ✓" : "Fout – probeer opnieuw";
-          if (!data.success) btn.disabled = false;
-        })
-        .catch(function() { btn.disabled = false; btn.textContent = "Fout – probeer opnieuw"; });
-    }
-
-    /* ---- Software ---- */
-    (function checkSoftwareAvailable() {
+    function checkAvailable() {
       fetch("/check_updates_available")
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
+        .then(r => r.json())
+        .then(data => {
           if (data.available) {
-            document.getElementById("swCheckCard").classList.add("update-available");
-            document.getElementById("swCheckTitle").textContent = "Nieuwe update beschikbaar!";
-            document.getElementById("swCheckSub").textContent = "Druk op Update om de nieuwste versie te installeren.";
-            document.getElementById("dotSoftware").style.display = "block";
+            document.getElementById("checkCard").classList.add("update-available");
+            document.getElementById("checkTitle").textContent = "Nieuwe update beschikbaar!";
+            document.getElementById("checkSub").textContent = "Druk op Update om de nieuwste versie te installeren.";
           }
         })
-        .catch(function() {});
-    })();
+        .catch(() => {});
+    }
+    checkAvailable();
 
-    function runSoftwareUpdate() {
-      var btn = document.getElementById("swUpdateBtn");
-      var res = document.getElementById("swResult");
+    function runUpdateCheck() {
+      const btn = document.getElementById("updateBtn");
+      const result = document.getElementById("updateResult");
+      const sub = document.getElementById("checkSub");
       btn.disabled = true;
       btn.textContent = "Bezig…";
-      res.className = "action-result";
+      result.className = "update-result";
 
       fetch("/run_update_check")
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
+        .then(r => r.json())
+        .then(data => {
           if (data.restarting) {
-            res.className = "action-result success";
-            res.textContent = "Updates worden uitgevoerd, hub zal herstarten…";
-            function poll() {
-              fetch("/status_json").then(function(r) {
-                if (r.ok) location.reload(true); else setTimeout(poll, 1500);
-              }).catch(function() { setTimeout(poll, 1500); });
+            result.className = "update-result success";
+            result.textContent = "Updates worden uitgevoerd, hub zal herstarten…";
+            function pollUntilBack() {
+              fetch("/status_json").then(r => {
+                if (r.ok) location.reload(true);
+                else setTimeout(pollUntilBack, 1500);
+              }).catch(() => setTimeout(pollUntilBack, 1500));
             }
-            setTimeout(poll, 3000);
+            setTimeout(pollUntilBack, 3000);
           } else if (data.success) {
-            res.className = "action-result success";
-            res.textContent = "Geen updates beschikbaar, alles is up-to-date.";
-            btn.disabled = false; btn.textContent = "Update";
-          } else {
-            res.className = "action-result error";
-            res.textContent = data.error || "Onbekende fout";
-            btn.disabled = false; btn.textContent = "Update";
-          }
-        })
-        .catch(function() {
-          res.className = "action-result error";
-          res.textContent = "Verbindingsfout";
-          btn.disabled = false; btn.textContent = "Update";
-        });
-    }
-
-    /* ---- Hardware ---- */
-    function checkHardwareUpdates() {
-      var btn  = document.getElementById("hwCheckBtn");
-      var res  = document.getElementById("hwResult");
-      var sub  = document.getElementById("hwCheckSub");
-      var card = document.getElementById("hwCheckCard");
-      btn.disabled = true;
-      btn.textContent = "Bezig…";
-      res.className = "action-result";
-
-      fetch("/system_updates_check")
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!data.success) {
-            res.className = "action-result error";
-            res.textContent = data.error || "Controleren mislukt";
-            btn.disabled = false; btn.textContent = "Controleer";
-            return;
-          }
-          var count = data.count || 0;
-          if (count > 0) {
-            card.classList.add("update-available");
-            document.getElementById("hwCheckTitle").textContent =
-              count + " hub " + (count > 1 ? "updates" : "update") + " beschikbaar";
-            sub.textContent = "Druk op Update om alle pakketjes bij te werken";
-            document.getElementById("dotHardware").style.display = "block";
+            result.className = "update-result success";
+            result.textContent = "Geen updates beschikbaar, alles is up-to-date.";
+            btn.disabled = false;
             btn.textContent = "Update";
-            btn.disabled = false;
-            btn.onclick = runHardwareUpdate;
-
-            if (data.packages && data.packages.length > 0) {
-              var pkgDiv = document.createElement("div");
-              pkgDiv.className = "pkg-list";
-              pkgDiv.textContent = data.packages.join("\n");
-              document.querySelector("#hwCheckCard .check-card-text").appendChild(pkgDiv);
-            }
           } else {
-            sub.textContent = "Alles is up-to-date — geen updates beschikbaar";
-            btn.disabled = false; btn.textContent = "Controleer";
+            result.className = "update-result error";
+            result.textContent = data.error || "Onbekende fout";
+            btn.disabled = false;
+            btn.textContent = "Update";
           }
         })
-        .catch(function() {
-          res.className = "action-result error";
-          res.textContent = "Verbindingsfout — probeer opnieuw";
-          btn.disabled = false; btn.textContent = "Controleer";
+        .catch(() => {
+          result.className = "update-result error";
+          result.textContent = "Verbindingsfout";
+          btn.disabled = false;
+          btn.textContent = "Update";
         });
-    }
-
-    var _hwEs = null;
-
-    function runHardwareUpdate() {
-      var btn     = document.getElementById("hwCheckBtn");
-      var res     = document.getElementById("hwResult");
-      var logWrap = document.getElementById("hwLogWrap");
-      var log     = document.getElementById("hwLog");
-
-      btn.disabled = true;
-      btn.textContent = "Bezig…";
-      res.className = "action-result";
-      log.innerHTML = "";
-      logWrap.classList.add("visible");
-      document.getElementById("hwLogStatus").textContent = "Bezig…";
-
-      connectHardwareSSE(true);
-    }
-
-    function connectHardwareSSE(isNew) {
-      if (_hwEs) { _hwEs.close(); _hwEs = null; }
-      var url = "/run_system_update" + (isNew ? "?reset=1" : "");
-      _hwEs = new EventSource(url);
-
-      _hwEs.onmessage = function(e) {
-        var data = JSON.parse(e.data);
-        var log = document.getElementById("hwLog");
-
-        if (data.line) {
-          var span = document.createElement("span");
-          if (/^(Get:|Hit:|Ign:)/.test(data.line)) span.className = "log-dim";
-          else if (/^>>>/.test(data.line)) span.className = "log-done";
-          span.textContent = data.line + "\n";
-          log.appendChild(span);
-          log.scrollTop = log.scrollHeight;
-        }
-
-        if (data.done) {
-          _hwEs.close(); _hwEs = null;
-          var btn = document.getElementById("hwCheckBtn");
-          var res = document.getElementById("hwResult");
-          if (data.success) {
-            document.getElementById("hwLogStatus").textContent = "Voltooid";
-            var ok = document.createElement("span");
-            ok.className = "log-done";
-            ok.textContent = "\nKlaar — alle updates geïnstalleerd.\n";
-            log.appendChild(ok);
-            btn.textContent = "Klaar ✓";
-            document.getElementById("dotHardware").style.display = "none";
-          } else {
-            document.getElementById("hwLogStatus").textContent = "Mislukt";
-            var err = document.createElement("span");
-            err.className = "log-err";
-            err.textContent = "\nFout: " + (data.error || "onbekend") + "\n";
-            log.appendChild(err);
-            res.className = "action-result error";
-            res.textContent = "Update mislukt — zie log hierboven";
-            btn.disabled = false;
-            btn.textContent = "Opnieuw";
-            btn.onclick = function() { runHardwareUpdate(); };
-          }
-          log.scrollTop = log.scrollHeight;
-        }
-      };
-
-      _hwEs.onerror = function() {
-        /* SSE auto-reconnects; only show error if update is marked done */
-        fetch("/system_update_status")
-          .then(function(r) { return r.json(); })
-          .then(function(d) {
-            if (!d.running) {
-              if (_hwEs) { _hwEs.close(); _hwEs = null; }
-              document.getElementById("hwLogStatus").textContent = "Verbinding verbroken";
-            }
-          })
-          .catch(function() {});
-      };
-    }
-
-    function escHtml(s) {
-      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
   </script>
 </body>

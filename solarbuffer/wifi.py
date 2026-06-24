@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, jsonify, redirect
+from flask import Flask, request, render_template_string, jsonify
 import subprocess
 import threading
 import time
@@ -13,8 +13,7 @@ HTML = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WiFi Setup - SolarBuffer</title>
-
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -33,349 +32,420 @@ body {
 
 .container {
     width: 100%;
-    max-width: 420px;
-    background: white;
-    border: 1px solid hsl(30, 15%, 88%);
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
-    padding: 2rem;
+    max-width: 400px;
 }
 
+/* Header */
 .header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.75rem;
 }
-
-.header .icon {
-    font-size: 2rem;
-    color: hsl(32, 95%, 52%);
+.header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 0.75rem;
+    box-shadow: 0 6px 20px -4px hsla(32, 95%, 52%, 0.4);
 }
-
+.header-icon i { font-size: 1.6rem; color: white; }
 .header h1 {
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
-    font-size: 1.6rem;
-    margin-top: 0.25rem;
+    font-size: 1.55rem;
 }
-
 .header h1 .solar {
     background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+.header p { color: hsl(220, 10%, 50%); font-size: 0.83rem; margin-top: 0.2rem; }
 
-.header p {
-    color: hsl(220, 10%, 46%);
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-}
-
-form > div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-label {
-    font-weight: 600;
-    font-size: 0.95rem;
-}
-
-input {
-    width: 100%;
-    padding: 0.65rem 0.75rem;
+/* Card */
+.card {
+    background: white;
     border: 1px solid hsl(30, 15%, 88%);
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.2s ease;
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px -8px hsla(32, 95%, 52%, 0.12);
+    overflow: hidden;
+    margin-bottom: 0.75rem;
 }
 
-input:focus {
-    border-color: hsl(32, 95%, 52%);
-    box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.15);
-    outline: none;
-}
-
-button[type="submit"] {
-    width: 100%;
-    background: hsl(32, 95%, 52%);
-    color: white;
-    font-weight: 600;
-    font-size: 1rem;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-button[type="submit"]:hover {
-    background: hsl(32, 85%, 45%);
-    transform: translateY(-1px);
-}
-
-button[type="submit"]:active {
-    transform: translateY(0);
-}
-
-.message {
-    text-align: center;
-    font-size: 0.9rem;
-    min-height: 1.2rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-    margin-bottom: 1rem;
-}
-
-.password-wrapper {
-    position: relative;
-}
-
-.password-wrapper input {
-    padding-right: 3rem;
-}
-
-.toggle-password {
-    position: absolute;
-    top: 50%;
-    right: 0.9rem;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: #777;
-    font-size: 1.2rem;
-    line-height: 1;
-    z-index: 2;
-}
-
-.toggle-password:hover {
-    color: #333;
-}
-
-.scan-header {
+/* Scan header */
+.scan-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.4rem;
+    padding: 0.9rem 1rem 0.6rem;
 }
-
-.refresh-btn {
-    background: none;
-    border: none;
-    color: hsl(32, 95%, 52%);
+.scan-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: hsl(220, 15%, 35%);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.btn-refresh {
+    display: flex; align-items: center; gap: 0.3rem;
+    background: hsl(30, 20%, 96%);
+    color: hsl(220, 15%, 40%);
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.28rem 0.65rem;
+    border: 1px solid hsl(30, 15%, 86%);
+    border-radius: 999px;
     cursor: pointer;
-    padding: 0;
-    font-size: 0.82rem;
-    font-weight: 500;
+    transition: all 0.15s;
     font-family: 'Inter', sans-serif;
+}
+.btn-refresh:hover { background: hsl(32, 100%, 95%); border-color: hsl(32, 80%, 70%); color: hsl(32, 90%, 40%); }
+.btn-refresh:disabled { opacity: 0.5; cursor: default; }
+
+/* Network list */
+.network-list { display: flex; flex-direction: column; }
+
+.network-entry { border-top: 1px solid hsl(30, 15%, 92%); overflow: hidden; }
+
+.network-header {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-}
-
-.refresh-btn:hover {
-    text-decoration: underline;
-}
-
-.network-list {
-    border: 1px solid hsl(30, 15%, 88%);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    max-height: 190px;
-    overflow-y: auto;
-}
-
-.network-item {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.55rem 0.75rem;
+    gap: 0.7rem;
+    padding: 0.7rem 1rem;
     cursor: pointer;
     transition: background 0.15s;
-    border-bottom: 1px solid hsl(30, 15%, 93%);
     user-select: none;
 }
+.network-header:hover { background: hsl(30, 30%, 98%); }
+.network-entry.open .network-header { background: hsl(32, 100%, 97%); }
 
-.network-item:last-child {
-    border-bottom: none;
-}
+.net-signal { font-size: 1.1rem; color: hsl(220, 10%, 58%); flex-shrink: 0; }
+.network-entry.open .net-signal { color: hsl(32, 90%, 50%); }
 
-.network-item:hover {
-    background: hsla(32, 95%, 52%, 0.07);
-}
-
-.network-item.selected {
-    background: hsla(32, 95%, 52%, 0.13);
-}
-
-.network-signal {
-    color: hsl(32, 95%, 52%);
-    font-size: 1.05rem;
-    flex-shrink: 0;
-}
-
-.network-name {
+.net-name {
     flex: 1;
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.network-entry.open .net-name { font-weight: 600; color: hsl(32, 80%, 35%); }
 
-.network-lock {
-    color: hsl(220, 10%, 62%);
-    font-size: 0.95rem;
-    flex-shrink: 0;
+.net-icons { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; color: hsl(220, 10%, 62%); font-size: 0.95rem; }
+.network-entry.open .net-icons { color: hsl(32, 80%, 55%); }
+
+.net-chevron { font-size: 1rem; color: hsl(220, 10%, 68%); transition: transform 0.2s; }
+.network-entry.open .net-chevron { transform: rotate(180deg); color: hsl(32, 80%, 55%); }
+
+/* Expand area */
+.network-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.28s ease;
+}
+.network-entry.open .network-body { max-height: 160px; }
+
+.network-body-inner {
+    padding: 0 1rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
-.scan-status {
+.pw-row { position: relative; }
+.pw-row input {
+    width: 100%;
+    padding: 0.6rem 2.6rem 0.6rem 0.75rem;
+    border: 1.5px solid hsl(30, 15%, 86%);
+    border-radius: 0.55rem;
+    font-size: 0.92rem;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: hsl(30, 20%, 98%);
+}
+.pw-row input:focus {
+    outline: none;
+    border-color: hsl(32, 90%, 55%);
+    box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.13);
+    background: white;
+}
+.pw-eye {
+    position: absolute;
+    top: 50%; right: 0.75rem;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: hsl(220, 10%, 60%);
+    font-size: 1.1rem;
+}
+.pw-eye:hover { color: hsl(220, 15%, 35%); }
+
+.btn-connect {
+    width: 100%;
+    background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(38, 98%, 56%));
+    color: white;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 0.6rem;
+    border: none;
+    border-radius: 0.55rem;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    box-shadow: 0 3px 12px -3px hsla(32, 95%, 52%, 0.45);
+    transition: all 0.15s;
+}
+.btn-connect:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn-connect:active { transform: translateY(0); filter: brightness(0.97); }
+
+/* Placeholders */
+.list-placeholder {
+    padding: 1.1rem 1rem;
     text-align: center;
-    padding: 0.8rem;
-    color: hsl(220, 10%, 55%);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+    color: hsl(220, 10%, 58%);
+    border-top: 1px solid hsl(30, 15%, 92%);
+}
+.list-error {
+    padding: 0.9rem 1rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: hsl(0, 60%, 50%);
+    border-top: 1px solid hsl(30, 15%, 92%);
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+/* Manual button */
+.btn-manual {
+    width: 100%;
+    background: white;
+    color: hsl(220, 15%, 38%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.75rem;
+    border: 1.5px dashed hsl(30, 15%, 82%);
+    border-radius: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.15s;
+}
+.btn-manual:hover { border-color: hsl(32, 80%, 65%); color: hsl(32, 85%, 40%); background: hsl(32, 100%, 98%); }
+.btn-manual.active { border-style: solid; border-color: hsl(32, 90%, 55%); color: hsl(32, 85%, 40%); background: hsl(32, 100%, 97%); }
+
+/* Manual form card */
+.manual-card {
+    background: white;
+    border: 1px solid hsl(30, 15%, 88%);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px -8px hsla(32, 95%, 52%, 0.12);
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+    margin-bottom: 0.75rem;
+}
+.manual-card.open { max-height: 260px; }
+
+.manual-inner {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+.manual-inner input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1.5px solid hsl(30, 15%, 86%);
+    border-radius: 0.55rem;
+    font-size: 0.92rem;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: hsl(30, 20%, 98%);
+}
+.manual-inner input:focus {
+    outline: none;
+    border-color: hsl(32, 90%, 55%);
+    box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.13);
+    background: white;
 }
 
-.spinning {
-    display: inline-block;
-    animation: spin 0.9s linear infinite;
-}
+/* Spinner */
+.spin { display: inline-block; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
-
 <body>
-
 <div class="container">
+
     <div class="header">
-        <div class="icon">📡</div>
         <h1><span class="solar">Solar</span>Buffer</h1>
-        <p>Configureer uw WiFi netwerk</p>
+        <p>Verbind met uw WiFi netwerk</p>
     </div>
 
-    <div class="message"></div>
-
-    <form method="POST">
-        <div>
-            <div class="scan-header">
-                <label>Beschikbare netwerken</label>
-                <button type="button" class="refresh-btn" id="refreshBtn" onclick="scanNetworks(true)">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg> Vernieuwen
-                </button>
-            </div>
-            <div class="network-list" id="networkList">
-                <div class="scan-status"><svg class="spinning" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Netwerken zoeken...</div>
-            </div>
+    <!-- Netwerken kaart -->
+    <div class="card">
+        <div class="scan-row">
+            <span class="scan-label">Netwerken</span>
+            <button type="button" class="btn-refresh" id="refreshBtn" onclick="startScan()">
+                <i class="mdi mdi-refresh" id="refreshIcon"></i>
+                <span id="refreshText">Ververs</span>
+            </button>
         </div>
-
-        <div>
-            <label>WiFi naam (SSID)</label>
-            <input name="ssid" id="ssidInput" required placeholder="Selecteer hierboven of typ hier">
-        </div>
-
-        <div>
-            <label>WiFi wachtwoord</label>
-            <div class="password-wrapper">
-                <input id="wifi_password" name="password" type="password">
-                <span class="toggle-password" onclick="togglePassword('wifi_password', this)">
-                    <svg id="eye_icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>
-                </span>
+        <div class="network-list" id="networkList">
+            <div class="list-placeholder">
+                <span class="spin"><i class="mdi mdi-loading"></i></span>&nbsp; Netwerken zoeken…
             </div>
         </div>
+    </div>
 
-        <button type="submit">Verbinden met netwerk</button>
+    <!-- Handmatige invoer knop -->
+    <button type="button" class="btn-manual" id="manualBtn" onclick="toggleManual()">
+        <i class="mdi mdi-pencil-outline"></i>
+        <span id="manualBtnText">Netwerk handmatig invoeren</span>
+    </button>
+
+    <!-- Handmatige invoer kaart -->
+    <div class="manual-card" id="manualCard">
+        <div class="manual-inner">
+            <input type="text" id="manualSsid" placeholder="WiFi naam (SSID)" autocomplete="off">
+            <div class="pw-row">
+                <input type="password" id="manualPw" placeholder="Wachtwoord (leeg = open netwerk)">
+                <i class="mdi mdi-eye-off pw-eye" onclick="toggleEye('manualPw', this)"></i>
+            </div>
+            <button type="button" class="btn-connect" onclick="connectManual()">
+                <i class="mdi mdi-wifi-arrow-right"></i>&nbsp; Verbinden
+            </button>
+        </div>
+    </div>
+
+    <!-- Verborgen formulier voor submit -->
+    <form id="wifiForm" method="POST" style="display:none;">
+        <input type="hidden" id="fSsid" name="ssid">
+        <input type="hidden" id="fPassword" name="password">
     </form>
+
 </div>
-
 <script>
-const SVG_EYE     = '<path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>';
-const SVG_EYE_OFF = '<path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/>';
+let openEntry = null;
+let manualOpen = false;
 
-function togglePassword(fieldId, btn) {
-    const field = document.getElementById(fieldId);
-    const svg = btn.querySelector('svg');
-    if (field.type === "password") {
-        field.type = "text";
-        svg.innerHTML = SVG_EYE;
-    } else {
-        field.type = "password";
-        svg.innerHTML = SVG_EYE_OFF;
+function signalIcon(s) {
+    if (s >= 75) return 'mdi-wifi-strength-4';
+    if (s >= 50) return 'mdi-wifi-strength-3';
+    if (s >= 25) return 'mdi-wifi-strength-2';
+    return 'mdi-wifi-strength-1';
+}
+function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleEye(inputId, icon) {
+    const f = document.getElementById(inputId);
+    if (f.type === 'password') { f.type = 'text'; icon.classList.replace('mdi-eye-off','mdi-eye'); }
+    else { f.type = 'password'; icon.classList.replace('mdi-eye','mdi-eye-off'); }
+}
+
+function submit(ssid, password) {
+    document.getElementById('fSsid').value = ssid;
+    document.getElementById('fPassword').value = password;
+    document.getElementById('wifiForm').submit();
+}
+
+function connectManual() {
+    const ssid = document.getElementById('manualSsid').value.trim();
+    if (!ssid) { document.getElementById('manualSsid').focus(); return; }
+    submit(ssid, document.getElementById('manualPw').value);
+}
+
+function toggleManual() {
+    manualOpen = !manualOpen;
+    document.getElementById('manualCard').classList.toggle('open', manualOpen);
+    document.getElementById('manualBtn').classList.toggle('active', manualOpen);
+    document.getElementById('manualBtnText').textContent = manualOpen
+        ? 'Handmatig invoeren verbergen'
+        : 'Netwerk handmatig invoeren';
+    if (manualOpen) {
+        setTimeout(() => document.getElementById('manualSsid').focus(), 300);
     }
 }
 
-function signalIcon(signal) {
-    const bars = signal >= 75 ? 4 : signal >= 50 ? 3 : signal >= 25 ? 2 : 1;
-    const paths = [
-        `<rect x="1"  y="13" width="3" height="5" rx="0.5" fill="${bars>=1?'hsl(32,95%,52%)':'#ccc'}"/>`,
-        `<rect x="6"  y="9"  width="3" height="9" rx="0.5" fill="${bars>=2?'hsl(32,95%,52%)':'#ccc'}"/>`,
-        `<rect x="11" y="5"  width="3" height="13" rx="0.5" fill="${bars>=3?'hsl(32,95%,52%)':'#ccc'}"/>`,
-        `<rect x="16" y="1"  width="3" height="17" rx="0.5" fill="${bars>=4?'hsl(32,95%,52%)':'#ccc'}"/>`,
-    ];
-    return `<svg width="20" height="18" viewBox="0 0 20 18">${paths.join('')}</svg>`;
-}
-
-function escapeHtml(str) {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-function selectNetwork(el) {
-    document.querySelectorAll('.network-item').forEach(i => i.classList.remove('selected'));
-    el.classList.add('selected');
-    document.getElementById('ssidInput').value = el.dataset.ssid;
-}
-
-function renderNetworks(networks) {
-    const list = document.getElementById('networkList');
-    if (networks.length === 0) {
-        list.innerHTML = '<div class="scan-status">Geen netwerken gevonden. Typ de netwerknaam handmatig.</div>';
-        return;
+function toggleEntry(entry) {
+    if (openEntry && openEntry !== entry) {
+        openEntry.classList.remove('open');
+        openEntry.querySelector('input[type=password]').value = '';
     }
-    const lockSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,17A2,2 0 0,1 10,15A2,2 0 0,1 12,13A2,2 0 0,1 14,15A2,2 0 0,1 12,17M15.1,8H8.9V6A3.1,3.1 0 0,1 12,2.9A3.1,3.1 0 0,1 15.1,6V8Z"/></svg>`;
-    list.innerHTML = networks.map(n => `
-        <div class="network-item" data-ssid="${escapeHtml(n.ssid)}">
-            <span class="network-signal">${signalIcon(n.signal)}</span>
-            <span class="network-name">${escapeHtml(n.ssid)}</span>
-            <span class="network-lock" style="${n.secured ? '' : 'opacity:0.25'}">${n.secured ? lockSvg : lockSvg}</span>
-        </div>
-    `).join('');
-    list.querySelectorAll('.network-item').forEach(el => {
-        el.addEventListener('click', () => selectNetwork(el));
-    });
+    const isOpen = entry.classList.toggle('open');
+    openEntry = isOpen ? entry : null;
+    if (isOpen) {
+        setTimeout(() => entry.querySelector('.pw-input').focus(), 250);
+    }
 }
 
-async function scanNetworks(force = false) {
-    const list = document.getElementById('networkList');
+function startScan() {
     const btn = document.getElementById('refreshBtn');
-    list.innerHTML = '<div class="scan-status"><svg class="spinning" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Netwerken zoeken...</div>';
+    const icon = document.getElementById('refreshIcon');
+    const txt = document.getElementById('refreshText');
+    const list = document.getElementById('networkList');
+
     btn.disabled = true;
-    try {
-        const res = await fetch(force ? '/scan?rescan=1' : '/scan');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const networks = await res.json();
-        renderNetworks(networks);
-    } catch {
-        list.innerHTML = '<div class="scan-status">Scannen mislukt. Typ de netwerknaam handmatig.</div>';
-    } finally {
-        btn.disabled = false;
-    }
+    icon.className = 'mdi mdi-loading spin';
+    txt.textContent = 'Bezig…';
+    list.innerHTML = '<div class="list-placeholder"><span class="spin"><i class="mdi mdi-loading"></i></span>&nbsp; Netwerken zoeken…</div>';
+    openEntry = null;
+
+    fetch('/scan')
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            icon.className = 'mdi mdi-refresh';
+            txt.textContent = 'Ververs';
+
+            if (!data.networks || data.networks.length === 0) {
+                list.innerHTML = '<div class="list-error"><i class="mdi mdi-wifi-off"></i>&nbsp; Geen netwerken gevonden.</div>';
+                return;
+            }
+
+            list.innerHTML = '';
+            data.networks.forEach(n => {
+                const entry = document.createElement('div');
+                entry.className = 'network-entry';
+                const pwId = 'pw_' + Math.random().toString(36).slice(2);
+                const eyeId = 'eye_' + Math.random().toString(36).slice(2);
+                entry.innerHTML =
+                    '<div class="network-header" onclick="toggleEntry(this.parentElement)">' +
+                        '<i class="mdi ' + signalIcon(n.signal) + ' net-signal"></i>' +
+                        '<span class="net-name">' + esc(n.ssid) + '</span>' +
+                        '<span class="net-icons">' +
+                            (n.secured ? '<i class="mdi mdi-lock"></i>' : '<i class="mdi mdi-lock-open-outline"></i>') +
+                        '</span>' +
+                        '<i class="mdi mdi-chevron-down net-chevron"></i>' +
+                    '</div>' +
+                    '<div class="network-body">' +
+                        '<div class="network-body-inner">' +
+                            '<div class="pw-row">' +
+                                '<input class="pw-input" id="' + pwId + '" type="password" placeholder="' + (n.secured ? 'Wachtwoord' : 'Wachtwoord (optioneel)') + '">' +
+                                '<i class="mdi mdi-eye-off pw-eye" id="' + eyeId + '" onclick="toggleEye(\'' + pwId + '\', document.getElementById(\'' + eyeId + '\'))"></i>' +
+                            '</div>' +
+                            '<button type="button" class="btn-connect" onclick="submit(\'' + esc(n.ssid).replace(/'/g,"\\'") + '\', document.getElementById(\'' + pwId + '\').value)">' +
+                                '<i class="mdi mdi-wifi-arrow-right"></i>&nbsp; Verbinden met ' + esc(n.ssid) +
+                            '</button>' +
+                        '</div>' +
+                    '</div>';
+                list.appendChild(entry);
+            });
+        })
+        .catch(() => {
+            btn.disabled = false;
+            icon.className = 'mdi mdi-refresh';
+            txt.textContent = 'Ververs';
+            list.innerHTML = '<div class="list-error"><i class="mdi mdi-alert-circle-outline"></i>&nbsp; Scan mislukt. Probeer opnieuw.</div>';
+        });
 }
 
-window.addEventListener('DOMContentLoaded', () => scanNetworks(false));
+startScan();
 </script>
-
 </body>
 </html>
 """
@@ -457,75 +527,6 @@ p {
 </body>
 </html>
 """
-
-
-OWN_SSIDS = {"PI-SETUP"}
-PORTAL_IP = "10.4.0.1"
-
-
-# iOS detecteert een captive portal als /hotspot-detect.html NIET de exacte
-# "Success"-tekst teruggeeft. We sturen een redirect zodat WebSheet opent.
-APPLE_PROBES = {
-    '/hotspot-detect.html',
-    '/library/test/success.html',
-    '/library/test/success',
-}
-
-_CAPTIVE_REDIRECT = (
-    '<HTML><HEAD>'
-    f'<meta http-equiv="refresh" content="0;url=http://{PORTAL_IP}/">'
-    '</HEAD><BODY></BODY></HTML>'
-)
-
-
-@app.route('/hotspot-detect.html')
-@app.route('/library/test/success.html')
-def apple_captive_probe():
-    # Geeft een non-Success pagina terug → iOS toont "Verbinden met netwerk" popup
-    return _CAPTIVE_REDIRECT, 200, {'Content-Type': 'text/html'}
-
-
-@app.route('/generate_204')
-@app.route('/gen_204')
-def android_captive_probe():
-    return redirect(f'http://{PORTAL_IP}/', 302)
-
-
-@app.before_request
-def captive_portal_redirect():
-    if request.path in ('/', '/scan') or request.method == 'POST':
-        return None
-    # Specifieke Apple/Android routes worden hierboven al afgehandeld
-    if request.path in APPLE_PROBES or request.path in ('/generate_204', '/gen_204'):
-        return None
-    # Alle overige paden (Windows probes, onbekende hosts) → redirect
-    return redirect(f'http://{PORTAL_IP}/', 302)
-
-def scan_networks(rescan=False):
-    try:
-        cmd = [
-            "nmcli", "--terse", "--fields", "SSID,SIGNAL,SECURITY",
-            "dev", "wifi", "list",
-            "--rescan", "yes" if rescan else "no",
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
-        networks = []
-        seen = set()
-        for line in result.stdout.splitlines():
-            parts = re.split(r'(?<!\\):', line)
-            if not parts:
-                continue
-            ssid = parts[0].replace('\\:', ':').strip()
-            if not ssid or ssid in seen or ssid in OWN_SSIDS:
-                continue
-            seen.add(ssid)
-            signal = int(parts[1]) if len(parts) > 1 and parts[1].strip().isdigit() else 0
-            security = parts[2].strip() if len(parts) > 2 else ""
-            networks.append({"ssid": ssid, "signal": signal, "secured": bool(security)})
-        networks.sort(key=lambda x: x["signal"], reverse=True)
-        return networks
-    except Exception:
-        return []
 
 
 def configure_wifi_and_reboot(ssid, password):
@@ -647,16 +648,51 @@ def configure_wifi_and_reboot(ssid, password):
 
 
 @app.route("/scan")
-def scan():
-    rescan = request.args.get("rescan") == "1"
-    return jsonify(scan_networks(rescan=rescan))
+def scan_wifi():
+    try:
+        # Trigger een achtergrond-rescan (werkt ook als de interface al verbonden is)
+        subprocess.run(
+            ["nmcli", "device", "wifi", "rescan"],
+            capture_output=True, timeout=5
+        )
+        time.sleep(2)
+
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"],
+            capture_output=True, text=True, timeout=10
+        )
+        networks = []
+        seen = set()
+        for line in result.stdout.splitlines():
+            # nmcli terse mode escapes ':' in values as '\:' — split on unescaped colons
+            parts = re.split(r'(?<!\\):', line, maxsplit=2)
+            if not parts:
+                continue
+            ssid = parts[0].replace('\\:', ':').strip()
+            signal = int(parts[1].strip()) if len(parts) > 1 and parts[1].strip().isdigit() else 0
+            security = parts[2].strip() if len(parts) > 2 else ""
+            if not ssid or ssid in seen:
+                continue
+            seen.add(ssid)
+            networks.append({
+                "ssid": ssid,
+                "signal": signal,
+                "secured": bool(security and security not in ("--", "")),
+            })
+        networks.sort(key=lambda x: -x["signal"])
+        return jsonify(networks=networks)
+    except Exception:
+        return jsonify(networks=[], error="Scan mislukt")
 
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        ssid = request.form["ssid"].strip()
-        password = request.form["password"]
+        ssid = request.form.get("ssid", "").strip()
+        password = request.form.get("password", "")
+
+        if not ssid:
+            return render_template_string(HTML)
 
         threading.Thread(
             target=configure_wifi_and_reboot,
@@ -668,4 +704,5 @@ def index():
 
     return render_template_string(HTML)
 
-app.run(host="0.0.0.0", port=80, threaded=True)
+
+app.run(host="0.0.0.0", port=8080)

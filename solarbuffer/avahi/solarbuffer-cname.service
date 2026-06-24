@@ -1,0 +1,16 @@
+[Unit]
+Description=SolarBuffer mDNS aliassen (app & wifi subdomains)
+After=avahi-daemon.service network.target
+Requires=avahi-daemon.service
+
+[Service]
+# Publiceert app.solarbuffer.local en wifi.solarbuffer.local als mDNS CNAME
+ExecStart=/bin/sh -c '\
+    avahi-publish --cname app.solarbuffer.local & \
+    avahi-publish --cname wifi.solarbuffer.local & \
+    wait'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

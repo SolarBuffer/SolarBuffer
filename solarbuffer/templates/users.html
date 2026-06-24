@@ -33,11 +33,12 @@
       justify-content: center;
       padding: 1rem;
     }
-    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
     .container { width: 100%; max-width: 480px; }
 
     .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header .icon { font-size: 2rem; color: hsl(32, 95%, 52%); }
+    .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
     .header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
@@ -53,116 +54,51 @@
       padding: 1.25rem;
       margin-bottom: 1rem;
     }
-    .card h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card h2 .ctrl-icon { color: hsl(32, 95%, 52%); }
 
-    /* ===== USER ROW ===== */
     .user-row {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 0.875rem;
-      border-radius: 0.6rem;
-      background: hsl(30, 15%, 96%);
+      justify-content: space-between;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      background: hsl(30, 15%, 95%);
       margin-bottom: 0.5rem;
     }
     .user-row:last-child { margin-bottom: 0; }
+    .user-name { font-weight: 500; font-size: 0.95rem; }
 
-    .user-avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      background: hsl(32, 100%, 93%);
-      color: hsl(32, 90%, 42%);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 0.85rem; font-family: 'Space Grotesk', sans-serif;
-      flex-shrink: 0;
-    }
-
-    .user-info { flex: 1; min-width: 0; }
-    .user-name { font-weight: 600; font-size: 0.9rem; }
-    .user-you  { font-size: 0.7rem; color: hsl(220,10%,58%); font-weight: 400; margin-left: 0.3rem; }
-
-    /* ===== ROLE PILL TOGGLE ===== */
-    .role-toggle {
-      display: flex;
-      border-radius: 999px;
-      background: hsl(220, 10%, 90%);
-      padding: 2px;
-      gap: 0;
-      flex-shrink: 0;
-    }
-    .role-toggle-btn {
-      font-size: 0.72rem;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      padding: 0.22rem 0.65rem;
-      border: none;
-      border-radius: 999px;
-      background: transparent;
-      color: hsl(220, 10%, 50%);
-      cursor: pointer;
-      transition: background 0.18s, color 0.18s;
-      white-space: nowrap;
-      line-height: 1.4;
-    }
-    .role-toggle-btn:hover:not(:disabled):not(.active-admin):not(.active-viewer) {
-      background: hsl(220, 10%, 84%);
-      color: hsl(220, 12%, 30%);
-    }
-    .role-toggle-btn.active-admin {
-      background: hsl(32, 95%, 52%);
-      color: white;
-      cursor: default;
-    }
-    .role-toggle-btn.active-viewer {
-      background: hsl(220, 12%, 48%);
-      color: white;
-      cursor: default;
-    }
-    .role-toggle-btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .role-toggle-btn.active-admin:disabled,
-    .role-toggle-btn.active-viewer:disabled {
-      opacity: 0.7;
-    }
-
-    /* ===== DELETE BUTTON ===== */
     .btn-delete {
-      background: transparent;
-      color: hsl(0, 65%, 55%);
-      border: 1.5px solid hsl(0, 60%, 82%);
+      background: hsl(0, 75%, 60%);
+      color: white;
+      border: none;
       border-radius: 0.4rem;
-      padding: 0.3rem 0.6rem;
-      font-size: 0.78rem;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      font-family: 'Inter', sans-serif;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      flex-shrink: 0;
-      white-space: nowrap;
+      transition: background 0.2s;
     }
-    .btn-delete:hover { background: hsl(0, 70%, 96%); border-color: hsl(0, 65%, 60%); }
-    .btn-delete:disabled {
-      color: hsl(220, 5%, 70%);
-      border-color: hsl(220, 5%, 86%);
-      cursor: default;
-      background: transparent;
-    }
+    .btn-delete:hover { background: hsl(0, 65%, 50%); }
+    .btn-delete:disabled { background: hsl(0, 0%, 75%); cursor: default; }
 
-    /* ===== FORM ===== */
-    .form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.875rem; }
-    label.field-label { font-weight: 600; font-size: 0.88rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
+    label { font-weight: 600; font-size: 0.9rem; }
     input[type="text"], input[type="password"] {
       width: 100%;
       padding: 0.6rem 0.75rem;
-      border: 1.5px solid hsl(30, 15%, 86%);
+      border: 1px solid hsl(30, 15%, 88%);
       border-radius: 0.5rem;
       font-size: 0.95rem;
       font-family: 'Inter', sans-serif;
-      background: white;
-      color: hsl(220, 20%, 14%);
-      transition: border-color 0.2s, box-shadow 0.2s;
+      transition: all 0.2s;
     }
     input:focus {
       border-color: hsl(32, 95%, 52%);
@@ -173,74 +109,16 @@
     .password-wrapper input { padding-right: 2.75rem; }
     .toggle-password {
       position: absolute;
-      top: 50%; right: 0.75rem;
+      top: 50%;
+      right: 0.75rem;
       transform: translateY(-50%);
       cursor: pointer;
       color: hsl(220, 10%, 60%);
-      font-size: 1.15rem; line-height: 1;
+      font-size: 1.15rem;
+      line-height: 1;
     }
     .toggle-password:hover { color: hsl(220, 20%, 30%); }
 
-    /* ===== ROLE RADIO CARDS ===== */
-    .role-cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-    }
-    .role-card {
-      position: relative;
-      cursor: pointer;
-    }
-    .role-card input[type="radio"] {
-      position: absolute;
-      opacity: 0;
-      width: 0; height: 0;
-    }
-    .role-card-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-      padding: 0.7rem 0.85rem;
-      border: 1.5px solid hsl(30, 15%, 86%);
-      border-radius: 0.6rem;
-      background: white;
-      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-      user-select: none;
-    }
-    .role-card:hover .role-card-inner {
-      border-color: hsl(30, 25%, 76%);
-      background: hsl(30, 25%, 98%);
-    }
-    .role-card input:checked + .role-card-inner {
-      border-color: hsl(32, 95%, 52%);
-      background: hsl(32, 100%, 97%);
-      box-shadow: 0 0 0 3px hsla(32, 95%, 52%, 0.12);
-    }
-    .role-card-title {
-      font-weight: 700;
-      font-size: 0.88rem;
-      font-family: 'Space Grotesk', sans-serif;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .role-card-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .role-card-dot.viewer { background: hsl(220, 12%, 55%); }
-    .role-card-dot.admin  { background: hsl(32, 95%, 52%); }
-    .role-card input:checked + .role-card-inner .role-card-dot.admin  { background: hsl(32, 95%, 52%); }
-    .role-card input:checked + .role-card-inner .role-card-dot.viewer { background: hsl(220, 12%, 48%); }
-    .role-card-sub {
-      font-size: 0.72rem;
-      color: hsl(220, 10%, 52%);
-      line-height: 1.35;
-    }
-    .role-card input:checked + .role-card-inner .role-card-title { color: hsl(32, 90%, 38%); }
-
-    /* ===== SUBMIT BUTTON ===== */
     .btn-add {
       width: 100%;
       background: hsl(32, 95%, 52%);
@@ -251,13 +129,11 @@
       border: none;
       border-radius: 0.5rem;
       cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif;
-      transition: background 0.15s, transform 0.1s;
+      transition: all 0.2s;
     }
-    .btn-add:hover  { background: hsl(32, 88%, 45%); transform: translateY(-1px); }
+    .btn-add:hover { background: hsl(32, 85%, 45%); transform: translateY(-1px); }
     .btn-add:active { transform: translateY(0); }
 
-    /* ===== BACK BUTTON ===== */
     .back-btn {
       display: inline-flex;
       align-items: center;
@@ -280,7 +156,12 @@
       color: hsl(32, 90%, 40%);
     }
 
-    /* ===== MISC ===== */
+    .note {
+      font-size: 0.78rem;
+      color: hsl(220, 10%, 55%);
+      margin-top: 0.4rem;
+    }
+
     .error-banner {
       background: hsl(0, 60%, 93%);
       color: hsl(0, 65%, 38%);
@@ -291,45 +172,43 @@
       font-weight: 500;
       margin-bottom: 1rem;
     }
-    .note { font-size: 0.78rem; color: hsl(220, 10%, 55%); margin-top: 0.4rem; }
-    .hint { font-size: 0.75rem; color: hsl(220, 10%, 55%); margin-top: 0.2rem; }
+
+    .hint {
+      font-size: 0.75rem;
+      color: hsl(220, 10%, 55%);
+      margin-top: 0.2rem;
+    }
 
     /* ===== DARK MODE ===== */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] body {
+      background: hsl(220, 8%, 20%);
+      color: hsl(220, 10%, 88%);
+    }
     html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card {
+      background: hsl(220, 8%, 26%);
+      border-color: hsl(220, 8%, 34%);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2);
+    }
     html[data-theme="dark"] .user-row { background: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .user-avatar { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 65%); }
-    html[data-theme="dark"] .user-you { color: hsl(220, 8%, 50%); }
-
-    html[data-theme="dark"] .role-toggle { background: hsl(220, 8%, 36%); }
-    html[data-theme="dark"] .role-toggle-btn { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .role-toggle-btn:hover:not(:disabled):not(.active-admin):not(.active-viewer) { background: hsl(220, 8%, 44%); color: hsl(220, 8%, 78%); }
-    html[data-theme="dark"] .role-toggle-btn.active-admin  { background: hsl(32, 88%, 50%); color: white; }
-    html[data-theme="dark"] .role-toggle-btn.active-viewer { background: hsl(220, 10%, 50%); color: white; }
-
-    html[data-theme="dark"] .btn-delete { color: hsl(0, 60%, 62%); border-color: hsl(0, 30%, 40%); }
-    html[data-theme="dark"] .btn-delete:hover { background: hsl(0, 20%, 28%); border-color: hsl(0, 55%, 52%); }
-    html[data-theme="dark"] .btn-delete:disabled { color: hsl(220, 8%, 45%); border-color: hsl(220, 8%, 36%); }
-
     html[data-theme="dark"] input[type="text"],
-    html[data-theme="dark"] input[type="password"] { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 39%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] input:focus { border-color: hsl(32, 88%, 52%); box-shadow: 0 0 0 3px hsla(32, 88%, 52%, 0.18); }
-    html[data-theme="dark"] label.field-label { color: hsl(220, 8%, 80%); }
-    html[data-theme="dark"] .hint { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .note { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .toggle-password { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] input[type="password"] {
+      background: hsl(220, 8%, 32%);
+      border-color: hsl(220, 8%, 39%);
+      color: hsl(220, 10%, 88%);
+    }
+    html[data-theme="dark"] label { color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .note  { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .hint  { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .toggle-password { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .toggle-password:hover { color: hsl(220, 8%, 82%); }
-
-    html[data-theme="dark"] .role-card-inner { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 38%); }
-    html[data-theme="dark"] .role-card:hover .role-card-inner { background: hsl(220, 8%, 33%); border-color: hsl(220, 8%, 46%); }
-    html[data-theme="dark"] .role-card input:checked + .role-card-inner { border-color: hsl(32, 88%, 52%); background: hsl(32, 20%, 22%); box-shadow: 0 0 0 3px hsla(32, 88%, 52%, 0.18); }
-    html[data-theme="dark"] .role-card input:checked + .role-card-inner .role-card-title { color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .role-card-sub { color: hsl(220, 8%, 54%); }
-
     html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
     html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .error-banner { background: hsl(0, 20%, 28%); color: hsl(0, 60%, 70%); border-color: hsl(0, 20%, 36%); }
+    html[data-theme="dark"] .error-banner {
+      background: hsl(0, 20%, 28%);
+      color: hsl(0, 60%, 70%);
+      border-color: hsl(0, 20%, 36%);
+    }
   </style>
 </head>
 <body>
@@ -344,7 +223,6 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
     </a>
-
     {% if error %}
     <div class="error-banner">{{ error }}</div>
     {% endif %}
@@ -352,53 +230,15 @@
     <!-- Bestaande gebruikers -->
     <div class="card">
       <h2>Gebruikers</h2>
-      {% set admin_count = users | selectattr("role", "equalto", "admin") | list | length %}
       {% for user in users %}
-      {% set user_role = user.get('role', 'admin') %}
-      {% set is_self = user.username == current_user %}
-      {% set is_last_admin = user_role == 'admin' and admin_count <= 1 %}
       <div class="user-row">
-
-        <!-- Avatar -->
-        <div class="user-avatar">{{ user.username[0] | upper }}</div>
-
-        <!-- Naam -->
-        <div class="user-info">
-          <div class="user-name">
-            {{ user.username }}
-            {% if is_self %}<span class="user-you">(jij)</span>{% endif %}
-          </div>
-        </div>
-
-        <!-- Rol toggle -->
-        <form action="/users/set_role" method="POST" style="margin:0">
-          <input type="hidden" name="username" value="{{ user.username }}">
-          <div class="role-toggle">
-            <button type="submit" name="role" value="admin"
-              class="role-toggle-btn {{ 'active-admin' if user_role == 'admin' else '' }}"
-              {% if user_role == 'admin' or is_self or is_last_admin %}disabled{% endif %}
-              title="{% if is_self %}Je kunt je eigen rol niet wijzigen{% elif is_last_admin %}Minimaal één admin vereist{% endif %}">
-              Admin
-            </button>
-            <button type="submit" name="role" value="viewer"
-              class="role-toggle-btn {{ 'active-viewer' if user_role == 'viewer' else '' }}"
-              {% if user_role == 'viewer' or is_self or is_last_admin %}disabled{% endif %}
-              title="{% if is_self %}Je kunt je eigen rol niet wijzigen{% elif is_last_admin %}Minimaal één admin vereist{% endif %}">
-              Viewer
-            </button>
-          </div>
-        </form>
-
-        <!-- Verwijderen -->
+        <span class="user-name">{{ user.username }}</span>
         <form action="/users/delete" method="POST" style="margin:0">
           <input type="hidden" name="username" value="{{ user.username }}">
-          <button type="submit" class="btn-delete"
-            {% if users|length <= 1 or is_self %}disabled
-            title="{% if users|length <= 1 %}Laatste gebruiker{% else %}Eigen account{% endif %}"{% endif %}>
+          <button type="submit" class="btn-delete" {% if users|length <= 1 %}disabled title="Laatste gebruiker kan niet worden verwijderd"{% endif %}>
             Verwijderen
           </button>
         </form>
-
       </div>
       {% else %}
       <p class="note">Geen gebruikers gevonden.</p>
@@ -410,45 +250,21 @@
       <h2>Gebruiker toevoegen</h2>
       <form action="/users/add" method="POST">
         <div class="form-group">
-          <label class="field-label" for="username">Gebruikersnaam</label>
+          <label for="username">Gebruikersnaam</label>
           <input type="text" id="username" name="username" required autocomplete="off">
         </div>
         <div class="form-group">
-          <label class="field-label" for="password">Wachtwoord</label>
+          <label for="password">Wachtwoord</label>
           <div class="password-wrapper">
             <input type="password" id="password" name="password" required autocomplete="new-password" minlength="6">
             <i class="mdi mdi-eye-off toggle-password" onclick="togglePassword('password', this)"></i>
           </div>
           <span class="hint">Minimaal 6 tekens</span>
         </div>
-        <div class="form-group">
-          <label class="field-label">Rol</label>
-          <div class="role-cards">
-            <label class="role-card">
-              <input type="radio" name="role" value="viewer" checked>
-              <div class="role-card-inner">
-                <div class="role-card-title">
-                  <span class="role-card-dot viewer"></span>
-                  Viewer
-                </div>
-                <div class="role-card-sub">Alleen bekijken, eigen thema &amp; meldingen</div>
-              </div>
-            </label>
-            <label class="role-card">
-              <input type="radio" name="role" value="admin">
-              <div class="role-card-inner">
-                <div class="role-card-title">
-                  <span class="role-card-dot admin"></span>
-                  Admin
-                </div>
-                <div class="role-card-sub">Volledige toegang tot alle instellingen</div>
-              </div>
-            </label>
-          </div>
-        </div>
         <button type="submit" class="btn-add">Toevoegen</button>
       </form>
     </div>
+
 
   </div>
 

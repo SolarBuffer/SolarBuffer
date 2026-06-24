@@ -98,16 +98,16 @@
     }
 
     @keyframes pulse-dot {
-      0%, 100% { box-shadow: 0 0 0 0 hsla(32, 95%, 52%, 0.55); }
-      50%       { box-shadow: 0 0 0 7px hsla(32, 95%, 52%, 0); }
+      0%, 100% { box-shadow: 0 0 0 0 hsla(32, 95%, 52%, 0.5); }
+      50%       { box-shadow: 0 0 0 5px hsla(32, 95%, 52%, 0); }
     }
 
     .update-dot {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 13px;
-      height: 13px;
+      top: 5px;
+      right: 5px;
+      width: 10px;
+      height: 10px;
       background: hsl(32, 95%, 52%);
       border-radius: 50%;
       border: 2px solid white;
@@ -116,11 +116,6 @@
     .update-dot.visible {
       display: block;
       animation: pulse-dot 2s ease-in-out infinite;
-    }
-
-    .menu-item-sub.update-active {
-      color: hsl(32, 95%, 46%);
-      font-weight: 600;
     }
 
 
@@ -298,7 +293,14 @@
     }
 
     .stat-card::after {
-      display: none;
+      content: "";
+      position: absolute;
+      inset: auto -24px -24px auto;
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: radial-gradient(circle, hsla(32, 100%, 65%, 0.14), transparent 70%);
+      pointer-events: none;
     }
 
     .stat-card-top {
@@ -456,44 +458,6 @@
       margin-bottom: 1rem;
     }
 
-    .control-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-    }
-
-    .buffer-status-badge {
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 0.2rem 0.6rem;
-      border-radius: 999px;
-      border: 1px solid transparent;
-      white-space: nowrap;
-      flex-shrink: 0;
-      align-self: center;
-      line-height: 1.4;
-    }
-    .buffer-status-badge.standby  { background: hsl(145,30%,92%); color: hsl(145,35%,28%); border-color: hsl(145,20%,80%); }
-    .buffer-status-badge.neutral  { background: hsl(30,15%,93%);  color: hsl(220,12%,36%);  border-color: hsl(30,10%,84%); }
-    .buffer-status-badge.off      { background: hsl(220,14%,92%); color: hsl(220,12%,36%);  border-color: hsl(220,10%,80%); }
-    .buffer-status-badge.pending  { background: hsl(37,100%,92%); color: hsl(32,90%,28%);   border-color: hsl(35,80%,76%); }
-    .buffer-status-badge.running  { background: hsl(145,48%,90%); color: hsl(145,40%,22%);  border-color: hsl(145,30%,76%); }
-    .buffer-status-badge.freeze   { background: hsl(215,80%,91%); color: hsl(215,65%,26%);  border-color: hsl(215,50%,76%); }
-    .buffer-status-badge.cascade  { background: hsl(208,75%,90%); color: hsl(208,60%,24%);  border-color: hsl(208,50%,76%); }
-    .buffer-status-badge.import   { background: hsl(0,70%,92%);   color: hsl(0,60%,30%);    border-color: hsl(0,50%,80%); }
-    .buffer-status-badge.waiting  { background: hsl(48,100%,90%); color: hsl(40,80%,26%);   border-color: hsl(45,80%,74%); }
-
-    html[data-theme="dark"] .buffer-status-badge.standby  { background: hsl(145,20%,22%); color: hsl(145,45%,68%); border-color: hsl(145,20%,30%); }
-    html[data-theme="dark"] .buffer-status-badge.neutral  { background: hsl(220,8%,26%);  color: hsl(220,8%,65%);  border-color: hsl(220,8%,34%); }
-    html[data-theme="dark"] .buffer-status-badge.off      { background: hsl(220,8%,26%);  color: hsl(220,8%,65%);  border-color: hsl(220,8%,34%); }
-    html[data-theme="dark"] .buffer-status-badge.pending  { background: hsl(37,30%,22%);  color: hsl(37,80%,70%);  border-color: hsl(37,40%,32%); }
-    html[data-theme="dark"] .buffer-status-badge.running  { background: hsl(145,25%,20%); color: hsl(145,55%,68%); border-color: hsl(145,25%,30%); }
-    html[data-theme="dark"] .buffer-status-badge.freeze   { background: hsl(215,30%,22%); color: hsl(215,65%,72%); border-color: hsl(215,30%,32%); }
-    html[data-theme="dark"] .buffer-status-badge.cascade  { background: hsl(208,30%,22%); color: hsl(208,65%,72%); border-color: hsl(208,30%,32%); }
-    html[data-theme="dark"] .buffer-status-badge.import   { background: hsl(0,25%,22%);   color: hsl(0,65%,72%);   border-color: hsl(0,30%,32%); }
-    html[data-theme="dark"] .buffer-status-badge.waiting  { background: hsl(48,30%,20%);  color: hsl(48,80%,70%);  border-color: hsl(48,35%,30%); }
-
     .control-card h2 {
       font-size: 1.1rem;
       margin-bottom: 1rem;
@@ -501,10 +465,6 @@
       align-items: center;
       gap: 0.5rem;
     }
-
-    .control-card-header h2 { margin-bottom: 0; }
-
-    .power-card { margin-bottom: 1rem; }
 
     .control-card h2 .ctrl-icon {
       color: hsl(32, 95%, 52%);
@@ -516,18 +476,6 @@
       display: inline-block;
       vertical-align: middle;
       margin-bottom: 2px;
-    }
-    .control-card h2 .ctrl-icon img {
-      display: block;
-      background: transparent;
-      border-radius: 50%;
-      vertical-align: middle;
-    }
-    #batBrandIcon {
-      display: inline-flex;
-      align-items: center;
-      background: transparent !important;
-      line-height: 0;
     }
 
     .control-row {
@@ -629,39 +577,6 @@
       transform: translateX(20px);
     }
 
-    .toggle-mini {
-      display: inline-block;
-      position: relative;
-      width: 34px;
-      height: 18px;
-      flex-shrink: 0;
-      pointer-events: none;
-    }
-    .toggle-mini input { display: none; }
-    .toggle-mini .slider {
-      position: absolute;
-      inset: 0;
-      background: hsl(220, 10%, 72%);
-      border-radius: 9px;
-      transition: background 0.3s;
-    }
-    .toggle-mini input:checked + .slider { background: hsl(32, 95%, 52%); }
-    .toggle-mini .slider::before {
-      content: "";
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      left: 2px;
-      top: 2px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-      transition: transform 0.3s;
-    }
-    .toggle-mini input:checked + .slider::before { transform: translateX(16px); }
-    html[data-theme="dark"] .toggle-mini .slider { background: hsl(220, 8%, 42%); }
-    html[data-theme="dark"] .toggle-mini input:checked + .slider { background: hsl(32, 95%, 52%); }
-
     .footer {
       text-align: center;
       font-size: 0.75rem;
@@ -727,52 +642,11 @@
       border-color: hsl(220, 8%, 35%);
     }
     html[data-theme="dark"] .acc-tile-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .acc-tile-icon.temp { background: hsl(200, 25%, 22%); color: hsl(200, 60%, 62%); }
     html[data-theme="dark"] .acc-tile-sub  { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .acc-tile-watt { color: hsl(220, 10%, 90%); }
     html[data-theme="dark"] .acc-tile-unit { color: hsl(220, 8%, 55%); }
     html[data-theme="dark"] .acc-online-badge.online  { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
     html[data-theme="dark"] .acc-online-badge.offline { background: hsl(0, 25%, 22%);   color: hsl(0, 65%, 60%); }
-
-    .acc-card-header {
-      display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;
-    }
-    .acc-card-header h2 { flex: 1; margin-bottom: 0; }
-    .gas-badge {
-      display: flex; align-items: center; gap: 0.3rem;
-      font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 700;
-      color: hsl(24, 90%, 38%); background: hsl(24, 100%, 94%);
-      border: 1px solid hsl(24, 70%, 82%); border-radius: 999px;
-      padding: 0.2rem 0.65rem 0.2rem 0.45rem;
-    }
-    html[data-theme="dark"] .gas-badge {
-      background: hsl(24, 25%, 22%); border-color: hsl(24, 35%, 32%); color: hsl(24, 80%, 65%);
-    }
-
-    .acc-tile-icon.temp { background: hsl(200, 80%, 93%); color: hsl(200, 80%, 35%); }
-
-    .linked-temp-row {
-      display: flex; flex-wrap: wrap; gap: 0.5rem;
-      margin: 0.65rem -1rem -0.9rem;
-      padding: 0.55rem 1rem 0.6rem;
-      border-top: 1px solid hsl(30, 15%, 91%);
-    }
-    .linked-temp-chip {
-      display: flex; align-items: center; gap: 0.35rem;
-      background: hsl(200, 70%, 95%); border: 1px solid hsl(200, 60%, 84%);
-      border-radius: 999px; padding: 0.25rem 0.6rem 0.25rem 0.45rem;
-      font-size: 0.8rem;
-    }
-    .linked-temp-chip i { font-size: 0.95rem; line-height: 1; color: hsl(200, 80%, 35%); }
-    .linked-temp-chip .lt-name { color: hsl(220, 20%, 30%); font-weight: 600; }
-    .linked-temp-chip .lt-val  { color: hsl(200, 80%, 30%); font-weight: 700; margin-left: 0.2rem; }
-    .linked-temp-chip .lt-offline { color: hsl(220, 10%, 54%); font-style: italic; }
-    html[data-theme="dark"] .linked-temp-row { border-top-color: hsl(220, 8%, 32%); }
-    html[data-theme="dark"] .linked-temp-chip { background: hsl(200, 20%, 22%); border-color: hsl(200, 25%, 30%); }
-    html[data-theme="dark"] .linked-temp-chip i { color: hsl(200, 60%, 62%); }
-    html[data-theme="dark"] .linked-temp-chip .lt-name { color: hsl(220, 8%, 80%); }
-    html[data-theme="dark"] .linked-temp-chip .lt-val  { color: hsl(200, 60%, 68%); }
-    html[data-theme="dark"] .linked-temp-chip .lt-offline { color: hsl(220, 8%, 50%); }
 
     .device-card {
       border: 1px solid hsl(30, 15%, 88%);
@@ -782,7 +656,6 @@
       cursor: pointer;
       transition: opacity 0.2s;
       background: white;
-      overflow: hidden;
     }
 
     .device-card:last-child {
@@ -1398,7 +1271,7 @@
     }
 
     html[data-theme="dark"] #menuIcon line { stroke: hsl(220, 8%, 68%); }
-    html[data-theme="dark"] #menuIcon #menuMidLine { stroke: hsl(32, 95%, 58%); }
+    html[data-theme="dark"] #menuMidLine  { stroke: hsl(32, 95%, 58%); }
 
     html[data-theme="dark"] .menu-dropdown {
       background: hsl(220, 8%, 26%);
@@ -1416,16 +1289,12 @@
     html[data-theme="dark"] .menu-item:active { background: hsl(220, 8%, 34%); }
     html[data-theme="dark"] .menu-item-label  { color: hsl(220, 10%, 88%); }
     html[data-theme="dark"] .menu-item-sub    { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .menu-item-sub.update-active { color: hsl(32, 95%, 62%); }
     html[data-theme="dark"] .menu-item-icon   { background: hsl(220, 8%, 32%); }
 
     html[data-theme="dark"] .stat-card .label { color: hsl(220, 8%, 58%); }
     html[data-theme="dark"] .stat-card .value { color: hsl(220, 10%, 90%); }
     html[data-theme="dark"] .stat-card .unit  { color: hsl(220, 8%, 58%); }
     html[data-theme="dark"] .power-reading .power-unit { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] #batteryCard { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] #batteryCard [style*="hsl(30,20%,96%)"] { background: hsl(220, 8%, 22%) !important; }
-    html[data-theme="dark"] #batteryCard [style*="hsl(220,15%,90%)"] { background: hsl(220, 8%, 30%) !important; }
 
     html[data-theme="dark"] .status-card.neutral {
       background: hsl(220, 8%, 28%);
@@ -1556,18 +1425,6 @@
       color: hsl(145, 50%, 72%);
     }
 
-    .vacation-banner {
-      display: flex; align-items: center; gap: 0.5rem;
-      background: hsl(37, 90%, 92%); color: hsl(30, 80%, 28%);
-      border-radius: 0.6rem; padding: 0.55rem 0.85rem;
-      font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem;
-    }
-    .vacation-banner svg { flex-shrink: 0; }
-    html[data-theme="dark"] .vacation-banner {
-      background: hsl(37, 35%, 26%);
-      color: hsl(37, 80%, 70%);
-    }
-
     html[data-theme="dark"] .sched-item {
       background: hsl(220, 8%, 30%);
       border-color: hsl(220, 8%, 37%);
@@ -1647,75 +1504,6 @@
     }
 
     html[data-theme="dark"] .footer { color: hsl(220, 8%, 52%); }
-
-    /* ===== BROADLINK IR ===== */
-    .ir-widget-list { display: flex; flex-direction: column; gap: 0.75rem; }
-    .ir-widget {
-      background: hsl(30, 20%, 97%); border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.75rem; padding: 0.75rem 0.9rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .ir-widget-header { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.65rem; }
-    .ir-widget-icon {
-      width: 32px; height: 32px; border-radius: 8px;
-      background: hsl(260, 60%, 94%); color: hsl(260, 60%, 44%);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; flex-shrink: 0;
-    }
-    .ir-widget-name { font-size: 0.9rem; font-weight: 700; flex: 1; }
-    .ir-online-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .ir-online-dot.online  { background: hsl(142, 60%, 42%); }
-    .ir-online-dot.offline { background: hsl(0, 65%, 55%); }
-    .ir-cmd-btns {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-      gap: 0.45rem;
-    }
-    .ir-cmd-btn {
-      min-height: 44px;
-      padding: 0.5rem 0.65rem;
-      font-size: 0.82rem; font-weight: 600;
-      border: 1.5px solid hsl(30, 15%, 82%); border-radius: 0.6rem;
-      background: white; color: hsl(220, 20%, 22%); cursor: pointer;
-      transition: background 0.13s, border-color 0.13s, box-shadow 0.13s, transform 0.1s;
-      display: flex; align-items: center; justify-content: center; text-align: center;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      line-height: 1.2;
-    }
-    .ir-cmd-btn:hover {
-      background: hsl(32, 100%, 94%);
-      border-color: hsl(32, 80%, 65%);
-      color: hsl(25, 85%, 32%);
-      box-shadow: 0 2px 6px rgba(200, 100, 0, 0.13);
-    }
-    .ir-cmd-btn:active { transform: scale(0.95); background: hsl(32, 100%, 87%); }
-    .ir-cmd-btn.sending {
-      background: hsl(32, 95%, 52%);
-      border-color: hsl(32, 90%, 44%);
-      color: white;
-      cursor: default;
-      box-shadow: 0 2px 8px rgba(200, 100, 0, 0.28);
-      transform: scale(0.97);
-    }
-    .ir-cmd-btn:disabled { opacity: 0.45; cursor: default; }
-    .ir-power-badge {
-      display: inline-flex; align-items: center; gap: 0.3rem;
-      font-size: 0.72rem; font-weight: 600; padding: 0.18rem 0.55rem;
-      border-radius: 999px; margin-left: auto;
-    }
-    .ir-power-badge.on  { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
-    .ir-power-badge.off { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 40%); }
-    .ir-power-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .ir-power-badge.on  .ir-power-dot { background: hsl(145, 60%, 38%); }
-    .ir-power-badge.off .ir-power-dot { background: hsl(220, 10%, 58%); }
-
-    html[data-theme="dark"] .ir-widget { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 30%); box-shadow: 0 1px 3px rgba(0,0,0,0.18); }
-    html[data-theme="dark"] .ir-widget-icon { background: hsl(260, 20%, 28%); color: hsl(260, 60%, 72%); }
-    html[data-theme="dark"] .ir-cmd-btn { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 85%); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
-    html[data-theme="dark"] .ir-cmd-btn:hover { background: hsl(32, 18%, 28%); border-color: hsl(32, 50%, 44%); color: hsl(32, 80%, 70%); box-shadow: 0 2px 6px rgba(200,100,0,0.18); }
-    html[data-theme="dark"] .ir-cmd-btn.sending { background: hsl(32, 90%, 46%); }
-    html[data-theme="dark"] .ir-power-badge.on  { background: hsl(145, 25%, 22%); color: hsl(145, 55%, 62%); }
-    html[data-theme="dark"] .ir-power-badge.off { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 56%); }
 
     /* ===== SOLAR FORECAST ===== */
     .forecast-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
@@ -1865,13 +1653,6 @@
               <span class="menu-item-sub">Apparaten, account en back-up</span>
             </div>
           </div>
-          <div class="menu-item" onclick="window.location.href='/charts'">
-            <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22,21H2V3H4V19H6V10H10V19H12V6H16V19H18V14H22V21Z"/></svg></div>
-            <div class="menu-item-text">
-              <span class="menu-item-label">Grafieken</span>
-              <span class="menu-item-sub">Vermogen &amp; temperatuur historiek</span>
-            </div>
-          </div>
           <div class="menu-item" onclick="window.location.href='/updates'">
             <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.66 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L21,3V10.12Z"/></svg></div>
             <div class="menu-item-text">
@@ -1879,6 +1660,13 @@
               <span class="menu-item-sub" id="updateMenuSub">Versiegeschiedenis &amp; update uitvoeren</span>
             </div>
             <span class="menu-update-badge" id="menuUpdateBadge" style="display:none">Nieuw</span>
+          </div>
+          <div class="menu-item" onclick="toggleDarkMode()" id="darkModeMenuItem">
+            <div class="menu-item-icon" id="darkModeIcon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V5Z"/></svg></div>
+            <div class="menu-item-text">
+              <span class="menu-item-label" id="darkModeLabel">Donkere modus</span>
+              <span class="menu-item-sub" id="darkModeSub">Schakel over naar donker</span>
+            </div>
           </div>
           <div class="menu-item danger" onclick="logoutNow()">
             <div class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17,17.25V14H10V10H17V6.75L22.25,12L17,17.25M13,2A2,2 0 0,1 15,4V8H13V4H4V20H13V16H15V20A2,2 0 0,1 13,22H4A2,2 0 0,1 2,20V4A2,2 0 0,1 4,2H13Z"/></svg></div>
@@ -1892,15 +1680,29 @@
     </div>
 
 
-    <div id="vacationTopBanner" class="vacation-banner" style="display:none; margin-bottom:0.5rem;">
-      <i class="mdi mdi-palm-tree" style="font-size:1rem;line-height:1;flex-shrink:0"></i>
-      <span id="vacationTopText">Vakantiestand actief</span>
-    </div>
+    <div class="grid">
+      <div class="card stat-card status-card neutral" id="buffer_status_card">
+        <div class="stat-card-top">
+          <div class="stat-card-head">
+            <span class="label">Bufferstatus</span>
+          </div>
+          <div class="stat-icon-wrap">
+            <span class="stat-icon" id="buffer_status_icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg></span>
+          </div>
+        </div>
+        <div class="stat-card-main">
+          <span class="value" id="buffer_status_value">Standby</span>
+          <span class="unit" id="buffer_status_sub">Geen actieve regeling</span>
+        </div>
+      </div>
 
-    <div class="card stat-card power-card">
+      <div class="card stat-card power-card">
         <div class="stat-card-top">
           <div class="stat-card-head">
             <span class="label">Vermogen</span>
+          </div>
+          <div class="stat-icon-wrap">
+            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span>
           </div>
         </div>
         <div class="stat-card-main">
@@ -1909,125 +1711,17 @@
             <span class="power-unit">W</span>
           </div>
           <span class="unit">Live netvermogen</span>
-          <div id="dailyEnergyRow" style="display:none; margin-top:0.35rem; font-size:0.78rem; display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;">
-            <span style="display:flex;align-items:center;gap:0.25rem;color:hsl(22,90%,50%)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M4,12l1.41,1.41L11,7.83V20h2V7.83l5.58,5.59L20,12l-8-8-8,8z"/></svg>
-              <span id="dailyImport">—</span>&thinsp;kWh
-            </span>
-            <span style="opacity:0.3;color:hsl(220,10%,52%)">·</span>
-            <span style="display:flex;align-items:center;gap:0.25rem;color:hsl(145,55%,38%)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M20,12l-1.41-1.41L13,16.17V4h-2v12.17l-5.58-5.59L4,12l8,8 8-8z"/></svg>
-              <span id="dailyExport">—</span>&thinsp;kWh
-            </span>
-            <span id="solarKwhSep" style="display:none;opacity:0.3;color:hsl(220,10%,52%)">·</span>
-            <span id="solarKwhSpan" style="display:none;align-items:center;gap:0.25rem;color:hsl(32,95%,48%)">
-              <i class="mdi mdi-white-balance-sunny" style="font-size:0.95rem;flex-shrink:0;line-height:1"></i>
-              <span id="dailySolar">—</span>&thinsp;kWh
-            </span>
-          </div>
-          <div id="solarLiveRow" style="display:none; margin-top:0.3rem; font-size:0.78rem; align-items:center; gap:0.35rem; color:hsl(32,95%,48%);">
-            <i class="mdi mdi-white-balance-sunny" style="font-size:1rem;flex-shrink:0;line-height:1"></i>
-            <span style="flex:1;color:hsl(220,10%,52%)">Opwekking</span>
-            <span id="solarLivePower" style="font-weight:600">—</span>&thinsp;<span style="color:hsl(220,10%,52%)">W</span>
-          </div>
-          <div id="priceRow" style="display:none; margin-top:0.3rem; font-size:0.78rem; align-items:center; gap:0.35rem;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" id="priceIcon" style="flex-shrink:0"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-            <span style="flex:1;color:hsl(220,10%,52%)">Stroomprijs</span>
-            <span id="priceValue" style="font-weight:600">—</span>&thinsp;<span style="color:hsl(220,10%,52%)">ct/kWh</span>
-          </div>
-          <div id="solarEdgeRow" style="display:none; margin-top:0.35rem; font-size:0.78rem; color:hsl(220,10%,52%); align-items:center; gap:0.35rem;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
-            <span id="solarEdgeLabel">Omvormer:</span> <span id="solarEdgeValue">—</span> W
-          </div>
-          <div id="selfSufficiencyRow" style="display:none; margin-top:0.45rem; border-top:1px solid hsl(30,15%,90%); padding-top:0.4rem; gap:0.5rem; flex-direction:column;">
-            <div style="display:flex; align-items:center; gap:0.35rem; font-size:0.78rem;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(40,90%,42%)"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
-              <span style="color:hsl(220,10%,52%);flex:1">Zelfverbruik</span>
-              <span id="selfConsumptionValue" style="font-weight:600;color:hsl(40,85%,38%)">—</span><span style="color:hsl(220,10%,52%)">%</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:0.35rem; font-size:0.78rem;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(145,55%,36%)"><path d="M10,2H14V4H16A2,2 0 0,1 18,6V20A2,2 0 0,1 16,22H8A2,2 0 0,1 6,20V6A2,2 0 0,1 8,4H10V2M8,6V20H16V6H8M10,8H14V10H10V8M10,12H14V14H10V12Z"/></svg>
-              <span style="color:hsl(220,10%,52%);flex:1">Zelfvoorziening</span>
-              <span id="selfSufficiencyValue" style="font-weight:600;color:hsl(145,55%,36%)">—</span><span style="color:hsl(220,10%,52%)">%</span>
-            </div>
-          </div>
-        </div>
-    </div>
-
-    <div class="card control-card" id="batteryCard" style="display:none;">
-      <div class="control-card-header">
-        <h2><span class="ctrl-icon" id="batBrandIcon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span>
-          <span style="display:flex;flex-direction:column;gap:0.05rem;line-height:1.2;">
-            Batterij
-            <span id="batKwhDay" style="font-size:0.7rem;font-weight:400;color:hsl(220,10%,55%);"></span>
-          </span>
-        </h2>
-        <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
-          <span id="batPrioLabel" class="buffer-status-badge" style="display:none;"></span>
-          <span id="batPermLabel" class="buffer-status-badge" style="display:none;"></span>
-          <div id="batOnlineDot" style="width:8px;height:8px;border-radius:50%;background:hsl(145,55%,50%);flex-shrink:0;margin-left:0.1rem;"></div>
-        </div>
-      </div>
-
-      <div style="margin-bottom:0.55rem;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.25rem;">
-          <span id="batSocLabel" style="font-size:0.75rem;color:hsl(220,10%,52%);">SoC</span>
-          <span id="batSocText" style="font-size:0.88rem;font-weight:700;">—%</span>
-        </div>
-        <div style="height:8px;background:hsl(220,15%,90%);border-radius:999px;overflow:hidden;">
-          <div id="batSocBar" style="height:100%;width:0%;background:hsl(145,55%,50%);border-radius:999px;transition:width 0.5s;"></div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;">
-        <div style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
-          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Vermogen</div>
-          <div style="display:flex;align-items:center;gap:0.2rem;">
-            <span id="batPowerArrow" style="font-size:0.8rem;"></span>
-            <span id="batPowerVal" style="font-weight:700;font-size:0.88rem;">—</span>
-            <span style="font-size:0.7rem;color:hsl(220,10%,52%);">W</span>
-          </div>
-        </div>
-        <div id="batVoltRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
-          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.1rem;">Modus</div>
-          <div><span id="batCyclesVal" style="font-weight:700;font-size:0.88rem;">—</span></div>
-        </div>
-        <div id="batForceTofullRow" style="background:hsl(30,20%,96%);border-radius:0.5rem;padding:0.4rem 0.5rem;cursor:pointer;" onclick="toggleForceTofull()">
-          <div style="font-size:0.68rem;color:hsl(220,10%,52%);margin-bottom:0.25rem;">Volladen</div>
-          <label class="toggle-mini" style="pointer-events:none;">
-            <input type="checkbox" id="batForceTofullToggle">
-            <span class="slider"></span>
-          </label>
         </div>
       </div>
     </div>
 
     <div class="card control-card">
-      <div class="control-card-header">
-        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
-        <span id="buffer_status_badge" class="buffer-status-badge standby">Standby</span>
-      </div>
+      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
       <div id="devicesContainer"></div>
     </div>
 
-    <div class="card control-card" id="broadlinkCard" style="display:none">
-      <h2>
-        <span class="ctrl-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.5,2A1.5,1.5 0 0,0 5,3.5V20.5A1.5,1.5 0 0,0 6.5,22H17.5A1.5,1.5 0 0,0 19,20.5V3.5A1.5,1.5 0 0,0 17.5,2H6.5M8,5H16V7H8V5M8,9H10V11H8V9M11,9H13V11H11V9M14,9H16V11H14V9M8,12H10V14H8V12M11,12H13V14H11V12M14,12H16V14H14V12M8,15H10V17H8V15M11,15H13V17H11V15M14,15H16V17H14V15Z"/></svg>
-        </span>
-        IR-besturing
-      </h2>
-      <div class="ir-widget-list" id="irWidgetList"></div>
-    </div>
-
     <div class="card control-card" id="accessoriesCard" style="display:none">
-      <div class="acc-card-header">
-        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span> Verbruikers</h2>
-        <div class="gas-badge" id="gasBadge" style="display:none">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2Z"/></svg>
-          <span id="gasValue">—</span>&thinsp;m³
-        </div>
-      </div>
+      <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span> Verbruikers</h2>
       <div id="accessoriesContainer"></div>
     </div>
 
@@ -2093,7 +1787,7 @@
         <div>
           <label>Vermogen: <span id="schedBrightnessVal">50</span>%</label>
           <div class="sched-brightness-row">
-            <input type="range" id="schedBrightness" min="30" max="100" value="50"
+            <input type="range" id="schedBrightness" min="34" max="100" value="50"
               oninput="document.getElementById('schedBrightnessVal').textContent=this.value">
           </div>
         </div>
@@ -2113,7 +1807,7 @@
     </div>
 
     <div class="footer">Live data · Verversing elke seconde</div>
-    <div class="footer">Version 0.5.3</div>
+    <div class="footer">Version 0.3.1</div>
   </div>
 
   <script>
@@ -2126,6 +1820,31 @@
         document.querySelector('meta[name="theme-color"]').setAttribute("content", "#2e3238");
       }
     })();
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const newDark = !isDark;
+      document.documentElement.setAttribute("data-theme", newDark ? "dark" : "light");
+      localStorage.setItem("theme", newDark ? "dark" : "light");
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", newDark ? "#2e3238" : "#f9f7f5");
+      updateDarkModeMenuItem();
+      fetch("/set_theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dark_mode: newDark })
+      });
+    }
+
+    function updateDarkModeMenuItem() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      document.getElementById("darkModeLabel").textContent = isDark ? "Lichte modus" : "Donkere modus";
+      document.getElementById("darkModeSub").textContent = isDark ? "Schakel over naar licht" : "Schakel over naar donker";
+      document.getElementById("darkModeIcon").innerHTML = isDark
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19V5Z"/></svg>';
+    }
+
+    updateDarkModeMenuItem();
 
     // ===== MENU =====
     function toggleMenu() {
@@ -2155,8 +1874,6 @@
 
     // ===== GLOBALE STATUS =====
     let pidEnabled = true;
-    let batteryBlocksStart = false;
-    let solarKwhToday = null;
 
     // ===== STATUS =====
     function updateStatus() {
@@ -2164,171 +1881,18 @@
         .then(r => r.json())
         .then(data => {
           pidEnabled = !!data.enabled;
-          batteryBlocksStart = !!data.battery_blocks_start;
 
           document.getElementById("current_power").textContent = Number(data.power || 0).toFixed(1);
 
           const bufferStatus = getBufferStatus(data);
-          const badge = document.getElementById("buffer_status_badge");
-          badge.textContent = bufferStatus.badge || bufferStatus.label;
-          badge.className = `buffer-status-badge ${bufferStatus.cls}`;
+          document.getElementById("buffer_status_value").textContent = bufferStatus.label;
+          document.getElementById("buffer_status_sub").textContent = bufferStatus.sub;
+          document.getElementById("buffer_status_icon").innerHTML = bufferStatus.icon;
+          document.getElementById("buffer_status_card").className = `card stat-card status-card ${bufferStatus.cls}`;
 
           renderDevices(data.devices || []);
           renderAccessories(data.accessories || []);
-          if (data.broadlink_devices) _blDevices = data.broadlink_devices;
-          const _irStatesNext = data.broadlink_ir_states || {};
-          if ((_blDevices || []).length > 0) {
-            fetch('/api/broadlink/online').then(r => r.json()).then(d => { if (d.success) { _blOnline = d.online; } renderBroadlinkWidgets(_irStatesNext); }).catch(() => { renderBroadlinkWidgets(_irStatesNext); });
-          } else {
-            renderBroadlinkWidgets(_irStatesNext);
-          }
-          const gasBadge = document.getElementById('gasBadge');
-          if (data.gas_enabled && data.gas_today_m3 !== null && data.gas_today_m3 !== undefined) {
-            document.getElementById('gasValue').textContent = Number(data.gas_today_m3).toFixed(3);
-            gasBadge.style.display = '';
-          } else {
-            gasBadge.style.display = 'none';
-          }
-          if (data.gas_enabled) {
-            document.getElementById('accessoriesCard').style.display = '';
-          }
           renderSchedules(data.schedules || [], data.active_schedule || null);
-          renderVacationStatus(data);
-
-          // ---- Batterij widget ----
-          const batCard = document.getElementById('batteryCard');
-          if (data.battery_enabled && data.battery) {
-            batCard.style.display = '';
-            const bat = data.battery;
-            const batOnline = bat.online;
-            document.getElementById('batOnlineDot').style.background =
-              batOnline ? 'hsl(145,55%,50%)' : 'hsl(0,60%,60%)';
-
-            const perms = bat.permissions || [];
-            const canCharge = perms.includes('charge_allowed');
-            const canDischarge = perms.includes('discharge_allowed');
-            let permLabel = '';
-            if (canCharge && canDischarge) permLabel = 'Laden & ontladen';
-            else if (canCharge) permLabel = 'Alleen laden';
-            else if (canDischarge) permLabel = 'Alleen ontladen';
-            else permLabel = 'Geblokkeerd';
-            const prioEl = document.getElementById('batPrioLabel');
-            const permEl = document.getElementById('batPermLabel');
-            if (batOnline) {
-              prioEl.textContent = data.battery_priority === 'battery' ? 'Batterij-prio' : 'Boiler-prio';
-              prioEl.className = 'buffer-status-badge ' + (data.battery_priority === 'battery' ? 'freeze' : 'standby');
-              prioEl.style.display = '';
-              permEl.textContent = permLabel;
-              permEl.className = 'buffer-status-badge ' + (canCharge && canDischarge ? 'running' : canCharge || canDischarge ? 'pending' : 'import');
-              permEl.style.display = '';
-            } else {
-              prioEl.style.display = 'none';
-              permEl.textContent = 'Offline';
-              permEl.className = 'buffer-status-badge off';
-              permEl.style.display = '';
-            }
-
-            const batCount = data.battery_count || 1;
-            document.getElementById('batSocLabel').textContent = batCount > 1 ? 'SoC (gemiddeld)' : 'SoC';
-
-            const soc = bat.soc;
-            if (soc !== null && soc !== undefined) {
-              document.getElementById('batSocText').textContent = Number(soc).toFixed(0) + '%';
-              const bar = document.getElementById('batSocBar');
-              bar.style.width = Number(soc).toFixed(0) + '%';
-              const thr = data.battery_soc_threshold || 95;
-              bar.style.background = soc >= 80 ? 'hsl(145,55%,50%)' : soc >= 20 ? 'hsl(38,90%,52%)' : 'hsl(0,65%,52%)';
-            }
-
-            const pw = bat.power_w;
-            if (pw !== null && pw !== undefined) {
-              document.getElementById('batPowerVal').textContent = Math.abs(pw).toFixed(0);
-              document.getElementById('batPowerArrow').textContent = pw < -5 ? '↑' : pw > 5 ? '↓' : '·';
-              document.getElementById('batPowerArrow').style.color =
-                pw < -5 ? 'hsl(145,55%,40%)' : pw > 5 ? 'hsl(32,90%,48%)' : 'hsl(220,10%,60%)';
-            }
-            const isMarstek = data.battery_type === 'marstek';
-            const kwhEl = document.getElementById('batKwhDay');
-            const chToday = bat.charge_today_kwh;
-            const disToday = bat.discharge_today_kwh;
-            if (!isMarstek && chToday !== null && chToday !== undefined) {
-              kwhEl.innerHTML =
-                `<span style="color:hsl(145,55%,40%)">↑${Number(chToday).toFixed(2)}</span>` +
-                `<span style="color:hsl(220,10%,70%);margin:0 0.15rem">/</span>` +
-                `<span style="color:hsl(32,90%,48%)">↓${Number(disToday).toFixed(2)}</span>` +
-                `<span style="color:hsl(220,10%,60%);margin-left:0.15rem">kWh</span>`;
-            } else {
-              kwhEl.textContent = '';
-            }
-            document.getElementById('batVoltRow').style.display = isMarstek ? 'none' : '';
-            document.getElementById('batForceTofullRow').style.display = isMarstek ? 'none' : '';
-            const batIconEl = document.getElementById('batBrandIcon');
-            const batLogoSrc = isMarstek ? '/static/icons/battery-marstek.png' : '/static/icons/battery-homewizard.png';
-            const existingImg = batIconEl.querySelector('img');
-            if (!existingImg || existingImg.src !== location.origin + batLogoSrc) {
-              batIconEl.innerHTML = `<img src="${batLogoSrc}" width="22" height="22" alt="">`;
-            }
-            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
-            const md = bat.mode;
-            document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
-            const isToFull = !!data.battery_force_tofull;
-            if (!_tofullPending) document.getElementById('batForceTofullToggle').checked = isToFull;
-          } else {
-            batCard.style.display = 'none';
-          }
-          // ---- Einde batterij widget ----
-
-          const seRow = document.getElementById('solarEdgeRow');
-          if (data.inverter_enabled && data.inverter_online && data.inverter_power !== null) {
-            const labels = {solaredge:'SolarEdge',fronius:'Fronius',sma:'SMA',abb:'ABB',kostal:'Kostal',huawei:'Huawei',growatt:'Growatt',sungrow:'Sungrow',goodwe:'GoodWe'};
-            document.getElementById('solarEdgeLabel').textContent = (labels[data.inverter_type] || 'Omvormer') + ':';
-            document.getElementById('solarEdgeValue').textContent = Number(data.inverter_power).toFixed(0);
-            seRow.style.display = 'flex';
-          } else {
-            seRow.style.display = 'none';
-          }
-
-          const solarAcc = (data.accessories || []).find(a => a.is_solar && a.acc_type !== 'temperature');
-          solarKwhToday = solarAcc ? (solarAcc.energy_today_kwh || 0) : null;
-
-          const solarLiveRow = document.getElementById('solarLiveRow');
-          const solarKwhSep  = document.getElementById('solarKwhSep');
-          const solarKwhSpan = document.getElementById('solarKwhSpan');
-          if (solarAcc) {
-            document.getElementById('solarLivePower').textContent = Number(solarAcc.power || 0).toFixed(0);
-            solarLiveRow.style.display = 'flex';
-            document.getElementById('dailySolar').textContent = Number(solarAcc.energy_today_kwh || 0).toFixed(2);
-            solarKwhSep.style.display = '';
-            solarKwhSpan.style.display = 'flex';
-          } else {
-            solarLiveRow.style.display = 'none';
-            solarKwhSep.style.display = 'none';
-            solarKwhSpan.style.display = 'none';
-          }
-          updateSelfMetrics();
-
-          // Stroomprijs
-          const priceRow = document.getElementById('priceRow');
-          const priceVal = document.getElementById('priceValue');
-          const priceIcon = document.getElementById('priceIcon');
-          const priceCt = data.current_price_ct;
-          if (data.dynamic_pricing_enabled && priceCt !== null && priceCt !== undefined) {
-            priceVal.textContent = Number(priceCt).toFixed(1);
-            const threshold = data.price_threshold_ct ?? 5;
-            let priceColor, iconColor;
-            if (priceCt <= threshold) {
-              priceColor = 'hsl(145,50%,32%)'; iconColor = 'hsl(145,55%,36%)'; // groen — goedkoop
-            } else if (priceCt <= threshold * 2) {
-              priceColor = 'hsl(38,90%,38%)'; iconColor = 'hsl(38,90%,38%)';  // oranje — normaal
-            } else {
-              priceColor = 'hsl(0,65%,42%)'; iconColor = 'hsl(0,65%,42%)';    // rood — duur
-            }
-            priceVal.style.color = priceColor;
-            priceIcon.style.color = iconColor;
-            priceRow.style.display = 'flex';
-          } else {
-            priceRow.style.display = 'none';
-          }
         })
         .catch(err => console.error("Update error:", err));
     }
@@ -2375,20 +1939,6 @@
         </div>`;
       }).join("");
     }
-
-    // ===== VAKANTIESTAND (banner only — beheer via Instellingen) =====
-    function renderVacationStatus(data) {
-      const active = !!data.vacation_mode;
-      document.getElementById("vacationTopBanner").style.display = active ? "flex" : "none";
-      if (active && data.vacation_until) {
-        const d = new Date(data.vacation_until * 1000);
-        document.getElementById("vacationTopText").textContent =
-          "Vakantiestand actief — terug op " + d.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
-      } else {
-        document.getElementById("vacationTopText").textContent = "Vakantiestand actief — apparaten uitgeschakeld";
-      }
-    }
-    // ===== EINDE VAKANTIESTAND =====
 
     function openSchedForm(prefill) {
       editingSchedId = prefill ? prefill.id : null;
@@ -2481,24 +2031,6 @@
 
 
 
-    let _tofullPending = false;
-    function toggleForceTofull() {
-      if (_tofullPending) return;
-      const toggle = document.getElementById('batForceTofullToggle');
-      const wasOn = toggle.checked;
-      const newMode = wasOn ? 'zero' : 'to_full';
-      toggle.checked = !wasOn;
-      _tofullPending = true;
-      fetch('/api/battery/set_mode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: newMode })
-      }).then(r => r.json()).then(d => {
-        _tofullPending = false;
-        if (!d.success) toggle.checked = wasOn;
-      }).catch(() => { _tofullPending = false; toggle.checked = wasOn; });
-    }
-
     function toggleDevice(ip) {
       fetch("/toggle_shelly/" + encodeURIComponent(ip)).then(() => setTimeout(updateStatus, 200));
     }
@@ -2552,7 +2084,7 @@
     }
 
     function getVisualBrightness(brightness) {
-      const min = 30, max = 100;
+      const min = 34, max = 100;
       const v = Number(brightness || 0);
       if (v <= min) return 0;
       if (v >= max) return 100;
@@ -2577,45 +2109,28 @@
       const SVG_IMPORT   = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z"/></svg>';
       const SVG_TIMER    = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6,2V8H6V8L10,12L6,16V16H6V22H18V16H18V16L14,12L18,8V8H18V2H6M16,16.5V20H8V16.5L12,12.5L16,16.5M12,11.5L8,7.5V4H16V7.5L12,11.5Z"/></svg>';
       const SVG_SUN      = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg>';
-      const SVG_VACATION = '<i class="mdi mdi-palm-tree" style="font-size:1.5rem;line-height:1;display:block"></i>';
 
-      if (data.vacation_mode) return { label: "Vakantiestand", sub: "Alle apparaten uitgeschakeld", cls: "off", icon: SVG_VACATION };
       if (!enabled) return { label: "Uitgeschakeld", sub: "Automatische regeling staat uit", cls: "off", icon: SVG_PAUSE };
-      const n = s => s > 1 ? "s" : "";
-      const devName = arr => arr.length === 1 ? arr[0].name : `${arr.length} SolarBuffers`;
-      const SVG_EURO = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>';
-      if (pending.length > 0) return { label: "Opstarten", badge: `Opstarten · ${devName(pending)}`, sub: `${pending.length} buffer${n(pending.length)} bezig met starten`, cls: "pending", icon: SVG_ROCKET };
-      if (running.length > 0) {
-        if (frozen.length > 0) {
-          const lastPrio = Math.max(...devices.map(d => d.priority ?? 1));
-          const lastDevice = running.find(d => (d.priority ?? 1) === lastPrio);
-          if (lastDevice && lastDevice.brightness >= 100) {
-            const total = running.length + frozen.length;
-            return { label: "Overcapaciteit", badge: `Overcapaciteit · ${lastDevice.name}`, sub: `Alle ${total} buffers op max capaciteit`, cls: "cascade", icon: SVG_PARTCLOUD };
-          }
-        }
-        if (running.every(d => d.price_triggered)) {
-          return { label: "Goedkoop tarief", badge: `Goedkoop · ${devName(running)}`, sub: `Draait op voordelig stroomtarief`, cls: "waiting", icon: SVG_EURO };
-        }
-        return { label: "Actief", badge: `Actief · ${devName(running)}`, sub: `${running.length} actieve buffer${n(running.length)}${frozen.length > 0 ? ` · ${frozen.length} bevroren` : ""}`, cls: "running", icon: SVG_FIRE };
-      }
+      if (pending.length > 0) return { label: "Opstarten", sub: `${pending.length} buffer${pending.length > 1 ? "s" : ""} bezig met starten`, cls: "pending", icon: SVG_ROCKET };
+      if (frozen.length > 0 && running.length > 0) return { label: "Overcapaciteit", sub: `${frozen.length} bevroren · ${running.length} regelend`, cls: "cascade", icon: SVG_PARTCLOUD };
+      if (frozen.length > 0) return { label: "Bevroren", sub: `${frozen.length} buffer${frozen.length > 1 ? "s" : ""} op vast niveau`, cls: "freeze", icon: SVG_SNOWFLAKE };
+      if (running.length > 0) return { label: "Actief", sub: `${running.length} actieve buffer${running.length > 1 ? "s" : ""}`, cls: "running", icon: SVG_FIRE };
+
+      const importThreshold = Number(data.expert_settings?.IMPORT_OFF_THRESHOLD ?? 300);
+      if (power >= importThreshold) return { label: "Geen teruglevering", sub: `Verbruik > ${importThreshold} W`, cls: "import", icon: SVG_IMPORT };
 
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
-      const SVG_BATTERY_BLOCK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67,4H14V2H10V4H8.33A1.33,1.33 0 0,0 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67A1.33,1.33 0 0,0 17,20.67V5.33C17,4.6 16.4,4 15.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg>';
-      if (data.battery_blocks_start && started.length === 0) return { label: "Geblokkeerd", badge: "Geblokkeerd · Accu laadt eerst", sub: "Wacht tot accu op maximaal vermogen laadt", cls: "import", icon: SVG_BATTERY_BLOCK };
-      if (power <= exportThreshold && started.length === 0) return { label: "Wachten", badge: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
+      if (power <= exportThreshold && started.length === 0) return { label: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
 
       return { label: "Standby", sub: "Geen actieve buffer nodig", cls: "standby", icon: SVG_SUN };
     }
 
-    function getDeviceState(d, batteryBlocksStart) {
+    function getDeviceState(d) {
       if (d.pending_start || d.waiting_for_power_socket) return { label: "Opstarten", cls: "pending", dot: "pending" };
       if (!d.online) return { label: "", cls: "", dot: "" };
       if (d.boost_until && Date.now() / 1000 < d.boost_until) return { label: "Boost", cls: "boost", dot: "active" };
       if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
-      if (d.started && d.on && d.price_triggered) return { label: "Goedkoop tarief", cls: "waiting", dot: "active" };
       if (d.started && d.on) return { label: "Actief", cls: "running", dot: "active" };
-      if (batteryBlocksStart) return { label: "Geblokkeerd", cls: "import", dot: "" };
       return { label: "Uit", cls: "off", dot: "" };
     }
 
@@ -2661,7 +2176,7 @@
       });
 
       cont.innerHTML = devices.map(d => {
-        const state = getDeviceState(d, batteryBlocksStart);
+        const state = getDeviceState(d);
         const socket = getSocketState(d);
         const powerMeter = getPowerMeterState(d);
         const available = isDeviceAvailable(d);
@@ -2722,10 +2237,7 @@
                 ${hasPowerMeter ? `
                   <div class="mini-info">
                     <div class="mini-label">Vermogensmeter</div>
-                    <div class="mini-value" style="display:flex;align-items:center;gap:0.5rem;">
-                      <span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span>
-                      <span style="font-size:0.78rem;color:hsl(220,10%,52%);">${Number(d.energy_today_kwh || 0).toFixed(2)} kWh</span>
-                    </div>
+                    <div class="mini-value"><span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span></div>
                   </div>` : ''}
               </div>` : ''}
             <div class="device-bottom">
@@ -2742,17 +2254,6 @@
               </div>
             </div>
             ${manualBrightnessHtml}
-            ${(d.linked_temperatures && d.linked_temperatures.length) ? `
-              <div class="linked-temp-row">
-                ${d.linked_temperatures.map(lt => `
-                  <div class="linked-temp-chip">
-                    <i class="mdi ${escapeHtml(lt.icon || 'mdi-thermometer')}"></i>
-                    <span class="lt-name">${escapeHtml(lt.name)}</span>
-                    ${lt.temperature !== null && lt.temperature !== undefined
-                      ? `<span class="lt-val">${lt.temperature}&thinsp;°C</span>`
-                      : `<span class="lt-offline">offline</span>`}
-                  </div>`).join('')}
-              </div>` : ''}
           </div>`;
       }).join("");
 
@@ -2770,24 +2271,18 @@
     function renderAccessories(accessories) {
       const card = document.getElementById('accessoriesCard');
       const cont = document.getElementById('accessoriesContainer');
-      const gasVisible = document.getElementById('gasBadge') && document.getElementById('gasBadge').style.display !== 'none';
-      const visible = (accessories || []).filter(a => !a.is_solar);
-      if (visible.length === 0) {
-        if (!gasVisible) card.style.display = 'none';
+      if (!accessories || accessories.length === 0) {
+        card.style.display = 'none';
         return;
       }
       card.style.display = '';
-      cont.innerHTML = '<div class="acc-grid">' + visible.map(acc => {
-        const isTemp = acc.acc_type === 'temperature';
+      cont.innerHTML = '<div class="acc-grid">' + accessories.map(acc => {
+        const power = Number(acc.power || 0);
         const onlineLabel = acc.online ? '● Online' : '● Offline';
         const onlineCls   = acc.online ? 'online' : 'offline';
-        const valueHtml = isTemp
-          ? `<div class="acc-tile-watt">${acc.temperature !== null && acc.temperature !== undefined ? acc.temperature : '—'}</div><div class="acc-tile-unit">°C</div>`
-          : `<div style="display:flex;align-items:baseline;gap:0.2rem;justify-content:flex-end;"><span class="acc-tile-watt">${Number(acc.power || 0).toFixed(0)}</span><span class="acc-tile-unit">W</span></div>
-             <div style="font-size:0.72rem;color:hsl(220,10%,54%);text-align:right;margin-top:0.1rem;line-height:1;">${Number(acc.energy_today_kwh || 0).toFixed(2)} kWh</div>`;
         return `
           <div class="acc-tile">
-            <div class="acc-tile-icon${isTemp ? ' temp' : ''}">
+            <div class="acc-tile-icon">
               <i class="mdi ${escapeHtml(acc.icon || 'mdi-power-plug')}" style="font-size:1.2rem;line-height:1"></i>
             </div>
             <div class="acc-tile-info">
@@ -2795,106 +2290,12 @@
               <span class="acc-online-badge ${onlineCls}">${onlineLabel}</span>
             </div>
             <div class="acc-tile-power">
-              ${valueHtml}
+              <div class="acc-tile-watt">${power.toFixed(0)}</div>
+              <div class="acc-tile-unit">W</div>
             </div>
           </div>`;
       }).join('') + '</div>';
     }
-
-    // ===== BROADLINK IR DASHBOARD =====
-    let _blDevices = {{ config.broadlink_devices | tojson }};
-    let _irStates = {};
-    let _blOnline = {};
-
-    function renderBroadlinkWidgets(irStates) {
-      if (irStates !== undefined) _irStates = irStates || {};
-      const card = document.getElementById('broadlinkCard');
-      const list = document.getElementById('irWidgetList');
-      const visible = [];
-      (_blDevices || []).forEach(bl => {
-        (bl.ir_devices || []).forEach(ir => {
-          if (ir.show_on_dashboard !== false && (ir.commands || []).length > 0) {
-            visible.push({ bl, ir });
-          }
-        });
-      });
-      if (visible.length === 0) { card.style.display = 'none'; return; }
-      card.style.display = '';
-
-      // Only rebuild the button DOM when the structure actually changes
-      const structKey = visible.map(({ bl, ir }) =>
-        bl.id + '|' + ir.id + '|' + ir.name + '|' + (ir.icon || '') + '|' +
-        (ir.commands || []).map(c => c.id + ':' + c.name).join(',')
-      ).join(';');
-      if (list.dataset.structKey !== structKey) {
-        list.dataset.structKey = structKey;
-        list.innerHTML = visible.map(({ bl, ir }) => `
-          <div class="ir-widget">
-            <div class="ir-widget-header">
-              <div class="ir-widget-icon"><i class="mdi ${escHtmlDash(ir.icon || 'mdi-remote')}"></i></div>
-              <div class="ir-widget-name">${escHtmlDash(ir.name)}</div>
-              <span class="ir-online-slot" data-bl="${escHtmlDash(bl.id)}"></span>
-              <span class="ir-badge-slot" data-ir="${escHtmlDash(ir.id)}"></span>
-            </div>
-            <div class="ir-cmd-btns">
-              ${(ir.commands || []).map(cmd => `
-                <button class="ir-cmd-btn"
-                  onclick="dashSendIr(this, '${bl.id}', '${ir.id}', '${cmd.id}')">
-                  ${escHtmlDash(cmd.name)}
-                </button>`).join('')}
-            </div>
-          </div>`).join('');
-      }
-
-      // Always update online dots and power badges in-place — buttons are never touched
-      visible.forEach(({ bl, ir }) => {
-        const blOnline = _blOnline[bl.id];
-        const dotSlot = list.querySelector(`.ir-online-slot[data-bl="${bl.id}"]`);
-        if (dotSlot) {
-          const cls = blOnline === true ? 'online' : blOnline === false ? 'offline' : '';
-          const cur = dotSlot.firstElementChild;
-          if (!cur || cur.className !== `ir-online-dot ${cls}`.trim()) {
-            dotSlot.innerHTML = cls ? `<span class="ir-online-dot ${cls}"></span>` : '';
-          }
-        }
-        const st = _irStates[ir.id];
-        const hasPower = !!ir.linked_accessory_id;
-        const isOn = hasPower && st && st.on;
-        const badgeSlot = list.querySelector(`.ir-badge-slot[data-ir="${ir.id}"]`);
-        if (badgeSlot) {
-          const wantCls = hasPower ? (isOn ? 'on' : 'off') : '';
-          const cur = badgeSlot.firstElementChild;
-          if (!cur && !wantCls) return;
-          if (!cur || cur.dataset.state !== wantCls) {
-            badgeSlot.innerHTML = hasPower
-              ? `<span class="ir-power-badge ${wantCls}" data-state="${wantCls}">
-                   <span class="ir-power-dot"></span>${isOn ? 'Aan' : 'Uit'}
-                 </span>`
-              : '';
-          }
-        }
-      });
-    }
-
-    function dashSendIr(btn, blId, irId, cmdId) {
-      btn.classList.add('sending');
-      const reset = () => { btn.classList.remove('sending'); btn.blur(); };
-      const fallback = setTimeout(reset, 5000);
-      fetch('/api/broadlink/' + blId + '/ir_devices/' + irId + '/commands/' + cmdId + '/send', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-          clearTimeout(fallback);
-          setTimeout(reset, 400);
-          if (!data.success) console.warn('IR send failed:', data.error);
-        })
-        .catch(() => { clearTimeout(fallback); reset(); });
-    }
-
-    function escHtmlDash(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    renderBroadlinkWidgets();
 
     function runUpdateCheck() {
       const btn = document.getElementById("updateCheckBtn");
@@ -2942,66 +2343,15 @@
           const visible = !!data.available;
           document.getElementById("updateDot").classList.toggle("visible", visible);
           document.getElementById("menuUpdateBadge").style.display = visible ? "" : "none";
-          const sub = document.getElementById("updateMenuSub");
-          sub.textContent = visible ? "Nieuwe versie beschikbaar!" : "Versiegeschiedenis & update uitvoeren";
-          sub.classList.toggle("update-active", visible);
+          document.getElementById("updateMenuSub").textContent = visible
+            ? "Nieuwe versie beschikbaar!"
+            : "Versiegeschiedenis & update uitvoeren";
         })
         .catch(() => {});
     }
 
     checkUpdatesAvailable();
     setInterval(checkUpdatesAvailable, 5 * 60 * 1000);
-
-    // ===== DAILY ENERGY TOTALS =====
-    let dailyImportKwh = null, dailyExportKwh = null;
-
-    function updateDailyEnergy() {
-      const now = Math.floor(Date.now() / 1000);
-      const d = new Date(); d.setHours(0, 0, 0, 0);
-      const midnight = Math.floor(d.getTime() / 1000);
-      const resMap = {'5s': 5, '1m': 60, '1h': 3600, '1d': 86400};
-      fetch(`/api/history?metric=net_power&from=${midnight}&to=${now}`)
-        .then(r => r.json())
-        .then(data => {
-          const pts = data.data || [];
-          const interval = resMap[data.resolution] || 5;
-          let importWh = 0, exportWh = 0;
-          for (let i = 0; i < pts.length; i++) {
-            const v = pts[i].v;
-            if (v > 0) importWh += v * interval / 3600;
-            else       exportWh += Math.abs(v) * interval / 3600;
-          }
-          dailyImportKwh = importWh / 1000;
-          dailyExportKwh = exportWh / 1000;
-          document.getElementById('dailyImport').textContent = dailyImportKwh.toFixed(2);
-          document.getElementById('dailyExport').textContent = dailyExportKwh.toFixed(2);
-          document.getElementById('dailyEnergyRow').style.display = 'flex';
-          updateSelfMetrics();
-        })
-        .catch(() => {});
-    }
-
-    function updateSelfMetrics() {
-      const row = document.getElementById('selfSufficiencyRow');
-      if (solarKwhToday === null || dailyImportKwh === null || dailyExportKwh === null) {
-        row.style.display = 'none';
-        return;
-      }
-      const solar = solarKwhToday;
-      const exported = dailyExportKwh;
-      const imported = dailyImportKwh;
-
-      const selfConsumptionPct = solar > 0 ? Math.min(100, Math.max(0, (1 - exported / solar) * 100)) : 0;
-      const huisverbruik = imported + Math.max(0, solar - exported);
-      const selfSufficiencyPct = huisverbruik > 0 ? Math.min(100, Math.max(0, (Math.max(0, solar - exported) / huisverbruik) * 100)) : 0;
-
-      document.getElementById('selfConsumptionValue').textContent = selfConsumptionPct.toFixed(1);
-      document.getElementById('selfSufficiencyValue').textContent = selfSufficiencyPct.toFixed(1);
-      row.style.display = 'flex';
-    }
-
-    updateDailyEnergy();
-    setInterval(updateDailyEnergy, 60 * 1000);
 
     setInterval(updateStatus, 1000);
     updateStatus();
@@ -3093,12 +2443,8 @@
             return;
           }
           if (data.error) {
-            console.error('Solar forecast fout:', data.error);
-            const msg = data.error.includes('502') || data.error.includes('503') || data.error.includes('tijdelijk')
-              ? 'Open-Meteo tijdelijk niet beschikbaar. Wordt automatisch opnieuw geprobeerd.'
-              : `Kon verwachting niet ophalen. <small style="opacity:0.6;font-size:0.85em">${data.error}</small>`;
             document.getElementById('forecastContent').innerHTML =
-              `<div class="forecast-no-location">${msg}</div>`;
+              '<div class="forecast-no-location">Kon verwachting niet ophalen.</div>';
             return;
           }
           _forecastData = data;
