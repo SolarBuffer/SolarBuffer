@@ -140,21 +140,21 @@
       transition: max-height 0.3s ease, opacity 0.25s ease, margin-bottom 0.3s ease;
       margin-bottom: 0;
     }
-    .date-picker-panel.open { max-height: 170px; opacity: 1; margin-bottom: 0.75rem; }
+    .date-picker-panel.open { max-height: 220px; opacity: 1; margin-bottom: 0.75rem; }
     .date-picker-inner {
       background: var(--card-bg); border: 1.5px solid var(--card-border);
-      border-radius: var(--radius); padding: 0.875rem 1rem;
+      border-radius: var(--radius); padding: 0.75rem 0.875rem;
       box-shadow: var(--shadow-sm);
-      display: flex; flex-direction: column; gap: 0.625rem;
+      display: flex; flex-direction: column; gap: 0.45rem;
     }
-    .dp-fields { display: flex; gap: 0.75rem; }
-    .dp-field { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+    .dp-field { display: flex; align-items: center; gap: 0.6rem; }
     .dp-field label {
-      font-size: 0.7rem; font-weight: 600; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.04em;
+      font-size: 0.72rem; font-weight: 600; color: var(--text-muted);
+      min-width: 2.2rem; flex-shrink: 0;
     }
     .date-input {
-      width: 100%; padding: 0.42rem 0.6rem;
+      flex: 1; min-width: 0;
+      padding: 0.38rem 0.55rem;
       border: 1.5px solid var(--card-border); border-radius: 0.5rem;
       background: var(--bg); color: var(--text);
       font-family: 'Inter', sans-serif; font-size: 0.78rem;
@@ -163,9 +163,9 @@
     }
     .date-input:focus { border-color: var(--accent); }
     .apply-btn {
-      width: 100%; padding: 0.5rem;
+      width: 100%; padding: 0.48rem;
       background: var(--accent); color: white; border: none;
-      border-radius: 0.625rem;
+      border-radius: 0.625rem; margin-top: 0.1rem;
       font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
       cursor: pointer; letter-spacing: 0.01em;
       box-shadow: 0 2px 8px -2px var(--accent-glow);
@@ -338,15 +338,13 @@
     <!-- Datum picker panel -->
     <div class="date-picker-panel" id="datePicker">
       <div class="date-picker-inner">
-        <div class="dp-fields">
-          <div class="dp-field">
-            <label for="fromInput">Van</label>
-            <input class="date-input" type="datetime-local" id="fromInput" />
-          </div>
-          <div class="dp-field">
-            <label for="toInput">Tot</label>
-            <input class="date-input" type="datetime-local" id="toInput" />
-          </div>
+        <div class="dp-field">
+          <label for="fromInput">Van</label>
+          <input class="date-input" type="date" id="fromInput" />
+        </div>
+        <div class="dp-field">
+          <label for="toInput">Tot</label>
+          <input class="date-input" type="date" id="toInput" />
         </div>
         <button class="apply-btn" onclick="applyCustomRange()">Grafieken laden</button>
       </div>
@@ -402,6 +400,34 @@
 
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.font.size   = 11;
+    Chart.defaults.animation   = false; // geen opstart-animatie
+
+    /* ── LTTB downsampling (behoudt pieken/dalen) ── */
+    function lttb(pts, threshold) {
+      const n = pts.length;
+      if (n <= threshold) return pts;
+      const out   = [pts[0]];
+      const every = (n - 2) / (threshold - 2);
+      let a = 0;
+      for (let i = 0; i < threshold - 2; i++) {
+        const avgOff = Math.floor((i + 1) * every) + 1;
+        const avgEnd = Math.min(Math.floor((i + 2) * every) + 1, n);
+        let ax = 0, ay = 0;
+        for (let j = avgOff; j < avgEnd; j++) { ax += pts[j].ts; ay += pts[j].v; }
+        ax /= (avgEnd - avgOff); ay /= (avgEnd - avgOff);
+        const rOff = Math.floor(i * every) + 1;
+        let maxA = -1, pick = rOff;
+        const px = pts[a].ts, py = pts[a].v;
+        for (let j = rOff; j < avgOff; j++) {
+          const area = Math.abs((px - ax) * (pts[j].v - py) - (px - pts[j].ts) * (ay - py));
+          if (area > maxA) { maxA = area; pick = j; }
+        }
+        out.push(pts[pick]);
+        a = pick;
+      }
+      out.push(pts[n - 1]);
+      return out;
+    }
 
     // Vergrendel hoofdpagina in portret
     tryLockOrientation('portrait');
@@ -419,11 +445,14 @@
       const to = Math.floor(Date.now() / 1000);
       return { from: to - currentHours * 3600, to };
     }
-    function toDatetimeLocal(unixTs) {
+    function toDateInput(unixTs) {
       const d = new Date(unixTs * 1000);
-      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
-    function fromDatetimeLocal(str) { return Math.floor(new Date(str).getTime() / 1000); }
+    function fromDateInput(str) {
+      const [y, m, d] = str.split('-').map(Number);
+      return Math.floor(new Date(y, m - 1, d, 0, 0, 0).getTime() / 1000);
+    }
 
     /* ── Bereik knoppen ── */
     function setRange(btn) {
@@ -434,8 +463,8 @@
       if (btn.dataset.hours === 'custom') {
         mode = 'custom';
         const nowTs = Math.floor(Date.now() / 1000);
-        document.getElementById('fromInput').value = toDatetimeLocal(customFrom || nowTs - 86400);
-        document.getElementById('toInput').value   = toDatetimeLocal(customTo   || nowTs);
+        document.getElementById('fromInput').value = toDateInput(customFrom || nowTs - 86400);
+        document.getElementById('toInput').value   = toDateInput(customTo   || nowTs);
         panel.classList.add('open');
       } else {
         mode         = 'hours';
@@ -446,8 +475,8 @@
     }
 
     function applyCustomRange() {
-      const f = fromDatetimeLocal(document.getElementById('fromInput').value);
-      const t = fromDatetimeLocal(document.getElementById('toInput').value);
+      const f = fromDateInput(document.getElementById('fromInput').value);
+      const t = fromDateInput(document.getElementById('toInput').value);
       if (!f || !t) return;
       if (f >= t) { alert('Begintijd moet vóór eindtijd liggen.'); return; }
       customFrom = f; customTo = t; mode = 'custom';
@@ -519,7 +548,7 @@
         data: {
           labels,
           datasets: [{ data: values, borderColor: color, backgroundColor: fill,
-            borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true }]
+            borderWidth: 2, pointRadius: 0, tension: 0, fill: true }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
@@ -550,7 +579,7 @@
         data: {
           labels,
           datasets: [{
-            data: values, borderWidth: 2, pointRadius: 0, tension: 0.3, fill: 'origin',
+            data: values, borderWidth: 2, pointRadius: 0, tension: 0, fill: 'origin',
             segment: {
               borderColor: c => {
                 const mid = (c.p0.parsed.y + c.p1.parsed.y) / 2;
@@ -725,8 +754,9 @@
             return;
           }
           const { from, to } = getTimeRange();
-          const labels = pts.map(p => fmtTs(p.ts, to - from));
-          const values = pts.map(p => p.v);
+          const sampled = lttb(pts, 500);
+          const labels  = sampled.map(p => fmtTs(p.ts, to - from));
+          const values  = sampled.map(p => p.v);
           loading.style.display = 'none';
           canvas.style.display  = 'block';
           buildChart(cid, labels, values, type, unit);
