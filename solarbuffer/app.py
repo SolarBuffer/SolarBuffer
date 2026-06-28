@@ -35,6 +35,26 @@ except ImportError:
     _b64 = None
     BROADLINK_AVAILABLE = False
 
+try:
+    import bleak as _bleak_check
+except ImportError:
+    import sys as _sys
+    subprocess.run([_sys.executable, "-m", "pip", "install", "-q", "bleak"],
+                   capture_output=True, timeout=120)
+
+try:
+    from ble_provision import (
+        start_scan_background, get_scan_state,
+        start_provision_background, get_provision_state,
+        BLEAK_AVAILABLE,
+    )
+except ImportError:
+    BLEAK_AVAILABLE = False
+    def start_scan_background(*a, **kw): pass
+    def get_scan_state(): return {"running": False, "found": [], "error": "ble_provision module niet gevonden"}
+    def start_provision_background(*a, **kw): pass
+    def get_provision_state(): return {"running": False, "done": False, "success": False, "message": "", "log": []}
+
 _broadlink_learn_lock = threading.Lock()
 _broadlink_learn_state = {}  # learn_id -> {status, code, error}
 
@@ -2135,23 +2155,6 @@ def restart():
     return jsonify(success=True)
 
 
-@app.route("/shutdown", methods=["POST"])
-def shutdown():
-    if not require_login():
-        return jsonify(success=False), 401
-    if not is_current_user_admin():
-        return jsonify(success=False, error="Geen toegang"), 403
-    write_audit_log("system_shutdown", {"user": safe_session_username()})
-    def _do_shutdown():
-        cfg = load_config()
-        sync_configured_devices_off(cfg.get("shelly_devices", []))
-        time.sleep(1)
-        if os.name != "nt":
-            subprocess.run(["sudo", "shutdown", "-h", "now"])
-    threading.Thread(target=_do_shutdown, daemon=True).start()
-    return jsonify(success=True)
-
-
 @app.route("/factory_reset", methods=["POST"])
 def factory_reset():
     if not require_login():
@@ -2395,9 +2398,30 @@ def run_update_check():
                 cfg = load_config()
                 sync_configured_devices_off(cfg.get("shelly_devices", []))
                 time.sleep(1.5)
+                import sys
+                req_file = os.path.join(UPDATE_DIR, "requirements.txt")
+                if os.path.exists(req_file):
+                    subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "-q", "-r", req_file],
+                        capture_output=True, timeout=180,
+                    )
+                else:
+                    subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "-q", "bleak"],
+                        capture_output=True, timeout=120,
+                    )
                 if os.name != "nt":
                     subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
             threading.Thread(target=delayed_restart, daemon=True).start()
+        elif not BLEAK_AVAILABLE:
+            # Code is al actueel maar bleak was nog niet geïnstalleerd — doe het nu alsnog
+            def install_bleak():
+                import sys
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "-q", "bleak"],
+                    capture_output=True, timeout=120,
+                )
+            threading.Thread(target=install_bleak, daemon=True).start()
 
         return jsonify(success=True, returncode=pull.returncode, output=output,
                        has_changes=has_changes, restarting=has_changes)
@@ -6071,6 +6095,64 @@ def accessory_poll_loop():
         except Exception:
             pass
         time.sleep(5)
+
+
+# ================= BLE PROVISIONING =================
+
+@app.route("/ble_provision")
+def ble_provision_page():
+    if not require_login():
+        return redirect("/login")
+    return render_template("ble_provision.html", bleak_available=BLEAK_AVAILABLE)
+
+
+@app.route("/api/ble/scan", methods=["POST"])
+def api_ble_scan():
+    if not require_login():
+        return jsonify({"error": "Niet ingelogd"}), 401
+    if not BLEAK_AVAILABLE:
+        return jsonify({"error": "bleak niet geïnstalleerd"}), 503
+    duration = float((request.json or {}).get("duration", 8))
+    start_scan_background(duration)
+    return jsonify({"started": True})
+
+
+@app.route("/api/ble/scan_status")
+def api_ble_scan_status():
+    if not require_login():
+        return jsonify({"error": "Niet ingelogd"}), 401
+    return jsonify(get_scan_state())
+
+
+@app.route("/api/ble/provision", methods=["POST"])
+def api_ble_provision():
+    if not require_login():
+        return jsonify({"error": "Niet ingelogd"}), 401
+    if not BLEAK_AVAILABLE:
+        return jsonify({"error": "bleak niet geïnstalleerd"}), 503
+
+    data        = request.json or {}
+    address     = (data.get("address") or "").strip()
+    ssid        = (data.get("ssid") or "").strip()
+    password    = data.get("password", "")
+    device_name = (data.get("device_name") or "").strip() or None
+
+    if not address or not ssid:
+        return jsonify({"error": "address en ssid zijn verplicht"}), 400
+
+    if get_provision_state().get("running"):
+        return jsonify({"error": "Provisioning is al bezig"}), 409
+
+    start_provision_background(address, ssid, password, device_name)
+    write_audit_log("ble_provision_started", {"address": address, "ssid": ssid})
+    return jsonify({"started": True})
+
+
+@app.route("/api/ble/provision_status")
+def api_ble_provision_status():
+    if not require_login():
+        return jsonify({"error": "Niet ingelogd"}), 401
+    return jsonify(get_provision_state())
 
 
 # ================= START =================
