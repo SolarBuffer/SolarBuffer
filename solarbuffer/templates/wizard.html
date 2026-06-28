@@ -622,6 +622,83 @@
             background: hsl(220, 8%, 38%);
         }
 
+        /* ===== BLE PROVISIONING ===== */
+        .ble-toggle-header {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; user-select: none;
+        }
+        .ble-toggle-header:hover .section-title { color: hsl(32, 95%, 52%); }
+
+        .ble-steps { display: flex; gap: .4rem; margin-bottom: 1.1rem; }
+        .ble-step-dot {
+            flex: 1; height: 3px; border-radius: 2px;
+            background: hsl(30, 15%, 88%); transition: background .3s;
+        }
+        .ble-step-dot.ble-active { background: hsl(32, 95%, 52%); }
+        .ble-step-dot.ble-done   { background: hsl(145, 65%, 40%); }
+
+        .ble-device-list { display: flex; flex-direction: column; gap: .4rem; margin: .75rem 0; min-height: 48px; }
+        .ble-device-item {
+            display: flex; align-items: center; gap: .65rem;
+            padding: .55rem .85rem;
+            border: 1px solid hsl(30, 15%, 88%); border-radius: .5rem;
+            cursor: pointer; transition: border-color .15s, background .15s;
+            background: white;
+        }
+        .ble-device-item:hover { border-color: hsl(32, 95%, 52%); }
+        .ble-device-item.ble-sel {
+            border-color: hsl(32, 95%, 52%);
+            background: hsl(37, 100%, 96%);
+        }
+        .ble-device-name { font-weight: 600; font-size: .875rem; }
+        .ble-device-addr { font-size: .75rem; color: hsl(220, 10%, 46%); }
+        .ble-device-rssi { margin-left: auto; font-size: .75rem; color: hsl(220, 10%, 52%); white-space: nowrap; }
+
+        .ble-log-box {
+            background: hsl(220, 20%, 12%); color: hsl(145, 35%, 72%);
+            border: 1px solid hsl(30, 15%, 82%); border-radius: .5rem;
+            padding: .6rem .85rem; font-size: .775rem; font-family: 'Courier New', monospace;
+            max-height: 150px; overflow-y: auto; margin-top: .75rem; line-height: 1.5;
+        }
+        .ble-log-ok  { color: hsl(145, 65%, 55%); }
+        .ble-log-err { color: hsl(0, 75%, 65%); }
+
+        .ble-banner {
+            border-radius: .5rem; padding: .55rem .85rem;
+            font-size: .85rem; margin-bottom: .85rem; display: none;
+        }
+        .ble-banner.ble-ok  {
+            background: hsl(145, 45%, 95%); border: 1px solid hsl(145, 45%, 65%);
+            color: hsl(145, 55%, 26%); display: block;
+        }
+        .ble-banner.ble-err {
+            background: hsl(0, 75%, 96%); border: 1px solid hsl(0, 65%, 72%);
+            color: hsl(0, 65%, 38%); display: block;
+        }
+        .ble-empty { color: hsl(220, 10%, 58%); font-size: .85rem; text-align: center; padding: .75rem 0; }
+
+        .ble-spin {
+            display: inline-block; width: 13px; height: 13px;
+            border: 2px solid currentColor; border-top-color: transparent;
+            border-radius: 50%; animation: bleSpin .7s linear infinite; vertical-align: middle;
+            flex-shrink: 0;
+        }
+        @keyframes bleSpin { to { transform: rotate(360deg); } }
+
+        .ble-panel-divider { border-top: 1px solid hsl(30, 15%, 88%); margin-top: 1rem; padding-top: 1rem; }
+
+        html[data-theme="dark"] .ble-step-dot { background: hsl(220, 8%, 37%); }
+        html[data-theme="dark"] .ble-device-item { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 37%); }
+        html[data-theme="dark"] .ble-device-item:hover { border-color: hsl(32, 95%, 52%); }
+        html[data-theme="dark"] .ble-device-item.ble-sel { background: hsl(37, 60%, 22%); border-color: hsl(35, 78%, 50%); }
+        html[data-theme="dark"] .ble-device-addr { color: hsl(220, 8%, 52%); }
+        html[data-theme="dark"] .ble-device-rssi { color: hsl(220, 8%, 52%); }
+        html[data-theme="dark"] .ble-log-box { background: hsl(220, 10%, 14%); border-color: hsl(220, 8%, 32%); }
+        html[data-theme="dark"] .ble-banner.ble-ok  { background: hsl(145, 35%, 18%); border-color: hsl(145, 45%, 36%); color: hsl(145, 55%, 65%); }
+        html[data-theme="dark"] .ble-banner.ble-err { background: hsl(0, 35%, 20%); border-color: hsl(0, 45%, 40%); color: hsl(0, 60%, 68%); }
+        html[data-theme="dark"] .ble-empty { color: hsl(220, 8%, 50%); }
+        html[data-theme="dark"] .ble-panel-divider { border-color: hsl(220, 8%, 35%); }
+
         @media (max-width: 640px) {
             .container {
                 max-width: 100%;
@@ -734,6 +811,93 @@
                     </div>
 
                     <div class="scan-status" id="deviceScanStatus"></div>
+                </div>
+
+                <!-- BLE Provisioning -->
+                <div class="section-card" style="margin-top:1rem;">
+                    <div class="ble-toggle-header" onclick="toggleBleSection()" role="button" tabindex="0"
+                         onkeydown="if(event.key==='Enter'||event.key===' ')toggleBleSection()">
+                        <div>
+                            <div class="section-title" style="margin-bottom:.1rem;">🔵 Shelly koppelen via Bluetooth</div>
+                            <div class="section-subtitle" style="margin-bottom:0;">Shelly nog niet op WiFi? Koppel hem eerst via BLE.</div>
+                        </div>
+                        <svg id="bleChevron" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"
+                             style="flex-shrink:0;color:hsl(220,10%,52%);transition:transform .2s;">
+                            <path d="M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6 1.41-1.42z"/>
+                        </svg>
+                    </div>
+
+                    <div id="blePanel" style="display:none;">
+                        <div class="ble-panel-divider">
+                            <!-- Mini stappenbalken -->
+                            <div class="ble-steps">
+                                <div class="ble-step-dot ble-active" id="bleDot1"></div>
+                                <div class="ble-step-dot" id="bleDot2"></div>
+                                <div class="ble-step-dot" id="bleDot3"></div>
+                            </div>
+
+                            <div id="bleBanner" class="ble-banner"></div>
+
+                            <!-- Stap 1: Scannen -->
+                            <div id="bleS1">
+                                <p style="font-size:.85rem;color:hsl(220,10%,46%);margin-bottom:.85rem;">
+                                    Zorg dat de Shelly in de buurt is en in <strong>fabrieksstand</strong> staat (LED knippert blauw).
+                                </p>
+                                <button type="button" class="scan-btn" id="bleScanBtn" onclick="bleStartScan()" style="width:100%">
+                                    🔍 Scannen op Shelly apparaten (8 s)
+                                </button>
+                                <div class="ble-device-list" id="bleDeviceList">
+                                    <p class="ble-empty">Nog geen apparaten gevonden.</p>
+                                </div>
+                                <button type="button" id="bleNext1Btn" onclick="bleGoStep(2)" disabled style="width:100%;margin-top:.25rem;">
+                                    Verder →
+                                </button>
+                            </div>
+
+                            <!-- Stap 2: WiFi-gegevens -->
+                            <div id="bleS2" style="display:none">
+                                <div class="field-group">
+                                    <label>Geselecteerde Shelly</label>
+                                    <input type="text" id="bleSelDisplay" readonly style="opacity:.6;">
+                                </div>
+                                <div class="two-col">
+                                    <div class="field-group" style="margin-bottom:0">
+                                        <label>WiFi SSID *</label>
+                                        <input type="text" id="bleSsid" placeholder="MijnWifi">
+                                    </div>
+                                    <div class="field-group" style="margin-bottom:0">
+                                        <label>Wachtwoord</label>
+                                        <input type="password" id="blePass" placeholder="••••••••">
+                                    </div>
+                                </div>
+                                <div class="field-group" style="margin-top:.85rem">
+                                    <label>Apparaatnaam (optioneel)</label>
+                                    <input type="text" id="bleDevName" placeholder="Bijv. SolarBuffer Boiler">
+                                </div>
+                                <div class="two-col" style="margin-top:.85rem">
+                                    <button type="button" class="prev-btn" onclick="bleGoStep(1)">← Terug</button>
+                                    <button type="button" onclick="bleGoStep(3)">Koppelen →</button>
+                                </div>
+                            </div>
+
+                            <!-- Stap 3: Provisioning -->
+                            <div id="bleS3" style="display:none">
+                                <p style="font-size:.85rem;color:hsl(220,10%,46%);margin-bottom:.65rem;">
+                                    De Pi verbindt via Bluetooth en stuurt de WiFi-gegevens door.
+                                </p>
+                                <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;margin-bottom:.15rem;">
+                                    <span class="ble-spin" id="bleSpinner" style="color:hsl(32,95%,52%)"></span>
+                                    <span id="bleProvMsg">Verbinden …</span>
+                                </div>
+                                <div class="ble-log-box" id="bleLogBox"></div>
+                                <div id="bleProvActions" style="display:none;margin-top:.85rem;">
+                                    <button type="button" class="scan-btn" onclick="bleAfterSuccess()" style="width:100%">
+                                        🔍 Scan netwerk om Shelly toe te voegen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="wizard-actions">
@@ -1597,6 +1761,181 @@
         updateDeviceNumbers();
         updateWizardUI();
 });
+
+        // ===== BLE PROVISIONING =====
+        let bleSelectedDevice = null;
+        let bleLogCount = 0;
+        let blePanelOpen = false;
+
+        function toggleBleSection() {
+            blePanelOpen = !blePanelOpen;
+            document.getElementById('blePanel').style.display = blePanelOpen ? 'block' : 'none';
+            document.getElementById('bleChevron').style.transform = blePanelOpen ? 'rotate(180deg)' : '';
+        }
+
+        function bleSetStep(n) {
+            ['bleS1', 'bleS2', 'bleS3'].forEach((id, i) => {
+                document.getElementById(id).style.display = (i + 1 === n) ? '' : 'none';
+            });
+            ['bleDot1', 'bleDot2', 'bleDot3'].forEach((id, i) => {
+                document.getElementById(id).className =
+                    'ble-step-dot' + (i + 1 < n ? ' ble-done' : i + 1 === n ? ' ble-active' : '');
+            });
+            document.getElementById('bleBanner').className = 'ble-banner';
+        }
+
+        function bleGoStep(n) {
+            if (n === 3) {
+                const ssid = document.getElementById('bleSsid').value.trim();
+                if (!ssid) { alert('Vul een WiFi SSID in.'); return; }
+                bleSetStep(3);
+                document.getElementById('bleLogBox').innerHTML = '';
+                document.getElementById('bleSpinner').style.display = '';
+                document.getElementById('bleProvMsg').textContent = 'Verbinden via Bluetooth …';
+                document.getElementById('bleProvMsg').style.color = '';
+                document.getElementById('bleProvActions').style.display = 'none';
+                bleLogCount = 0;
+                bleStartProvision();
+                return;
+            }
+            bleSetStep(n);
+        }
+
+        function bleStartScan() {
+            const btn = document.getElementById('bleScanBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="ble-spin"></span>&nbsp; Bezig met scannen …';
+            document.getElementById('bleDeviceList').innerHTML = '<p class="ble-empty">Scannen op Shelly apparaten …</p>';
+            document.getElementById('bleNext1Btn').disabled = true;
+            bleSelectedDevice = null;
+
+            fetch('/api/ble/scan', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{"duration":8}' })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.error) { bleShowBanner('ble-err', d.error); bleResetScanBtn(); return; }
+                    blePollScan();
+                })
+                .catch(e => { bleShowBanner('ble-err', 'Scan mislukt: ' + e); bleResetScanBtn(); });
+        }
+
+        function blePollScan() {
+            fetch('/api/ble/scan_status').then(r => r.json()).then(state => {
+                if (state.running) { setTimeout(blePollScan, 800); return; }
+                bleResetScanBtn();
+                if (state.error) { bleShowBanner('ble-err', state.error); return; }
+                bleRenderDevices(state.found || []);
+            });
+        }
+
+        function bleResetScanBtn() {
+            const btn = document.getElementById('bleScanBtn');
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Opnieuw scannen';
+        }
+
+        function bleRenderDevices(devices) {
+            const list = document.getElementById('bleDeviceList');
+            if (!devices.length) {
+                list.innerHTML = '<p class="ble-empty">Geen Shelly gevonden. Controleer of het apparaat in de buurt is en in fabrieksstand staat.</p>';
+                return;
+            }
+            list.innerHTML = '';
+            devices.forEach(dev => {
+                const el = document.createElement('div');
+                el.className = 'ble-device-item';
+                el.innerHTML = `
+                    <div style="flex:1;min-width:0;">
+                        <div class="ble-device-name">${escapeHtml(dev.name)}</div>
+                        <div class="ble-device-addr">${escapeHtml(dev.address)}</div>
+                    </div>
+                    <span class="ble-device-rssi">${dev.rssi} dBm</span>
+                `;
+                el.onclick = () => {
+                    document.querySelectorAll('.ble-device-item').forEach(e => e.classList.remove('ble-sel'));
+                    el.classList.add('ble-sel');
+                    bleSelectedDevice = dev;
+                    document.getElementById('bleNext1Btn').disabled = false;
+                    document.getElementById('bleSelDisplay').value = dev.name + '  (' + dev.address + ')';
+                };
+                list.appendChild(el);
+            });
+        }
+
+        function bleStartProvision() {
+            const body = {
+                address:     bleSelectedDevice.address,
+                ssid:        document.getElementById('bleSsid').value.trim(),
+                password:    document.getElementById('blePass').value,
+                device_name: document.getElementById('bleDevName').value.trim() || null,
+            };
+            fetch('/api/ble/provision', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body),
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) { bleProvFailed(d.error); return; }
+                blePollProvision();
+            })
+            .catch(e => bleProvFailed('Netwerkfout: ' + e));
+        }
+
+        function blePollProvision() {
+            fetch('/api/ble/provision_status').then(r => r.json()).then(state => {
+                bleRenderLog(state.log || []);
+                if (state.running) { setTimeout(blePollProvision, 600); return; }
+                document.getElementById('bleSpinner').style.display = 'none';
+                if (state.success) {
+                    document.getElementById('bleProvMsg').textContent = '✓ ' + state.message;
+                    document.getElementById('bleProvMsg').style.color = 'hsl(145, 55%, 32%)';
+                    document.getElementById('bleProvActions').style.display = '';
+                } else {
+                    bleProvFailed(state.message);
+                }
+            });
+        }
+
+        function bleProvFailed(msg) {
+            document.getElementById('bleSpinner').style.display = 'none';
+            document.getElementById('bleProvMsg').textContent = '✗ Mislukt: ' + msg;
+            document.getElementById('bleProvMsg').style.color = 'hsl(0, 65%, 44%)';
+            const actions = document.getElementById('bleProvActions');
+            actions.innerHTML = '<button type="button" class="prev-btn" onclick="bleGoStep(1)" style="width:100%">← Opnieuw proberen</button>';
+            actions.style.display = '';
+        }
+
+        function bleRenderLog(lines) {
+            if (lines.length <= bleLogCount) return;
+            const box = document.getElementById('bleLogBox');
+            lines.slice(bleLogCount).forEach(line => {
+                const el = document.createElement('div');
+                const lower = line.toLowerCase();
+                if (line.includes('✓')) el.className = 'ble-log-ok';
+                else if (lower.includes('fout') || lower.includes('mislukt') || line.includes('✗')) el.className = 'ble-log-err';
+                el.textContent = line;
+                box.appendChild(el);
+            });
+            box.scrollTop = box.scrollHeight;
+            bleLogCount = lines.length;
+        }
+
+        function bleShowBanner(type, msg) {
+            const el = document.getElementById('bleBanner');
+            el.className = 'ble-banner ' + type;
+            el.textContent = msg;
+        }
+
+        function bleAfterSuccess() {
+            // Sluit BLE-paneel en scan netwerk om de nieuwe Shelly toe te voegen
+            blePanelOpen = false;
+            document.getElementById('blePanel').style.display = 'none';
+            document.getElementById('bleChevron').style.transform = '';
+            bleSetStep(1);
+            bleSelectedDevice = null;
+            bleLogCount = 0;
+            scanDevices();
+        }
     </script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
