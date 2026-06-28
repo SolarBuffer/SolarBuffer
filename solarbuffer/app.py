@@ -2135,6 +2135,23 @@ def restart():
     return jsonify(success=True)
 
 
+@app.route("/shutdown", methods=["POST"])
+def shutdown():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    write_audit_log("system_shutdown", {"user": safe_session_username()})
+    def _do_shutdown():
+        cfg = load_config()
+        sync_configured_devices_off(cfg.get("shelly_devices", []))
+        time.sleep(1)
+        if os.name != "nt":
+            subprocess.run(["sudo", "shutdown", "-h", "now"])
+    threading.Thread(target=_do_shutdown, daemon=True).start()
+    return jsonify(success=True)
+
+
 @app.route("/factory_reset", methods=["POST"])
 def factory_reset():
     if not require_login():
