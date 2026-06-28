@@ -17,114 +17,261 @@
     })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --accent:       hsl(32, 95%, 52%);
+      --accent-glow:  hsla(32, 95%, 52%, 0.35);
+      --accent-light: hsl(32, 100%, 96%);
+      --accent-dark:  hsl(32, 90%, 38%);
+      --card-bg:      #ffffff;
+      --card-border:  hsl(30, 15%, 88%);
+      --text:         hsl(220, 20%, 14%);
+      --text-muted:   hsl(220, 10%, 48%);
+      --bg:           hsl(30, 25%, 97%);
+      --shadow-sm:    0 1px 4px -1px rgba(0,0,0,0.08);
+      --shadow:       0 4px 16px -4px rgba(0,0,0,0.10), 0 1px 4px -1px rgba(0,0,0,0.05);
+      --radius:       1rem;
+    }
+    html[data-theme="dark"] {
+      --accent-light: hsl(220, 8%, 28%);
+      --accent-dark:  hsl(32, 85%, 62%);
+      --card-bg:      hsl(220, 9%, 19%);
+      --card-border:  hsl(220, 8%, 27%);
+      --text:         hsl(220, 10%, 90%);
+      --text-muted:   hsl(220, 8%, 52%);
+      --bg:           hsl(220, 10%, 13%);
+      --shadow-sm:    0 1px 4px -1px rgba(0,0,0,0.25);
+      --shadow:       0 4px 20px -4px rgba(0,0,0,0.35), 0 1px 4px -1px rgba(0,0,0,0.20);
+    }
+
     body {
       font-family: 'Inter', sans-serif;
-      background:
-        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.12), transparent 28%),
-        hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding: 2rem 1rem;
+      padding: 2rem 1rem 4rem;
+    }
+    html[data-theme="light"] body {
+      background:
+        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.12), transparent 28%),
+        hsl(30, 25%, 97%);
     }
 
-    .container { width: 100%; max-width: 520px; }
+    .container { width: 100%; max-width: 580px; }
 
-    .header { text-align: center; margin-bottom: 1.75rem; }
-    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; }
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 1.5rem; }
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.75rem; font-weight: 700;
+    }
     .header h1 .solar {
-      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 62%));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
 
+    /* ── Back button ── */
     .back-btn {
       display: inline-flex; align-items: center; gap: 0.4rem;
-      background: white; border: 1.5px solid hsl(30, 15%, 85%);
+      background: var(--card-bg); border: 1.5px solid var(--card-border);
       border-radius: 999px; padding: 0.45rem 0.9rem 0.45rem 0.65rem;
-      font-size: 0.85rem; font-weight: 600; color: hsl(220, 20%, 30%);
-      text-decoration: none; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      font-size: 0.85rem; font-weight: 600; color: var(--text);
+      text-decoration: none; box-shadow: var(--shadow-sm);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
-      margin-bottom: 0.75rem;
+      margin-bottom: 1.25rem;
     }
-    .back-btn:hover {
-      background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%);
-    }
+    .back-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
 
-    .range-bar {
-      display: flex; gap: 0.4rem; margin-bottom: 1.25rem; flex-wrap: wrap;
-    }
+    /* ── Range bar ── */
+    .range-bar { display: flex; gap: 0.35rem; margin-bottom: 0.75rem; }
     .range-btn {
-      flex: 1; min-width: 0;
-      padding: 0.45rem 0.5rem;
-      border: 1.5px solid hsl(30, 15%, 88%);
-      border-radius: 0.5rem;
-      background: white;
+      flex: 1;
+      padding: 0.5rem 0.2rem;
+      border: 1.5px solid var(--card-border);
+      border-radius: 0.625rem;
+      background: var(--card-bg);
       font-family: 'Inter', sans-serif;
       font-size: 0.8rem; font-weight: 600;
-      color: hsl(220, 10%, 45%);
+      color: var(--text-muted);
       cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: var(--shadow-sm);
     }
+    .range-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
     .range-btn.active {
-      background: hsl(32, 95%, 52%);
-      border-color: hsl(32, 95%, 52%);
+      background: var(--accent);
+      border-color: var(--accent);
       color: white;
+      box-shadow: 0 2px 10px -2px var(--accent-glow);
+    }
+    .range-btn-custom {
+      display: flex; align-items: center; justify-content: center; gap: 0.3rem;
     }
 
+    /* ── Custom date picker panel ── */
+    .date-picker-panel {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.3s ease, opacity 0.25s ease, margin-bottom 0.3s ease;
+      margin-bottom: 0;
+    }
+    .date-picker-panel.open {
+      max-height: 160px;
+      opacity: 1;
+      margin-bottom: 0.75rem;
+    }
+    .date-picker-inner {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 0.875rem 1rem 0.875rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+    }
+    .dp-fields {
+      display: flex; gap: 0.75rem;
+    }
+    .dp-field {
+      flex: 1; display: flex; flex-direction: column; gap: 0.25rem;
+    }
+    .dp-field label {
+      font-size: 0.7rem; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .date-input {
+      width: 100%;
+      padding: 0.42rem 0.6rem;
+      border: 1.5px solid var(--card-border);
+      border-radius: 0.5rem;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      outline: none;
+      transition: border-color 0.15s;
+      color-scheme: light dark;
+    }
+    .date-input:focus { border-color: var(--accent); }
+    .apply-btn {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 0.625rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem; font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px -2px var(--accent-glow);
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .apply-btn:active { opacity: 0.88; transform: scale(0.98); }
+
+    /* ── Chart card ── */
     .chart-card {
-      background: white;
-      border: 1px solid hsl(30, 15%, 88%);
-      border-radius: 0.875rem;
-      padding: 1rem 1rem 0.75rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 1.125rem 1.125rem 0.75rem;
       margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.2rem;
+      gap: 0.5rem;
     }
     .chart-title {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.9rem; font-weight: 700;
-      margin-bottom: 0.25rem;
+      font-size: 0.92rem; font-weight: 700;
+      line-height: 1.2;
     }
     .chart-sub {
-      font-size: 0.75rem; color: hsl(220, 10%, 50%);
-      margin-bottom: 0.85rem;
+      font-size: 0.74rem; color: var(--text-muted);
+      margin-bottom: 0.875rem;
+      margin-top: 0.15rem;
     }
-    .chart-wrap { position: relative; height: 220px; }
 
+    /* Reset zoom button (hidden until zoomed) */
+    .zoom-reset-btn {
+      display: none;
+      align-items: center; gap: 0.25rem;
+      padding: 0.22rem 0.55rem;
+      background: var(--accent-light);
+      border: 1.5px solid var(--accent);
+      border-radius: 999px;
+      font-size: 0.68rem; font-weight: 600;
+      color: var(--accent-dark);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .zoom-reset-btn.visible { display: inline-flex; }
+    .zoom-reset-btn:hover { opacity: 0.8; }
+
+    .chart-wrap { position: relative; height: 210px; }
+
+    /* Per-chart loading / no-data */
+    .chart-loading, .chart-no-data {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem;
+      color: var(--text-muted); font-size: 0.82rem;
+    }
+    .chart-spinner {
+      width: 15px; height: 15px; flex-shrink: 0;
+      border: 2px solid var(--card-border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* Hint below each chart */
+    .chart-hint {
+      font-size: 0.67rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 0.5rem;
+      opacity: 0.65;
+      letter-spacing: 0.01em;
+    }
+
+    /* Global loading */
     .loading {
       text-align: center; padding: 3rem 1rem;
-      color: hsl(220, 10%, 50%); font-size: 0.88rem;
+      color: var(--text-muted); font-size: 0.88rem;
     }
     .spinner {
       display: inline-block; width: 20px; height: 20px;
-      border: 2px solid hsl(30, 15%, 85%);
-      border-top-color: hsl(32, 95%, 52%);
+      border: 2px solid var(--card-border);
+      border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       margin-right: 0.5rem; vertical-align: middle;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
     .no-data {
       text-align: center; padding: 2rem 1rem;
-      color: hsl(220, 10%, 55%); font-size: 0.82rem;
+      color: var(--text-muted); font-size: 0.82rem; line-height: 1.6;
     }
 
-    /* Dark mode */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 18%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .chart-card { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 28%); }
-    html[data-theme="dark"] .chart-sub  { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .range-btn  { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 30%); color: hsl(220, 8%, 60%); }
-    html[data-theme="dark"] .range-btn.active { background: hsl(32, 95%, 52%); border-color: hsl(32, 95%, 52%); color: white; }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .header p   { color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .loading, html[data-theme="dark"] .no-data { color: hsl(220, 8%, 50%); }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -136,15 +283,35 @@
     </div>
 
     <a class="back-btn" href="/">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Dashboard
     </a>
 
     <div class="range-bar">
-      <button class="range-btn active" data-hours="1"  onclick="setRange(this)">1u</button>
-      <button class="range-btn" data-hours="24" onclick="setRange(this)">24u</button>
-      <button class="range-btn" data-hours="168" onclick="setRange(this)">7d</button>
-      <button class="range-btn" data-hours="720" onclick="setRange(this)">30d</button>
+      <button class="range-btn active" data-hours="1"      onclick="setRange(this)">1u</button>
+      <button class="range-btn"        data-hours="24"     onclick="setRange(this)">24u</button>
+      <button class="range-btn"        data-hours="168"    onclick="setRange(this)">7d</button>
+      <button class="range-btn"        data-hours="720"    onclick="setRange(this)">30d</button>
+      <button class="range-btn range-btn-custom" data-hours="custom" onclick="setRange(this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19,3H18V1H16V3H8V1H6V3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z"/></svg>
+        Datum
+      </button>
+    </div>
+
+    <div class="date-picker-panel" id="datePicker">
+      <div class="date-picker-inner">
+        <div class="dp-fields">
+          <div class="dp-field">
+            <label for="fromInput">Van</label>
+            <input class="date-input" type="datetime-local" id="fromInput" />
+          </div>
+          <div class="dp-field">
+            <label for="toInput">Tot</label>
+            <input class="date-input" type="datetime-local" id="toInput" />
+          </div>
+        </div>
+        <button class="apply-btn" onclick="applyCustomRange()">Grafieken laden</button>
+      </div>
     </div>
 
     <div id="chartsArea">
@@ -154,44 +321,137 @@
   </div>
 
   <script>
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const gridColor   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+    const isDark      = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.055)';
     const tickColor   = isDark ? 'hsl(220,8%,50%)'        : 'hsl(220,10%,55%)';
     const chartInstances = {};
+
+    let mode         = 'hours';
     let currentHours = 1;
+    let customFrom   = null;
+    let customTo     = null;
 
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.font.size   = 11;
 
+    /* ── Time range helpers ── */
+
+    function getTimeRange() {
+      if (mode === 'custom') return { from: customFrom, to: customTo };
+      const to = Math.floor(Date.now() / 1000);
+      return { from: to - currentHours * 3600, to };
+    }
+
+    function toDatetimeLocal(unixTs) {
+      const d = new Date(unixTs * 1000);
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+    }
+
+    function fromDatetimeLocal(str) {
+      return Math.floor(new Date(str).getTime() / 1000);
+    }
+
+    /* ── Range & date picker ── */
+
     function setRange(btn) {
       document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentHours = parseInt(btn.dataset.hours);
+      const panel = document.getElementById('datePicker');
+
+      if (btn.dataset.hours === 'custom') {
+        mode = 'custom';
+        const nowTs  = Math.floor(Date.now() / 1000);
+        document.getElementById('fromInput').value = toDatetimeLocal(customFrom || nowTs - 86400);
+        document.getElementById('toInput').value   = toDatetimeLocal(customTo   || nowTs);
+        panel.classList.add('open');
+      } else {
+        mode         = 'hours';
+        currentHours = parseInt(btn.dataset.hours);
+        panel.classList.remove('open');
+        loadAll();
+      }
+    }
+
+    function applyCustomRange() {
+      const fromStr = document.getElementById('fromInput').value;
+      const toStr   = document.getElementById('toInput').value;
+      if (!fromStr || !toStr) return;
+      const f = fromDatetimeLocal(fromStr);
+      const t = fromDatetimeLocal(toStr);
+      if (f >= t) { alert('Begintijd moet vóór eindtijd liggen.'); return; }
+      customFrom = f;
+      customTo   = t;
+      mode = 'custom';
       loadAll();
     }
 
-    function fmtTs(ts, hours) {
+    /* ── Timestamp formatting ── */
+
+    function fmtTs(ts, rangeSeconds) {
       const d = new Date(ts * 1000);
-      if (hours <= 1)   return d.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-      if (hours <= 24)  return d.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
-      if (hours <= 168) return d.toLocaleDateString('nl-NL', {weekday:'short', hour:'2-digit', minute:'2-digit'});
-      return d.toLocaleDateString('nl-NL', {day:'numeric', month:'short'});
+      if (rangeSeconds <= 3600)
+        return d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (rangeSeconds <= 86400)
+        return d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+      if (rangeSeconds <= 86400 * 8)
+        return d.toLocaleDateString('nl-NL', { weekday: 'short' }) + ' ' +
+               d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
     }
+
+    /* ── Zoom helpers ── */
+
+    function buildZoomOptions(canvasId) {
+      return {
+        zoom: {
+          wheel:  { enabled: true, speed: 0.08 },
+          pinch:  { enabled: true },
+          mode:   'x',
+          onZoomComplete: () => showResetBtn(canvasId),
+        },
+        pan: {
+          enabled: true,
+          mode:    'x',
+          onPanComplete: () => showResetBtn(canvasId),
+        },
+        limits: { x: { minRange: 5 } },
+      };
+    }
+
+    function showResetBtn(canvasId) {
+      const card = document.getElementById(canvasId)?.closest('.chart-card');
+      card?.querySelector('.zoom-reset-btn')?.classList.add('visible');
+    }
+
+    function resetZoom(canvasId) {
+      chartInstances[canvasId]?.resetZoom();
+      const card = document.getElementById(canvasId)?.closest('.chart-card');
+      card?.querySelector('.zoom-reset-btn')?.classList.remove('visible');
+    }
+
+    /* ── Chart color helpers ── */
 
     function chartColor(alpha, type) {
       if (type === 'net')         return `hsla(220, 70%, 55%, ${alpha})`;
       if (type === 'power')       return `hsla(145, 55%, 40%, ${alpha})`;
-      if (type === 'temperature') return `hsla(0, 80%, 55%, ${alpha})`;
+      if (type === 'temperature') return `hsla(0,   80%, 55%, ${alpha})`;
       return `hsla(260, 60%, 55%, ${alpha})`;
     }
 
+    /* ── Chart builders ── */
+
     function buildChart(canvasId, labels, values, type, unit) {
       if (type === 'net') { buildNetPowerChart(canvasId, labels, values); return; }
-      const ctx = document.getElementById(canvasId).getContext('2d');
+
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
       if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-      const color = chartColor(1, type);
-      const fill  = chartColor(0.20, type);
-      chartInstances[canvasId] = new Chart(ctx, {
+
+      const color = chartColor(1,    type);
+      const fill  = chartColor(0.18, type);
+
+      chartInstances[canvasId] = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
           labels,
@@ -211,11 +471,25 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
-            tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(1)} ${unit}` } }
+            tooltip: {
+              callbacks: {
+                label: c => `${c.parsed.y.toFixed(unit === '°C' ? 1 : 0)} ${unit}`
+              }
+            },
+            zoom: buildZoomOptions(canvasId),
           },
           scales: {
-            x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
-            y: { ticks: { color: tickColor, callback: v => (unit === '°C' ? v.toFixed(1) : Math.round(v)) + ' ' + unit }, grid: { color: gridColor } }
+            x: {
+              ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 },
+              grid:  { color: gridColor }
+            },
+            y: {
+              ticks: {
+                color: tickColor,
+                callback: v => (unit === '°C' ? v.toFixed(1) : Math.round(v)) + ' ' + unit
+              },
+              grid: { color: gridColor }
+            }
           }
         }
       });
@@ -223,16 +497,14 @@
 
     function buildNetPowerChart(canvasId, labels, values) {
       const canvas = document.getElementById(canvasId);
-      const ctx = canvas.getContext('2d');
+      if (!canvas) return;
       if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-
-      const maxAbs = Math.max(...values.map(v => Math.abs(v)), 100);
 
       const purpleLine = isDark ? 'hsl(270, 80%, 72%)' : 'hsl(270, 70%, 55%)';
       const greenLine  = isDark ? 'hsl(145, 75%, 55%)' : 'hsl(145, 65%, 40%)';
-      const zeroLine   = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.20)';
+      const zeroLine   = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)';
 
-      chartInstances[canvasId] = new Chart(ctx, {
+      chartInstances[canvasId] = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
           labels,
@@ -252,16 +524,14 @@
               const chart = context.chart;
               const { ctx: c, chartArea } = chart;
               if (!chartArea) return 'transparent';
-              const zeroY  = chart.scales.y.getPixelForValue(0);
+              const zeroY = chart.scales.y.getPixelForValue(0);
               const { top, bottom } = chartArea;
-              const ratio  = Math.max(0, Math.min(1, (zeroY - top) / (bottom - top)));
+              const ratio = Math.max(0, Math.min(1, (zeroY - top) / (bottom - top)));
               const g = c.createLinearGradient(0, top, 0, bottom);
-              // Boven 0: paarse fill
-              g.addColorStop(0,     isDark ? 'hsla(270,70%,65%,0.40)' : 'hsla(270,70%,55%,0.25)');
+              g.addColorStop(0,     isDark ? 'hsla(270,70%,65%,0.42)' : 'hsla(270,70%,55%,0.26)');
               g.addColorStop(ratio, isDark ? 'hsla(270,70%,65%,0.05)' : 'hsla(270,70%,55%,0.03)');
-              // Onder 0: teal/groen fill
               g.addColorStop(ratio, isDark ? 'hsla(160,55%,40%,0.05)' : 'hsla(160,55%,40%,0.03)');
-              g.addColorStop(1,     isDark ? 'hsla(160,55%,35%,0.50)' : 'hsla(160,55%,35%,0.35)');
+              g.addColorStop(1,     isDark ? 'hsla(160,55%,35%,0.52)' : 'hsla(160,55%,35%,0.36)');
               return g;
             },
           }]
@@ -274,22 +544,29 @@
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: c => `${c.parsed.y.toFixed(0)} W`,
+                label: c => {
+                  const v = c.parsed.y;
+                  return v >= 0
+                    ? `Verbruik: ${v.toFixed(0)} W`
+                    : `Teruglevering: ${Math.abs(v).toFixed(0)} W`;
+                },
                 labelColor: c => {
                   const col = c.parsed.y >= 0 ? purpleLine : greenLine;
                   return { borderColor: col, backgroundColor: col };
                 }
               }
-            }
+            },
+            zoom: buildZoomOptions(canvasId),
           },
           scales: {
-            x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
+            x: {
+              ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 },
+              grid:  { color: gridColor }
+            },
             y: {
-              min: -maxAbs,
-              max:  maxAbs,
               ticks: { color: tickColor, callback: v => Math.round(v) + ' W' },
               grid: {
-                color: c => c.tick.value === 0 ? zeroLine : gridColor,
+                color:     c => c.tick.value === 0 ? zeroLine : gridColor,
                 lineWidth: c => c.tick.value === 0 ? 2 : 1,
               }
             }
@@ -298,25 +575,30 @@
       });
     }
 
-    async function fetchHistory(metric, hours) {
-      const to   = Math.floor(Date.now() / 1000);
-      const from = to - hours * 3600;
-      const res  = await fetch(`/api/history?metric=${encodeURIComponent(metric)}&from=${from}&to=${to}`);
+    /* ── Data fetching ── */
+
+    async function fetchHistory(metric) {
+      const { from, to } = getTimeRange();
+      const res = await fetch(
+        `/api/history?metric=${encodeURIComponent(metric)}&from=${from}&to=${to}`
+      );
       return res.json();
     }
 
     function metricLabel(metric) {
-      if (metric === 'net_power') return ['Netvermogen', 'Huidig netverbruik (negatief = teruglevering)', 'W', 'net'];
+      if (metric === 'net_power')
+        return ['Netvermogen', 'Verbruik (paars) · teruglevering (groen)', 'W', 'net'];
       const dm = metric.match(/^device:(.+):power$/);
-      if (dm) return [dm[1] + ' — Vermogen', 'Gemeten vermogen', 'W', 'power'];
+      if (dm) return [dm[1], 'Gemeten vermogen', 'W', 'power'];
       const am = metric.match(/^acc:(.+):(power|temperature)$/);
       if (am) {
-        const name = am[1];
-        if (am[2] === 'temperature') return [name + ' — Temperatuur', 'Gemeten temperatuur', '°C', 'temperature'];
-        if (am[2] === 'power')       return [name + ' — Vermogen', 'Gemeten vermogen', 'W', 'power'];
+        if (am[2] === 'temperature') return [am[1] + ' — Temp.', 'Gemeten temperatuur', '°C', 'temperature'];
+        if (am[2] === 'power')       return [am[1] + ' — Vermogen', 'Gemeten vermogen', 'W', 'power'];
       }
       return [metric, '', '', 'other'];
     }
+
+    /* ── Render ── */
 
     function renderCards(metrics) {
       const area = document.getElementById('chartsArea');
@@ -325,12 +607,11 @@
         return;
       }
 
-      // Sorteer: net_power, dan device (SolarBuffers), dan acc (verbruikers)
       const order = m => {
-        if (m === 'net_power') return 0;
-        if (m.startsWith('device:')) return 1;
-        if (m.startsWith('acc:'))    return m.endsWith(':temperature') ? 4 : 3;
-        return 5;
+        if (m === 'net_power')          return 0;
+        if (m.startsWith('device:'))    return 1;
+        if (m.startsWith('acc:'))       return m.endsWith(':temperature') ? 3 : 2;
+        return 4;
       };
       metrics.sort((a, b) => order(a) - order(b));
 
@@ -339,33 +620,54 @@
         const cid = `chart_${i}`;
         return `
           <div class="chart-card">
-            <div class="chart-title">${title}</div>
-            <div class="chart-sub">${sub}</div>
-            <div class="chart-wrap"><canvas id="${cid}"></canvas></div>
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">${title}</div>
+                <div class="chart-sub">${sub}</div>
+              </div>
+              <button class="zoom-reset-btn" onclick="resetZoom('${cid}')">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-1.76-4.24L13 11h7V4l-2.35 2.35Z"/>
+                </svg>
+                Reset zoom
+              </button>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-loading" id="loading_${cid}">
+                <div class="chart-spinner"></div>Laden…
+              </div>
+              <canvas id="${cid}" style="display:none"></canvas>
+            </div>
+            <div class="chart-hint">Scroll of knijp om in te zoomen &nbsp;·&nbsp; Sleep om te verschuiven</div>
           </div>`;
       }).join('');
 
       metrics.forEach(async (m, i) => {
-        const cid = `chart_${i}`;
+        const cid      = `chart_${i}`;
         const [,, unit, type] = metricLabel(m);
+        const loading  = document.getElementById(`loading_${cid}`);
+        const canvas   = document.getElementById(cid);
+        if (!loading || !canvas) return;
         try {
-          const data = await fetchHistory(m, currentHours);
+          const data = await fetchHistory(m);
           const pts  = data.data || [];
           if (!pts.length) {
-            document.getElementById(cid).closest('.chart-wrap').innerHTML =
-              '<div class="no-data" style="padding:1.5rem">Geen data in dit tijdsbestek</div>';
+            loading.className = 'chart-no-data';
+            loading.innerHTML = 'Geen data in dit tijdsbestek';
             return;
           }
-          const labels = pts.map(p => fmtTs(p.ts, currentHours));
+          const { from, to } = getTimeRange();
+          const labels = pts.map(p => fmtTs(p.ts, to - from));
           const values = pts.map(p => p.v);
+          loading.style.display = 'none';
+          canvas.style.display  = 'block';
           buildChart(cid, labels, values, type, unit);
         } catch(e) {
+          if (loading) { loading.className = 'chart-no-data'; loading.innerHTML = 'Laden mislukt'; }
           console.error(m, e);
         }
       });
     }
-
-    let _activeMetricKey = '';
 
     async function fetchMetrics() {
       const res  = await fetch('/api/history/metrics');
@@ -376,6 +678,8 @@
         /^acc:.+:(power|temperature)$/.test(m)
       );
     }
+
+    let _activeMetricKey = '';
 
     async function loadAll() {
       const area = document.getElementById('chartsArea');
@@ -389,11 +693,12 @@
       }
     }
 
+    // Auto-refresh metric list (niet in custom modus)
     setInterval(async () => {
+      if (mode === 'custom') return;
       try {
         const metrics = await fetchMetrics();
-        const key = JSON.stringify(metrics.slice().sort());
-        if (key !== _activeMetricKey) loadAll();
+        if (JSON.stringify(metrics.slice().sort()) !== _activeMetricKey) loadAll();
       } catch(e) {}
     }, 30000);
 
