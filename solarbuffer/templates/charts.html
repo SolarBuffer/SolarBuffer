@@ -496,28 +496,105 @@
       return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
     }
 
-    /* ── Zoom plugin opties ── */
+    /* ── Zoom plugin opties + dynamisch bijladen ── */
+    const _refetching = new Set();
+    const _zoomTimers = {};
+
     function zoomOptions(canvasId) {
+      const onInteract = ({ chart }) => {
+        showResetBtn(canvasId);
+        clearTimeout(_zoomTimers[canvasId]);
+        _zoomTimers[canvasId] = setTimeout(() => refetchForZoom(canvasId, chart), 400);
+      };
       return {
         zoom: {
           wheel:  { enabled: true, speed: 0.08 },
           pinch:  { enabled: true },
           mode:   'x',
-          onZoomComplete: () => showResetBtn(canvasId),
+          onZoomComplete: onInteract,
         },
         pan: {
           enabled: true, mode: 'x',
-          onPanComplete: () => showResetBtn(canvasId),
+          onPanComplete: onInteract,
         },
         limits: { x: { minRange: 5 } },
       };
     }
+
     function showResetBtn(canvasId) {
       document.getElementById(canvasId)?.closest('.chart-card')
         ?.querySelector('.zoom-reset-btn')?.classList.add('visible');
     }
-    function resetZoom(canvasId) {
-      chartInstances[canvasId]?.resetZoom();
+
+    async function refetchForZoom(canvasId, chart) {
+      if (_refetching.has(canvasId)) return;
+      const state = chartData[canvasId];
+      if (!state?.pts?.length) return;
+
+      const xScale = chart.scales.x;
+      const minIdx = Math.max(0, Math.round(xScale.min));
+      const maxIdx = Math.min(state.pts.length - 1, Math.round(xScale.max));
+      if (maxIdx <= minIdx) return;
+
+      const fromTs = state.pts[minIdx].ts;
+      const toTs   = state.pts[maxIdx].ts;
+
+      // Niet ophalen als bereik maar klein beetje kleiner is dan het totaal
+      const fullRange = state.pts[state.pts.length - 1].ts - state.pts[0].ts;
+      if ((toTs - fromTs) > fullRange * 0.85) return;
+
+      _refetching.add(canvasId);
+      try {
+        const res  = await fetch(`/api/history?metric=${encodeURIComponent(state.metric)}&from=${fromTs}&to=${toTs}`);
+        const json = await res.json();
+        const pts  = json.data || [];
+        if (pts.length < 2) return;
+
+        const rangeSeconds = toTs - fromTs;
+        const sampled = lttb(pts, 500);
+        const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
+        const values  = sampled.map(p => p.v);
+
+        // Bewaar originele range voor de reset-knop
+        chartData[canvasId] = { ...state, pts: sampled, labels, values };
+
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.resetZoom();
+        chart.update('none');
+      } catch(e) {
+        console.warn('zoom refetch mislukt', e);
+      } finally {
+        _refetching.delete(canvasId);
+      }
+    }
+
+    async function resetZoom(canvasId) {
+      const state = chartData[canvasId];
+      const chart = chartInstances[canvasId];
+      if (!chart) return;
+
+      if (state?.originalFrom != null) {
+        chart.resetZoom();
+        try {
+          const res  = await fetch(`/api/history?metric=${encodeURIComponent(state.metric)}&from=${state.originalFrom}&to=${state.originalTo}`);
+          const json = await res.json();
+          const pts  = json.data || [];
+          if (pts.length >= 2) {
+            const rangeSeconds = state.originalTo - state.originalFrom;
+            const sampled = lttb(pts, 500);
+            const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
+            const values  = sampled.map(p => p.v);
+            chartData[canvasId] = { ...state, pts: sampled, labels, values };
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = values;
+            chart.update('none');
+          }
+        } catch(e) {}
+      } else {
+        chart.resetZoom();
+      }
+
       document.getElementById(canvasId)?.closest('.chart-card')
         ?.querySelector('.zoom-reset-btn')?.classList.remove('visible');
     }
@@ -634,8 +711,12 @@
       });
     }
 
-    function buildChart(canvasId, labels, values, type, unit) {
-      chartData[canvasId] = { labels, values, type, unit };
+    function buildChart(canvasId, labels, values, type, unit, pts, metric) {
+      chartData[canvasId] = {
+        labels, values, type, unit, pts, metric,
+        originalFrom: pts[0]?.ts,
+        originalTo:   pts[pts.length - 1]?.ts,
+      };
       buildChartOnCanvas(document.getElementById(canvasId), canvasId, labels, values, type, unit);
     }
 
@@ -759,7 +840,7 @@
           const values  = sampled.map(p => p.v);
           loading.style.display = 'none';
           canvas.style.display  = 'block';
-          buildChart(cid, labels, values, type, unit);
+          buildChart(cid, labels, values, type, unit, sampled, m);
         } catch(e) {
           if (loading) { loading.className = 'chart-no-data'; loading.innerHTML = 'Laden mislukt'; }
           console.error(m, e);
