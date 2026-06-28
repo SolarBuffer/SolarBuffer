@@ -70,10 +70,7 @@
 
     /* ── Header ── */
     .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.75rem; font-weight: 700;
-    }
+    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; }
     .header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 62%));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
@@ -92,16 +89,17 @@
     }
     .back-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
 
-    /* ── Range bar ── */
-    .range-bar { display: flex; gap: 0.35rem; margin-bottom: 0.75rem; }
+    /* ── Range controls ── */
+    /* Rij 1: snelle bereik-knoppen */
+    .range-bar { display: flex; gap: 0.35rem; margin-bottom: 0.4rem; }
     .range-btn {
       flex: 1;
-      padding: 0.5rem 0.2rem;
+      padding: 0.52rem 0.25rem;
       border: 1.5px solid var(--card-border);
       border-radius: 0.625rem;
       background: var(--card-bg);
       font-family: 'Inter', sans-serif;
-      font-size: 0.8rem; font-weight: 600;
+      font-size: 0.82rem; font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
       transition: all 0.15s;
@@ -109,169 +107,205 @@
     }
     .range-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
     .range-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
+      background: var(--accent); border-color: var(--accent); color: white;
       box-shadow: 0 2px 10px -2px var(--accent-glow);
     }
-    .range-btn-custom {
-      display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+
+    /* Rij 2: datum-knop (vol breedte) */
+    .datum-btn {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 0.45rem;
+      padding: 0.52rem 1rem;
+      border: 1.5px solid var(--card-border);
+      border-radius: 0.625rem;
+      background: var(--card-bg);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem; font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .datum-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
+    .datum-btn.active {
+      background: var(--accent); border-color: var(--accent); color: white;
+      box-shadow: 0 2px 10px -2px var(--accent-glow);
     }
 
-    /* ── Custom date picker panel ── */
+    /* ── Datum/tijd picker panel ── */
     .date-picker-panel {
       overflow: hidden;
-      max-height: 0;
-      opacity: 0;
+      max-height: 0; opacity: 0;
       transition: max-height 0.3s ease, opacity 0.25s ease, margin-bottom 0.3s ease;
       margin-bottom: 0;
     }
-    .date-picker-panel.open {
-      max-height: 160px;
-      opacity: 1;
-      margin-bottom: 0.75rem;
-    }
+    .date-picker-panel.open { max-height: 170px; opacity: 1; margin-bottom: 0.75rem; }
     .date-picker-inner {
-      background: var(--card-bg);
-      border: 1.5px solid var(--card-border);
-      border-radius: var(--radius);
-      padding: 0.875rem 1rem 0.875rem;
+      background: var(--card-bg); border: 1.5px solid var(--card-border);
+      border-radius: var(--radius); padding: 0.875rem 1rem;
       box-shadow: var(--shadow-sm);
-      display: flex;
-      flex-direction: column;
-      gap: 0.625rem;
+      display: flex; flex-direction: column; gap: 0.625rem;
     }
-    .dp-fields {
-      display: flex; gap: 0.75rem;
-    }
-    .dp-field {
-      flex: 1; display: flex; flex-direction: column; gap: 0.25rem;
-    }
+    .dp-fields { display: flex; gap: 0.75rem; }
+    .dp-field { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
     .dp-field label {
       font-size: 0.7rem; font-weight: 600; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.03em;
+      text-transform: uppercase; letter-spacing: 0.04em;
     }
     .date-input {
-      width: 100%;
-      padding: 0.42rem 0.6rem;
-      border: 1.5px solid var(--card-border);
-      border-radius: 0.5rem;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.78rem;
-      outline: none;
+      width: 100%; padding: 0.42rem 0.6rem;
+      border: 1.5px solid var(--card-border); border-radius: 0.5rem;
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', sans-serif; font-size: 0.78rem;
+      outline: none; color-scheme: light dark;
       transition: border-color 0.15s;
-      color-scheme: light dark;
     }
     .date-input:focus { border-color: var(--accent); }
     .apply-btn {
-      width: 100%;
-      padding: 0.5rem;
-      background: var(--accent);
-      color: white;
-      border: none;
+      width: 100%; padding: 0.5rem;
+      background: var(--accent); color: white; border: none;
       border-radius: 0.625rem;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.82rem; font-weight: 600;
-      cursor: pointer;
-      letter-spacing: 0.01em;
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; letter-spacing: 0.01em;
       box-shadow: 0 2px 8px -2px var(--accent-glow);
-      transition: opacity 0.15s, transform 0.1s;
+      transition: opacity 0.15s;
     }
-    .apply-btn:active { opacity: 0.88; transform: scale(0.98); }
+    .apply-btn:active { opacity: 0.88; }
 
     /* ── Chart card ── */
     .chart-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius);
-      padding: 1.125rem 1.125rem 0.75rem;
-      margin-bottom: 1rem;
-      box-shadow: var(--shadow);
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); padding: 1.125rem 1.125rem 0.75rem;
+      margin-bottom: 1rem; box-shadow: var(--shadow);
     }
     .chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 0.2rem;
-      gap: 0.5rem;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 0.5rem; margin-bottom: 0.15rem;
     }
-    .chart-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.92rem; font-weight: 700;
-      line-height: 1.2;
-    }
-    .chart-sub {
-      font-size: 0.74rem; color: var(--text-muted);
-      margin-bottom: 0.875rem;
-      margin-top: 0.15rem;
-    }
+    .chart-title { font-family: 'Space Grotesk', sans-serif; font-size: 0.92rem; font-weight: 700; }
+    .chart-sub { font-size: 0.74rem; color: var(--text-muted); margin-bottom: 0.875rem; margin-top: 0.15rem; }
+    .chart-actions { display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0; }
 
-    /* Reset zoom button (hidden until zoomed) */
-    .zoom-reset-btn {
+    .zoom-reset-btn, .expand-btn {
       display: none;
-      align-items: center; gap: 0.25rem;
-      padding: 0.22rem 0.55rem;
-      background: var(--accent-light);
-      border: 1.5px solid var(--accent);
+      align-items: center; gap: 0.2rem;
+      padding: 0.22rem 0.5rem;
       border-radius: 999px;
       font-size: 0.68rem; font-weight: 600;
-      color: var(--accent-dark);
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
+      cursor: pointer; white-space: nowrap;
       transition: opacity 0.15s;
     }
+    .zoom-reset-btn {
+      background: var(--accent-light); border: 1.5px solid var(--accent);
+      color: var(--accent-dark);
+    }
     .zoom-reset-btn.visible { display: inline-flex; }
-    .zoom-reset-btn:hover { opacity: 0.8; }
+    .expand-btn {
+      background: var(--card-bg); border: 1.5px solid var(--card-border);
+      color: var(--text-muted);
+      display: inline-flex; /* altijd zichtbaar */
+    }
+    .expand-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
 
     .chart-wrap { position: relative; height: 210px; }
-
-    /* Per-chart loading / no-data */
     .chart-loading, .chart-no-data {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      gap: 0.5rem;
-      color: var(--text-muted); font-size: 0.82rem;
+      gap: 0.5rem; color: var(--text-muted); font-size: 0.82rem;
     }
     .chart-spinner {
       width: 15px; height: 15px; flex-shrink: 0;
-      border: 2px solid var(--card-border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      border: 2px solid var(--card-border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
     }
-
-    /* Hint below each chart */
     .chart-hint {
-      font-size: 0.67rem;
-      color: var(--text-muted);
-      text-align: center;
-      margin-top: 0.5rem;
-      opacity: 0.65;
-      letter-spacing: 0.01em;
+      font-size: 0.67rem; color: var(--text-muted);
+      text-align: center; margin-top: 0.5rem; opacity: 0.65;
     }
 
-    /* Global loading */
+    /* ── Global loading ── */
     .loading {
       text-align: center; padding: 3rem 1rem;
       color: var(--text-muted); font-size: 0.88rem;
     }
     .spinner {
       display: inline-block; width: 20px; height: 20px;
-      border: 2px solid var(--card-border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      border: 2px solid var(--card-border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
       margin-right: 0.5rem; vertical-align: middle;
     }
-    .no-data {
-      text-align: center; padding: 2rem 1rem;
-      color: var(--text-muted); font-size: 0.82rem; line-height: 1.6;
-    }
+    .no-data { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.82rem; line-height: 1.6; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══════════════════════════════════════
+       VOLLEDIG SCHERM OVERLAY
+       ═══════════════════════════════════════ */
+    .fs-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: none;
+    }
+    .fs-overlay.active { display: block; }
+
+    /* Sluit-knop: altijd rechtsboven */
+    .fs-close {
+      position: absolute; top: 0.875rem; right: 0.875rem; z-index: 10;
+      width: 2.25rem; height: 2.25rem;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--card-bg); border: 1.5px solid var(--card-border);
+      border-radius: 50%; color: var(--text); cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .fs-close:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+
+    /* ── Portrait: draai-hint ── */
+    .fs-portrait {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1.25rem; padding: 2rem;
+    }
+    @media (orientation: landscape) { .fs-portrait { display: none; } }
+
+    .phone-anim {
+      color: var(--text-muted);
+      animation: phoneRotate 2.8s ease-in-out infinite;
+      transform-origin: center;
+    }
+    @keyframes phoneRotate {
+      0%, 15%   { transform: rotate(0deg);   }
+      40%, 70%  { transform: rotate(-90deg); }
+      90%, 100% { transform: rotate(0deg);   }
+    }
+    .fs-portrait p {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.05rem; font-weight: 600;
+      color: var(--text); text-align: center;
+    }
+    .fs-portrait small { font-size: 0.8rem; color: var(--text-muted); text-align: center; }
+
+    /* ── Landscape: grafiek fullscreen ── */
+    .fs-landscape {
+      position: absolute; inset: 0;
+      display: none;
+      flex-direction: column;
+      padding: 0.75rem 0.875rem 0.75rem 0.875rem;
+    }
+    @media (orientation: landscape) { .fs-landscape { display: flex; } }
+
+    .fs-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem; font-weight: 700;
+      color: var(--text); margin-bottom: 0.4rem;
+      padding-right: 3rem; /* ruimte voor sluit-knop */
+    }
+    .fs-chart-wrap {
+      flex: 1; min-height: 0; position: relative;
+    }
+    .fs-chart-wrap canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
   </style>
 </head>
 <body>
@@ -287,17 +321,21 @@
       Dashboard
     </a>
 
+    <!-- Rij 1: snelle bereiken -->
     <div class="range-bar">
-      <button class="range-btn active" data-hours="1"      onclick="setRange(this)">1u</button>
-      <button class="range-btn"        data-hours="24"     onclick="setRange(this)">24u</button>
-      <button class="range-btn"        data-hours="168"    onclick="setRange(this)">7d</button>
-      <button class="range-btn"        data-hours="720"    onclick="setRange(this)">30d</button>
-      <button class="range-btn range-btn-custom" data-hours="custom" onclick="setRange(this)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19,3H18V1H16V3H8V1H6V3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z"/></svg>
-        Datum
-      </button>
+      <button class="range-btn active" data-hours="1"   onclick="setRange(this)">1u</button>
+      <button class="range-btn" data-hours="24"         onclick="setRange(this)">24u</button>
+      <button class="range-btn" data-hours="168"        onclick="setRange(this)">7d</button>
+      <button class="range-btn" data-hours="720"        onclick="setRange(this)">30d</button>
     </div>
 
+    <!-- Rij 2: datum/tijd kiezen -->
+    <button class="datum-btn" id="datumBtn" data-hours="custom" onclick="setRange(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,3H18V1H16V3H8V1H6V3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z"/></svg>
+      Datum &amp; tijd kiezen
+    </button>
+
+    <!-- Datum picker panel -->
     <div class="date-picker-panel" id="datePicker">
       <div class="date-picker-inner">
         <div class="dp-fields">
@@ -320,48 +358,82 @@
 
   </div>
 
+  <!-- ═══ Volledig scherm overlay ═══ -->
+  <div class="fs-overlay" id="fsOverlay">
+    <!-- Sluit knop -->
+    <button class="fs-close" onclick="closeFullscreen()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+    </button>
+
+    <!-- Portrait: draai-hint -->
+    <div class="fs-portrait">
+      <div class="phone-anim">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.45">
+          <path d="M17,1H7A2,2 0 0,0 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3A2,2 0 0,0 17,1M17,19H7V5H17V19M12,20A1,1 0 0,1 11,19A1,1 0 0,1 12,18A1,1 0 0,1 13,19A1,1 0 0,1 12,20Z"/>
+        </svg>
+      </div>
+      <p>Draai je telefoon</p>
+      <small>voor een grotere weergave van de grafiek</small>
+    </div>
+
+    <!-- Landscape: volledige grafiek -->
+    <div class="fs-landscape">
+      <div class="fs-title" id="fsTitle"></div>
+      <div class="fs-chart-wrap">
+        <canvas id="fsCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const isDark      = document.documentElement.getAttribute('data-theme') === 'dark';
-    const gridColor   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.055)';
-    const tickColor   = isDark ? 'hsl(220,8%,50%)'        : 'hsl(220,10%,55%)';
+    const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.055)';
+    const tickColor = isDark ? 'hsl(220,8%,50%)'        : 'hsl(220,10%,55%)';
+
     const chartInstances = {};
+    const chartData      = {}; // canvasId → { labels, values, type, unit }
 
     let mode         = 'hours';
     let currentHours = 1;
     let customFrom   = null;
     let customTo     = null;
+    let fsCanvasId   = null;
+    let fsBuilt      = false;
 
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.font.size   = 11;
 
-    /* ── Time range helpers ── */
+    // Vergrendel hoofdpagina in portret
+    tryLockOrientation('portrait');
 
+    /* ── Orientation lock ── */
+    function tryLockOrientation(dir) {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock(dir).catch(() => {});
+      }
+    }
+
+    /* ── Tijdsbereik helpers ── */
     function getTimeRange() {
       if (mode === 'custom') return { from: customFrom, to: customTo };
       const to = Math.floor(Date.now() / 1000);
       return { from: to - currentHours * 3600, to };
     }
-
     function toDatetimeLocal(unixTs) {
       const d = new Date(unixTs * 1000);
-      const offset = d.getTimezoneOffset() * 60000;
-      return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     }
+    function fromDatetimeLocal(str) { return Math.floor(new Date(str).getTime() / 1000); }
 
-    function fromDatetimeLocal(str) {
-      return Math.floor(new Date(str).getTime() / 1000);
-    }
-
-    /* ── Range & date picker ── */
-
+    /* ── Bereik knoppen ── */
     function setRange(btn) {
-      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.range-btn, .datum-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const panel = document.getElementById('datePicker');
 
       if (btn.dataset.hours === 'custom') {
         mode = 'custom';
-        const nowTs  = Math.floor(Date.now() / 1000);
+        const nowTs = Math.floor(Date.now() / 1000);
         document.getElementById('fromInput').value = toDatetimeLocal(customFrom || nowTs - 86400);
         document.getElementById('toInput').value   = toDatetimeLocal(customTo   || nowTs);
         panel.classList.add('open');
@@ -374,20 +446,15 @@
     }
 
     function applyCustomRange() {
-      const fromStr = document.getElementById('fromInput').value;
-      const toStr   = document.getElementById('toInput').value;
-      if (!fromStr || !toStr) return;
-      const f = fromDatetimeLocal(fromStr);
-      const t = fromDatetimeLocal(toStr);
+      const f = fromDatetimeLocal(document.getElementById('fromInput').value);
+      const t = fromDatetimeLocal(document.getElementById('toInput').value);
+      if (!f || !t) return;
       if (f >= t) { alert('Begintijd moet vóór eindtijd liggen.'); return; }
-      customFrom = f;
-      customTo   = t;
-      mode = 'custom';
+      customFrom = f; customTo = t; mode = 'custom';
       loadAll();
     }
 
-    /* ── Timestamp formatting ── */
-
+    /* ── Tijdlabels ── */
     function fmtTs(ts, rangeSeconds) {
       const d = new Date(ts * 1000);
       if (rangeSeconds <= 3600)
@@ -400,9 +467,8 @@
       return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
     }
 
-    /* ── Zoom helpers ── */
-
-    function buildZoomOptions(canvasId) {
+    /* ── Zoom plugin opties ── */
+    function zoomOptions(canvasId) {
       return {
         zoom: {
           wheel:  { enabled: true, speed: 0.08 },
@@ -411,27 +477,23 @@
           onZoomComplete: () => showResetBtn(canvasId),
         },
         pan: {
-          enabled: true,
-          mode:    'x',
+          enabled: true, mode: 'x',
           onPanComplete: () => showResetBtn(canvasId),
         },
         limits: { x: { minRange: 5 } },
       };
     }
-
     function showResetBtn(canvasId) {
-      const card = document.getElementById(canvasId)?.closest('.chart-card');
-      card?.querySelector('.zoom-reset-btn')?.classList.add('visible');
+      document.getElementById(canvasId)?.closest('.chart-card')
+        ?.querySelector('.zoom-reset-btn')?.classList.add('visible');
     }
-
     function resetZoom(canvasId) {
       chartInstances[canvasId]?.resetZoom();
-      const card = document.getElementById(canvasId)?.closest('.chart-card');
-      card?.querySelector('.zoom-reset-btn')?.classList.remove('visible');
+      document.getElementById(canvasId)?.closest('.chart-card')
+        ?.querySelector('.zoom-reset-btn')?.classList.remove('visible');
     }
 
-    /* ── Chart color helpers ── */
-
+    /* ── Kleuren ── */
     function chartColor(alpha, type) {
       if (type === 'net')         return `hsla(220, 70%, 55%, ${alpha})`;
       if (type === 'power')       return `hsla(145, 55%, 40%, ${alpha})`;
@@ -439,81 +501,56 @@
       return `hsla(260, 60%, 55%, ${alpha})`;
     }
 
-    /* ── Chart builders ── */
-
-    function buildChart(canvasId, labels, values, type, unit) {
-      if (type === 'net') { buildNetPowerChart(canvasId, labels, values); return; }
-
-      const canvas = document.getElementById(canvasId);
+    /* ── Grafiek bouwen op een canvas-element ── */
+    function buildChartOnCanvas(canvas, instanceKey, labels, values, type, unit) {
       if (!canvas) return;
-      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+      if (chartInstances[instanceKey]) chartInstances[instanceKey].destroy();
 
-      const color = chartColor(1,    type);
+      if (type === 'net') {
+        buildNetOnCanvas(canvas, instanceKey, labels, values);
+        return;
+      }
+
+      const color = chartColor(1, type);
       const fill  = chartColor(0.18, type);
 
-      chartInstances[canvasId] = new Chart(canvas.getContext('2d'), {
+      chartInstances[instanceKey] = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
           labels,
-          datasets: [{
-            data: values,
-            borderColor: color,
-            backgroundColor: fill,
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.3,
-            fill: true,
-          }]
+          datasets: [{ data: values, borderColor: color, backgroundColor: fill,
+            borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: c => `${c.parsed.y.toFixed(unit === '°C' ? 1 : 0)} ${unit}`
-              }
-            },
-            zoom: buildZoomOptions(canvasId),
+            tooltip: { callbacks: { label: c => `${c.parsed.y.toFixed(unit==='°C'?1:0)} ${unit}` } },
+            zoom: zoomOptions(instanceKey),
           },
           scales: {
-            x: {
-              ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 },
-              grid:  { color: gridColor }
-            },
-            y: {
-              ticks: {
-                color: tickColor,
-                callback: v => (unit === '°C' ? v.toFixed(1) : Math.round(v)) + ' ' + unit
-              },
-              grid: { color: gridColor }
-            }
+            x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
+            y: { ticks: { color: tickColor, callback: v => (unit==='°C'?v.toFixed(1):Math.round(v))+' '+unit }, grid: { color: gridColor } }
           }
         }
       });
     }
 
-    function buildNetPowerChart(canvasId, labels, values) {
-      const canvas = document.getElementById(canvasId);
+    function buildNetOnCanvas(canvas, instanceKey, labels, values) {
       if (!canvas) return;
-      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+      if (chartInstances[instanceKey]) chartInstances[instanceKey].destroy();
 
-      const purpleLine = isDark ? 'hsl(270, 80%, 72%)' : 'hsl(270, 70%, 55%)';
-      const greenLine  = isDark ? 'hsl(145, 75%, 55%)' : 'hsl(145, 65%, 40%)';
+      const purpleLine = isDark ? 'hsl(270,80%,72%)' : 'hsl(270,70%,55%)';
+      const greenLine  = isDark ? 'hsl(145,75%,55%)' : 'hsl(145,65%,40%)';
       const zeroLine   = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)';
 
-      chartInstances[canvasId] = new Chart(canvas.getContext('2d'), {
+      chartInstances[instanceKey] = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
           labels,
           datasets: [{
-            data: values,
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.3,
-            fill: 'origin',
+            data: values, borderWidth: 2, pointRadius: 0, tension: 0.3, fill: 'origin',
             segment: {
               borderColor: c => {
                 const mid = (c.p0.parsed.y + c.p1.parsed.y) / 2;
@@ -537,32 +574,25 @@
           }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: c => {
-                  const v = c.parsed.y;
-                  return v >= 0
-                    ? `Verbruik: ${v.toFixed(0)} W`
-                    : `Teruglevering: ${Math.abs(v).toFixed(0)} W`;
-                },
+                label: c => c.parsed.y >= 0
+                  ? `Verbruik: ${c.parsed.y.toFixed(0)} W`
+                  : `Teruglevering: ${Math.abs(c.parsed.y).toFixed(0)} W`,
                 labelColor: c => {
                   const col = c.parsed.y >= 0 ? purpleLine : greenLine;
                   return { borderColor: col, backgroundColor: col };
                 }
               }
             },
-            zoom: buildZoomOptions(canvasId),
+            zoom: zoomOptions(instanceKey),
           },
           scales: {
-            x: {
-              ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 },
-              grid:  { color: gridColor }
-            },
+            x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
             y: {
               ticks: { color: tickColor, callback: v => Math.round(v) + ' W' },
               grid: {
@@ -575,13 +605,52 @@
       });
     }
 
-    /* ── Data fetching ── */
+    function buildChart(canvasId, labels, values, type, unit) {
+      chartData[canvasId] = { labels, values, type, unit };
+      buildChartOnCanvas(document.getElementById(canvasId), canvasId, labels, values, type, unit);
+    }
 
+    /* ── Volledig scherm ── */
+    function openFullscreen(canvasId, title) {
+      fsCanvasId = canvasId;
+      fsBuilt    = false;
+      document.getElementById('fsTitle').textContent = title;
+      document.getElementById('fsOverlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      tryLockOrientation('landscape');
+      checkFsOrientation();
+    }
+
+    function closeFullscreen() {
+      document.getElementById('fsOverlay').classList.remove('active');
+      document.body.style.overflow = '';
+      if (chartInstances['__fs__']) {
+        chartInstances['__fs__'].destroy();
+        delete chartInstances['__fs__'];
+      }
+      fsCanvasId = null;
+      fsBuilt    = false;
+      tryLockOrientation('portrait');
+    }
+
+    function checkFsOrientation() {
+      if (!document.getElementById('fsOverlay').classList.contains('active')) return;
+      const isLandscape = window.innerWidth > window.innerHeight;
+      if (isLandscape && !fsBuilt && fsCanvasId && chartData[fsCanvasId]) {
+        fsBuilt = true;
+        setTimeout(() => {
+          const { labels, values, type, unit } = chartData[fsCanvasId];
+          buildChartOnCanvas(document.getElementById('fsCanvas'), '__fs__', labels, values, type, unit);
+        }, 120);
+      }
+    }
+
+    window.addEventListener('resize', checkFsOrientation);
+
+    /* ── Data ophalen ── */
     async function fetchHistory(metric) {
       const { from, to } = getTimeRange();
-      const res = await fetch(
-        `/api/history?metric=${encodeURIComponent(metric)}&from=${from}&to=${to}`
-      );
+      const res = await fetch(`/api/history?metric=${encodeURIComponent(metric)}&from=${from}&to=${to}`);
       return res.json();
     }
 
@@ -598,26 +667,20 @@
       return [metric, '', '', 'other'];
     }
 
-    /* ── Render ── */
-
+    /* ── Kaarten renderen ── */
     function renderCards(metrics) {
       const area = document.getElementById('chartsArea');
       if (!metrics.length) {
         area.innerHTML = '<div class="no-data">Nog geen historische data beschikbaar.<br>Data wordt elke 5 seconden opgeslagen.</div>';
         return;
       }
-
-      const order = m => {
-        if (m === 'net_power')          return 0;
-        if (m.startsWith('device:'))    return 1;
-        if (m.startsWith('acc:'))       return m.endsWith(':temperature') ? 3 : 2;
-        return 4;
-      };
+      const order = m => m === 'net_power' ? 0 : m.startsWith('device:') ? 1 : m.endsWith(':temperature') ? 3 : 2;
       metrics.sort((a, b) => order(a) - order(b));
 
       area.innerHTML = metrics.map((m, i) => {
         const [title, sub] = metricLabel(m);
         const cid = `chart_${i}`;
+        const titleEsc = title.replace(/'/g, '\\\'');
         return `
           <div class="chart-card">
             <div class="chart-header">
@@ -625,12 +688,17 @@
                 <div class="chart-title">${title}</div>
                 <div class="chart-sub">${sub}</div>
               </div>
-              <button class="zoom-reset-btn" onclick="resetZoom('${cid}')">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-1.76-4.24L13 11h7V4l-2.35 2.35Z"/>
-                </svg>
-                Reset zoom
-              </button>
+              <div class="chart-actions">
+                <button class="zoom-reset-btn" onclick="resetZoom('${cid}')">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-1.76-4.24L13 11h7V4l-2.35 2.35Z"/></svg>
+                  Reset
+                </button>
+                <button class="expand-btn" onclick="openFullscreen('${cid}', '${titleEsc}')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="chart-wrap">
               <div class="chart-loading" id="loading_${cid}">
@@ -643,10 +711,10 @@
       }).join('');
 
       metrics.forEach(async (m, i) => {
-        const cid      = `chart_${i}`;
+        const cid     = `chart_${i}`;
         const [,, unit, type] = metricLabel(m);
-        const loading  = document.getElementById(`loading_${cid}`);
-        const canvas   = document.getElementById(cid);
+        const loading = document.getElementById(`loading_${cid}`);
+        const canvas  = document.getElementById(cid);
         if (!loading || !canvas) return;
         try {
           const data = await fetchHistory(m);
@@ -669,6 +737,7 @@
       });
     }
 
+    /* ── Laden ── */
     async function fetchMetrics() {
       const res  = await fetch('/api/history/metrics');
       const json = await res.json();
@@ -682,18 +751,18 @@
     let _activeMetricKey = '';
 
     async function loadAll() {
-      const area = document.getElementById('chartsArea');
-      area.innerHTML = '<div class="loading"><span class="spinner"></span>Gegevens laden…</div>';
+      document.getElementById('chartsArea').innerHTML =
+        '<div class="loading"><span class="spinner"></span>Gegevens laden…</div>';
       try {
         const metrics = await fetchMetrics();
         _activeMetricKey = JSON.stringify(metrics.slice().sort());
         renderCards(metrics);
       } catch(e) {
-        area.innerHTML = '<div class="no-data">Laden mislukt. Controleer de verbinding.</div>';
+        document.getElementById('chartsArea').innerHTML =
+          '<div class="no-data">Laden mislukt. Controleer de verbinding.</div>';
       }
     }
 
-    // Auto-refresh metric list (niet in custom modus)
     setInterval(async () => {
       if (mode === 'custom') return;
       try {
