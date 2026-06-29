@@ -251,12 +251,14 @@
 
     /* Sluit-knop: altijd rechtsboven */
     .fs-close {
-      position: absolute; top: 0.875rem; right: 0.875rem; z-index: 10;
-      width: 2.25rem; height: 2.25rem;
+      position: absolute; top: 0.5rem; right: 0.5rem; z-index: 200;
+      width: 3rem; height: 3rem;
       display: flex; align-items: center; justify-content: center;
       background: var(--card-bg); border: 1.5px solid var(--card-border);
       border-radius: 50%; color: var(--text); cursor: pointer;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow);
+      touch-action: manipulation;
+      pointer-events: all;
       transition: background 0.15s, border-color 0.15s;
     }
     .fs-close:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
@@ -359,7 +361,7 @@
   <!-- ═══ Volledig scherm overlay ═══ -->
   <div class="fs-overlay" id="fsOverlay">
     <!-- Sluit knop -->
-    <button class="fs-close" onclick="closeFullscreen()">
+    <button class="fs-close" id="fsCloseBtn" onclick="closeFullscreen()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
     </button>
 
@@ -431,6 +433,13 @@
 
     // Vergrendel hoofdpagina in portret
     tryLockOrientation('portrait');
+
+    // Sluit-knop: ook via touchend zodat hammerjs hem niet blokkeert
+    document.getElementById('fsCloseBtn').addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeFullscreen();
+    }, { passive: false });
 
     /* ── Orientation lock ── */
     function tryLockOrientation(dir) {
@@ -539,9 +548,9 @@
       const fromTs = state.pts[minIdx].ts;
       const toTs   = state.pts[maxIdx].ts;
 
-      // Niet ophalen als bereik maar klein beetje kleiner is dan het totaal
+      // Niet ophalen als zichtbaar bereik meer dan 95% van totaal beslaat
       const fullRange = state.pts[state.pts.length - 1].ts - state.pts[0].ts;
-      if ((toTs - fromTs) > fullRange * 0.85) return;
+      if ((toTs - fromTs) > fullRange * 0.95) return;
 
       _refetching.add(canvasId);
       try {
@@ -749,8 +758,10 @@
       if (isLandscape && !fsBuilt && fsCanvasId && chartData[fsCanvasId]) {
         fsBuilt = true;
         setTimeout(() => {
-          const { labels, values, type, unit } = chartData[fsCanvasId];
-          buildChartOnCanvas(document.getElementById('fsCanvas'), '__fs__', labels, values, type, unit);
+          const src = chartData[fsCanvasId];
+          // Kopieer state naar '__fs__' zodat zoom-refetch ook in fullscreen werkt
+          chartData['__fs__'] = { ...src };
+          buildChartOnCanvas(document.getElementById('fsCanvas'), '__fs__', src.labels, src.values, src.type, src.unit);
         }, 120);
       }
     }
