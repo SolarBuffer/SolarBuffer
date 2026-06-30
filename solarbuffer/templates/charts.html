@@ -249,20 +249,6 @@
     }
     .fs-overlay.active { display: block; }
 
-    /* Sluit-knop: altijd rechtsboven */
-    .fs-close {
-      position: absolute; top: 0.5rem; right: 0.5rem; z-index: 200;
-      width: 3rem; height: 3rem;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--card-bg); border: 1.5px solid var(--card-border);
-      border-radius: 50%; color: var(--text); cursor: pointer;
-      box-shadow: var(--shadow);
-      touch-action: manipulation;
-      pointer-events: all;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .fs-close:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
-
     /* ── Portrait: draai-hint ── */
     .fs-portrait {
       position: absolute; inset: 0;
@@ -289,21 +275,41 @@
     }
     .fs-portrait small { font-size: 0.8rem; color: var(--text-muted); text-align: center; }
 
-    /* ── Landscape: grafiek fullscreen ── */
+    /* ── Landscape: header balk + grafiek ── */
     .fs-landscape {
       position: absolute; inset: 0;
-      display: none;
-      flex-direction: column;
-      padding: 0.75rem 0.875rem 0.75rem 0.875rem;
+      display: none; flex-direction: column;
     }
     @media (orientation: landscape) { .fs-landscape { display: flex; } }
 
+    /* Header balk: canvas raakt deze NOOIT aan */
+    .fs-header {
+      flex-shrink: 0;
+      display: flex; align-items: center;
+      gap: 0.5rem;
+      padding: 0.3rem 0.6rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--card-border);
+    }
     .fs-title {
+      flex: 1;
       font-family: 'Space Grotesk', sans-serif;
       font-size: 0.85rem; font-weight: 700;
-      color: var(--text); margin-bottom: 0.4rem;
-      padding-right: 3rem; /* ruimte voor sluit-knop */
+      color: var(--text);
     }
+    .fs-header-btn {
+      flex-shrink: 0;
+      height: 2.25rem; padding: 0 0.75rem;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--card-bg); border: 1.5px solid var(--card-border);
+      border-radius: 0.5rem; color: var(--text); cursor: pointer;
+      font-size: 0.78rem; font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      touch-action: manipulation;
+    }
+    .fs-header-btn.close-btn { width: 2.25rem; padding: 0; border-radius: 50%; }
+    .fs-header-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+    #fsResetBtn { display: none; }
+
     .fs-chart-wrap {
       flex: 1; min-height: 0; position: relative;
     }
@@ -360,10 +366,6 @@
 
   <!-- ═══ Volledig scherm overlay ═══ -->
   <div class="fs-overlay" id="fsOverlay">
-    <!-- Sluit knop -->
-    <button class="fs-close" id="fsCloseBtn" onclick="closeFullscreen()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
-    </button>
 
     <!-- Portrait: draai-hint -->
     <div class="fs-portrait">
@@ -376,9 +378,15 @@
       <small>voor een grotere weergave van de grafiek</small>
     </div>
 
-    <!-- Landscape: volledige grafiek -->
+    <!-- Landscape: header balk (buiten canvas!) + grafiek -->
     <div class="fs-landscape">
-      <div class="fs-title" id="fsTitle"></div>
+      <div class="fs-header">
+        <div class="fs-title" id="fsTitle"></div>
+        <button class="fs-header-btn" id="fsResetBtn" onclick="resetZoom('__fs__')">↺ Reset</button>
+        <button class="fs-header-btn close-btn" id="fsCloseBtn" onclick="closeFullscreen()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+        </button>
+      </div>
       <div class="fs-chart-wrap">
         <canvas id="fsCanvas"></canvas>
       </div>
@@ -433,13 +441,6 @@
 
     // Vergrendel hoofdpagina in portret
     tryLockOrientation('portrait');
-
-    // Sluit-knop: ook via touchend zodat hammerjs hem niet blokkeert
-    document.getElementById('fsCloseBtn').addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      closeFullscreen();
-    }, { passive: false });
 
     /* ── Orientation lock ── */
     function tryLockOrientation(dir) {
@@ -510,29 +511,33 @@
     const _zoomTimers = {};
 
     function zoomOptions(canvasId) {
-      const onInteract = ({ chart }) => {
-        showResetBtn(canvasId);
-        clearTimeout(_zoomTimers[canvasId]);
-        _zoomTimers[canvasId] = setTimeout(() => refetchForZoom(canvasId, chart), 400);
-      };
       return {
         zoom: {
           wheel:  { enabled: true, speed: 0.08 },
           pinch:  { enabled: true },
           mode:   'x',
-          onZoomComplete: onInteract,
+          onZoomComplete: ({ chart }) => {
+            showResetBtn(canvasId);
+            clearTimeout(_zoomTimers[canvasId]);
+            _zoomTimers[canvasId] = setTimeout(() => refetchForZoom(canvasId, chart), 500);
+          },
         },
         pan: {
           enabled: true, mode: 'x',
-          onPanComplete: onInteract,
+          onPanComplete: ({ chart }) => showResetBtn(canvasId),
         },
         limits: { x: { minRange: 5 } },
       };
     }
 
     function showResetBtn(canvasId) {
-      document.getElementById(canvasId)?.closest('.chart-card')
-        ?.querySelector('.zoom-reset-btn')?.classList.add('visible');
+      if (canvasId === '__fs__') {
+        const btn = document.getElementById('fsResetBtn');
+        if (btn) btn.style.display = '';
+      } else {
+        document.getElementById(canvasId)?.closest('.chart-card')
+          ?.querySelector('.zoom-reset-btn')?.classList.add('visible');
+      }
     }
 
     async function refetchForZoom(canvasId, chart) {
@@ -543,14 +548,14 @@
       const xScale = chart.scales.x;
       const minIdx = Math.max(0, Math.round(xScale.min));
       const maxIdx = Math.min(state.pts.length - 1, Math.round(xScale.max));
-      if (maxIdx <= minIdx) return;
+      if (maxIdx <= minIdx + 2) return;
 
       const fromTs = state.pts[minIdx].ts;
       const toTs   = state.pts[maxIdx].ts;
 
-      // Niet ophalen als zichtbaar bereik meer dan 95% van totaal beslaat
+      // Sla over als zichtbaar bereik meer dan 92% van het huidig bereik is
       const fullRange = state.pts[state.pts.length - 1].ts - state.pts[0].ts;
-      if ((toTs - fromTs) > fullRange * 0.95) return;
+      if ((toTs - fromTs) > fullRange * 0.92) return;
 
       _refetching.add(canvasId);
       try {
@@ -564,13 +569,15 @@
         const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
         const values  = sampled.map(p => p.v);
 
-        // Bewaar originele range voor de reset-knop
+        // Update state; originalFrom/To uit 'state' blijft behouden (voor Reset-knop)
         chartData[canvasId] = { ...state, pts: sampled, labels, values };
 
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = values;
-        chart.resetZoom();
-        chart.update('none');
+        // Herbouw grafiek: schone aanpak, geen verouderde zoom-indices
+        const canvas = canvasId === '__fs__'
+          ? document.getElementById('fsCanvas')
+          : document.getElementById(canvasId);
+        buildChartOnCanvas(canvas, canvasId, labels, values, state.type, state.unit);
+        showResetBtn(canvasId);
       } catch(e) {
         console.warn('zoom refetch mislukt', e);
       } finally {
@@ -581,10 +588,18 @@
     async function resetZoom(canvasId) {
       const state = chartData[canvasId];
       const chart = chartInstances[canvasId];
-      if (!chart) return;
+
+      const hideResetBtn = () => {
+        if (canvasId === '__fs__') {
+          const btn = document.getElementById('fsResetBtn');
+          if (btn) btn.style.display = 'none';
+        } else {
+          document.getElementById(canvasId)?.closest('.chart-card')
+            ?.querySelector('.zoom-reset-btn')?.classList.remove('visible');
+        }
+      };
 
       if (state?.originalFrom != null) {
-        chart.resetZoom();
         try {
           const res  = await fetch(`/api/history?metric=${encodeURIComponent(state.metric)}&from=${state.originalFrom}&to=${state.originalTo}`);
           const json = await res.json();
@@ -595,17 +610,17 @@
             const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
             const values  = sampled.map(p => p.v);
             chartData[canvasId] = { ...state, pts: sampled, labels, values };
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = values;
-            chart.update('none');
+            const canvas = canvasId === '__fs__'
+              ? document.getElementById('fsCanvas')
+              : document.getElementById(canvasId);
+            buildChartOnCanvas(canvas, canvasId, labels, values, state.type, state.unit);
           }
         } catch(e) {}
-      } else {
+      } else if (chart) {
         chart.resetZoom();
       }
 
-      document.getElementById(canvasId)?.closest('.chart-card')
-        ?.querySelector('.zoom-reset-btn')?.classList.remove('visible');
+      hideResetBtn();
     }
 
     /* ── Kleuren ── */
@@ -747,6 +762,8 @@
         chartInstances['__fs__'].destroy();
         delete chartInstances['__fs__'];
       }
+      const btn = document.getElementById('fsResetBtn');
+      if (btn) btn.style.display = 'none';
       fsCanvasId = null;
       fsBuilt    = false;
       tryLockOrientation('portrait');
