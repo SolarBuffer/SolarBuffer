@@ -314,6 +314,35 @@
       flex: 1; min-height: 0; position: relative;
     }
     .fs-chart-wrap canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+
+    /* ── Readout slider ── */
+    .fs-readout {
+      position: absolute; top: 0; bottom: 0; left: -9999px;
+      width: 2px; background: var(--accent); opacity: 0;
+      z-index: 6; cursor: ew-resize; touch-action: none;
+      transition: opacity 0.18s;
+    }
+    /* Bredere onzichtbare raakzone */
+    .fs-readout::before {
+      content: ''; position: absolute;
+      left: -16px; right: -16px; top: 0; bottom: 0;
+    }
+    .fs-readout-handle {
+      position: absolute; left: 50%; bottom: 18%;
+      width: 24px; height: 24px; transform: translateX(-50%);
+      background: var(--accent); border-radius: 50%;
+      border: 2.5px solid var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .fs-readout-card {
+      position: absolute; top: 8%; left: 10px;
+      background: var(--card-bg); border: 1.5px solid var(--card-border);
+      border-radius: 8px; padding: .28rem .6rem;
+      font-family: 'Space Grotesk', sans-serif;
+      white-space: nowrap; pointer-events: none;
+      box-shadow: var(--shadow); line-height: 1.4;
+    }
+    .fs-readout-time { font-size: .68rem; color: var(--text-muted); }
+    .fs-readout-val  { font-size: .82rem; font-weight: 700; color: var(--text); }
   </style>
 </head>
 <body>
@@ -389,6 +418,14 @@
       </div>
       <div class="fs-chart-wrap">
         <canvas id="fsCanvas"></canvas>
+        <!-- Draggable readout slider -->
+        <div class="fs-readout" id="fsReadout">
+          <div class="fs-readout-card" id="fsReadoutCard">
+            <div class="fs-readout-time" id="fsReadoutTime"></div>
+            <div class="fs-readout-val"  id="fsReadoutVal"></div>
+          </div>
+          <div class="fs-readout-handle"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -517,14 +554,30 @@
           pinch:  { enabled: true },
           mode:   'x',
           onZoomComplete: ({ chart }) => {
-            showResetBtn(canvasId);
             clearTimeout(_zoomTimers[canvasId]);
+
+            // Als de gebruiker volledig uitzoomt op een ingekort bereik → terug naar origineel
+            const state = chartData[canvasId];
+            if (state?.originalFrom != null && state.pts?.length) {
+              const isSubset =
+                state.pts[0].ts > state.originalFrom ||
+                state.pts[state.pts.length - 1].ts < state.originalTo;
+              if (isSubset) {
+                const xs = chart.scales.x;
+                if (xs.min <= 0 && xs.max >= state.pts.length - 1) {
+                  resetZoom(canvasId);
+                  return;
+                }
+              }
+            }
+
+            showResetBtn(canvasId);
             _zoomTimers[canvasId] = setTimeout(() => refetchForZoom(canvasId, chart), 500);
           },
         },
         pan: {
           enabled: true, mode: 'x',
-          onPanComplete: ({ chart }) => showResetBtn(canvasId),
+          onPanComplete: () => showResetBtn(canvasId),
         },
         limits: { x: { minRange: 5 } },
       };
@@ -578,6 +631,7 @@
           : document.getElementById(canvasId);
         buildChartOnCanvas(canvas, canvasId, labels, values, state.type, state.unit);
         showResetBtn(canvasId);
+        if (canvasId === '__fs__') requestAnimationFrame(initFsReadout);
       } catch(e) {
         console.warn('zoom refetch mislukt', e);
       } finally {
@@ -764,6 +818,8 @@
       }
       const btn = document.getElementById('fsResetBtn');
       if (btn) btn.style.display = 'none';
+      const rd = document.getElementById('fsReadout');
+      if (rd) rd.style.opacity = '0';
       fsCanvasId = null;
       fsBuilt    = false;
       tryLockOrientation('portrait');
@@ -776,14 +832,90 @@
         fsBuilt = true;
         setTimeout(() => {
           const src = chartData[fsCanvasId];
-          // Kopieer state naar '__fs__' zodat zoom-refetch ook in fullscreen werkt
           chartData['__fs__'] = { ...src };
           buildChartOnCanvas(document.getElementById('fsCanvas'), '__fs__', src.labels, src.values, src.type, src.unit);
+          requestAnimationFrame(initFsReadout);
         }, 120);
       }
     }
 
     window.addEventListener('resize', checkFsOrientation);
+
+    /* ── Readout slider: draggable verticale lijn ── */
+    let _fsRdDragging = false;
+
+    function _fsRdRelX(e) {
+      const rect = document.getElementById('fsCanvas')?.parentElement?.getBoundingClientRect();
+      if (!rect) return 0;
+      const src = e.touches?.[0] ?? e.changedTouches?.[0] ?? e;
+      return src.clientX - rect.left;
+    }
+
+    function _fsRdMove(relX) {
+      const track = document.getElementById('fsReadout');
+      const chart = chartInstances['__fs__'];
+      const state = chartData['__fs__'];
+      if (!track || !chart?.chartArea || !state?.pts?.length) return;
+
+      const { left, right } = chart.chartArea;
+      const x = Math.max(left, Math.min(right, relX));
+      track.style.left = x + 'px';
+
+      const idx = Math.max(0, Math.min(state.pts.length - 1,
+                    Math.round(chart.scales.x.getValueForPixel(x))));
+
+      document.getElementById('fsReadoutTime').textContent = state.labels[idx] ?? '';
+
+      const v = state.values[idx];
+      const unit = state.unit, type = state.type;
+      let txt;
+      if (v == null)          txt = '—';
+      else if (type === 'net') txt = v >= 0
+        ? `${Math.round(v)} W verbruik`
+        : `${Math.abs(Math.round(v))} W teruglevering`;
+      else if (unit === '°C') txt = `${v.toFixed(1)} °C`;
+      else                    txt = `${Math.round(v)} ${unit}`;
+      document.getElementById('fsReadoutVal').textContent = txt;
+
+      // Kaartje links of rechts van de lijn
+      const card = document.getElementById('fsReadoutCard');
+      if (card) {
+        const ww = track.parentElement?.offsetWidth || 1;
+        if (x > ww * 0.55) { card.style.left = ''; card.style.right = '10px'; }
+        else                { card.style.left = '10px'; card.style.right = ''; }
+      }
+    }
+
+    function initFsReadout() {
+      const chart = chartInstances['__fs__'];
+      const track = document.getElementById('fsReadout');
+      if (!chart?.chartArea || !track) return;
+      const mid = (chart.chartArea.left + chart.chartArea.right) / 2;
+      track.style.left    = mid + 'px';
+      track.style.opacity = '1';
+      _fsRdMove(mid);
+    }
+
+    // Event listeners (eenmalig instellen)
+    (function() {
+      const track = document.getElementById('fsReadout');
+      if (!track) return;
+      track.addEventListener('touchstart', e => {
+        _fsRdDragging = true;
+        _fsRdMove(_fsRdRelX(e));
+      }, { passive: true });
+      track.addEventListener('touchmove', e => {
+        if (!_fsRdDragging) return;
+        e.preventDefault();
+        _fsRdMove(_fsRdRelX(e));
+      }, { passive: false });
+      track.addEventListener('touchend', () => { _fsRdDragging = false; });
+      track.addEventListener('mousedown', e => {
+        _fsRdDragging = true; _fsRdMove(_fsRdRelX(e)); e.preventDefault();
+      });
+      document.addEventListener('mousemove', e => { if (_fsRdDragging) _fsRdMove(_fsRdRelX(e)); });
+      document.addEventListener('mouseup',   () => { _fsRdDragging = false; });
+    })();
 
     /* ── Data ophalen ── */
     async function fetchHistory(metric) {
