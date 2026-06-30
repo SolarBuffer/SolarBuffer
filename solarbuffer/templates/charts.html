@@ -320,6 +320,7 @@
       position: absolute; top: 0; bottom: 0; left: -9999px;
       width: 2px; background: var(--accent); opacity: 0;
       z-index: 6; cursor: ew-resize; touch-action: none;
+      overflow: visible; /* kaartje mag buiten de 2px lijn uitsteken */
       transition: opacity 0.18s;
     }
     /* Bredere onzichtbare raakzone */
@@ -334,7 +335,10 @@
       border: 2.5px solid var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,.35);
     }
     .fs-readout-card {
-      position: absolute; top: 8%; left: 10px;
+      position: absolute; top: 8%;
+      /* Beginpositie: rechts van de lijn. JS overschrijft left/right expliciet. */
+      left: 10px; right: auto;
+      min-width: 110px;
       background: var(--card-bg); border: 1.5px solid var(--card-border);
       border-radius: 8px; padding: .28rem .6rem;
       font-family: 'Space Grotesk', sans-serif;
@@ -563,8 +567,12 @@
                 state.pts[0].ts > state.originalFrom ||
                 state.pts[state.pts.length - 1].ts < state.originalTo;
               if (isSubset) {
-                const xs = chart.scales.x;
-                if (xs.min <= 0 && xs.max >= state.pts.length - 1) {
+                const xs  = chart.scales.x;
+                const min = xs.min ?? 0;
+                const max = xs.max ?? state.pts.length - 1;
+                // Trigger als >92% van de data zichtbaar is (werkt ook als scale clamt op mobiel)
+                const visibleFraction = (max - min) / Math.max(1, state.pts.length - 1);
+                if (visibleFraction >= 0.92) {
                   resetZoom(canvasId);
                   return;
                 }
@@ -877,12 +885,12 @@
       else                    txt = `${Math.round(v)} ${unit}`;
       document.getElementById('fsReadoutVal').textContent = txt;
 
-      // Kaartje links of rechts van de lijn
+      // Kaartje links of rechts van de lijn — altijd BEIDE kanten expliciet zetten
       const card = document.getElementById('fsReadoutCard');
       if (card) {
         const ww = track.parentElement?.offsetWidth || 1;
-        if (x > ww * 0.55) { card.style.left = ''; card.style.right = '10px'; }
-        else                { card.style.left = '10px'; card.style.right = ''; }
+        if (x > ww * 0.55) { card.style.left = 'auto'; card.style.right = '10px'; }
+        else                { card.style.left = '10px'; card.style.right = 'auto'; }
       }
     }
 
