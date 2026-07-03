@@ -1,52 +1,24 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Locatie - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
     h1, h2 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 420px; }
 
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     .card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
       padding: 1.25rem;
@@ -58,7 +30,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: hsl(220, 10%, 52%);
+      color: hsl(224, 18%, 71%);
       margin-bottom: 0.85rem;
     }
 
@@ -91,29 +63,29 @@
     .search-row input {
       flex: 1;
       padding: 0.65rem 0.85rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
+      border: 1.5px solid hsl(224, 20%, 82%);
       border-radius: 0.5rem;
       font-size: 0.95rem;
       font-family: 'Inter', sans-serif;
       background: white;
-      color: hsl(220, 20%, 14%);
+      color: hsl(224, 26%, 14%);
       transition: border-color 0.2s;
     }
     .search-row input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
     .btn-search {
       padding: 0.65rem 1rem;
-      background: hsl(30, 15%, 93%);
-      border: 1.5px solid hsl(30, 15%, 82%);
+      background: hsl(224, 20%, 93%);
+      border: 1.5px solid hsl(224, 20%, 82%);
       border-radius: 0.5rem;
       font-family: 'Space Grotesk', sans-serif;
       font-weight: 600;
       font-size: 0.9rem;
       cursor: pointer;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       transition: background 0.15s;
       white-space: nowrap;
     }
-    .btn-search:hover { background: hsl(30, 15%, 87%); }
+    .btn-search:hover { background: hsl(224, 20%, 87%); }
     .btn-search:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Found location pill */
@@ -139,18 +111,18 @@
       display: block;
       font-size: 0.78rem;
       font-weight: 600;
-      color: hsl(220, 10%, 46%);
+      color: hsl(224, 18%, 67%);
       margin-bottom: 0.3rem;
     }
     .coord-group input {
       width: 100%;
       padding: 0.6rem 0.75rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
+      border: 1.5px solid hsl(224, 20%, 82%);
       border-radius: 0.5rem;
       font-size: 0.95rem;
       font-family: 'Inter', sans-serif;
       background: white;
-      color: hsl(220, 20%, 14%);
+      color: hsl(224, 26%, 14%);
       transition: border-color 0.2s;
     }
     .coord-group input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
@@ -208,7 +180,7 @@
       align-items: center;
       gap: 0.6rem;
       margin: 0.85rem 0;
-      color: hsl(220, 10%, 62%);
+      color: hsl(224, 18%, 78%);
       font-size: 0.75rem;
       font-weight: 500;
     }
@@ -216,7 +188,7 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: hsl(30, 15%, 87%);
+      background: hsl(224, 20%, 87%);
     }
 
     .back-btn {
@@ -224,12 +196,12 @@
       align-items: center;
       gap: 0.4rem;
       background: white;
-      border: 1.5px solid hsl(30, 15%, 85%);
+      border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px;
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -242,36 +214,31 @@
     }
 
     /* DARK MODE */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
-    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .search-row input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
+    html[data-theme="dark"] .card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .search-row input { background: hsl(224, 38%, 9%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .search-row input:focus { border-color: hsl(32, 75%, 52%); }
-    html[data-theme="dark"] .btn-search { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 10%, 78%); }
-    html[data-theme="dark"] .btn-search:hover { background: hsl(220, 8%, 38%); }
-    html[data-theme="dark"] .coord-group label { color: hsl(220, 8%, 56%); }
-    html[data-theme="dark"] .coord-group input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .btn-search { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 17%); color: hsl(224, 18%, 88%); }
+    html[data-theme="dark"] .btn-search:hover { background: hsl(224, 38%, 16%); }
+    html[data-theme="dark"] .coord-group label { color: hsl(224, 18%, 74%); }
+    html[data-theme="dark"] .coord-group input { background: hsl(224, 38%, 9%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .coord-group input:focus { border-color: hsl(32, 75%, 52%); }
     html[data-theme="dark"] .coord-group input.filled { border-color: hsl(145, 45%, 42%); background: hsl(145, 20%, 22%); }
     html[data-theme="dark"] .found-location { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
-    html[data-theme="dark"] .divider { color: hsl(220, 8%, 46%); }
-    html[data-theme="dark"] .divider::before, html[data-theme="dark"] .divider::after { background: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .divider { color: hsl(224, 18%, 67%); }
+    html[data-theme="dark"] .divider::before, html[data-theme="dark"] .divider::after { background: hsl(224, 38%, 14%); }
     html[data-theme="dark"] .success-banner { background: hsl(145, 25%, 24%); color: hsl(145, 55%, 68%); border-color: hsl(145, 30%, 34%); }
     html[data-theme="dark"] .error-banner { background: hsl(0, 20%, 28%); color: hsl(0, 60%, 70%); border-color: hsl(0, 20%, 36%); }
     html[data-theme="dark"] .inline-error { color: hsl(0, 60%, 65%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 13%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
   </style>
-</head>
-<body>
-  <div class="container">
+{% endblock %}
 
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Locatie voor zonne-verwachting</p>
-    </div>
+{% block tagline %}<p>Locatie voor zonne-verwachting</p>{% endblock %}
 
+{% block content %}
     <a class="back-btn" href="/settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
@@ -323,10 +290,9 @@
         <button type="submit" class="btn-primary" style="margin-top:0.75rem">Opslaan</button>
       </form>
     </div>
+{% endblock %}
 
-
-  </div>
-
+{% block scripts %}
   <script>
     function fillCoords(lat, lon) {
       const latEl = document.getElementById('latitude');
@@ -408,5 +374,4 @@
     document.getElementById('longitude').classList.add('filled');
     {% endif %}
   </script>
-</body>
-</html>
+{% endblock %}

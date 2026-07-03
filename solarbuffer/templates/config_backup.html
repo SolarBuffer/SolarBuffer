@@ -1,52 +1,24 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Config Back-up - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
     h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 480px; }
 
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     .card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.75rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
       padding: 1.25rem;
@@ -59,7 +31,7 @@
     }
     .card-desc {
       font-size: 0.85rem;
-      color: hsl(220, 10%, 46%);
+      color: hsl(224, 18%, 67%);
       margin-bottom: 1.1rem;
       line-height: 1.5;
     }
@@ -86,12 +58,12 @@
     .btn-secondary {
       display: inline-block;
       width: 100%;
-      background: hsl(30, 15%, 95%);
-      color: hsl(220, 20%, 30%);
+      background: hsl(224, 20%, 95%);
+      color: hsl(224, 26%, 30%);
       font-weight: 600;
       font-size: 1rem;
       padding: 0.7rem;
-      border: 1px solid hsl(30, 15%, 84%);
+      border: 1px solid hsl(224, 20%, 84%);
       border-radius: 0.5rem;
       cursor: pointer;
       text-align: center;
@@ -99,10 +71,10 @@
       transition: all 0.2s;
       box-sizing: border-box;
     }
-    .btn-secondary:hover { background: hsl(30, 15%, 90%); }
+    .btn-secondary:hover { background: hsl(224, 20%, 90%); }
 
     .file-upload-area {
-      border: 2px dashed hsl(30, 15%, 82%);
+      border: 2px dashed hsl(224, 20%, 82%);
       border-radius: 0.6rem;
       padding: 1.5rem;
       text-align: center;
@@ -124,7 +96,7 @@
     }
     .upload-icon { font-size: 1.6rem; margin-bottom: 0.4rem; color: hsl(32, 85%, 55%); }
     .upload-label { font-weight: 600; font-size: 0.9rem; }
-    .upload-hint { font-size: 0.78rem; color: hsl(220, 10%, 55%); margin-top: 0.2rem; }
+    .upload-hint { font-size: 0.78rem; color: hsl(224, 18%, 73%); margin-top: 0.2rem; }
     .file-name { font-size: 0.85rem; font-weight: 600; color: hsl(32, 85%, 38%); margin-top: 0.3rem; }
 
     .warning-box {
@@ -165,12 +137,12 @@
       align-items: center;
       gap: 0.4rem;
       background: white;
-      border: 1.5px solid hsl(30, 15%, 85%);
+      border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px;
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -183,22 +155,21 @@
     }
 
     /* ===== DARK MODE ===== */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
     html[data-theme="dark"] .card {
-      background: hsl(220, 8%, 26%);
-      border-color: hsl(220, 8%, 34%);
+      background: hsl(224, 38%, 11%);
+      border-color: hsl(224, 38%, 14%);
       box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2);
     }
-    html[data-theme="dark"] .card-desc { color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .card-desc { color: hsl(224, 18%, 75%); }
     html[data-theme="dark"] .btn-secondary {
-      background: hsl(220, 8%, 32%);
-      border-color: hsl(220, 8%, 40%);
-      color: hsl(220, 10%, 82%);
+      background: hsl(224, 38%, 13%);
+      border-color: hsl(224, 38%, 17%);
+      color: hsl(224, 18%, 91%);
     }
-    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(224, 38%, 15%); }
     html[data-theme="dark"] .file-upload-area {
-      border-color: hsl(220, 8%, 38%);
+      border-color: hsl(224, 38%, 16%);
     }
     html[data-theme="dark"] .file-upload-area:hover {
       border-color: hsl(32, 75%, 52%);
@@ -208,7 +179,7 @@
       border-color: hsl(32, 75%, 48%);
       background: hsl(32, 20%, 22%);
     }
-    html[data-theme="dark"] .upload-hint { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .upload-hint { color: hsl(224, 18%, 73%); }
     html[data-theme="dark"] .warning-box {
       background: hsl(37, 25%, 24%);
       border-color: hsl(37, 40%, 36%);
@@ -224,18 +195,14 @@
       color: hsl(0, 60%, 70%);
       border-color: hsl(0, 20%, 36%);
     }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 13%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
   </style>
-</head>
-<body>
-  <div class="container">
+{% endblock %}
 
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Config back-up &amp; herstel</p>
-    </div>
+{% block tagline %}<p>Config back-up &amp; herstel</p>{% endblock %}
 
+{% block content %}
     <a class="back-btn" href="/settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
@@ -282,9 +249,9 @@
         <button type="submit" class="btn-primary" id="importBtn" disabled>Importeren</button>
       </form>
     </div>
+{% endblock %}
 
-  </div>
-
+{% block scripts %}
   <script>
     function handleFileSelect(input) {
       const nameEl = document.getElementById("fileName");
@@ -301,5 +268,4 @@
       }
     }
   </script>
-</body>
-</html>
+{% endblock %}

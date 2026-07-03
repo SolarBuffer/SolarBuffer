@@ -1,25 +1,10 @@
-<!DOCTYPE html>
-<html lang="nl" data-theme="{{ 'dark' if dark_mode else 'light' }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Grafieken - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <script>
-    (function () {
-      const t = localStorage.getItem('theme') ||
-        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      document.documentElement.setAttribute('data-theme', t);
-      document.getElementById('themeColorMeta').setAttribute('content', t === 'dark' ? '#1a1d23' : '#f9f7f5');
-    })();
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,52 +15,34 @@
       --accent-light: hsl(32, 100%, 96%);
       --accent-dark:  hsl(32, 90%, 38%);
       --card-bg:      #ffffff;
-      --card-border:  hsl(30, 15%, 88%);
-      --text:         hsl(220, 20%, 14%);
-      --text-muted:   hsl(220, 10%, 48%);
-      --bg:           hsl(30, 25%, 97%);
+      --card-border:  hsl(224, 20%, 88%);
+      --text:         hsl(224, 26%, 14%);
+      --text-muted:   hsl(224, 18%, 69%);
+      --bg:           hsl(224, 30%, 97%);
       --shadow-sm:    0 1px 4px -1px rgba(0,0,0,0.08);
       --shadow:       0 4px 16px -4px rgba(0,0,0,0.10), 0 1px 4px -1px rgba(0,0,0,0.05);
       --radius:       1rem;
     }
     html[data-theme="dark"] {
-      --accent-light: hsl(220, 8%, 28%);
+      --accent-light: hsl(224, 38%, 12%);
       --accent-dark:  hsl(32, 85%, 62%);
-      --card-bg:      hsl(220, 9%, 19%);
-      --card-border:  hsl(220, 8%, 27%);
-      --text:         hsl(220, 10%, 90%);
-      --text-muted:   hsl(220, 8%, 52%);
-      --bg:           hsl(220, 10%, 13%);
+      --card-bg:      hsl(224, 38%, 8%);
+      --card-border:  hsl(224, 38%, 11%);
+      --text:         hsl(224, 18%, 96%);
+      --text-muted:   hsl(224, 18%, 71%);
+      --bg:           hsl(224, 38%, 6%);
       --shadow-sm:    0 1px 4px -1px rgba(0,0,0,0.25);
       --shadow:       0 4px 20px -4px rgba(0,0,0,0.35), 0 1px 4px -1px rgba(0,0,0,0.20);
     }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem 1rem 4rem;
-    }
-    html[data-theme="light"] body {
-      background:
-        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.12), transparent 28%),
-        hsl(30, 25%, 97%);
-    }
-
-    .container { width: 100%; max-width: 580px; }
-
     /* ── Header ── */
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.5rem; }
+    .page-header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 62%));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-    .header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
+    .page-header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
 
     /* ── Back button ── */
     .back-btn {
@@ -348,20 +315,11 @@
     .fs-readout-time { font-size: .68rem; color: var(--text-muted); }
     .fs-readout-val  { font-size: .82rem; font-weight: 700; color: var(--text); }
   </style>
-</head>
-<body>
-  <div class="container">
+{% endblock %}
 
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Grafieken</p>
-    </div>
+{% block tagline %}<p>Grafieken</p>{% endblock %}
 
-    <a class="back-btn" href="/">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
-      Dashboard
-    </a>
-
+{% block content %}
     <!-- Rij 1: snelle bereiken -->
     <div class="range-bar">
       <button class="range-btn active" data-hours="1"   onclick="setRange(this)">1u</button>
@@ -394,8 +352,6 @@
     <div id="chartsArea">
       <div class="loading"><span class="spinner"></span>Gegevens laden…</div>
     </div>
-
-  </div>
 
   <!-- ═══ Volledig scherm overlay ═══ -->
   <div class="fs-overlay" id="fsOverlay">
@@ -433,11 +389,13 @@
       </div>
     </div>
   </div>
+{% endblock %}
 
+{% block scripts %}
   <script>
     const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
     const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.055)';
-    const tickColor = isDark ? 'hsl(220,8%,50%)'        : 'hsl(220,10%,55%)';
+    const tickColor = isDark ? 'hsl(224, 18%, 70%)'        : 'hsl(224, 18%, 73%)';
 
     const chartInstances = {};
     const chartData      = {}; // canvasId → { labels, values, type, unit }
@@ -1052,5 +1010,4 @@
 
     loadAll();
   </script>
-</body>
-</html>
+{% endblock %}

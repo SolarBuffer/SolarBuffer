@@ -1,49 +1,21 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Updates - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 1rem;
-    }
     h1, h2 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 480px; padding-bottom: 2rem; }
 
     /* Header */
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     /* Back button */
     .back-btn {
@@ -51,12 +23,12 @@
       align-items: center;
       gap: 0.4rem;
       background: white;
-      border: 1.5px solid hsl(30, 15%, 85%);
+      border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px;
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -69,7 +41,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       padding: 0.3rem;
       gap: 0.2rem;
@@ -88,13 +60,13 @@
       font-family: 'Space Grotesk', sans-serif;
       font-size: 0.78rem;
       font-weight: 600;
-      color: hsl(220, 10%, 52%);
+      color: hsl(224, 18%, 71%);
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
       position: relative;
     }
     .tab-btn svg { opacity: 0.6; transition: opacity 0.15s; }
-    .tab-btn:hover { background: hsl(30, 20%, 96%); color: hsl(220, 15%, 30%); }
+    .tab-btn:hover { background: hsl(224, 25%, 96%); color: hsl(224, 20%, 30%); }
     .tab-btn.active {
       background: hsl(32, 95%, 52%);
       color: white;
@@ -120,7 +92,7 @@
     /* Check / action card */
     .check-card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.12);
       padding: 1.1rem 1.25rem;
@@ -135,7 +107,7 @@
     .check-card.update-available .check-card-sub   { color: hsl(32, 80%, 50%); }
     .check-card-text { flex: 1; }
     .check-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem; }
-    .check-card-sub { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.15rem; }
+    .check-card-sub { font-size: 0.78rem; color: hsl(224, 18%, 70%); margin-top: 0.15rem; }
 
     .btn-action {
       padding: 0.5rem 1.1rem;
@@ -170,7 +142,7 @@
 
     .fw-card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.75rem;
       padding: 0.85rem 1rem;
       display: flex;
@@ -189,11 +161,11 @@
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .fw-card.offline .fw-icon { background: hsl(220, 10%, 94%); color: hsl(220, 10%, 60%); }
+    .fw-card.offline .fw-icon { background: hsl(224, 18%, 97%); color: hsl(224, 18%, 76%); }
 
     .fw-info { flex: 1; min-width: 0; }
     .fw-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fw-ver  { font-size: 0.75rem; color: hsl(220, 10%, 52%); margin-top: 0.15rem; }
+    .fw-ver  { font-size: 0.75rem; color: hsl(224, 18%, 71%); margin-top: 0.15rem; }
     .fw-ver .arrow { color: hsl(32, 90%, 50%); font-weight: 700; margin: 0 0.2em; }
 
     .fw-badge {
@@ -203,7 +175,7 @@
     }
     .fw-badge.ok      { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
     .fw-badge.update  { background: hsl(32, 95%, 90%);  color: hsl(32, 95%, 32%); }
-    .fw-badge.offline { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 44%); }
+    .fw-badge.offline { background: hsl(224, 18%, 97%); color: hsl(224, 38%, 18%); }
 
     .btn-fw-update {
       padding: 0.35rem 0.75rem;
@@ -221,18 +193,18 @@
 
     .fw-placeholder {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.75rem;
       padding: 1rem 1.25rem;
       font-size: 0.83rem;
-      color: hsl(220, 10%, 55%);
+      color: hsl(224, 18%, 73%);
       text-align: center;
     }
 
     /* ---- Software version cards ---- */
     .update-card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.75rem;
       box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.08);
       padding: 0.9rem 1rem;
@@ -250,9 +222,9 @@
     }
     .version-badge.new { background: hsl(32, 95%, 90%);  color: hsl(32, 95%, 32%); }
     .version-badge.mid { background: hsl(215, 80%, 91%); color: hsl(215, 70%, 36%); }
-    .version-badge.old { background: hsl(220, 10%, 92%); color: hsl(220, 12%, 36%); }
-    .update-date-small { font-size: 0.67rem; color: hsl(220, 10%, 54%); white-space: nowrap; }
-    .update-divider { width: 1px; flex-shrink: 0; background: hsl(30, 15%, 90%); align-self: stretch; }
+    .version-badge.old { background: hsl(224, 18%, 97%); color: hsl(224, 38%, 15%); }
+    .update-date-small { font-size: 0.67rem; color: hsl(224, 18%, 73%); white-space: nowrap; }
+    .update-divider { width: 1px; flex-shrink: 0; background: hsl(224, 20%, 90%); align-self: stretch; }
     .update-right { flex: 1; min-width: 0; }
     .update-tag {
       display: inline-block; font-size: 0.64rem; font-weight: 600;
@@ -261,8 +233,8 @@
     .tag-feature { background: hsl(145, 55%, 90%); color: hsl(145, 60%, 28%); }
     .tag-fix     { background: hsl(0, 60%, 93%);   color: hsl(0, 65%, 38%); }
     .tag-ui      { background: hsl(280, 60%, 93%); color: hsl(280, 60%, 35%); }
-    .update-title { font-size: 0.88rem; font-weight: 600; color: hsl(220, 20%, 14%); margin-bottom: 4px; line-height: 1.3; }
-    .update-body  { font-size: 0.81rem; color: hsl(220, 10%, 44%); line-height: 1.5; }
+    .update-title { font-size: 0.88rem; font-weight: 600; color: hsl(224, 26%, 14%); margin-bottom: 4px; line-height: 1.3; }
+    .update-body  { font-size: 0.81rem; color: hsl(224, 38%, 18%); line-height: 1.5; }
     .update-notes-link {
       display: inline-block; margin-top: 0.4rem; font-size: 0.75rem;
       font-weight: 600; color: hsl(32, 95%, 42%); text-decoration: none;
@@ -272,14 +244,14 @@
     /* ---- Hardware package list ---- */
     .pkg-list {
       margin-top: 0.5rem; font-size: 0.74rem;
-      color: hsl(220, 10%, 45%); line-height: 1.6;
+      color: hsl(224, 38%, 19%); line-height: 1.6;
       max-height: 120px; overflow-y: auto;
     }
 
     /* ---- Update log terminal ---- */
     .update-log-wrap {
       margin-top: 0.75rem;
-      background: hsl(220, 16%, 14%);
+      background: hsl(224, 21%, 14%);
       border-radius: 0.75rem;
       overflow: hidden;
       display: none;
@@ -288,15 +260,15 @@
     .update-log-bar {
       display: flex; align-items: center; gap: 0.5rem;
       padding: 0.5rem 0.85rem;
-      background: hsl(220, 16%, 18%);
-      border-bottom: 1px solid hsl(220, 16%, 22%);
+      background: hsl(224, 21%, 18%);
+      border-bottom: 1px solid hsl(224, 21%, 22%);
     }
     .log-dot { width: 8px; height: 8px; border-radius: 50%; }
     .log-dot.red    { background: hsl(0, 70%, 58%); }
     .log-dot.yellow { background: hsl(42, 90%, 56%); }
     .log-dot.green  { background: hsl(130, 60%, 50%); }
     .update-log-bar span {
-      font-size: 0.72rem; color: hsl(220, 10%, 52%);
+      font-size: 0.72rem; color: hsl(224, 18%, 71%);
       font-family: 'Space Grotesk', sans-serif; font-weight: 600;
       margin-left: auto;
     }
@@ -311,45 +283,40 @@
       white-space: pre-wrap;
       word-break: break-all;
     }
-    .update-log .log-dim  { color: hsl(220, 10%, 48%); }
+    .update-log .log-dim  { color: hsl(224, 18%, 69%); }
     .update-log .log-done { color: hsl(130, 60%, 60%); font-weight: bold; }
     .update-log .log-err  { color: hsl(0, 70%, 65%); }
 
     /* ---- DARK MODE ---- */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .tab-bar { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
-    html[data-theme="dark"] .tab-btn { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .tab-btn:hover { background: hsl(220, 8%, 32%); color: hsl(220, 10%, 78%); }
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 13%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .tab-bar { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); box-shadow: none; }
+    html[data-theme="dark"] .tab-btn { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .tab-btn:hover { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 88%); }
     html[data-theme="dark"] .tab-btn.active { background: hsl(32, 85%, 48%); color: white; }
-    html[data-theme="dark"] .check-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
-    html[data-theme="dark"] .check-card-sub { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .check-card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); box-shadow: none; }
+    html[data-theme="dark"] .check-card-sub { color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .check-card.update-available { background: hsl(32, 20%, 24%); border-color: hsl(32, 70%, 45%); }
-    html[data-theme="dark"] .fw-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
+    html[data-theme="dark"] .fw-card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); box-shadow: none; }
     html[data-theme="dark"] .fw-card.has-update { background: hsl(32, 15%, 24%); border-color: hsl(32, 70%, 42%); }
     html[data-theme="dark"] .fw-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .fw-ver { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .fw-placeholder { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .update-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
-    html[data-theme="dark"] .update-divider { background: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] .update-date-small { color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .update-title { color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .update-body { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .fw-ver { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .fw-placeholder { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .update-card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); box-shadow: none; }
+    html[data-theme="dark"] .update-divider { background: hsl(224, 38%, 14%); }
+    html[data-theme="dark"] .update-date-small { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .update-title { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .update-body { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .action-result.success { background: hsl(145, 25%, 24%); color: hsl(145, 55%, 68%); }
     html[data-theme="dark"] .action-result.error   { background: hsl(0, 20%, 28%);   color: hsl(0, 60%, 70%); }
-    html[data-theme="dark"] .pkg-list { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .pkg-list { color: hsl(224, 18%, 71%); }
   </style>
-</head>
-<body>
-  <div class="container">
+{% endblock %}
 
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Updates</p>
-    </div>
+{% block tagline %}<p>Updates</p>{% endblock %}
 
+{% block content %}
     <a class="back-btn" href="/settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
@@ -400,7 +367,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.5.4</span>
+          <span class="version-badge new">v6.0.0</span>
+          <span class="update-date-small">3 jul</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-ui">UI</span>
+          <div class="update-title">Volledig vernieuwde interface</div>
+          <div class="update-body">Het dashboard en alle instellingenpagina's hebben een nieuwe, strakke stijl gekregen met een donker thema, cyaan/violette accenten en overal consistente kleuren. Navigatie verloopt nu via een vaste onderbalk (Dashboard, Grafieken, Instellingen, Meer) in plaats van het oude hamburgermenu. Nieuw op het dashboard: een Netenergiebalans-paneel dat in één oogopslag toont hoeveel stroom je vandaag van het net haalde versus terugleverde.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V6.0.0" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.5.4</span>
           <span class="update-date-small">30 jun</span>
         </div>
         <div class="update-divider"></div>
@@ -647,8 +628,9 @@
       </div>
     </div>
 
-  </div>
+{% endblock %}
 
+{% block scripts %}
   <script>
     /* ---- Tab switching ---- */
     function switchTab(name) {
@@ -963,5 +945,4 @@
       return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
   </script>
-</body>
-</html>
+{% endblock %}

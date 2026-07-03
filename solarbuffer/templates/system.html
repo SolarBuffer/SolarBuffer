@@ -1,60 +1,32 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Systeeminfo - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
     h1, h2 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 480px; }
 
-    .header { text-align: center; margin-bottom: 1.5rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     .back-btn {
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
       background: white;
-      border: 1.5px solid hsl(30, 15%, 85%);
+      border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px;
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -68,7 +40,7 @@
 
     .stat-card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 4px 16px -4px hsla(32, 95%, 52%, 0.10);
       padding: 1.1rem 1.25rem;
@@ -103,23 +75,23 @@
       font-size: 1.55rem;
       font-weight: 700;
       font-family: 'Space Grotesk', sans-serif;
-      color: hsl(220, 20%, 14%);
+      color: hsl(224, 26%, 14%);
       line-height: 1;
     }
     .stat-value .unit {
       font-size: 0.95rem;
       font-weight: 500;
-      color: hsl(220, 10%, 50%);
+      color: hsl(224, 18%, 70%);
       margin-left: 0.2rem;
     }
     .stat-sub {
       font-size: 0.78rem;
-      color: hsl(220, 10%, 52%);
+      color: hsl(224, 18%, 71%);
       margin-top: 0.3rem;
     }
 
     .bar-wrap {
-      background: hsl(30, 15%, 92%);
+      background: hsl(224, 20%, 92%);
       border-radius: 999px;
       height: 7px;
       overflow: hidden;
@@ -161,32 +133,27 @@
     .last-update {
       text-align: center;
       font-size: 0.72rem;
-      color: hsl(220, 10%, 62%);
+      color: hsl(224, 18%, 78%);
       margin-top: 0.25rem;
     }
 
     /* DARK MODE */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .stat-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: none; }
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
+    html[data-theme="dark"] .stat-card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); box-shadow: none; }
     html[data-theme="dark"] .stat-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .stat-value { color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .stat-value .unit { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .stat-sub { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .bar-wrap { background: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .last-update { color: hsl(220, 8%, 48%); }
+    html[data-theme="dark"] .stat-value { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .stat-value .unit { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .stat-sub { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .bar-wrap { background: hsl(224, 38%, 14%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 13%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .last-update { color: hsl(224, 18%, 69%); }
   </style>
-</head>
-<body>
-  <div class="container">
+{% endblock %}
 
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Systeeminfo</p>
-    </div>
+{% block tagline %}<p>Systeeminfo</p>{% endblock %}
 
+{% block content %}
     <a class="back-btn" href="/settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
@@ -250,9 +217,9 @@
     </div>
 
     <div class="last-update" id="lastUpdate"></div>
+{% endblock %}
 
-  </div>
-
+{% block scripts %}
   <script>
     function fmtBytes(b) {
       if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
@@ -327,5 +294,4 @@
     load();
     setInterval(load, 10000);
   </script>
-</body>
-</html>
+{% endblock %}

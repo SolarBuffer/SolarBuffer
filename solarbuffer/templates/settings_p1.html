@@ -1,61 +1,33 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>P1 &amp; Batterij - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
     @keyframes spin { to { transform: rotate(360deg); } }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem 1rem 3rem;
-    }
     h1, h2 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 480px; }
 
-    .header { text-align: center; margin-bottom: 1.75rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     .back-btn {
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
       background: white;
-      border: 1.5px solid hsl(30, 15%, 85%);
+      border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px;
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -65,7 +37,7 @@
 
     .card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.75rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
       padding: 1.25rem;
@@ -76,7 +48,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.07em;
-      color: hsl(220, 10%, 52%);
+      color: hsl(224, 18%, 71%);
       margin-bottom: 0.85rem;
     }
 
@@ -86,18 +58,18 @@
       display: block;
       font-size: 0.82rem;
       font-weight: 600;
-      color: hsl(220, 10%, 46%);
+      color: hsl(224, 18%, 67%);
       margin-bottom: 0.35rem;
     }
     .field-group input {
       width: 100%;
       padding: 0.65rem 0.85rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
+      border: 1.5px solid hsl(224, 20%, 82%);
       border-radius: 0.5rem;
       font-size: 0.95rem;
       font-family: 'Inter', sans-serif;
       background: white;
-      color: hsl(220, 20%, 14%);
+      color: hsl(224, 26%, 14%);
       transition: border-color 0.2s;
     }
     .field-group input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
@@ -123,7 +95,7 @@
     .scan-status {
       margin-top: 0.6rem;
       font-size: 0.83rem;
-      color: hsl(220, 10%, 46%);
+      color: hsl(224, 18%, 67%);
       min-height: 1.2rem;
     }
     .scan-results {
@@ -159,13 +131,13 @@
 
     .btn-secondary {
       flex: 1;
-      background: hsl(30, 15%, 95%);
-      color: hsl(220, 20%, 30%);
+      background: hsl(224, 20%, 95%);
+      color: hsl(224, 26%, 30%);
       font-family: 'Space Grotesk', sans-serif;
       font-weight: 600;
       font-size: 1rem;
       padding: 0.7rem;
-      border: 1px solid hsl(30, 15%, 84%);
+      border: 1px solid hsl(224, 20%, 84%);
       border-radius: 0.5rem;
       cursor: pointer;
       text-align: center;
@@ -173,21 +145,20 @@
       text-decoration: none;
       display: block;
     }
-    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+    .btn-secondary:hover { background: hsl(224, 20%, 88%); }
     .btn-row { display: flex; gap: 0.75rem; }
     .btn-row .btn-primary { flex: 1; }
 
     /* DARK MODE */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
-    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
-    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .field-group label { color: hsl(220, 8%, 56%); }
-    html[data-theme="dark"] .field-group input { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
+    html[data-theme="dark"] .card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .field-group label { color: hsl(224, 18%, 74%); }
+    html[data-theme="dark"] .field-group input { background: hsl(224, 38%, 9%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .field-group input:focus { border-color: hsl(32, 75%, 52%); }
-    html[data-theme="dark"] .scan-status { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .scan-status { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .scan-results { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 91%); }
 
     .toggle-row {
       display: flex;
@@ -215,7 +186,7 @@
     .toggle .slider {
       position: absolute;
       inset: 0;
-      background: hsl(30, 15%, 80%);
+      background: hsl(224, 20%, 80%);
       border-radius: 12px;
       transition: background 0.25s;
     }
@@ -231,10 +202,10 @@
       transition: transform 0.25s;
     }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
-    html[data-theme="dark"] .toggle .slider { background: hsl(220, 8%, 42%); }
+    html[data-theme="dark"] .toggle .slider { background: hsl(224, 38%, 18%); }
     html[data-theme="dark"] .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
     .solaredge-fields { margin-top: 1rem; }
-    html[data-theme="dark"] .toggle-row { color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .toggle-row { color: hsl(224, 18%, 95%); }
 
     .prio-grid {
       display: grid;
@@ -246,9 +217,9 @@
     .prio-grid .prio-card {
       display: block !important;
       padding: 1rem 0.75rem;
-      border: 2px solid hsl(220, 12%, 82%);
+      border: 2px solid hsl(224, 18%, 91%);
       border-radius: 0.9rem;
-      background: hsl(220, 20%, 98%);
+      background: hsl(224, 26%, 98%);
       cursor: pointer;
       text-align: center !important;
       user-select: none;
@@ -264,8 +235,8 @@
       width: 48px; height: 48px;
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      background: hsl(220, 14%, 88%);
-      color: hsl(220, 15%, 40%);
+      background: hsl(224, 18%, 95%);
+      color: hsl(224, 20%, 40%);
       margin: 0 auto 0.5rem;
     }
     .prio-icon svg { display: block; }
@@ -277,22 +248,22 @@
       display: block;
       font-size: 0.84rem;
       font-weight: 700;
-      color: hsl(220, 15%, 18%);
+      color: hsl(224, 20%, 18%);
       margin-bottom: 0.15rem;
     }
     .prio-sub {
       display: block;
       font-size: 0.70rem;
-      color: hsl(220, 10%, 52%);
+      color: hsl(224, 18%, 71%);
       line-height: 1.35;
     }
-    html[data-theme="dark"] .prio-grid .prio-card { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] .prio-grid .prio-card:hover { border-color: hsl(32, 70%, 48%); background: hsl(220, 8%, 24%); }
-    html[data-theme="dark"] .prio-option:checked + .prio-card { border-color: hsl(32, 85%, 54%); background: hsl(220, 8%, 26%); }
-    html[data-theme="dark"] .prio-icon { background: hsl(220, 8%, 30%); color: hsl(220, 10%, 70%); }
+    html[data-theme="dark"] .prio-grid .prio-card { background: hsl(224, 38%, 8%); border-color: hsl(224, 38%, 14%); }
+    html[data-theme="dark"] .prio-grid .prio-card:hover { border-color: hsl(32, 70%, 48%); background: hsl(224, 38%, 10%); }
+    html[data-theme="dark"] .prio-option:checked + .prio-card { border-color: hsl(32, 85%, 54%); background: hsl(224, 38%, 11%); }
+    html[data-theme="dark"] .prio-icon { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 83%); }
     html[data-theme="dark"] .prio-option:checked + .prio-card .prio-icon { background: hsl(32, 85%, 50%); color: #fff; }
-    html[data-theme="dark"] .prio-label { color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .prio-sub   { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .prio-label { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .prio-sub   { color: hsl(224, 18%, 74%); }
     .bat-type-grid .prio-icon { background: transparent !important; width: auto; height: auto; border-radius: 0; }
     .bat-type-grid .prio-icon img { border-radius: 50%; display: block; }
     .bat-type-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
@@ -301,29 +272,26 @@
     .select-field {
       width: 100%;
       padding: 0.65rem 0.85rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
+      border: 1.5px solid hsl(224, 20%, 82%);
       border-radius: 0.5rem;
       font-size: 0.95rem;
       font-family: 'Inter', sans-serif;
       background: white;
-      color: hsl(220, 20%, 14%);
+      color: hsl(224, 26%, 14%);
       appearance: none;
       transition: border-color 0.2s;
     }
     .select-field:focus { outline: none; border-color: hsl(32, 85%, 55%); }
-    html[data-theme="dark"] .select-field { background: hsl(220, 8%, 22%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
-    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .select-field { background: hsl(224, 38%, 9%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 13%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 17%); color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(224, 38%, 15%); }
   </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>P1 &amp; Batterij</p>
-    </div>
+{% endblock %}
 
+{% block tagline %}<p>P1 &amp; Batterij</p>{% endblock %}
+
+{% block content %}
     <a class="back-btn" href="/settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
@@ -386,12 +354,12 @@
 
           <!-- Gedeelde IP-lijst (voor beide typen) -->
           <div class="field-group">
-            <label id="batteryIpsLabel">IP-adres(sen) batterij <span style="font-weight:400;color:hsl(220,10%,55%);font-size:0.78rem;">(max. 4)</span></label>
+            <label id="batteryIpsLabel">IP-adres(sen) batterij <span style="font-weight:400;color:hsl(224, 18%, 73%);font-size:0.78rem;">(max. 4)</span></label>
             <div id="batteryIpsList">
               {% set tokens = config.battery_tokens if config.battery_tokens else [] %}
               {% for ip in (config.battery_ips if config.battery_ips else ['']) %}
               {% set tok = tokens[loop.index0] if loop.index0 < tokens|length else '' %}
-              <div class="battery-ip-row" style="border:1px solid hsl(220,13%,88%);border-radius:0.5rem;padding:0.6rem 0.75rem;margin-bottom:0.5rem;">
+              <div class="battery-ip-row" style="border:1px solid hsl(224, 18%, 95%);border-radius:0.5rem;padding:0.6rem 0.75rem;margin-bottom:0.5rem;">
                 <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">
                   <input type="text" name="battery_ip[]"
                          placeholder="Bijv. 192.168.178.50"
@@ -410,7 +378,7 @@
               </div>
               {% endfor %}
             </div>
-            <button type="button" id="addIpBtn" onclick="addIpRow()" style="margin-top:0.25rem;background:none;border:1.5px dashed hsl(30,15%,78%);border-radius:0.5rem;color:hsl(220,10%,50%);font-size:0.85rem;padding:0.45rem 0.75rem;cursor:pointer;width:100%;">
+            <button type="button" id="addIpBtn" onclick="addIpRow()" style="margin-top:0.25rem;background:none;border:1.5px dashed hsl(224, 20%, 78%);border-radius:0.5rem;color:hsl(224, 18%, 70%);font-size:0.85rem;padding:0.45rem 0.75rem;cursor:pointer;width:100%;">
               + Accu toevoegen
             </button>
           </div>
@@ -428,7 +396,7 @@
                   Koppelen
                 </button>
               </div>
-              <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.3rem;">Druk de knop in op de P1 meter — dit token gebruikt SolarBuffer om de accu aan te sturen.</div>
+              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Druk de knop in op de P1 meter — dit token gebruikt SolarBuffer om de accu aan te sturen.</div>
             </div>
             <div id="pairP1Status" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
               <div id="pairP1StatusText"></div>
@@ -443,17 +411,17 @@
                 <input type="number" id="marstek_port" name="marstek_port"
                        min="1024" max="65535" step="1"
                        value="{{ config.marstek_port or 30000 }}">
-                <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.25rem;">Stel in via de Marstek app (standaard 30000)</div>
+                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Stel in via de Marstek app (standaard 30000)</div>
               </div>
               <div class="field-group" style="flex:1;">
                 <label for="marstek_max_power">Max. vermogen (W)</label>
                 <input type="number" id="marstek_max_power" name="marstek_max_power"
                        min="100" max="10000" step="100"
                        value="{{ config.marstek_max_power or 2000 }}">
-                <div style="font-size:0.75rem;color:hsl(220,10%,55%);margin-top:0.25rem;">Max. laad- én ontlaadvermogen van je accu</div>
+                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Max. laad- én ontlaadvermogen van je accu</div>
               </div>
             </div>
-            <div style="font-size:0.82rem;color:hsl(220,10%,50%);padding:0.6rem 0.75rem;background:hsl(220,15%,96%);border-radius:0.5rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
               Stel de Open API in via de Marstek app en configureer een statisch IP-adres voor je accu.
             </div>
           </div>
@@ -499,8 +467,9 @@
         <button type="submit" class="btn-primary">Opslaan</button>
       </div>
     </form>
-  </div>
+{% endblock %}
 
+{% block scripts %}
   <script>
     function escapeHtml(v) {
       return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -677,7 +646,7 @@
       if (list.querySelectorAll('.battery-ip-row').length >= 4) return;
       var row = document.createElement('div');
       row.className = 'battery-ip-row';
-      row.style.cssText = 'border:1px solid hsl(220,13%,88%);border-radius:0.5rem;padding:0.6rem 0.75rem;margin-bottom:0.5rem;';
+      row.style.cssText = 'border:1px solid hsl(224, 18%, 95%);border-radius:0.5rem;padding:0.6rem 0.75rem;margin-bottom:0.5rem;';
       row.innerHTML = '<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">'
         + '<input type="text" name="battery_ip[]" placeholder="Bijv. 192.168.178.50" style="flex:1;">'
         + '<button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>'
@@ -736,5 +705,4 @@
       }
     }
   </script>
-</body>
-</html>
+{% endblock %}

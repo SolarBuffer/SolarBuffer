@@ -1,66 +1,33 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Netwerk - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background:
-        radial-gradient(circle at top, hsla(38, 100%, 70%, 0.12), transparent 28%),
-        hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem 1rem 3rem;
-    }
-
     h1, h2 { font-family: 'Space Grotesk', sans-serif; }
 
-    .container { width: 100%; max-width: 480px; }
-
-    .header { text-align: center; margin-bottom: 1.75rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     .back-btn {
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
       background: white;
-      border: 1.5px solid hsl(30, 15%, 85%);
+      border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px;
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -77,7 +44,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.07em;
-      color: hsl(220, 10%, 52%);
+      color: hsl(224, 18%, 71%);
       padding: 0 0.25rem;
       margin: 1.25rem 0 0.4rem;
     }
@@ -129,7 +96,7 @@
     }
     .current-meta {
       font-size: 0.78rem;
-      color: hsl(220, 10%, 50%);
+      color: hsl(224, 18%, 70%);
       margin-top: 0.1rem;
     }
 
@@ -159,7 +126,7 @@
     /* ===== NETWERKEN LIJST ===== */
     .card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
       overflow: hidden;
@@ -171,7 +138,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 0.85rem 1.1rem 0.6rem;
-      border-bottom: 1px solid hsl(30, 15%, 91%);
+      border-bottom: 1px solid hsl(224, 20%, 91%);
     }
     .scan-header-title {
       font-weight: 600;
@@ -203,7 +170,7 @@
       padding: 0.65rem 1.1rem;
       cursor: pointer;
       transition: background 0.15s;
-      border-bottom: 1px solid hsl(30, 15%, 93%);
+      border-bottom: 1px solid hsl(224, 20%, 93%);
       user-select: none;
     }
     .network-item:last-child { border-bottom: none; }
@@ -236,7 +203,7 @@
       flex-shrink: 0;
     }
     .network-lock {
-      color: hsl(220, 10%, 62%);
+      color: hsl(224, 18%, 78%);
       font-size: 0.95rem;
     }
     .current-tag {
@@ -251,14 +218,14 @@
     .scan-status {
       text-align: center;
       padding: 1rem;
-      color: hsl(220, 10%, 55%);
+      color: hsl(224, 18%, 73%);
       font-size: 0.85rem;
     }
 
     /* ===== FORMULIER ===== */
     .form-card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
       overflow: hidden;
@@ -273,14 +240,14 @@
 
     .form-field {
       padding: 0.8rem 1.1rem;
-      border-bottom: 1px solid hsl(30, 15%, 91%);
+      border-bottom: 1px solid hsl(224, 20%, 91%);
     }
     .form-field:last-child { border-bottom: none; }
 
     .form-label {
       font-weight: 600;
       font-size: 0.82rem;
-      color: hsl(220, 10%, 46%);
+      color: hsl(224, 18%, 67%);
       margin-bottom: 0.35rem;
       display: block;
     }
@@ -288,12 +255,12 @@
     .form-input {
       width: 100%;
       padding: 0.6rem 0.75rem;
-      border: 1.5px solid hsl(30, 15%, 88%);
+      border: 1.5px solid hsl(224, 20%, 88%);
       border-radius: 0.5rem;
       font-size: 0.95rem;
       font-family: 'Inter', sans-serif;
-      color: hsl(220, 20%, 14%);
-      background: hsl(30, 25%, 98%);
+      color: hsl(224, 26%, 14%);
+      background: hsl(224, 30%, 98%);
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .form-input:focus {
@@ -309,11 +276,11 @@
       top: 50%; right: 0.75rem;
       transform: translateY(-50%);
       cursor: pointer;
-      color: hsl(220, 10%, 60%);
+      color: hsl(224, 18%, 76%);
       font-size: 1.1rem;
       line-height: 1;
     }
-    .toggle-pw:hover { color: hsl(220, 10%, 32%); }
+    .toggle-pw:hover { color: hsl(224, 38%, 13%); }
 
     /* ===== KNOP ===== */
     .connect-btn {
@@ -356,30 +323,26 @@
     .spinning { display: inline-block; animation: spin 0.9s linear infinite; }
 
     /* ===== DARK MODE ===== */
-    html[data-theme="dark"] body {
-      background: hsl(220, 8%, 18%);
-      color: hsl(220, 10%, 88%);
-    }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 73%); }
     html[data-theme="dark"] .back-btn {
-      background: hsl(220, 8%, 26%);
-      border-color: hsl(220, 8%, 36%);
-      color: hsl(220, 10%, 82%);
+      background: hsl(224, 38%, 11%);
+      border-color: hsl(224, 38%, 15%);
+      color: hsl(224, 18%, 91%);
     }
     html[data-theme="dark"] .back-btn:hover {
-      background: hsl(220, 8%, 32%);
+      background: hsl(224, 38%, 13%);
       border-color: hsl(32, 70%, 50%);
       color: hsl(32, 80%, 62%);
     }
-    html[data-theme="dark"] .section-title { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .section-title { color: hsl(224, 18%, 71%); }
 
     html[data-theme="dark"] .current-card {
-      background: hsl(220, 8%, 24%);
+      background: hsl(224, 38%, 10%);
       border-color: hsl(32, 50%, 42%);
     }
     html[data-theme="dark"] .current-label { color: hsl(32, 80%, 60%); }
-    html[data-theme="dark"] .current-ssid  { color: hsl(220, 8%, 90%); }
-    html[data-theme="dark"] .current-meta  { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .current-ssid  { color: hsl(224, 18%, 96%); }
+    html[data-theme="dark"] .current-meta  { color: hsl(224, 18%, 73%); }
     html[data-theme="dark"] .connected-badge {
       background: hsl(145, 30%, 22%);
       color: hsl(145, 55%, 62%);
@@ -388,55 +351,51 @@
 
     html[data-theme="dark"] .card,
     html[data-theme="dark"] .form-card {
-      background: hsl(220, 8%, 24%);
-      border-color: hsl(220, 8%, 32%);
+      background: hsl(224, 38%, 10%);
+      border-color: hsl(224, 38%, 13%);
     }
     html[data-theme="dark"] .scan-header {
-      border-color: hsl(220, 8%, 30%);
+      border-color: hsl(224, 38%, 13%);
     }
-    html[data-theme="dark"] .scan-header-title { color: hsl(220, 8%, 85%); }
+    html[data-theme="dark"] .scan-header-title { color: hsl(224, 18%, 93%); }
     html[data-theme="dark"] .network-item {
-      border-color: hsl(220, 8%, 30%);
+      border-color: hsl(224, 38%, 13%);
     }
     html[data-theme="dark"] .network-item:hover    { background: hsla(32, 80%, 52%, 0.08); }
     html[data-theme="dark"] .network-item.selected { background: hsla(32, 80%, 52%, 0.14); }
     html[data-theme="dark"] .network-item.is-current { background: hsla(145, 55%, 42%, 0.1); }
     html[data-theme="dark"] .network-item.is-current:hover { background: hsla(145, 55%, 42%, 0.16); }
-    html[data-theme="dark"] .network-name  { color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .network-name  { color: hsl(224, 18%, 91%); }
     html[data-theme="dark"] .current-tag {
       background: hsl(145, 30%, 22%);
       color: hsl(145, 55%, 62%);
     }
-    html[data-theme="dark"] .scan-status  { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .network-lock { color: hsl(220, 8%, 50%); }
+    html[data-theme="dark"] .scan-status  { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .network-lock { color: hsl(224, 18%, 70%); }
 
-    html[data-theme="dark"] .form-field { border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .form-label { color: hsl(220, 8%, 56%); }
+    html[data-theme="dark"] .form-field { border-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .form-label { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .form-input {
-      background: hsl(220, 8%, 20%);
-      border-color: hsl(220, 8%, 36%);
-      color: hsl(220, 8%, 88%);
+      background: hsl(224, 38%, 8%);
+      border-color: hsl(224, 38%, 15%);
+      color: hsl(224, 18%, 95%);
     }
     html[data-theme="dark"] .form-input:focus {
       border-color: hsl(32, 80%, 55%);
       box-shadow: 0 0 0 3px hsla(32, 80%, 55%, 0.16);
     }
-    html[data-theme="dark"] .toggle-pw { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .toggle-pw:hover { color: hsl(220, 8%, 78%); }
+    html[data-theme="dark"] .toggle-pw { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .toggle-pw:hover { color: hsl(224, 18%, 88%); }
 
     html[data-theme="dark"] .status-bar.info    { background: hsla(32, 80%, 52%, 0.14); color: hsl(32, 80%, 65%); }
     html[data-theme="dark"] .status-bar.success { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
     html[data-theme="dark"] .status-bar.error   { background: hsl(0, 30%, 22%); color: hsl(0, 70%, 62%); }
   </style>
-</head>
-<body>
+{% endblock %}
 
-<div class="container">
-  <div class="header">
-    <h1><span class="solar">Solar</span>Buffer</h1>
-    <p>Netwerkinstellingen</p>
-  </div>
+{% block tagline %}<p>Netwerkinstellingen</p>{% endblock %}
 
+{% block content %}
   <a class="back-btn" href="/settings">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
     Instellingen
@@ -495,9 +454,9 @@
     <div id="statusBar" class="status-bar"></div>
     <button class="connect-btn" id="connectBtn" onclick="connectWifi()">Verbinden met netwerk</button>
   </div>
+{% endblock %}
 
-</div>
-
+{% block scripts %}
 <script>
   const OWN_SSIDS = new Set(["PI-SETUP"]);
   let currentSsid = null;
@@ -638,5 +597,4 @@
     scanNetworks(true);
   });
 </script>
-</body>
-</html>
+{% endblock %}

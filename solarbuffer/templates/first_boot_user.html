@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5">
+  <meta name="theme-color" content="#eef1f8">
   <title>Account aanmaken - SolarBuffer</title>
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
@@ -15,8 +15,8 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
+      background: hsl(224, 30%, 97%);
+      color: hsl(224, 26%, 14%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -48,14 +48,14 @@
     .header .subtitle {
       font-size: 1rem;
       font-weight: 600;
-      color: hsl(220, 20%, 24%);
+      color: hsl(224, 26%, 24%);
       margin-bottom: 0.35rem;
     }
-    .header p { color: hsl(220, 10%, 50%); font-size: 0.85rem; line-height: 1.5; }
+    .header p { color: hsl(224, 18%, 70%); font-size: 0.85rem; line-height: 1.5; }
 
     .card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
       padding: 1.5rem;
@@ -65,18 +65,18 @@
       display: block;
       font-size: 0.82rem;
       font-weight: 600;
-      color: hsl(220, 10%, 40%);
+      color: hsl(224, 38%, 17%);
       margin-bottom: 0.35rem;
     }
     input[type="text"], input[type="password"] {
       width: 100%;
       padding: 0.7rem 0.9rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
+      border: 1.5px solid hsl(224, 20%, 82%);
       border-radius: 0.5rem;
       font-size: 1rem;
       font-family: 'Inter', sans-serif;
       background: white;
-      color: hsl(220, 20%, 14%);
+      color: hsl(224, 26%, 14%);
       margin-bottom: 1rem;
       transition: border-color 0.2s;
     }
@@ -96,15 +96,15 @@
       right: 0.9rem;
       transform: translateY(-50%);
       cursor: pointer;
-      color: hsl(220, 10%, 58%);
+      color: hsl(224, 18%, 75%);
       font-size: 1.2rem;
       line-height: 1;
     }
-    .toggle-password:hover { color: hsl(220, 20%, 28%); }
+    .toggle-password:hover { color: hsl(224, 26%, 28%); }
 
     .hint {
       font-size: 0.76rem;
-      color: hsl(220, 10%, 56%);
+      color: hsl(224, 18%, 74%);
       margin-top: -0.75rem;
       margin-bottom: 1rem;
     }

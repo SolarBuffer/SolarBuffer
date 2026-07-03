@@ -1,52 +1,21 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Instellingen - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem 1rem;
-    }
-
     h1, h2 { font-family: 'Space Grotesk', sans-serif; }
 
-    .container { width: 100%; max-width: 480px; }
-
-    .header { text-align: center; margin-bottom: 1.75rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     /* ===== SECTION TILES (main view) ===== */
     .section-tiles {
@@ -58,7 +27,7 @@
 
     .section-tile {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.1);
       padding: 1.1rem 1rem 1rem;
@@ -72,8 +41,8 @@
       font-family: 'Inter', sans-serif;
       outline: none;
     }
-    .section-tile:hover  { background: hsl(30, 25%, 97%); }
-    .section-tile:active { background: hsl(30, 20%, 94%); }
+    .section-tile:hover  { background: hsl(224, 30%, 97%); }
+    .section-tile:active { background: hsl(224, 25%, 94%); }
 
     .tile-icon {
       width: 44px; height: 44px;
@@ -87,19 +56,19 @@
       font-family: 'Space Grotesk', sans-serif;
       font-weight: 700;
       font-size: 0.9rem;
-      color: hsl(220, 20%, 14%);
+      color: hsl(224, 26%, 14%);
       margin-top: 0.1rem;
     }
     .tile-sub {
       font-size: 0.72rem;
-      color: hsl(220, 10%, 50%);
+      color: hsl(224, 18%, 70%);
       line-height: 1.4;
     }
 
     /* ===== SETTINGS LIST ===== */
     .settings-list {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
       overflow: hidden;
@@ -111,7 +80,7 @@
       align-items: center;
       gap: 1rem;
       padding: 1rem 1.1rem;
-      border-bottom: 1px solid hsl(30, 15%, 91%);
+      border-bottom: 1px solid hsl(224, 20%, 91%);
       text-decoration: none;
       color: inherit;
       cursor: pointer;
@@ -119,8 +88,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     .settings-item:last-child { border-bottom: none; }
-    .settings-item:hover  { background: hsl(30, 25%, 97%); }
-    .settings-item:active { background: hsl(30, 20%, 94%); }
+    .settings-item:hover  { background: hsl(224, 30%, 97%); }
+    .settings-item:active { background: hsl(224, 25%, 94%); }
 
     .settings-icon {
       width: 40px; height: 40px;
@@ -133,16 +102,16 @@
 
     .settings-text { flex: 1; min-width: 0; }
     .settings-label { font-weight: 600; font-size: 0.95rem; }
-    .settings-sub   { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; }
+    .settings-sub   { font-size: 0.78rem; color: hsl(224, 18%, 70%); margin-top: 0.1rem; }
 
-    .settings-chevron { color: hsl(220, 10%, 68%); flex-shrink: 0; }
+    .settings-chevron { color: hsl(224, 18%, 82%); flex-shrink: 0; }
 
     .section-title {
       font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.07em;
-      color: hsl(220, 10%, 52%);
+      color: hsl(224, 18%, 71%);
       padding: 0 0.25rem;
       margin: 1.25rem 0 0.4rem;
     }
@@ -153,13 +122,13 @@
       align-items: center;
       gap: 0.4rem;
       background: white;
-      border: 1.5px solid hsl(30, 15%, 85%);
+      border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px;
       padding: 0.45rem 0.9rem 0.45rem 0.65rem;
       font-size: 0.85rem;
       font-weight: 600;
       font-family: 'Inter', sans-serif;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       text-decoration: none;
       box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -178,18 +147,18 @@
       align-items: center;
       gap: 1rem;
       padding: 1rem 1.1rem;
-      border-bottom: 1px solid hsl(30, 15%, 91%);
+      border-bottom: 1px solid hsl(224, 20%, 91%);
     }
     .ctrl-row:last-child { border-bottom: none; }
     .ctrl-text { flex: 1; min-width: 0; }
     .ctrl-label { font-weight: 600; font-size: 0.95rem; }
-    .ctrl-sub   { font-size: 0.78rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; }
+    .ctrl-sub   { font-size: 0.78rem; color: hsl(224, 18%, 70%); margin-top: 0.1rem; }
     .ctrl-right { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
 
     .dot {
       width: 9px; height: 9px;
       border-radius: 50%;
-      background: hsl(220, 10%, 80%);
+      background: hsl(224, 18%, 90%);
       flex-shrink: 0;
     }
     .dot.active { background: #22c55e; animation: pulse 2s infinite; }
@@ -199,7 +168,7 @@
     .toggle input { display: none; }
     .toggle .slider {
       position: absolute; inset: 0;
-      background: hsl(30, 15%, 88%);
+      background: hsl(224, 20%, 88%);
       border-radius: 12px;
       transition: background 0.3s;
     }
@@ -219,26 +188,26 @@
     .vacation-panel {
       display: none;
       padding: 0.9rem 1.1rem 1rem;
-      border-top: 1px solid hsl(30, 15%, 91%);
+      border-top: 1px solid hsl(224, 20%, 91%);
       background: hsl(37, 40%, 98%);
       flex-direction: column;
       gap: 0.75rem;
     }
     .vacation-field { display: flex; flex-direction: column; gap: 0.3rem; }
-    .vacation-field label { font-size: 0.78rem; color: hsl(220,10%,52%); }
+    .vacation-field label { font-size: 0.78rem; color: hsl(224, 18%, 71%); }
     .vacation-date-selects { display: flex; gap: 0.4rem; }
     .vacation-date-selects select {
       flex: 1; padding: 0.42rem 0.5rem; border-radius: 0.5rem;
-      border: 1px solid hsl(220,12%,82%); font-size: 0.85rem;
-      background: hsl(0,0%,100%); color: hsl(220,10%,20%);
+      border: 1px solid hsl(224, 18%, 91%); font-size: 0.85rem;
+      background: hsl(0,0%,100%); color: hsl(224, 38%, 8%);
       appearance: none; -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 0.45rem center;
       padding-right: 1.4rem; cursor: pointer;
     }
     .vacation-date-selects select:focus { outline: none; border-color: hsl(32,90%,55%); }
-    .vacation-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.83rem; color: hsl(220,10%,40%); cursor: pointer; }
-    .vacation-info-line { font-size: 0.82rem; color: hsl(220,10%,50%); }
+    .vacation-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.83rem; color: hsl(224, 38%, 17%); cursor: pointer; }
+    .vacation-info-line { font-size: 0.82rem; color: hsl(224, 18%, 70%); }
     .vacation-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.1rem; }
     .vacation-save-btn {
       padding: 0.42rem 1rem; border-radius: 0.5rem; border: none;
@@ -254,8 +223,8 @@
     .vacation-deact-btn:hover { background: hsl(0, 60%, 96%); }
     .vacation-cancel-btn {
       padding: 0.42rem 1rem; border-radius: 0.5rem;
-      border: 1px solid hsl(220,12%,80%); background: transparent;
-      color: hsl(220,10%,40%); font-size: 0.83rem; cursor: pointer;
+      border: 1px solid hsl(224, 18%, 90%); background: transparent;
+      color: hsl(224, 38%, 17%); font-size: 0.83rem; cursor: pointer;
     }
 
     /* ===== VERBINDING ===== */
@@ -266,42 +235,42 @@
       white-space: nowrap; flex-shrink: 0;
     }
     .ts-badge.on      { background: hsl(145, 55%, 90%); color: hsl(145, 55%, 30%); }
-    .ts-badge.off     { background: hsl(220, 14%, 93%); color: hsl(220, 10%, 46%); }
+    .ts-badge.off     { background: hsl(224, 18%, 97%); color: hsl(224, 18%, 67%); }
     .ts-badge.pending { background: hsl(32, 100%, 92%); color: hsl(32, 90%, 38%); }
 
     .ts-panel {
       display: none;
       padding: 0.9rem 1.1rem 1rem;
-      border-top: 1px solid hsl(30, 15%, 91%);
-      background: hsl(30, 25%, 98%);
+      border-top: 1px solid hsl(224, 20%, 91%);
+      background: hsl(224, 30%, 98%);
     }
     .ts-row {
       display: flex; align-items: center; justify-content: space-between;
       gap: 0.75rem; padding: 0.4rem 0;
-      border-bottom: 1px solid hsl(30, 15%, 92%);
+      border-bottom: 1px solid hsl(224, 20%, 92%);
     }
     .ts-row:last-child { border-bottom: none; }
-    .ts-row-label { font-size: 0.8rem; color: hsl(220, 10%, 50%); }
+    .ts-row-label { font-size: 0.8rem; color: hsl(224, 18%, 70%); }
     .ts-row-val   { font-size: 0.8rem; font-weight: 600; font-family: monospace;
-                    color: hsl(220, 16%, 22%); text-align: right; word-break: break-all; }
-    .ts-hint { font-size: 0.78rem; color: hsl(220, 10%, 56%); margin-bottom: 0.5rem; }
+                    color: hsl(224, 21%, 22%); text-align: right; word-break: break-all; }
+    .ts-hint { font-size: 0.78rem; color: hsl(224, 18%, 74%); margin-bottom: 0.5rem; }
     .ts-url-row {
       display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
       padding: 0.45rem 0.6rem; border-radius: 0.5rem;
-      background: hsl(220, 14%, 97%); border: 1px solid hsl(220, 10%, 90%);
+      background: hsl(224, 18%, 97%); border: 1px solid hsl(224, 18%, 96%);
     }
     .ts-auth-link { flex: 1; font-size: 0.72rem; color: hsl(220, 60%, 50%); word-break: break-all; text-decoration: none; }
     .ts-auth-link:hover { text-decoration: underline; }
     .ts-copy-btn {
       flex-shrink: 0; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 600;
-      border: 1px solid hsl(220, 10%, 84%); border-radius: 0.35rem;
-      background: white; color: hsl(220, 12%, 46%); cursor: pointer;
+      border: 1px solid hsl(224, 18%, 92%); border-radius: 0.35rem;
+      background: white; color: hsl(224, 18%, 67%); cursor: pointer;
       transition: background 0.15s; white-space: nowrap;
     }
-    .ts-copy-btn:hover { background: hsl(220, 10%, 93%); }
+    .ts-copy-btn:hover { background: hsl(224, 18%, 97%); }
     .ts-install-cmd {
       display: block; margin-top: 0.5rem; padding: 0.4rem 0.6rem;
-      background: hsl(220, 12%, 15%); color: hsl(120, 50%, 68%);
+      background: hsl(224, 38%, 6%); color: hsl(120, 50%, 68%);
       border-radius: 0.4rem; font-size: 0.73rem; font-family: monospace;
       user-select: all;
     }
@@ -320,7 +289,7 @@
     .settings-item.clickable { cursor: pointer; user-select: none; }
     .dark-pill {
       width: 40px; height: 24px; border-radius: 999px;
-      background: hsl(30, 15%, 80%);
+      background: hsl(224, 20%, 80%);
       position: relative; flex-shrink: 0;
       transition: background 0.2s;
       pointer-events: none;
@@ -366,16 +335,16 @@
       margin: 0 auto 1rem; font-size: 1.5rem;
     }
     .modal h2 { font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; }
-    .modal p  { font-size: 0.85rem; color: hsl(220, 10%, 46%); text-align: center; line-height: 1.55; margin-bottom: 1.25rem; }
+    .modal p  { font-size: 0.85rem; color: hsl(224, 18%, 67%); text-align: center; line-height: 1.55; margin-bottom: 1.25rem; }
     .modal-btns { display: flex; gap: 0.75rem; }
     .btn-cancel {
       flex: 1; padding: 0.7rem;
-      border: 1.5px solid hsl(30, 15%, 82%); border-radius: 0.5rem;
+      border: 1.5px solid hsl(224, 20%, 82%); border-radius: 0.5rem;
       background: transparent; font-family: 'Space Grotesk', sans-serif;
       font-weight: 600; font-size: 0.95rem; cursor: pointer;
       transition: background 0.15s;
     }
-    .btn-cancel:hover { background: hsl(30, 15%, 94%); }
+    .btn-cancel:hover { background: hsl(224, 20%, 94%); }
     .btn-reset {
       flex: 1; padding: 0.7rem;
       background: hsl(0, 68%, 50%); border: none; border-radius: 0.5rem;
@@ -387,92 +356,80 @@
     .btn-reset:disabled { opacity: 0.6; cursor: default; }
 
     /* ===== DARK MODE ===== */
-    html[data-theme="dark"] body {
-      background: hsl(220, 8%, 18%);
-      color: hsl(220, 10%, 88%);
-    }
-    html[data-theme="dark"] .header p { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 73%); }
 
     html[data-theme="dark"] .section-tile {
-      background: hsl(220, 8%, 24%);
-      border-color: hsl(220, 8%, 32%);
+      background: hsl(224, 38%, 10%);
+      border-color: hsl(224, 38%, 13%);
       box-shadow: 0 4px 16px -6px rgba(0,0,0,0.2);
     }
-    html[data-theme="dark"] .section-tile:hover  { background: hsl(220, 8%, 28%); }
-    html[data-theme="dark"] .section-tile:active { background: hsl(220, 8%, 31%); }
+    html[data-theme="dark"] .section-tile:hover  { background: hsl(224, 38%, 12%); }
+    html[data-theme="dark"] .section-tile:active { background: hsl(224, 38%, 13%); }
     html[data-theme="dark"] .tile-icon { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .tile-label { color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .tile-sub   { color: hsl(220, 8%, 55%); }
+    html[data-theme="dark"] .tile-label { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .tile-sub   { color: hsl(224, 18%, 73%); }
 
-    html[data-theme="dark"] .settings-list { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.25); }
-    html[data-theme="dark"] .settings-item { border-bottom-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .settings-item:hover  { background: hsl(220, 8%, 28%); }
-    html[data-theme="dark"] .settings-item:active { background: hsl(220, 8%, 31%); }
+    html[data-theme="dark"] .settings-list { background: hsl(224, 38%, 10%); border-color: hsl(224, 38%, 13%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.25); }
+    html[data-theme="dark"] .settings-item { border-bottom-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .settings-item:hover  { background: hsl(224, 38%, 12%); }
+    html[data-theme="dark"] .settings-item:active { background: hsl(224, 38%, 13%); }
     html[data-theme="dark"] .settings-icon  { background: hsl(32, 30%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .settings-sub   { color: hsl(220, 8%, 55%); }
-    html[data-theme="dark"] .settings-chevron { color: hsl(220, 8%, 45%); }
-    html[data-theme="dark"] .section-title { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .settings-sub   { color: hsl(224, 18%, 73%); }
+    html[data-theme="dark"] .settings-chevron { color: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .section-title { color: hsl(224, 18%, 71%); }
 
-    html[data-theme="dark"] .back-btn       { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .back-btn       { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 13%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
 
-    html[data-theme="dark"] .ctrl-row   { border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .ctrl-sub   { color: hsl(220, 8%, 55%); }
-    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(220, 8%, 42%); }
+    html[data-theme="dark"] .ctrl-row   { border-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .ctrl-sub   { color: hsl(224, 18%, 73%); }
+    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(224, 38%, 18%); }
 
-    html[data-theme="dark"] .vacation-panel      { background: hsl(37, 12%, 22%); border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .vacation-field label { color: hsl(220,8%,55%); }
+    html[data-theme="dark"] .vacation-panel      { background: hsl(37, 12%, 22%); border-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .vacation-field label { color: hsl(224, 18%, 73%); }
     html[data-theme="dark"] .vacation-date-selects select {
-      background-color: hsl(220,8%,26%); border-color: hsl(220,8%,38%); color: hsl(220,10%,88%);
+      background-color: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 16%); color: hsl(224, 18%, 95%);
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23aaa'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
     }
-    html[data-theme="dark"] .vacation-check      { color: hsl(220,10%,62%); }
-    html[data-theme="dark"] .vacation-info-line  { color: hsl(220,8%,60%); }
-    html[data-theme="dark"] .vacation-cancel-btn { border-color: hsl(220,8%,40%); color: hsl(220,10%,65%); }
+    html[data-theme="dark"] .vacation-check      { color: hsl(224, 18%, 78%); }
+    html[data-theme="dark"] .vacation-info-line  { color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .vacation-cancel-btn { border-color: hsl(224, 38%, 17%); color: hsl(224, 18%, 80%); }
     html[data-theme="dark"] .vacation-deact-btn  { border-color: hsl(0,40%,42%); color: hsl(0,60%,65%); }
     html[data-theme="dark"] .vacation-deact-btn:hover { background: hsl(0,20%,28%); }
 
     html[data-theme="dark"] .ts-badge.on      { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
-    html[data-theme="dark"] .ts-badge.off     { background: hsl(220, 8%, 30%); color: hsl(220, 8%, 58%); }
+    html[data-theme="dark"] .ts-badge.off     { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 75%); }
     html[data-theme="dark"] .ts-badge.pending { background: hsl(32, 30%, 24%); color: hsl(32, 80%, 60%); }
-    html[data-theme="dark"] .ts-panel         { background: hsl(220, 8%, 20%); border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .ts-row           { border-color: hsl(220, 8%, 30%); }
-    html[data-theme="dark"] .ts-row-label     { color: hsl(220, 8%, 54%); }
-    html[data-theme="dark"] .ts-row-val       { color: hsl(220, 8%, 82%); }
-    html[data-theme="dark"] .ts-hint          { color: hsl(220, 8%, 48%); }
-    html[data-theme="dark"] .ts-url-row       { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 34%); }
+    html[data-theme="dark"] .ts-panel         { background: hsl(224, 38%, 8%); border-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .ts-row           { border-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .ts-row-label     { color: hsl(224, 18%, 73%); }
+    html[data-theme="dark"] .ts-row-val       { color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .ts-hint          { color: hsl(224, 18%, 69%); }
+    html[data-theme="dark"] .ts-url-row       { background: hsl(224, 38%, 10%); border-color: hsl(224, 38%, 14%); }
     html[data-theme="dark"] .ts-auth-link     { color: hsl(210, 70%, 62%); }
-    html[data-theme="dark"] .ts-copy-btn      { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 70%); }
-    html[data-theme="dark"] .ts-copy-btn:hover { background: hsl(220, 8%, 38%); }
-    html[data-theme="dark"] .ts-install-cmd   { background: hsl(220, 12%, 12%); }
+    html[data-theme="dark"] .ts-copy-btn      { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 17%); color: hsl(224, 18%, 83%); }
+    html[data-theme="dark"] .ts-copy-btn:hover { background: hsl(224, 38%, 16%); }
+    html[data-theme="dark"] .ts-install-cmd   { background: hsl(224, 38%, 6%); }
 
-    html[data-theme="dark"] .dark-pill    { background: hsl(220, 8%, 42%); }
+    html[data-theme="dark"] .dark-pill    { background: hsl(224, 38%, 18%); }
     html[data-theme="dark"] .dark-pill.on { background: hsl(32, 80%, 58%); }
     html[data-theme="dark"] .update-badge { background: hsl(32, 80%, 52%); }
 
     html[data-theme="dark"] .settings-icon.danger { background: hsl(0, 40%, 22%); color: hsl(0, 70%, 62%); }
     html[data-theme="dark"] .settings-item.danger .settings-label { color: hsl(0, 65%, 62%); }
     html[data-theme="dark"] .settings-item.danger:hover { background: hsl(0, 20%, 22%); }
-    html[data-theme="dark"] .modal   { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .modal p { color: hsl(220, 8%, 56%); }
-    html[data-theme="dark"] .btn-cancel       { border-color: hsl(220, 8%, 38%); color: hsl(220, 8%, 70%); }
-    html[data-theme="dark"] .btn-cancel:hover { background: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .modal   { background: hsl(224, 38%, 9%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .modal p { color: hsl(224, 18%, 74%); }
+    html[data-theme="dark"] .btn-cancel       { border-color: hsl(224, 38%, 16%); color: hsl(224, 18%, 83%); }
+    html[data-theme="dark"] .btn-cancel:hover { background: hsl(224, 38%, 13%); }
   </style>
-</head>
-<body>
-  <div class="container">
+{% endblock %}
 
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Instellingen</p>
-    </div>
+{% block tagline %}<p>Instellingen</p>{% endblock %}
 
+{% block content %}
     <!-- ===== MAIN VIEW ===== -->
     <div id="mainView">
-      <a class="back-btn" href="/dashboard">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
-        Dashboard
-      </a>
       <div class="section-tiles">
 
         {% if is_admin %}
@@ -984,7 +941,6 @@
       </div>
     </div>
 
-  </div>
   {% endif %}
 
   {% if is_admin %}
@@ -1048,7 +1004,9 @@
     </div>
   </div>
   {% endif %}
+{% endblock %}
 
+{% block scripts %}
   <script>
     // ===== NAVIGATION =====
     function showSection(name) {
@@ -1486,7 +1444,7 @@
       const newDark = document.documentElement.getAttribute("data-theme") !== "dark";
       document.documentElement.setAttribute("data-theme", newDark ? "dark" : "light");
       localStorage.setItem("theme", newDark ? "dark" : "light");
-      document.getElementById("themeColorMeta").setAttribute("content", newDark ? "#2e3238" : "#f9f7f5");
+      document.getElementById("themeColorMeta").setAttribute("content", newDark ? "#05070d" : "#eef1f8");
       updateDarkModeUI();
       fetch("/set_theme", {
         method: "POST",
@@ -1497,5 +1455,4 @@
 
     updateDarkModeUI();
   </script>
-</body>
-</html>
+{% endblock %}

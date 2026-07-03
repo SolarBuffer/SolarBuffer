@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="SolarBuffer">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
+    <meta name="theme-color" content="#eef1f8" id="themeColorMeta">
     <meta charset="UTF-8">
     <title>SolarBuffer Configuratie Wizard</title>
     <script>
@@ -21,7 +21,7 @@
         localStorage.setItem("theme", dark ? "dark" : "light");
         if (dark) {
           document.documentElement.setAttribute("data-theme", "dark");
-          document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
+          document.getElementById("themeColorMeta").setAttribute("content", "#05070d");
         }
       })();
     </script>
@@ -36,8 +36,8 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: hsl(30, 25%, 97%);
-            color: hsl(220, 20%, 14%);
+            background: hsl(224, 30%, 97%);
+            color: hsl(224, 26%, 14%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -49,7 +49,7 @@
             width: 100%;
             max-width: 920px;
             background: white;
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .75rem;
             box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
             padding: 2rem;
@@ -79,7 +79,7 @@
         }
 
         .header p {
-            color: hsl(220, 10%, 46%);
+            color: hsl(224, 18%, 67%);
             font-size: .9rem;
             margin-top: .25rem;
         }
@@ -90,7 +90,7 @@
 
         .progress-bar {
             height: 10px;
-            background: hsl(30, 15%, 92%);
+            background: hsl(224, 20%, 92%);
             border-radius: 999px;
             overflow: hidden;
             margin-bottom: 1rem;
@@ -113,9 +113,9 @@
         .progress-step {
             text-align: center;
             padding: .75rem;
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .65rem;
-            background: hsl(30, 25%, 98%);
+            background: hsl(224, 30%, 98%);
             transition: .2s ease;
         }
 
@@ -138,7 +138,7 @@
 
         .progress-step .step-label {
             font-size: .82rem;
-            color: hsl(220, 10%, 46%);
+            color: hsl(224, 18%, 67%);
         }
 
         form {
@@ -156,10 +156,10 @@
         }
 
         .step-card {
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .75rem;
             padding: 1.25rem;
-            background: hsl(30, 25%, 98%);
+            background: hsl(224, 30%, 98%);
         }
 
         .step-title {
@@ -170,14 +170,14 @@
 
         .step-subtitle {
             font-size: .9rem;
-            color: hsl(220, 10%, 46%);
+            color: hsl(224, 18%, 67%);
             margin-bottom: 1rem;
         }
 
         label {
             font-weight: 600;
             font-size: .95rem;
-            color: hsl(220, 20%, 14%);
+            color: hsl(224, 26%, 14%);
         }
 
         input[type="text"],
@@ -187,7 +187,7 @@
             width: 100%;
             height: 46px;
             padding: 0 .75rem;
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .5rem;
             font-size: 1rem;
             font-family: 'Inter', sans-serif;
@@ -204,8 +204,8 @@
             -moz-appearance: none;
             padding-right: 2.5rem;
             background-image:
-                linear-gradient(45deg, transparent 50%, hsl(220, 10%, 40%) 50%),
-                linear-gradient(135deg, hsl(220, 10%, 40%) 50%, transparent 50%);
+                linear-gradient(45deg, transparent 50%, hsl(224, 38%, 17%) 50%),
+                linear-gradient(135deg, hsl(224, 38%, 17%) 50%, transparent 50%);
             background-position:
                 calc(100% - 18px) calc(50% - 3px),
                 calc(100% - 12px) calc(50% - 3px);
@@ -223,8 +223,8 @@
 
         input:disabled,
         select:disabled {
-            background: hsl(220, 10%, 96%);
-            color: hsl(220, 10%, 55%);
+            background: hsl(224, 18%, 97%);
+            color: hsl(224, 18%, 73%);
             cursor: not-allowed;
         }
 
@@ -255,7 +255,7 @@
         .scan-status {
             margin-top: .75rem;
             font-size: .9rem;
-            color: hsl(220, 10%, 46%);
+            color: hsl(224, 18%, 67%);
             min-height: 1.2rem;
             text-align: center;
         }
@@ -263,11 +263,11 @@
         .scan-results {
             margin-top: .75rem;
             padding: .75rem;
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .5rem;
-            background: hsl(30, 25%, 98%);
+            background: hsl(224, 30%, 98%);
             font-size: .9rem;
-            color: hsl(220, 20%, 14%);
+            color: hsl(224, 26%, 14%);
             display: none;
         }
 
@@ -291,7 +291,7 @@
 
         .device-card {
             background: white;
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .75rem;
             padding: 1.1rem 1.1rem 1.25rem;
             margin-bottom: 1rem;
@@ -309,7 +309,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .07em;
-            color: hsl(220, 10%, 52%);
+            color: hsl(224, 18%, 71%);
         }
 
         .remove-btn {
@@ -335,7 +335,7 @@
             display: block;
             font-size: .82rem;
             font-weight: 600;
-            color: hsl(220, 10%, 46%);
+            color: hsl(224, 18%, 67%);
             margin-bottom: .3rem;
         }
 
@@ -346,10 +346,10 @@
         }
 
         .section-card {
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .65rem;
             padding: 1rem;
-            background: hsl(30, 25%, 98%);
+            background: hsl(224, 30%, 98%);
         }
 
         .section-title {
@@ -360,7 +360,7 @@
 
         .section-subtitle {
             font-size: .85rem;
-            color: hsl(220, 10%, 46%);
+            color: hsl(224, 18%, 67%);
             margin-bottom: .9rem;
         }
 
@@ -393,7 +393,7 @@
             gap: .35rem;
             min-width: 0;
             padding: .85rem;
-            border: 1px solid hsl(30, 15%, 90%);
+            border: 1px solid hsl(224, 20%, 90%);
             border-radius: .55rem;
             background: white;
         }
@@ -401,14 +401,14 @@
         .field-label {
             font-size: .88rem;
             font-weight: 600;
-            color: hsl(220, 20%, 14%);
+            color: hsl(224, 26%, 14%);
             line-height: 1.2;
             word-break: break-word;
         }
 
         .field-help {
             font-size: .74rem;
-            color: hsl(220, 10%, 46%);
+            color: hsl(224, 18%, 67%);
             line-height: 1.2;
             min-height: 1rem;
         }
@@ -416,7 +416,7 @@
         .input-with-unit {
             display: flex;
             align-items: center;
-            border: 1px solid hsl(30, 15%, 88%);
+            border: 1px solid hsl(224, 20%, 88%);
             border-radius: .5rem;
             background: white;
             overflow: hidden;
@@ -444,15 +444,15 @@
 
         .input-with-unit .unit {
             padding: 0 .75rem;
-            border-left: 1px solid hsl(30, 15%, 88%);
-            background: hsl(30, 25%, 98%);
-            color: hsl(220, 10%, 46%);
+            border-left: 1px solid hsl(224, 20%, 88%);
+            background: hsl(224, 30%, 98%);
+            color: hsl(224, 18%, 67%);
             font-weight: 600;
             white-space: nowrap;
         }
 
         .subsection {
-            border-top: 1px solid hsl(30, 15%, 91%);
+            border-top: 1px solid hsl(224, 20%, 91%);
             margin-top: 1rem;
             padding-top: 1rem;
         }
@@ -462,7 +462,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .07em;
-            color: hsl(220, 10%, 52%);
+            color: hsl(224, 18%, 71%);
             margin-bottom: .75rem;
         }
 
@@ -513,32 +513,32 @@
 
         .cancel-btn,
         .prev-btn {
-            background: hsl(220, 10%, 88%);
-            color: hsl(220, 20%, 20%);
+            background: hsl(224, 18%, 95%);
+            color: hsl(224, 26%, 20%);
         }
 
         .cancel-btn:hover,
         .prev-btn:hover {
-            background: hsl(220, 10%, 80%);
+            background: hsl(224, 18%, 90%);
         }
 
         .hidden { display: none !important; }
 
         /* ===== DARK MODE ===== */
         html[data-theme="dark"] body {
-            background: hsl(220, 8%, 20%);
-            color: hsl(220, 10%, 88%);
+            background: hsl(224, 38%, 8%);
+            color: hsl(224, 18%, 95%);
         }
         html[data-theme="dark"] .container {
-            background: hsl(220, 8%, 26%);
-            border-color: hsl(220, 8%, 34%);
+            background: hsl(224, 38%, 11%);
+            border-color: hsl(224, 38%, 14%);
             box-shadow: 0 10px 40px -10px rgba(0,0,0,0.25);
         }
-        html[data-theme="dark"] .header p { color: hsl(220, 8%, 58%); }
-        html[data-theme="dark"] .progress-bar { background: hsl(220, 8%, 34%); }
+        html[data-theme="dark"] .header p { color: hsl(224, 18%, 75%); }
+        html[data-theme="dark"] .progress-bar { background: hsl(224, 38%, 14%); }
         html[data-theme="dark"] .progress-step {
-            background: hsl(220, 8%, 30%);
-            border-color: hsl(220, 8%, 37%);
+            background: hsl(224, 38%, 13%);
+            border-color: hsl(224, 38%, 16%);
         }
         html[data-theme="dark"] .progress-step.active {
             background: hsl(37, 65%, 32%);
@@ -548,78 +548,78 @@
             background: hsl(145, 48%, 27%);
             border-color: hsl(145, 58%, 42%);
         }
-        html[data-theme="dark"] .progress-step .step-label        { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .progress-step .step-label        { color: hsl(224, 18%, 75%); }
         html[data-theme="dark"] .progress-step.active .step-label { color: hsl(37, 90%, 78%); }
         html[data-theme="dark"] .progress-step.active .step-number { color: hsl(37, 95%, 82%); }
         html[data-theme="dark"] .progress-step.done .step-label   { color: hsl(145, 60%, 72%); }
         html[data-theme="dark"] .progress-step.done .step-number  { color: hsl(145, 65%, 76%); }
         html[data-theme="dark"] .step-card {
-            background: hsl(220, 8%, 30%);
-            border-color: hsl(220, 8%, 37%);
+            background: hsl(224, 38%, 13%);
+            border-color: hsl(224, 38%, 16%);
         }
-        html[data-theme="dark"] .step-subtitle { color: hsl(220, 8%, 58%); }
-        html[data-theme="dark"] label { color: hsl(220, 8%, 82%); }
+        html[data-theme="dark"] .step-subtitle { color: hsl(224, 18%, 75%); }
+        html[data-theme="dark"] label { color: hsl(224, 18%, 91%); }
         html[data-theme="dark"] input[type="text"],
         html[data-theme="dark"] input[type="number"],
         html[data-theme="dark"] input[type="password"],
         html[data-theme="dark"] select {
-            background: hsl(220, 8%, 32%);
-            border-color: hsl(220, 8%, 39%);
-            color: hsl(220, 10%, 88%);
+            background: hsl(224, 38%, 13%);
+            border-color: hsl(224, 38%, 16%);
+            color: hsl(224, 18%, 95%);
         }
         html[data-theme="dark"] input:disabled,
         html[data-theme="dark"] select:disabled {
-            background: hsl(220, 8%, 28%);
-            color: hsl(220, 8%, 50%);
+            background: hsl(224, 38%, 12%);
+            color: hsl(224, 18%, 70%);
         }
         html[data-theme="dark"] .scan-results {
-            background: hsl(220, 8%, 30%);
-            border-color: hsl(220, 8%, 37%);
-            color: hsl(220, 10%, 88%);
+            background: hsl(224, 38%, 13%);
+            border-color: hsl(224, 38%, 16%);
+            color: hsl(224, 18%, 95%);
         }
-        html[data-theme="dark"] .scan-status { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .scan-status { color: hsl(224, 18%, 75%); }
         html[data-theme="dark"] .device-card {
-            background: hsl(220, 8%, 28%);
-            border-color: hsl(220, 8%, 35%);
+            background: hsl(224, 38%, 12%);
+            border-color: hsl(224, 38%, 15%);
         }
-        html[data-theme="dark"] .device-card-label { color: hsl(220, 8%, 50%); }
+        html[data-theme="dark"] .device-card-label { color: hsl(224, 18%, 70%); }
         html[data-theme="dark"] .remove-btn { background: hsl(0, 30%, 30%); color: hsl(0, 60%, 65%); }
         html[data-theme="dark"] .remove-btn:hover { background: hsl(0, 35%, 36%); }
-        html[data-theme="dark"] .field-group > label { color: hsl(220, 8%, 56%); }
-        html[data-theme="dark"] .subsection { border-color: hsl(220, 8%, 35%); }
-        html[data-theme="dark"] .subsection-title { color: hsl(220, 8%, 50%); }
+        html[data-theme="dark"] .field-group > label { color: hsl(224, 18%, 74%); }
+        html[data-theme="dark"] .subsection { border-color: hsl(224, 38%, 15%); }
+        html[data-theme="dark"] .subsection-title { color: hsl(224, 18%, 70%); }
         html[data-theme="dark"] .section-card {
-            background: hsl(220, 8%, 30%);
-            border-color: hsl(220, 8%, 37%);
+            background: hsl(224, 38%, 13%);
+            border-color: hsl(224, 38%, 16%);
         }
-        html[data-theme="dark"] .section-subtitle { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .section-subtitle { color: hsl(224, 18%, 75%); }
         html[data-theme="dark"] .expert-grid .field {
-            background: hsl(220, 8%, 32%);
-            border-color: hsl(220, 8%, 38%);
+            background: hsl(224, 38%, 13%);
+            border-color: hsl(224, 38%, 16%);
         }
-        html[data-theme="dark"] .field-label { color: hsl(220, 10%, 88%); }
-        html[data-theme="dark"] .field-help  { color: hsl(220, 8%, 58%); }
+        html[data-theme="dark"] .field-label { color: hsl(224, 18%, 95%); }
+        html[data-theme="dark"] .field-help  { color: hsl(224, 18%, 75%); }
         html[data-theme="dark"] .input-with-unit {
-            background: hsl(220, 8%, 32%);
-            border-color: hsl(220, 8%, 39%);
+            background: hsl(224, 38%, 13%);
+            border-color: hsl(224, 38%, 16%);
         }
         html[data-theme="dark"] .input-with-unit input {
-            background: hsl(220, 8%, 32%);
-            color: hsl(220, 10%, 88%);
+            background: hsl(224, 38%, 13%);
+            color: hsl(224, 18%, 95%);
         }
         html[data-theme="dark"] .input-with-unit .unit {
-            background: hsl(220, 8%, 28%);
-            border-color: hsl(220, 8%, 38%);
-            color: hsl(220, 8%, 58%);
+            background: hsl(224, 38%, 12%);
+            border-color: hsl(224, 38%, 16%);
+            color: hsl(224, 18%, 75%);
         }
         html[data-theme="dark"] .cancel-btn,
         html[data-theme="dark"] .prev-btn {
-            background: hsl(220, 8%, 34%);
-            color: hsl(220, 8%, 80%);
+            background: hsl(224, 38%, 14%);
+            color: hsl(224, 18%, 90%);
         }
         html[data-theme="dark"] .cancel-btn:hover,
         html[data-theme="dark"] .prev-btn:hover {
-            background: hsl(220, 8%, 38%);
+            background: hsl(224, 38%, 16%);
         }
 
         @media (max-width: 640px) {

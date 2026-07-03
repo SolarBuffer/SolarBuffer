@@ -1,83 +1,54 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5" id="themeColorMeta">
-  <title>Broadlink IR - SolarBuffer</title>
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
-  <script>
-    (function () {
-      var dark = {{ dark_mode | tojson }};
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      if (dark) {
-        document.documentElement.setAttribute("data-theme", "dark");
-        document.getElementById("themeColorMeta").setAttribute("content", "#2e3238");
-      }
-    })();
-  </script>
-  <style>
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem 1rem 4rem;
-    }
     h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
-    .container { width: 100%; max-width: 520px; }
 
-    .header { text-align: center; margin-bottom: 1.75rem; }
-    .header h1 { font-size: 1.75rem; font-weight: 700; }
-    .header h1 .solar {
+    .page-header { text-align: center; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
       background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .header p { color: hsl(220, 10%, 46%); font-size: 0.85rem; margin-top: 0.25rem; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
 
     .back-btn {
       display: inline-flex; align-items: center; gap: 0.4rem;
-      background: white; border: 1.5px solid hsl(30, 15%, 85%);
+      background: white; border: 1.5px solid hsl(224, 20%, 85%);
       border-radius: 999px; padding: 0.45rem 0.9rem 0.45rem 0.65rem;
-      font-size: 0.85rem; font-weight: 600; color: hsl(220, 20%, 30%);
+      font-size: 0.85rem; font-weight: 600; color: hsl(224, 26%, 30%);
       text-decoration: none; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
       transition: background 0.15s, border-color 0.15s, color 0.15s; margin-bottom: 0.75rem;
     }
     .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
 
     .card {
-      background: white; border: 1px solid hsl(30, 15%, 88%);
+      background: white; border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem; box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
       overflow: hidden; margin-bottom: 1rem;
     }
     .card-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0.9rem 1rem; border-bottom: 1px solid hsl(30, 15%, 91%);
+      padding: 0.9rem 1rem; border-bottom: 1px solid hsl(224, 20%, 91%);
     }
     .card-title {
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.07em; color: hsl(220, 10%, 52%);
+      letter-spacing: 0.07em; color: hsl(224, 18%, 71%);
     }
     .card-body { padding: 1rem; }
 
     .section-label {
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.07em; color: hsl(220, 10%, 52%);
+      letter-spacing: 0.07em; color: hsl(224, 18%, 71%);
       margin: 1.25rem 0 0.5rem;
     }
 
     .bl-device-card {
-      background: white; border: 1px solid hsl(30, 15%, 88%);
+      background: white; border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem; margin-bottom: 1rem; overflow: hidden;
     }
     .bl-device-header {
@@ -93,31 +64,31 @@
     }
     .bl-device-info { flex: 1; min-width: 0; }
     .bl-device-name { font-weight: 600; font-size: 0.95rem; }
-    .bl-device-sub { font-size: 0.76rem; color: hsl(220, 10%, 50%); margin-top: 0.1rem; font-family: monospace; display: flex; align-items: center; gap: 0.35rem; }
-    .bl-online-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: hsl(220, 8%, 72%); }
+    .bl-device-sub { font-size: 0.76rem; color: hsl(224, 18%, 70%); margin-top: 0.1rem; font-family: monospace; display: flex; align-items: center; gap: 0.35rem; }
+    .bl-online-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: hsl(224, 18%, 84%); }
     .bl-online-dot.online { background: hsl(142, 60%, 42%); }
     .bl-online-dot.offline { background: hsl(0, 65%, 55%); }
     .bl-device-actions { display: flex; gap: 0.4rem; }
 
     .btn-icon {
       width: 32px; height: 32px; border-radius: 8px;
-      border: 1px solid hsl(30, 15%, 85%); background: transparent;
-      color: hsl(220, 10%, 46%); cursor: pointer;
+      border: 1px solid hsl(224, 20%, 85%); background: transparent;
+      color: hsl(224, 18%, 67%); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, color 0.15s;
     }
-    .btn-icon:hover { background: hsl(30, 15%, 93%); color: hsl(220, 20%, 20%); }
+    .btn-icon:hover { background: hsl(224, 20%, 93%); color: hsl(224, 26%, 20%); }
     .btn-icon.danger:hover { background: hsl(0, 80%, 95%); color: hsl(0, 65%, 48%); border-color: hsl(0, 60%, 85%); }
 
     .bl-device-body {
-      border-top: 1px solid hsl(30, 15%, 91%);
+      border-top: 1px solid hsl(224, 20%, 91%);
       padding: 0.85rem 1rem;
     }
 
     .ir-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
 
     .ir-card {
-      background: hsl(30, 20%, 97%); border: 1px solid hsl(30, 15%, 88%);
+      background: hsl(224, 25%, 97%); border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.6rem; overflow: hidden;
     }
     .ir-header {
@@ -131,12 +102,12 @@
       font-size: 1rem; flex-shrink: 0;
     }
     .ir-name { flex: 1; font-size: 0.88rem; font-weight: 600; }
-    .ir-cmd-count { font-size: 0.75rem; color: hsl(220, 10%, 54%); }
+    .ir-cmd-count { font-size: 0.75rem; color: hsl(224, 18%, 73%); }
     .ir-actions { display: flex; gap: 0.3rem; }
     .btn-icon-sm {
       width: 26px; height: 26px; border-radius: 6px;
-      border: 1px solid hsl(30, 15%, 85%); background: transparent;
-      color: hsl(220, 10%, 46%); cursor: pointer;
+      border: 1px solid hsl(224, 20%, 85%); background: transparent;
+      color: hsl(224, 18%, 67%); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, color 0.15s; font-size: 0.8rem;
     }
@@ -148,20 +119,20 @@
     .cmd-list { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.5rem; }
     .cmd-row {
       display: flex; align-items: center; gap: 0.5rem;
-      background: white; border: 1px solid hsl(30, 15%, 88%);
+      background: white; border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.4rem; padding: 0.4rem 0.65rem;
     }
     .cmd-order-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
     .cmd-order-btn {
-      width: 20px; height: 18px; border: 1px solid hsl(30, 15%, 82%);
-      border-radius: 3px; background: hsl(30, 20%, 96%); color: hsl(220, 12%, 44%);
+      width: 20px; height: 18px; border: 1px solid hsl(224, 20%, 82%);
+      border-radius: 3px; background: hsl(224, 25%, 96%); color: hsl(224, 38%, 18%);
       cursor: pointer; font-size: 0.6rem; line-height: 1; display: flex;
       align-items: center; justify-content: center; padding: 0;
       transition: background 0.12s, color 0.12s;
     }
     .cmd-order-btn:hover { background: hsl(32, 100%, 90%); color: hsl(25, 85%, 32%); border-color: hsl(32, 80%, 65%); }
     .cmd-order-btn:active { background: hsl(32, 95%, 80%); }
-    html[data-theme="dark"] .cmd-order-btn { background: hsl(220, 8%, 32%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 60%); }
+    html[data-theme="dark"] .cmd-order-btn { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 17%); color: hsl(224, 18%, 76%); }
     html[data-theme="dark"] .cmd-order-btn:hover { background: hsl(32, 20%, 30%); color: hsl(32, 80%, 70%); }
     .cmd-name { flex: 1; font-size: 0.82rem; font-weight: 600; }
     .cmd-send-btn {
@@ -193,12 +164,12 @@
     .add-ir-btn {
       display: flex; align-items: center; gap: 0.4rem;
       width: 100%; padding: 0.55rem 0.75rem;
-      border: 1.5px dashed hsl(220, 10%, 75%); border-radius: 0.5rem;
-      background: transparent; color: hsl(220, 10%, 46%);
+      border: 1.5px dashed hsl(224, 18%, 86%); border-radius: 0.5rem;
+      background: transparent; color: hsl(224, 18%, 67%);
       font-size: 0.82rem; font-weight: 600; cursor: pointer;
       transition: background 0.15s; justify-content: center;
     }
-    .add-ir-btn:hover { background: hsl(30, 15%, 94%); }
+    .add-ir-btn:hover { background: hsl(224, 20%, 94%); }
 
     .btn-primary {
       display: block; width: 100%;
@@ -213,25 +184,25 @@
 
     .btn-secondary {
       display: block; width: 100%;
-      background: hsl(30, 15%, 95%); color: hsl(220, 20%, 30%);
+      background: hsl(224, 20%, 95%); color: hsl(224, 26%, 30%);
       font-family: 'Space Grotesk', sans-serif; font-weight: 600;
       font-size: 0.95rem; padding: 0.65rem;
-      border: 1px solid hsl(30, 15%, 84%); border-radius: 0.5rem;
+      border: 1px solid hsl(224, 20%, 84%); border-radius: 0.5rem;
       cursor: pointer; text-align: center; transition: background 0.2s; text-decoration: none;
     }
-    .btn-secondary:hover { background: hsl(30, 15%, 88%); }
+    .btn-secondary:hover { background: hsl(224, 20%, 88%); }
 
     .btn-row { display: flex; gap: 0.6rem; }
     .btn-row .btn-primary, .btn-row .btn-secondary { flex: 1; }
 
     .field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
     .field:last-child { margin-bottom: 0; }
-    .field-label { font-size: 0.82rem; font-weight: 600; color: hsl(220, 10%, 46%); }
+    .field-label { font-size: 0.82rem; font-weight: 600; color: hsl(224, 18%, 67%); }
     .field input, .field select {
       width: 100%; padding: 0.6rem 0.75rem;
-      border: 1.5px solid hsl(30, 15%, 82%); border-radius: 0.5rem;
+      border: 1.5px solid hsl(224, 20%, 82%); border-radius: 0.5rem;
       font-size: 0.95rem; font-family: 'Inter', sans-serif;
-      background: white; color: hsl(220, 20%, 14%); outline: none;
+      background: white; color: hsl(224, 26%, 14%); outline: none;
       transition: border-color 0.2s;
     }
     .field input:focus, .field select:focus { border-color: hsl(32, 85%, 55%); }
@@ -239,12 +210,12 @@
     .scan-result-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
     .scan-result-item {
       display: flex; align-items: center; gap: 0.75rem;
-      background: white; border: 1px solid hsl(30, 15%, 88%);
+      background: white; border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.5rem; padding: 0.65rem 0.85rem;
     }
     .scan-result-info { flex: 1; min-width: 0; }
     .scan-result-name { font-size: 0.88rem; font-weight: 600; }
-    .scan-result-sub { font-size: 0.75rem; color: hsl(220, 10%, 50%); font-family: monospace; }
+    .scan-result-sub { font-size: 0.75rem; color: hsl(224, 18%, 70%); font-family: monospace; }
     .scan-add-btn {
       padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 600;
       border: 1px solid hsl(32, 80%, 68%); border-radius: 0.4rem;
@@ -278,7 +249,7 @@
       100% { box-shadow: 0 0 0 0 hsla(32, 95%, 52%, 0); }
     }
     .learn-modal h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
-    .learn-modal p { font-size: 0.85rem; color: hsl(220, 10%, 46%); line-height: 1.5; margin-bottom: 1.25rem; }
+    .learn-modal p { font-size: 0.85rem; color: hsl(224, 18%, 67%); line-height: 1.5; margin-bottom: 1.25rem; }
     .learn-progress { font-size: 0.8rem; color: hsl(32, 80%, 42%); font-weight: 600; margin-bottom: 1rem; }
 
     .modal-overlay {
@@ -296,7 +267,7 @@
 
     .toast {
       position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-      background: hsl(220, 20%, 16%); color: white;
+      background: hsl(224, 26%, 16%); color: white;
       padding: 0.6rem 1.2rem; border-radius: 999px;
       font-size: 0.85rem; font-weight: 600; white-space: nowrap;
       opacity: 0; transition: opacity 0.2s; z-index: 300; pointer-events: none;
@@ -321,7 +292,7 @@
     }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .slider {
-      position: absolute; inset: 0; background: hsl(30, 15%, 80%);
+      position: absolute; inset: 0; background: hsl(224, 20%, 80%);
       border-radius: 999px; transition: background 0.2s; cursor: pointer;
     }
     .slider::after {
@@ -334,48 +305,48 @@
 
     .empty-state {
       padding: 1.5rem; text-align: center;
-      color: hsl(220, 10%, 54%); font-size: 0.88rem;
+      color: hsl(224, 18%, 73%); font-size: 0.88rem;
     }
 
     /* DARK MODE */
-    html[data-theme="dark"] body { background: hsl(220, 8%, 20%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] .card-header { border-color: hsl(220, 8%, 32%); }
-    html[data-theme="dark"] .card-title { color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .section-label { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .bl-device-card { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 34%); }
-    html[data-theme="dark"] .bl-device-header { background: hsl(220, 8%, 26%); }
-    html[data-theme="dark"] .bl-device-body { border-color: hsl(220, 8%, 32%); }
-    html[data-theme="dark"] .bl-device-sub { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] body { background: hsl(224, 38%, 8%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); }
+    html[data-theme="dark"] .card-header { border-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .section-label { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .bl-device-card { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 14%); }
+    html[data-theme="dark"] .bl-device-header { background: hsl(224, 38%, 11%); }
+    html[data-theme="dark"] .bl-device-body { border-color: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .bl-device-sub { color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .bl-device-icon { background: hsl(32, 25%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .ir-card { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 32%); }
+    html[data-theme="dark"] .ir-card { background: hsl(224, 38%, 10%); border-color: hsl(224, 38%, 13%); }
     html[data-theme="dark"] .ir-icon { background: hsl(32, 25%, 26%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .ir-cmd-count { color: hsl(220, 8%, 50%); }
-    html[data-theme="dark"] .cmd-row { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 35%); }
-    html[data-theme="dark"] .btn-icon { border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 60%); }
-    html[data-theme="dark"] .btn-icon:hover { background: hsl(220, 8%, 32%); color: hsl(220, 8%, 82%); }
+    html[data-theme="dark"] .ir-cmd-count { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .cmd-row { background: hsl(224, 38%, 12%); border-color: hsl(224, 38%, 15%); }
+    html[data-theme="dark"] .btn-icon { border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .btn-icon:hover { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 91%); }
     html[data-theme="dark"] .btn-icon.danger:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 62%); border-color: hsl(0, 40%, 36%); }
-    html[data-theme="dark"] .btn-icon-sm { border-color: hsl(220, 8%, 36%); color: hsl(220, 8%, 60%); }
-    html[data-theme="dark"] .btn-icon-sm:hover { background: hsl(220, 8%, 30%); }
+    html[data-theme="dark"] .btn-icon-sm { border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .btn-icon-sm:hover { background: hsl(224, 38%, 13%); }
     html[data-theme="dark"] .btn-icon-sm.danger:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 62%); }
-    html[data-theme="dark"] .back-btn { background: hsl(220, 8%, 26%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 82%); }
-    html[data-theme="dark"] .back-btn:hover { background: hsl(220, 8%, 32%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
-    html[data-theme="dark"] .field input, html[data-theme="dark"] .field select { background: hsl(220, 8%, 24%); border-color: hsl(220, 8%, 36%); color: hsl(220, 10%, 88%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 11%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 13%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .field input, html[data-theme="dark"] .field select { background: hsl(224, 38%, 10%); border-color: hsl(224, 38%, 15%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .field input:focus, html[data-theme="dark"] .field select:focus { border-color: hsl(32, 75%, 52%); }
-    html[data-theme="dark"] .modal, html[data-theme="dark"] .learn-modal { background: hsl(220, 8%, 22%); color: hsl(220, 10%, 88%); }
-    html[data-theme="dark"] .scan-result-item { background: hsl(220, 8%, 28%); border-color: hsl(220, 8%, 36%); }
-    html[data-theme="dark"] .scan-result-sub { color: hsl(220, 8%, 52%); }
-    html[data-theme="dark"] .add-ir-btn { border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 60%); }
-    html[data-theme="dark"] .add-ir-btn:hover { background: hsl(220, 8%, 28%); }
+    html[data-theme="dark"] .modal, html[data-theme="dark"] .learn-modal { background: hsl(224, 38%, 9%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .scan-result-item { background: hsl(224, 38%, 12%); border-color: hsl(224, 38%, 15%); }
+    html[data-theme="dark"] .scan-result-sub { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .add-ir-btn { border-color: hsl(224, 38%, 17%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .add-ir-btn:hover { background: hsl(224, 38%, 12%); }
     html[data-theme="dark"] .learn-btn { border-color: hsl(32, 50%, 42%); color: hsl(32, 80%, 62%); }
     html[data-theme="dark"] .learn-btn:hover { background: hsl(32, 18%, 26%); }
-    html[data-theme="dark"] .btn-secondary { background: hsl(220, 8%, 30%); border-color: hsl(220, 8%, 40%); color: hsl(220, 8%, 80%); }
-    html[data-theme="dark"] .btn-secondary:hover { background: hsl(220, 8%, 36%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 17%); color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(224, 38%, 15%); }
     html[data-theme="dark"] .learn-pulse { background: hsl(32, 35%, 26%); }
-    html[data-theme="dark"] .learn-modal p { color: hsl(220, 8%, 54%); }
+    html[data-theme="dark"] .learn-modal p { color: hsl(224, 18%, 73%); }
     html[data-theme="dark"] .ir-body { background: transparent; }
-    html[data-theme="dark"] .slider { background: hsl(220, 8%, 42%); }
-    html[data-theme="dark"] .empty-state { color: hsl(220, 8%, 52%); }
+    html[data-theme="dark"] .slider { background: hsl(224, 38%, 18%); }
+    html[data-theme="dark"] .empty-state { color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .unavailable-banner { background: hsl(37, 25%, 24%); color: hsl(37, 80%, 70%); }
 
     @media (max-width: 600px) {
@@ -402,14 +373,11 @@
       .ir-header { padding: 0.75rem; }
     }
   </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1><span class="solar">Solar</span>Buffer</h1>
-      <p>Broadlink IR-besturing</p>
-    </div>
+{% endblock %}
 
+{% block tagline %}<p>Broadlink IR-besturing</p>{% endblock %}
+
+{% block content %}
     <a class="back-btn" href="/settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Instellingen
@@ -432,10 +400,10 @@
         <div id="scanResults" style="display:none; margin-top:0.75rem;">
           <div class="scan-result-list" id="scanResultList"></div>
         </div>
-        <div style="margin-top:0.75rem; border-top:1px solid hsl(30,15%,90%); padding-top:0.75rem;">
-          <p style="font-size:0.8rem; color:hsl(220,10%,50%); margin-bottom:0.5rem;">Of voeg handmatig toe via IP-adres:</p>
+        <div style="margin-top:0.75rem; border-top:1px solid hsl(224, 20%, 90%); padding-top:0.75rem;">
+          <p style="font-size:0.8rem; color:hsl(224, 18%, 70%); margin-bottom:0.5rem;">Of voeg handmatig toe via IP-adres:</p>
           <div style="display:flex; gap:0.5rem;">
-            <input type="text" id="manualIp" placeholder="192.168.1.x" style="flex:1; padding:0.55rem 0.7rem; border:1.5px solid hsl(30,15%,82%); border-radius:0.5rem; font-size:0.9rem; outline:none;">
+            <input type="text" id="manualIp" placeholder="192.168.1.x" style="flex:1; padding:0.55rem 0.7rem; border:1.5px solid hsl(224, 20%, 82%); border-radius:0.5rem; font-size:0.9rem; outline:none;">
             <button class="btn-primary" style="width:auto; padding:0.55rem 1rem; white-space:nowrap;" onclick="addManual()" {% if not broadlink_available %}disabled{% endif %}>Toevoegen</button>
           </div>
         </div>
@@ -459,7 +427,7 @@
             <button class="btn-icon danger" title="Verwijder" onclick="deleteBlDevice('{{ bl.id }}', '{{ bl.name }}')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
             </button>
-            <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);">
+            <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:hsl(224, 18%, 74%);">
               <i class="mdi mdi-chevron-down" id="bl-chevron-{{ bl.id }}"></i>
             </div>
           </div>
@@ -479,7 +447,7 @@
                   <button class="btn-icon-sm danger" title="Verwijder" onclick="deleteIrDevice('{{ bl.id }}', '{{ ir.id }}', '{{ ir.name }}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
                   </button>
-                  <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);">
+                  <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:hsl(224, 18%, 74%);">
                     <i class="mdi mdi-chevron-down" id="ir-chevron-{{ ir.id }}"></i>
                   </div>
                 </div>
@@ -519,13 +487,11 @@
       </div>
       {% endfor %}
       {% if not config.broadlink_devices %}
-      <div class="empty-state" style="background:white;border:1px solid hsl(30,15%,88%);border-radius:0.875rem;margin-bottom:1rem;" id="blEmptyState">
+      <div class="empty-state" style="background:white;border:1px solid hsl(224, 20%, 88%);border-radius:0.875rem;margin-bottom:1rem;" id="blEmptyState">
         Nog geen Broadlink-apparaten. Scan of voeg handmatig toe.
       </div>
       {% endif %}
     </div>
-
-  </div><!-- /container -->
 
   <!-- Modal: IR-apparaat toevoegen -->
   <div class="modal-overlay" id="addIrModal">
@@ -551,14 +517,14 @@
         </select>
       </div>
       <div class="field">
-        <label class="field-label">Vermogensmeter koppelen <span style="font-weight:400;color:hsl(220,10%,58%)">(optioneel)</span></label>
+        <label class="field-label">Vermogensmeter koppelen <span style="font-weight:400;color:hsl(224, 18%, 75%)">(optioneel)</span></label>
         <select id="addIrAccessory">
           <option value="">— Geen —</option>
           {% for acc in power_accessories %}
           <option value="{{ acc.id }}">{{ acc.name }}</option>
           {% endfor %}
         </select>
-        <span style="font-size:0.75rem;color:hsl(220,10%,56%);margin-top:0.2rem;display:block;line-height:1.35;">
+        <span style="font-size:0.75rem;color:hsl(224, 18%, 74%);margin-top:0.2rem;display:block;line-height:1.35;">
           Koppel een vermogensmeter om het verbruik en de aan/uit-status te zien op het dashboard.
         </span>
       </div>
@@ -603,7 +569,7 @@
         </select>
       </div>
       <div class="field">
-        <label class="field-label">Vermogensmeter koppelen <span style="font-weight:400;color:hsl(220,10%,58%)">(optioneel)</span></label>
+        <label class="field-label">Vermogensmeter koppelen <span style="font-weight:400;color:hsl(224, 18%, 75%)">(optioneel)</span></label>
         <select id="editIrAccessory">
           <option value="">— Geen —</option>
           {% for acc in power_accessories %}
@@ -657,7 +623,9 @@
   </div>
 
   <div class="toast" id="toast"></div>
+{% endblock %}
 
+{% block scripts %}
   <script>
     var BROADLINK_AVAILABLE = {{ broadlink_available | tojson }};
     var learnAbortController = null;
@@ -707,7 +675,7 @@
           var wrap = document.getElementById('scanResults');
           list.innerHTML = '';
           if (!data.devices || data.devices.length === 0) {
-            list.innerHTML = '<p style="font-size:0.84rem;color:hsl(220,10%,50%)">Geen Broadlink-apparaten gevonden op het netwerk.</p>';
+            list.innerHTML = '<p style="font-size:0.84rem;color:hsl(224, 18%, 70%)">Geen Broadlink-apparaten gevonden op het netwerk.</p>';
           } else {
             data.devices.forEach(function(d) {
               var alreadyAdded = !data.new_devices.some(function(nd) { return nd.ip === d.ip; });
@@ -786,7 +754,7 @@
             '<button class="btn-icon danger" title="Verwijder" onclick="deleteBlDevice(\'' + bl.id + '\', \'' + escHtml(bl.name) + '\')">' +
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>' +
             '</button>' +
-            '<div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);"><i class="mdi mdi-chevron-down" id="bl-chevron-' + bl.id + '"></i></div>' +
+            '<div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:hsl(224, 18%, 74%);"><i class="mdi mdi-chevron-down" id="bl-chevron-' + bl.id + '"></i></div>' +
           '</div>' +
         '</div>' +
         '<div class="bl-device-body" id="bl-body-' + bl.id + '" style="display:none;">' +
@@ -867,7 +835,7 @@
             '<button class="btn-icon-sm danger" title="Verwijder" onclick="deleteIrDevice(\'' + blId + '\', \'' + ir.id + '\', \'' + escHtml(ir.name) + '\')">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>' +
             '</button>' +
-            '<div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:hsl(220,10%,56%);"><i class="mdi mdi-chevron-down" id="ir-chevron-' + ir.id + '"></i></div>' +
+            '<div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:hsl(224, 18%, 74%);"><i class="mdi mdi-chevron-down" id="ir-chevron-' + ir.id + '"></i></div>' +
           '</div>' +
         '</div>' +
         '<div class="ir-body" id="ir-body-' + ir.id + '" style="display:none;">' +
@@ -1108,5 +1076,4 @@
     refreshOnlineStatus();
     setInterval(refreshOnlineStatus, 15000);
   </script>
-</body>
-</html>
+{% endblock %}

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="theme-color" content="#f9f7f5">
+  <meta name="theme-color" content="#eef1f8">
   <title>Installatie - SolarBuffer</title>
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
@@ -20,8 +20,8 @@
 
     body {
       font-family: 'Inter', sans-serif;
-      background: hsl(30, 25%, 97%);
-      color: hsl(220, 20%, 14%);
+      background: hsl(224, 30%, 97%);
+      color: hsl(224, 26%, 14%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -73,12 +73,12 @@
     .header .subtitle {
       font-size: 1rem;
       font-weight: 600;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
       margin-bottom: 0.4rem;
     }
 
     .header p {
-      color: hsl(220, 10%, 50%);
+      color: hsl(224, 18%, 70%);
       font-size: 0.875rem;
       line-height: 1.5;
     }
@@ -88,7 +88,7 @@
       align-items: center;
       gap: 0.75rem;
       margin: 1.25rem 0;
-      color: hsl(220, 10%, 60%);
+      color: hsl(224, 18%, 76%);
       font-size: 0.8rem;
       font-weight: 500;
     }
@@ -98,12 +98,12 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: hsl(30, 15%, 86%);
+      background: hsl(224, 20%, 86%);
     }
 
     .card {
       background: white;
-      border: 1px solid hsl(30, 15%, 88%);
+      border: 1px solid hsl(224, 20%, 88%);
       border-radius: 0.875rem;
       box-shadow: 0 8px 32px -8px hsla(32, 95%, 52%, 0.12);
       padding: 1.5rem;
@@ -125,7 +125,7 @@
 
     .card-desc {
       font-size: 0.85rem;
-      color: hsl(220, 10%, 46%);
+      color: hsl(224, 18%, 67%);
       margin-bottom: 1.25rem;
       line-height: 1.55;
     }
@@ -160,12 +160,12 @@
       display: block;
       width: 100%;
       background: transparent;
-      color: hsl(220, 20%, 35%);
+      color: hsl(224, 26%, 35%);
       font-family: 'Space Grotesk', sans-serif;
       font-weight: 600;
       font-size: 1rem;
       padding: 0.75rem;
-      border: 1.5px solid hsl(30, 15%, 82%);
+      border: 1.5px solid hsl(224, 20%, 82%);
       border-radius: 0.5rem;
       cursor: pointer;
       text-align: center;
@@ -174,8 +174,8 @@
     }
 
     .btn-secondary:hover {
-      background: hsl(30, 15%, 94%);
-      border-color: hsl(30, 15%, 72%);
+      background: hsl(224, 20%, 94%);
+      border-color: hsl(224, 20%, 72%);
     }
 
     .btn-secondary:disabled {
@@ -185,7 +185,7 @@
     }
 
     .file-upload-area {
-      border: 2px dashed hsl(30, 15%, 80%);
+      border: 2px dashed hsl(224, 20%, 80%);
       border-radius: 0.6rem;
       padding: 1.25rem;
       text-align: center;
@@ -223,12 +223,12 @@
     .upload-label {
       font-weight: 600;
       font-size: 0.875rem;
-      color: hsl(220, 20%, 30%);
+      color: hsl(224, 26%, 30%);
     }
 
     .upload-hint {
       font-size: 0.775rem;
-      color: hsl(220, 10%, 56%);
+      color: hsl(224, 18%, 74%);
       margin-top: 0.2rem;
     }
 
