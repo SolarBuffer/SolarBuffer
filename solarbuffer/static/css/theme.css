@@ -20,8 +20,8 @@
 }
 
 html[data-theme="dark"] {
-  --bg: hsl(224, 38%, 8%);
-  --surface: hsl(224, 38%, 11%);
+  --bg: hsl(224, 38%, 12%);
+  --surface: hsl(224, 38%, 15%);
   --text: hsl(224, 18%, 95%);
   --text-dim: hsl(224, 18%, 66%);
   --border: hsl(224, 30%, 18%);
