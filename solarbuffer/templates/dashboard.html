@@ -2045,6 +2045,38 @@
       margin-top: 0.6rem;
     }
 
+    /* Gekoppelde temperatuursensoren: zachte chips zonder rand */
+    .section-body .linked-temp-row {
+      margin: 0.75rem -1rem -0.9rem;
+      padding: 0.6rem 1rem 0.7rem;
+      border-top: 1px solid hsl(224, 20%, 93%);
+      gap: 0.45rem;
+    }
+    .section-body .linked-temp-chip {
+      background: hsl(200, 75%, 95%);
+      border: none;
+      padding: 0.32rem 0.75rem 0.32rem 0.55rem;
+      gap: 0.4rem;
+    }
+    .section-body .linked-temp-chip i { color: hsl(200, 80%, 38%); font-size: 1rem; }
+    .section-body .linked-temp-chip .lt-name {
+      color: hsl(224, 18%, 45%);
+      font-weight: 500;
+      font-size: 0.78rem;
+    }
+    .section-body .linked-temp-chip .lt-val {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      color: hsl(200, 85%, 28%);
+    }
+    .section-body .linked-temp-chip .lt-offline { font-size: 0.76rem; }
+
+    html[data-theme="dark"] .section-body .linked-temp-row { border-top-color: hsl(224, 38%, 18%); }
+    html[data-theme="dark"] .section-body .linked-temp-chip { background: hsl(200, 28%, 22%); border: none; }
+    html[data-theme="dark"] .section-body .linked-temp-chip i { color: hsl(200, 65%, 62%); }
+    html[data-theme="dark"] .section-body .linked-temp-chip .lt-name { color: hsl(224, 18%, 82%); }
+    html[data-theme="dark"] .section-body .linked-temp-chip .lt-val { color: hsl(200, 70%, 70%); }
+
     html[data-theme="dark"] .device-status-line { color: hsl(224, 18%, 72%); }
     html[data-theme="dark"] .dstate.off      { color: hsl(224, 18%, 72%); }
     html[data-theme="dark"] .dstate.offline  { color: hsl(0, 70%, 65%); }
@@ -2241,14 +2273,14 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: hsl(260, 55%, 94%);
-      color: hsl(260, 55%, 46%);
+      background: hsl(224, 20%, 94%);
+      color: hsl(224, 18%, 52%);
       font-size: 1.15rem;
       transition: background 0.3s, color 0.3s;
     }
     .section-body .ir-widget-icon.active {
-      background: linear-gradient(135deg, hsl(260, 85%, 90%), hsl(280, 80%, 88%));
-      color: hsl(262, 70%, 42%);
+      background: linear-gradient(135deg, hsl(32, 100%, 90%), hsl(42, 100%, 84%));
+      color: hsl(28, 90%, 45%);
     }
     .section-body .ir-widget-name { font-size: 0.95rem; }
     .section-body .ir-cmd-btn {
@@ -2271,8 +2303,8 @@
       box-shadow: 0 2px 8px rgba(200, 100, 0, 0.28);
     }
 
-    html[data-theme="dark"] .section-body .ir-widget-icon { background: hsl(260, 24%, 27%); color: hsl(260, 65%, 76%); }
-    html[data-theme="dark"] .section-body .ir-widget-icon.active { background: hsl(262, 40%, 36%); color: hsl(262, 85%, 84%); }
+    html[data-theme="dark"] .section-body .ir-widget-icon { background: hsl(224, 38%, 19%); color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .section-body .ir-widget-icon.active { background: hsl(32, 40%, 26%); color: hsl(32, 90%, 65%); }
     html[data-theme="dark"] .section-body .ir-cmd-btn {
       background: hsl(224, 38%, 19%);
       border: none;
