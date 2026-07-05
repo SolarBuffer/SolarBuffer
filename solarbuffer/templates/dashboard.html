@@ -487,8 +487,8 @@
       transition: left 0.5s ease, right 0.5s ease, width 0.5s ease;
     }
 
-    .balance-bar-track.import { right: 50%; background: linear-gradient(90deg, hsla(24, 80%, 50%, 0.16), hsla(24, 80%, 50%, 0.32)); }
-    .balance-bar-track.export { left: 50%; background: linear-gradient(90deg, hsla(150, 60%, 45%, 0.32), hsla(150, 60%, 45%, 0.16)); }
+    .balance-bar-track.import { right: 50%; border-radius: 999px 0 0 999px; background: linear-gradient(90deg, hsla(24, 80%, 50%, 0.16), hsla(24, 80%, 50%, 0.32)); }
+    .balance-bar-track.export { left: 50%; border-radius: 0 999px 999px 0; background: linear-gradient(90deg, hsla(150, 60%, 45%, 0.32), hsla(150, 60%, 45%, 0.16)); }
 
     /* Duidelijke som-balk: toont de nettobalans t.o.v. het midden */
     .balance-bar-sum {
@@ -2508,8 +2508,7 @@
   </style>
 {% endblock %}
 
-{% block title_suffix %} Control{% endblock %}
-{% block tagline %}<p>Niet terugleveren, Bufferen!</p>{% endblock %}
+{% block tagline %}<p>Dashboard</p>{% endblock %}
 
 {% block content %}
     <div id="vacationTopBanner" class="vacation-banner" style="display:none; margin-bottom:0.5rem;">
