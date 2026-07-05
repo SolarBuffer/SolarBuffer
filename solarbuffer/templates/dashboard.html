@@ -2234,11 +2234,58 @@
       border-bottom: 1px solid hsl(224, 20%, 93%);
     }
     .section-body .ir-widget:last-child { border-bottom: none; }
+
+    /* IR-besturing: ronde icon-badge + pil-knoppen */
+    .section-body .ir-widget-header { gap: 0.75rem; margin-bottom: 0.75rem; }
+    .section-body .ir-widget-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: hsl(260, 55%, 94%);
+      color: hsl(260, 55%, 46%);
+      font-size: 1.15rem;
+      transition: background 0.3s, color 0.3s;
+    }
+    .section-body .ir-widget-icon.active {
+      background: linear-gradient(135deg, hsl(260, 85%, 90%), hsl(280, 80%, 88%));
+      color: hsl(262, 70%, 42%);
+    }
+    .section-body .ir-widget-name { font-size: 0.95rem; }
     .section-body .ir-cmd-btn {
-      background: hsl(224, 25%, 97%);
-      border: 1px solid hsl(224, 20%, 89%);
+      background: hsl(224, 25%, 95%);
+      border: none;
       box-shadow: none;
-      border-radius: 0.55rem;
+      border-radius: 999px;
+      color: hsl(224, 26%, 25%);
+      font-weight: 600;
+    }
+    .section-body .ir-cmd-btn:hover {
+      background: hsl(32, 100%, 92%);
+      color: hsl(25, 85%, 32%);
+      box-shadow: none;
+    }
+    .section-body .ir-cmd-btn:active { background: hsl(32, 100%, 86%); }
+    .section-body .ir-cmd-btn.sending {
+      background: hsl(32, 95%, 52%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(200, 100, 0, 0.28);
+    }
+
+    html[data-theme="dark"] .section-body .ir-widget-icon { background: hsl(260, 24%, 27%); color: hsl(260, 65%, 76%); }
+    html[data-theme="dark"] .section-body .ir-widget-icon.active { background: hsl(262, 40%, 36%); color: hsl(262, 85%, 84%); }
+    html[data-theme="dark"] .section-body .ir-cmd-btn {
+      background: hsl(224, 38%, 19%);
+      border: none;
+      color: hsl(224, 18%, 92%);
+      box-shadow: none;
+    }
+    html[data-theme="dark"] .section-body .ir-cmd-btn:hover {
+      background: hsl(32, 22%, 30%);
+      color: hsl(32, 80%, 72%);
+    }
+    html[data-theme="dark"] .section-body .ir-cmd-btn.sending {
+      background: hsl(32, 90%, 46%);
+      color: white;
     }
 
     .section-body .sched-list { gap: 0; margin-top: 0.4rem; }
@@ -3366,7 +3413,7 @@
         list.innerHTML = visible.map(({ bl, ir }) => `
           <div class="ir-widget">
             <div class="ir-widget-header">
-              <div class="ir-widget-icon"><i class="mdi ${escHtmlDash(ir.icon || 'mdi-remote')}"></i></div>
+              <div class="ir-widget-icon" data-ir-icon="${escHtmlDash(ir.id)}"><i class="mdi ${escHtmlDash(ir.icon || 'mdi-remote')}"></i></div>
               <div class="ir-widget-name">${escHtmlDash(ir.name)}</div>
               <span class="ir-online-slot" data-bl="${escHtmlDash(bl.id)}"></span>
               <span class="ir-badge-slot" data-ir="${escHtmlDash(ir.id)}"></span>
@@ -3395,6 +3442,8 @@
         const st = _irStates[ir.id];
         const hasPower = !!ir.linked_accessory_id;
         const isOn = hasPower && st && st.on;
+        const iconEl = list.querySelector(`.ir-widget-icon[data-ir-icon="${ir.id}"]`);
+        if (iconEl) iconEl.classList.toggle('active', !!isOn);
         const badgeSlot = list.querySelector(`.ir-badge-slot[data-ir="${ir.id}"]`);
         if (badgeSlot) {
           const wantCls = hasPower ? (isOn ? 'on' : 'off') : '';
