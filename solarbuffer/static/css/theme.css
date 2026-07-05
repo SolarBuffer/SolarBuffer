@@ -104,7 +104,7 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
   max-width: 560px;
   margin: 0 auto;
   padding: 1rem;
-  padding-bottom: calc(96px + var(--safe-bottom));
+  padding-bottom: calc(110px + var(--safe-bottom));
 }
 
 /* ===== Bottom tab bar ===== */
@@ -132,20 +132,20 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.15rem;
+  gap: 0.25rem;
   background: none;
   border: none;
   cursor: pointer;
   font-family: "Inter", sans-serif;
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-dim);
-  padding: 0.4rem 0.3rem;
+  padding: 0.6rem 0.4rem;
   border-radius: 14px;
   transition: color 0.2s ease, transform 0.15s ease;
 }
 
-.bn-item i { font-size: 1.35rem; line-height: 1; }
+.bn-item i { font-size: 1.6rem; line-height: 1; }
 
 .bn-item:active { transform: scale(0.90); }
 
@@ -202,7 +202,7 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
 .menu-dropdown {
   position: fixed;
   right: 12px;
-  bottom: calc(72px + var(--safe-bottom));
+  bottom: calc(86px + var(--safe-bottom));
   left: auto;
   top: auto;
   z-index: 150;
