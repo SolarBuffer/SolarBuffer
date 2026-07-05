@@ -1861,6 +1861,571 @@
     html[data-theme="dark"] .forecast-meta { color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .forecast-meta strong { color: hsl(224, 18%, 91%); }
     html[data-theme="dark"] .forecast-no-location { color: hsl(224, 18%, 70%); }
+
+    /* ===== APP-INDELING: hero + secties (vervangt losse tegels) ===== */
+    .hero {
+      text-align: center;
+      padding: 0.4rem 0.25rem 0;
+      margin-bottom: 1.9rem;
+    }
+
+    .hero-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: hsl(224, 14%, 52%);
+    }
+
+    .hero-power {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 0.45rem;
+      margin-top: 0.15rem;
+    }
+
+    .hero-power .value {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 3.6rem;
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-unit {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: hsl(224, 14%, 52%);
+    }
+
+    .hero-meta {
+      max-width: 340px;
+      margin: 0.5rem auto 0;
+      text-align: left;
+    }
+
+    /* Labelkleur in de hero: donkerder in light mode voor leesbaarheid op de paginakleur */
+    .hero { --hm-dim: hsl(224, 14%, 44%); }
+    html[data-theme="dark"] .hero { --hm-dim: hsl(224, 18%, 71%); }
+
+    .hero-divider { border-top: 1px solid hsl(224, 20%, 90%); }
+
+    .hero .balance-block {
+      max-width: 460px;
+      margin: 1.1rem auto 0;
+    }
+    .hero .balance-header {
+      justify-content: center;
+      text-align: center;
+      margin-bottom: 0.7rem;
+    }
+    .hero .balance-title {
+      font-family: "Inter", sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: hsl(224, 14%, 52%);
+    }
+    html[data-theme="dark"] .hero .balance-title { color: hsl(224, 18%, 66%); }
+
+    .dash-section { margin-bottom: 1.7rem; }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin: 0 0.4rem 0.55rem;
+      min-height: 26px;
+    }
+
+    .section-head h2 {
+      font-family: "Inter", sans-serif;
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: hsl(224, 14%, 46%);
+    }
+
+    .section-head .ctrl-icon {
+      color: hsl(32, 95%, 52%);
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .section-head .ctrl-icon svg { width: 15px; height: 15px; display: block; }
+    #batBrandIcon img { width: 18px; height: 18px; display: block; border-radius: 50%; }
+
+    .section-sub { font-size: 0.72rem; color: hsl(224, 18%, 62%); }
+
+    .section-side {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    .section-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: hsl(145, 55%, 50%);
+      flex-shrink: 0;
+      margin-left: 0.1rem;
+    }
+
+    .section-body {
+      background: #fff;
+      border: 1px solid hsl(224, 20%, 91%);
+      border-radius: 1.1rem;
+      box-shadow: 0 1px 2px hsla(224, 26%, 14%, 0.04);
+      overflow: hidden;
+    }
+
+    .section-body.pad { padding: 1rem 1rem 1.05rem; }
+    .section-body:empty { display: none; }
+    .section-body > .control-label { display: block; padding: 0.9rem 1rem; }
+
+    /* Rijen met hairlines i.p.v. losse tegels */
+    .section-body .device-card {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      margin: 0;
+      padding: 1rem 1rem 0.9rem;
+      cursor: default;
+      border-bottom: 1px solid hsl(224, 20%, 93%);
+    }
+    .section-body .device-card:last-child { border-bottom: none; }
+    .section-body .device-card.offline { opacity: 0.55; }
+
+    /* SolarBuffer-rij: naam + statusregel, schakelaar rechts, balk + chips */
+    .section-body .device-card .name { font-size: 1rem; }
+    .device-top { align-items: center; margin-bottom: 0; }
+
+    .device-status-line {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 3px;
+      font-size: 0.78rem;
+      color: hsl(224, 18%, 60%);
+      flex-wrap: wrap;
+    }
+    .device-status-line .dot { width: 8px; height: 8px; flex: 0 0 8px; }
+    .device-status-line .dsep { opacity: 0.45; }
+
+    .dstate { font-weight: 600; }
+    .dstate.off      { color: hsl(224, 18%, 55%); }
+    .dstate.offline  { color: hsl(0, 65%, 48%); }
+    .dstate.running  { color: hsl(145, 60%, 30%); }
+    .dstate.pending  { color: hsl(32, 95%, 38%); }
+    .dstate.freeze   { color: hsl(215, 70%, 42%); }
+    .dstate.boost    { color: hsl(25, 90%, 40%); }
+    .dstate.waiting  { color: hsl(40, 80%, 34%); }
+    .dstate.import   { color: hsl(0, 65%, 45%); }
+
+    .device-bright {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.7rem;
+    }
+    .device-bright .bar { flex: 1; min-width: 0; }
+
+    .device-chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.6rem;
+    }
+
+    html[data-theme="dark"] .device-status-line { color: hsl(224, 18%, 72%); }
+    html[data-theme="dark"] .dstate.off      { color: hsl(224, 18%, 72%); }
+    html[data-theme="dark"] .dstate.offline  { color: hsl(0, 70%, 65%); }
+    html[data-theme="dark"] .dstate.running  { color: hsl(145, 55%, 62%); }
+    html[data-theme="dark"] .dstate.pending  { color: hsl(32, 85%, 65%); }
+    html[data-theme="dark"] .dstate.freeze   { color: hsl(215, 70%, 70%); }
+    html[data-theme="dark"] .dstate.boost    { color: hsl(25, 90%, 65%); }
+    html[data-theme="dark"] .dstate.waiting  { color: hsl(45, 85%, 65%); }
+    html[data-theme="dark"] .dstate.import   { color: hsl(0, 70%, 68%); }
+
+    /* Handmatig instellen: rustige rij met invoer-pil */
+    .manual-brightness {
+      border-top: 1px solid hsl(224, 20%, 93%);
+      margin-top: 0.75rem;
+      padding-top: 0.7rem;
+      gap: 0.5rem;
+    }
+    .manual-brightness-label {
+      flex: 1;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: hsl(224, 18%, 55%);
+    }
+    .mb-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: hsl(224, 25%, 96%);
+      border-radius: 0.55rem;
+      padding: 0.3rem 0.55rem;
+      flex-shrink: 0;
+    }
+    .mb-group .manual-brightness-input {
+      width: 40px;
+      border: 1px solid transparent;
+      border-radius: 0.35rem;
+      background: transparent;
+      padding: 0;
+      text-align: right;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: "Space Grotesk", sans-serif;
+    }
+    .mb-group .manual-brightness-input:focus { border-color: transparent; box-shadow: none; }
+    .mb-unit { font-size: 0.75rem; color: hsl(224, 18%, 60%); }
+    .manual-brightness-btn { border-radius: 999px; padding: 0.35rem 0.85rem; }
+
+    html[data-theme="dark"] .manual-brightness { border-top-color: hsl(224, 38%, 18%); }
+    html[data-theme="dark"] .manual-brightness-label { color: hsl(224, 18%, 72%); }
+    html[data-theme="dark"] .mb-group { background: hsl(224, 38%, 13%); }
+    html[data-theme="dark"] .mb-group .manual-brightness-input {
+      background: transparent;
+      border-color: transparent;
+      color: hsl(224, 18%, 95%);
+    }
+    html[data-theme="dark"] .mb-unit { color: hsl(224, 18%, 72%); }
+
+    .section-body .mini-info { background: transparent; padding: 0; }
+
+    .section-body .acc-grid { gap: 0; }
+    .section-body .acc-grid .acc-tile {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid hsl(224, 20%, 93%);
+    }
+    .section-body .acc-grid .acc-tile:last-child { border-bottom: none; }
+
+    /* Verbruikers: ronde icon-badge, kWh onder de naam, grote waarde rechts */
+    .section-body .acc-grid .acc-tile { gap: 0.8rem; }
+    .section-body .acc-tile-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: hsl(224, 20%, 94%);
+      color: hsl(224, 18%, 52%);
+      transition: background 0.3s, color 0.3s;
+    }
+    .section-body .acc-tile-icon.active {
+      background: linear-gradient(135deg, hsl(32, 100%, 90%), hsl(42, 100%, 84%));
+      color: hsl(28, 90%, 45%);
+    }
+    .section-body .acc-tile-icon.temp { background: hsl(200, 80%, 93%); color: hsl(200, 80%, 36%); }
+    .acc-tile-name { font-size: 0.95rem; }
+    .acc-sub { font-size: 0.74rem; color: hsl(224, 18%, 55%); margin-top: 2px; }
+    .acc-sub.offline { color: hsl(0, 65%, 48%); font-weight: 600; }
+    .acc-val {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: hsl(224, 26%, 16%);
+      white-space: nowrap;
+    }
+    .acc-val-unit {
+      font-family: "Inter", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: hsl(224, 18%, 55%);
+      margin-left: 3px;
+    }
+    .acc-tile.acc-offline .acc-tile-icon,
+    .acc-tile.acc-offline .acc-val { opacity: 0.45; }
+
+    html[data-theme="dark"] .section-body .acc-tile-icon { background: hsl(224, 38%, 19%); color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .section-body .acc-tile-icon.active { background: hsl(32, 40%, 26%); color: hsl(32, 90%, 65%); }
+    html[data-theme="dark"] .section-body .acc-tile-icon.temp { background: hsl(200, 25%, 24%); color: hsl(200, 65%, 62%); }
+    html[data-theme="dark"] .acc-sub { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .acc-sub.offline { color: hsl(0, 70%, 65%); }
+    html[data-theme="dark"] .acc-val { color: hsl(224, 18%, 95%); }
+
+    /* Zonne-verwachting: segmentschakelaar + rustiger staafdiagram */
+    .forecast-seg {
+      display: flex;
+      background: hsl(224, 20%, 93%);
+      border-radius: 999px;
+      padding: 3px;
+      margin-bottom: 1rem;
+    }
+    .forecast-seg .forecast-tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      border-radius: 999px;
+      padding: 0.42rem 0;
+      font-family: "Inter", sans-serif;
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: hsl(224, 18%, 48%);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .forecast-seg .forecast-tab.active {
+      background: #fff;
+      color: hsl(224, 26%, 16%);
+      box-shadow: 0 1px 3px hsla(224, 26%, 14%, 0.15);
+    }
+
+    .forecast-bars { gap: 4px; height: 110px; }
+    .forecast-bar {
+      border-radius: 4px 4px 0 0;
+      background: linear-gradient(180deg, hsl(38, 95%, 58%), hsl(28, 90%, 52%));
+    }
+    .forecast-bar.dim { background: hsl(32, 45%, 88%); }
+    .forecast-hour {
+      min-height: 0.72rem;
+      font-size: 0.62rem;
+      color: hsl(224, 14%, 55%);
+      margin-top: 2px;
+    }
+    .forecast-col.now .forecast-hour { color: hsl(28, 90%, 42%); font-weight: 700; }
+
+    .forecast-meta {
+      margin-top: 0.4rem;
+      font-size: 0.76rem;
+      color: hsl(224, 14%, 50%);
+    }
+    .forecast-meta strong {
+      color: hsl(224, 26%, 16%);
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    html[data-theme="dark"] .forecast-seg { background: hsl(224, 38%, 11%); }
+    html[data-theme="dark"] .forecast-seg .forecast-tab { color: hsl(224, 18%, 66%); }
+    html[data-theme="dark"] .forecast-seg .forecast-tab.active {
+      background: hsl(224, 38%, 22%);
+      color: hsl(224, 18%, 95%);
+      box-shadow: none;
+    }
+    html[data-theme="dark"] .forecast-bar {
+      background: linear-gradient(180deg, hsl(38, 90%, 55%), hsl(28, 85%, 48%));
+    }
+    html[data-theme="dark"] .forecast-bar.dim { background: hsl(32, 18%, 30%); }
+    html[data-theme="dark"] .forecast-hour { color: hsl(224, 18%, 66%); }
+    html[data-theme="dark"] .forecast-col.now .forecast-hour { color: hsl(32, 90%, 65%); }
+    html[data-theme="dark"] .forecast-meta { color: hsl(224, 18%, 68%); }
+    html[data-theme="dark"] .forecast-meta strong { color: hsl(224, 18%, 94%); }
+
+    .section-body .ir-widget-list { gap: 0; }
+    .section-body .ir-widget {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid hsl(224, 20%, 93%);
+    }
+    .section-body .ir-widget:last-child { border-bottom: none; }
+    .section-body .ir-cmd-btn {
+      background: hsl(224, 25%, 97%);
+      border: 1px solid hsl(224, 20%, 89%);
+      box-shadow: none;
+      border-radius: 0.55rem;
+    }
+
+    .section-body .sched-list { gap: 0; margin-top: 0.4rem; }
+    .section-body .sched-item {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid hsl(224, 20%, 93%);
+    }
+    .section-body .sched-item:last-child { border-bottom: none; }
+
+    /* Tijdschema: nette rijen met tijd, dag-bolletjes en schakelaar */
+    .sched-time {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 50px;
+      flex-shrink: 0;
+      line-height: 1.25;
+    }
+    .st-start {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: hsl(224, 26%, 16%);
+    }
+    .st-end { font-size: 0.75rem; color: hsl(224, 18%, 62%); }
+    .sched-item.sched-live .st-start { color: hsl(145, 55%, 32%); }
+
+    .sched-day-dots { display: flex; gap: 3px; margin: 4px 0 3px; }
+    .sched-day-dot {
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      font-size: 0.58rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: hsl(224, 20%, 93%);
+      color: hsl(224, 18%, 60%);
+    }
+    .sched-day-dot.on { background: hsl(32, 95%, 52%); color: #fff; }
+
+    .sched-live-badge {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: hsl(145, 60%, 28%);
+      background: hsl(145, 55%, 90%);
+      border-radius: 999px;
+      padding: 0.12rem 0.5rem;
+      margin-left: 0.45rem;
+      vertical-align: 1px;
+      white-space: nowrap;
+    }
+
+    .sched-item.sched-disabled .sched-time,
+    .sched-item.sched-disabled .sched-day-dots { opacity: 0.45; }
+
+    .sched-switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 22px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .sched-switch input { display: none; }
+    .sched-switch .slider {
+      position: absolute;
+      inset: 0;
+      background: hsl(224, 18%, 84%);
+      border-radius: 11px;
+      transition: background 0.3s;
+    }
+    .sched-switch input:checked + .slider { background: hsl(32, 95%, 52%); }
+    .sched-switch .slider::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 2px;
+      top: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      transition: transform 0.3s;
+    }
+    .sched-switch input:checked + .slider::before { transform: translateX(16px); }
+
+    .sched-icon-btn {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: hsl(224, 18%, 55%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sched-icon-btn:hover { background: hsl(224, 20%, 93%); color: hsl(224, 26%, 20%); }
+    .sched-icon-btn.danger:hover { background: hsl(0, 60%, 94%); color: hsl(0, 65%, 45%); }
+
+    .sched-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 1rem 0 0.6rem;
+      color: hsl(224, 18%, 65%);
+      font-size: 0.82rem;
+      text-align: center;
+    }
+    .sched-empty .mdi { font-size: 1.7rem; opacity: 0.55; line-height: 1; }
+
+    html[data-theme="dark"] .st-start { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .st-end { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .sched-item.sched-live .st-start { color: hsl(145, 55%, 62%); }
+    html[data-theme="dark"] .sched-day-dot { background: hsl(224, 38%, 20%); color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .sched-day-dot.on { background: hsl(32, 95%, 52%); color: #fff; }
+    html[data-theme="dark"] .sched-live-badge { background: hsl(145, 25%, 22%); color: hsl(145, 55%, 62%); }
+    html[data-theme="dark"] .sched-switch .slider { background: hsl(224, 38%, 22%); }
+    html[data-theme="dark"] .sched-switch input:checked + .slider { background: hsl(32, 95%, 52%); }
+    html[data-theme="dark"] .sched-icon-btn { color: hsl(224, 18%, 68%); }
+    html[data-theme="dark"] .sched-icon-btn:hover { background: hsl(224, 38%, 19%); color: hsl(224, 18%, 92%); }
+    html[data-theme="dark"] .sched-icon-btn.danger:hover { background: hsl(0, 30%, 24%); color: hsl(0, 70%, 65%); }
+    html[data-theme="dark"] .sched-empty { color: hsl(224, 18%, 68%); }
+
+    /* Batterij: platte statistieken met scheidingslijntjes */
+    .bat-label { font-size: 0.7rem; color: hsl(224, 18%, 60%); margin-bottom: 0.12rem; }
+    .bat-soc-track { height: 8px; background: hsl(224, 20%, 91%); border-radius: 999px; overflow: hidden; }
+    .bat-soc-fill { height: 100%; width: 0%; background: hsl(145, 55%, 50%); border-radius: 999px; transition: width 0.5s; }
+    .bat-stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin-top: 0.9rem; }
+    .bat-stat { padding: 0 0.75rem; border-left: 1px solid hsl(224, 20%, 92%); min-width: 0; }
+    .bat-stat:first-child { border-left: none; padding-left: 0; }
+
+    /* Dark mode voor de app-indeling */
+    html[data-theme="dark"] .hero-label,
+    html[data-theme="dark"] .hero-unit { color: hsl(224, 18%, 66%); }
+    html[data-theme="dark"] .hero-divider { border-top-color: hsl(224, 30%, 18%); }
+    html[data-theme="dark"] .section-head h2 { color: hsl(224, 18%, 68%); }
+    html[data-theme="dark"] .section-sub { color: hsl(224, 18%, 72%); }
+    html[data-theme="dark"] .section-body {
+      background: hsl(224, 38%, 15%);
+      border-color: hsl(224, 38%, 18%);
+      box-shadow: none;
+    }
+    html[data-theme="dark"] #batteryCard { background: transparent; border-color: transparent; }
+    html[data-theme="dark"] .section-body .device-card {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid hsl(224, 38%, 18%);
+    }
+    html[data-theme="dark"] .section-body .device-card:last-child { border-bottom: none; }
+    html[data-theme="dark"] .section-body .mini-info { background: transparent; }
+    html[data-theme="dark"] .section-body .acc-grid .acc-tile {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid hsl(224, 38%, 18%);
+    }
+    html[data-theme="dark"] .section-body .acc-grid .acc-tile:last-child { border-bottom: none; }
+    html[data-theme="dark"] .section-body .ir-widget {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      border-bottom: 1px solid hsl(224, 38%, 18%);
+    }
+    html[data-theme="dark"] .section-body .ir-widget:last-child { border-bottom: none; }
+    html[data-theme="dark"] .section-body .sched-item {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid hsl(224, 38%, 18%);
+    }
+    html[data-theme="dark"] .section-body .sched-item:last-child { border-bottom: none; }
+    html[data-theme="dark"] .bat-label { color: hsl(224, 18%, 72%); }
+    html[data-theme="dark"] .bat-soc-track { background: hsl(224, 38%, 20%); }
+    html[data-theme="dark"] .bat-stat { border-left-color: hsl(224, 38%, 19%); }
+
+    @media (max-width: 520px) {
+      .hero-power .value { font-size: 3rem; }
+    }
   </style>
 {% endblock %}
 
@@ -1873,49 +2438,45 @@
       <span id="vacationTopText">Vakantiestand actief</span>
     </div>
 
-    <div class="card stat-card power-card">
-        <div class="stat-card-top">
-          <div class="stat-card-head">
-            <span class="label">Vermogen</span>
-          </div>
-        </div>
-        <div class="stat-card-main">
-          <div class="power-reading">
+    <section class="hero">
+        <div class="hero-label">Live netvermogen</div>
+        <div class="hero-power">
             <span class="value" id="current_power">0.0</span>
-            <span class="power-unit">W</span>
-          </div>
-          <span class="unit">Live netvermogen</span>
+            <span class="hero-unit">W</span>
+        </div>
+        <div class="hero-meta">
           <div id="solarLiveRow" style="display:none; margin-top:0.3rem; font-size:0.78rem; align-items:center; gap:0.35rem; color:hsl(32,95%,48%);">
             <i class="mdi mdi-white-balance-sunny" style="font-size:1rem;flex-shrink:0;line-height:1"></i>
-            <span style="flex:1;color:hsl(224, 18%, 71%)">Opwekking</span>
-            <span id="solarLivePower" style="font-weight:600">—</span>&thinsp;<span style="color:hsl(224, 18%, 71%)">W</span>
-            <span style="opacity:0.3;color:hsl(224, 18%, 71%)">·</span>
-            <span id="dailySolar" style="font-weight:600">—</span>&thinsp;<span style="color:hsl(224, 18%, 71%)">kWh</span>
+            <span style="flex:1;color:var(--hm-dim)">Opwekking</span>
+            <span id="solarLivePower" style="font-weight:600">—</span>&thinsp;<span style="color:var(--hm-dim)">W</span>
+            <span style="opacity:0.4;color:var(--hm-dim)">·</span>
+            <span id="dailySolar" style="font-weight:600">—</span>&thinsp;<span style="color:var(--hm-dim)">kWh</span>
           </div>
           <div id="priceRow" style="display:none; margin-top:0.3rem; font-size:0.78rem; align-items:center; gap:0.35rem;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" id="priceIcon" style="flex-shrink:0"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-            <span style="flex:1;color:hsl(224, 18%, 71%)">Stroomprijs</span>
-            <span id="priceValue" style="font-weight:600">—</span>&thinsp;<span style="color:hsl(224, 18%, 71%)">ct/kWh</span>
+            <span style="flex:1;color:var(--hm-dim)">Stroomprijs</span>
+            <span id="priceValue" style="font-weight:600">—</span>&thinsp;<span style="color:var(--hm-dim)">ct/kWh</span>
           </div>
-          <div id="solarEdgeRow" style="display:none; margin-top:0.35rem; font-size:0.78rem; color:hsl(224, 18%, 71%); align-items:center; gap:0.35rem;">
+          <div id="solarEdgeRow" style="display:none; margin-top:0.35rem; font-size:0.78rem; color:var(--hm-dim); align-items:center; gap:0.35rem;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
             <span id="solarEdgeLabel">Omvormer:</span> <span id="solarEdgeValue">—</span> W
           </div>
 
-          <div id="selfSufficiencyRow" style="display:none; margin-top:0.45rem; border-top:1px solid hsl(224, 20%, 90%); padding-top:0.4rem; gap:0.5rem; flex-direction:column;">
+          <div id="selfSufficiencyRow" class="hero-divider" style="display:none; margin-top:0.45rem; padding-top:0.4rem; gap:0.5rem; flex-direction:column;">
             <div style="display:flex; align-items:center; gap:0.35rem; font-size:0.78rem;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(40,90%,42%)"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
-              <span style="color:hsl(224, 18%, 71%);flex:1">Zelfverbruik</span>
-              <span id="selfConsumptionValue" style="font-weight:600;color:hsl(40,85%,38%)">—</span><span style="color:hsl(224, 18%, 71%)">%</span>
+              <span style="color:var(--hm-dim);flex:1">Zelfverbruik</span>
+              <span id="selfConsumptionValue" style="font-weight:600;color:hsl(40,85%,38%)">—</span><span style="color:var(--hm-dim)">%</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.35rem; font-size:0.78rem;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(145,55%,36%)"><path d="M10,2H14V4H16A2,2 0 0,1 18,6V20A2,2 0 0,1 16,22H8A2,2 0 0,1 6,20V6A2,2 0 0,1 8,4H10V2M8,6V20H16V6H8M10,8H14V10H10V8M10,12H14V14H10V12Z"/></svg>
-              <span style="color:hsl(224, 18%, 71%);flex:1">Zelfvoorziening</span>
-              <span id="selfSufficiencyValue" style="font-weight:600;color:hsl(145,55%,36%)">—</span><span style="color:hsl(224, 18%, 71%)">%</span>
+              <span style="color:var(--hm-dim);flex:1">Zelfvoorziening</span>
+              <span id="selfSufficiencyValue" style="font-weight:600;color:hsl(145,55%,36%)">—</span><span style="color:var(--hm-dim)">%</span>
             </div>
           </div>
+        </div>
 
-          <div id="balanceCard" class="balance-block" style="display:none;">
+        <div id="balanceCard" class="balance-block" style="display:none;">
             <div class="balance-header">
               <div class="balance-title-wrap">
                 <div class="balance-title">Netenergiebalans</div>
@@ -1939,104 +2500,111 @@
               <span class="balance-legend-item"><i class="balance-dot import"></i>Van net</span>
               <span class="balance-legend-item"><i class="balance-dot export"></i>Teruglevering</span>
             </div>
-          </div>
         </div>
-    </div>
+    </section>
 
-    <div class="card control-card" id="batteryCard" style="display:none;">
-      <div class="control-card-header">
-        <h2><span class="ctrl-icon" id="batBrandIcon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span>
-          <span style="display:flex;flex-direction:column;gap:0.05rem;line-height:1.2;">
-            Batterij
-            <span id="batKwhDay" style="font-size:0.7rem;font-weight:400;color:hsl(224, 18%, 73%);"></span>
-          </span>
-        </h2>
-        <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
+    <section class="dash-section" id="batteryCard" style="display:none;">
+      <div class="section-head">
+        <span class="ctrl-icon" id="batBrandIcon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg></span>
+        <h2>Batterij</h2>
+        <span id="batKwhDay" class="section-sub"></span>
+        <div class="section-side">
           <span id="batPrioLabel" class="buffer-status-badge" style="display:none;"></span>
           <span id="batPermLabel" class="buffer-status-badge" style="display:none;"></span>
-          <div id="batOnlineDot" style="width:8px;height:8px;border-radius:50%;background:hsl(145,55%,50%);flex-shrink:0;margin-left:0.1rem;"></div>
+          <div id="batOnlineDot" class="section-dot"></div>
         </div>
       </div>
 
-      <div style="margin-bottom:0.55rem;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.25rem;">
-          <span id="batSocLabel" style="font-size:0.75rem;color:hsl(224, 18%, 71%);">SoC</span>
-          <span id="batSocText" style="font-size:0.88rem;font-weight:700;">—%</span>
-        </div>
-        <div style="height:8px;background:hsl(224, 20%, 90%);border-radius:999px;overflow:hidden;">
-          <div id="batSocBar" style="height:100%;width:0%;background:hsl(145,55%,50%);border-radius:999px;transition:width 0.5s;"></div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;">
-        <div style="background:hsl(224, 25%, 96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
-          <div style="font-size:0.68rem;color:hsl(224, 18%, 71%);margin-bottom:0.1rem;">Vermogen</div>
-          <div style="display:flex;align-items:center;gap:0.2rem;">
-            <span id="batPowerArrow" style="font-size:0.8rem;"></span>
-            <span id="batPowerVal" style="font-weight:700;font-size:0.88rem;">—</span>
-            <span style="font-size:0.7rem;color:hsl(224, 18%, 71%);">W</span>
+      <div class="section-body pad">
+        <div style="margin-bottom:0.8rem;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.3rem;">
+            <span id="batSocLabel" class="bat-label" style="margin-bottom:0;">SoC</span>
+            <span id="batSocText" style="font-size:0.92rem;font-weight:700;">—%</span>
+          </div>
+          <div class="bat-soc-track">
+            <div id="batSocBar" class="bat-soc-fill"></div>
           </div>
         </div>
-        <div id="batVoltRow" style="background:hsl(224, 25%, 96%);border-radius:0.5rem;padding:0.4rem 0.5rem;">
-          <div style="font-size:0.68rem;color:hsl(224, 18%, 71%);margin-bottom:0.1rem;">Modus</div>
-          <div><span id="batCyclesVal" style="font-weight:700;font-size:0.88rem;">—</span></div>
-        </div>
-        <div id="batForceTofullRow" style="background:hsl(224, 25%, 96%);border-radius:0.5rem;padding:0.4rem 0.5rem;cursor:pointer;" onclick="toggleForceTofull()">
-          <div style="font-size:0.68rem;color:hsl(224, 18%, 71%);margin-bottom:0.25rem;">Volladen</div>
-          <label class="toggle-mini" style="pointer-events:none;">
-            <input type="checkbox" id="batForceTofullToggle">
-            <span class="slider"></span>
-          </label>
+
+        <div class="bat-stats">
+          <div class="bat-stat">
+            <div class="bat-label">Vermogen</div>
+            <div style="display:flex;align-items:center;gap:0.2rem;">
+              <span id="batPowerArrow" style="font-size:0.8rem;"></span>
+              <span id="batPowerVal" style="font-weight:700;font-size:0.9rem;">—</span>
+              <span style="font-size:0.7rem;color:hsl(224, 18%, 60%);">W</span>
+            </div>
+          </div>
+          <div class="bat-stat" id="batVoltRow">
+            <div class="bat-label">Modus</div>
+            <div><span id="batCyclesVal" style="font-weight:700;font-size:0.9rem;">—</span></div>
+          </div>
+          <div class="bat-stat" id="batForceTofullRow" style="cursor:pointer;" onclick="toggleForceTofull()">
+            <div class="bat-label">Volladen</div>
+            <label class="toggle-mini" style="pointer-events:none;">
+              <input type="checkbox" id="batForceTofullToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="card control-card">
-      <div class="control-card-header">
-        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span> SolarBuffers</h2>
-        <span id="buffer_status_badge" class="buffer-status-badge standby">Standby</span>
+    <section class="dash-section">
+      <div class="section-head">
+        <span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.55,18.54L4.96,19.95L6.76,18.16L5.34,16.74M11,22.45C11.32,22.45 13,22.45 13,22.45V19.5H11M12,5.5A6,6 0 0,0 6,11.5A6,6 0 0,0 12,17.5A6,6 0 0,0 18,11.5C18,8.18 15.31,5.5 12,5.5M20,12.5H23V10.5H20M17.24,18.16L19.04,19.95L20.45,18.54L18.66,16.74M20.45,4.46L19.04,3.05L17.24,4.84L18.66,6.26M13,0.55H11V3.5H13M4,10.5H1V12.5H4M6.76,4.84L4.96,3.05L3.55,4.46L5.34,6.26L6.76,4.84Z"/></svg></span>
+        <h2>SolarBuffers</h2>
+        <div class="section-side">
+          <span id="buffer_status_badge" class="buffer-status-badge standby">Standby</span>
+        </div>
       </div>
-      <div id="devicesContainer"></div>
-    </div>
+      <div class="section-body" id="devicesContainer"></div>
+    </section>
 
-    <div class="card control-card" id="broadlinkCard" style="display:none">
-      <h2>
+    <section class="dash-section" id="broadlinkCard" style="display:none">
+      <div class="section-head">
         <span class="ctrl-icon">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.5,2A1.5,1.5 0 0,0 5,3.5V20.5A1.5,1.5 0 0,0 6.5,22H17.5A1.5,1.5 0 0,0 19,20.5V3.5A1.5,1.5 0 0,0 17.5,2H6.5M8,5H16V7H8V5M8,9H10V11H8V9M11,9H13V11H11V9M14,9H16V11H14V9M8,12H10V14H8V12M11,12H13V14H11V12M14,12H16V14H14V12M8,15H10V17H8V15M11,15H13V17H11V15M14,15H16V17H14V15Z"/></svg>
         </span>
-        IR-besturing
-      </h2>
-      <div class="ir-widget-list" id="irWidgetList"></div>
-    </div>
+        <h2>IR-besturing</h2>
+      </div>
+      <div class="section-body">
+        <div class="ir-widget-list" id="irWidgetList"></div>
+      </div>
+    </section>
 
-    <div class="card control-card" id="accessoriesCard" style="display:none">
-      <div class="acc-card-header">
-        <h2><span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span> Verbruikers</h2>
-        <div class="gas-badge" id="gasBadge" style="display:none">
+    <section class="dash-section" id="accessoriesCard" style="display:none">
+      <div class="section-head">
+        <span class="ctrl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7,2V13H10V22L17,11H13L17,2H7Z"/></svg></span>
+        <h2>Verbruikers</h2>
+        <div class="gas-badge section-side" id="gasBadge" style="display:none">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2Z"/></svg>
           <span id="gasValue">—</span>&thinsp;m³
         </div>
       </div>
-      <div id="accessoriesContainer"></div>
-    </div>
+      <div class="section-body" id="accessoriesContainer"></div>
+    </section>
 
-    <div class="card control-card" id="forecastCard">
-      <h2>
+    <section class="dash-section" id="forecastCard">
+      <div class="section-head">
         <span class="ctrl-icon">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
         </span>
-        Zonne-verwachting
-      </h2>
-      <div id="forecastContent"><div class="forecast-loading">Laden…</div></div>
-    </div>
+        <h2>Zonne-verwachting</h2>
+      </div>
+      <div class="section-body pad">
+        <div id="forecastContent"><div class="forecast-loading">Laden…</div></div>
+      </div>
+    </section>
 
-    <div class="card control-card" id="scheduleCard">
-      <h2>
+    <section class="dash-section" id="scheduleCard">
+      <div class="section-head">
         <span class="ctrl-icon">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg>
         </span>
-        Tijdschema's
-      </h2>
+        <h2>Tijdschema's</h2>
+      </div>
+      <div class="section-body pad">
       <div id="schedActiveBanner" style="display:none" class="sched-active-banner">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
         <span id="schedActiveName">Schema actief</span>
@@ -2099,7 +2667,8 @@
           <button class="sched-cancel-btn" onclick="closeSchedForm()">Annuleren</button>
         </div>
       </div>
-    </div>
+      </div>
+    </section>
 
 {% endblock %}
 
@@ -2303,25 +2872,37 @@
 
       const list = document.getElementById("schedList");
       if (!schedules.length) {
-        list.innerHTML = `<div style="font-size:0.8rem;color:hsl(224, 18%, 73%);text-align:center;padding:0.5rem 0">Nog geen tijdschema's ingesteld</div>`;
+        list.innerHTML = `<div class="sched-empty">
+          <i class="mdi mdi-clock-plus-outline"></i>
+          Nog geen tijdschema's ingesteld
+        </div>`;
         return;
       }
       list.innerHTML = schedules.map(s => {
-        const dayStr = s.days.map(d => DAY_NAMES[d]).join(", ");
         const activeNow = active && active.id === s.id;
         const deviceIps = s.device_ips || [];
         const deviceStr = deviceIps.length
-          ? ' · ' + deviceIps.map(ip => { const dev = SCHED_DEVICES.find(d => d.ip === ip); return escapeHtml(dev ? dev.name : ip); }).join(", ")
-          : '';
-        return `<div class="sched-item${s.enabled ? '' : ' sched-disabled'}">
+          ? deviceIps.map(ip => { const dev = SCHED_DEVICES.find(d => d.ip === ip); return escapeHtml(dev ? dev.name : ip); }).join(", ")
+          : 'Alle apparaten';
+        const dayDots = DAY_NAMES.map((nm, i) =>
+          `<span class="sched-day-dot${s.days.includes(i) ? ' on' : ''}">${nm[0]}</span>`).join("");
+        return `<div class="sched-item${s.enabled ? '' : ' sched-disabled'}${activeNow ? ' sched-live' : ''}">
+          <div class="sched-time">
+            <span class="st-start">${s.start_time}</span>
+            <span class="st-end">${s.end_time}</span>
+          </div>
           <div class="sched-item-info">
-            <div class="sched-item-name">${escapeHtml(s.name || (s.start_time + '–' + s.end_time))}${activeNow ? ' <span style="color:hsl(145,60%,32%);font-size:0.72rem">● actief</span>' : ''}</div>
-            <div class="sched-item-meta">${dayStr} · ${s.start_time}–${s.end_time} · ${s.brightness}%${deviceStr}</div>
+            <div class="sched-item-name">${escapeHtml(s.name || 'Tijdschema')}${activeNow ? '<span class="sched-live-badge">Actief</span>' : ''}</div>
+            <div class="sched-day-dots">${dayDots}</div>
+            <div class="sched-item-meta">${s.brightness}% vermogen · ${deviceStr}</div>
           </div>
           <div class="sched-item-actions">
-            <button class="sched-btn" onclick="editSchedule('${s.id}')">${s.enabled ? 'Bewerken' : 'Bewerken'}</button>
-            <button class="sched-btn${s.enabled ? ' disable' : ' enable'}" onclick="toggleSchedEnabled('${s.id}', ${!s.enabled})">${s.enabled ? 'Uit' : 'Aan'}</button>
-            <button class="sched-btn danger" onclick="deleteSchedule('${s.id}')">✕</button>
+            <label class="sched-switch" title="${s.enabled ? 'Schema uitzetten' : 'Schema aanzetten'}">
+              <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSchedEnabled('${s.id}', ${!s.enabled})">
+              <span class="slider"></span>
+            </label>
+            <button class="sched-icon-btn" onclick="editSchedule('${s.id}')" aria-label="Bewerken"><i class="mdi mdi-pencil-outline"></i></button>
+            <button class="sched-icon-btn danger" onclick="deleteSchedule('${s.id}')" aria-label="Verwijderen"><i class="mdi mdi-trash-can-outline"></i></button>
           </div>
         </div>`;
       }).join("");
@@ -2628,59 +3209,50 @@
         // Handmatige helderheid alleen tonen als PID uitstaat
         const manualBrightnessHtml = !pidEnabled ? `
           <div class="manual-brightness">
-            <span class="manual-brightness-label">Handmatig instellen:</span>
-            <input
-              type="number"
-              id="mb_input_${safeId}"
-              class="manual-brightness-input"
-              min="0"
-              max="100"
-              step="1"
-              value="${currentBrightness}"
-              placeholder="0-100"
-            />
-            <span class="manual-brightness-unit">%</span>
+            <span class="manual-brightness-label">Handmatig instellen</span>
+            <span class="manual-brightness-feedback" id="mb_feedback_${safeId}">✓ Ingesteld</span>
+            <div class="mb-group">
+              <input
+                type="number"
+                id="mb_input_${safeId}"
+                class="manual-brightness-input"
+                min="0"
+                max="100"
+                step="1"
+                value="${currentBrightness}"
+              />
+              <span class="mb-unit">%</span>
+            </div>
             <button
               class="manual-brightness-btn"
               onclick="setManualBrightness('${escapeHtml(d.ip)}')"
             >Instellen</button>
-            <span class="manual-brightness-feedback" id="mb_feedback_${safeId}">✓ Ingesteld</span>
           </div>` : '';
+
+        const socketReady = hasSocket && d.power_socket_online;
+        const stateTxt = d.online
+          ? (state.label || 'Uit')
+          : (socketReady ? 'Klaar om te starten' : 'Offline');
+        const stateCls = d.online ? (state.cls || 'off') : (socketReady ? 'off' : 'offline');
+        let meterHtml = '';
+        if (hasPowerMeter) {
+          meterHtml = d.power_meter_online === false
+            ? `<span class="dsep">·</span><span>Meter offline</span>`
+            : `<span class="dsep">·</span><span>${Number(d.power || 0).toFixed(0)} W</span>` +
+              `<span class="dsep">·</span><span>${Number(d.energy_today_kwh || 0).toFixed(2)} kWh</span>`;
+        }
 
         return `
           <div class="device-card ${available ? '' : 'offline'}">
             <div class="device-top">
               <div class="device-info">
                 <div class="name">${escapeHtml(d.name)}</div>
+                <div class="device-status-line">
+                  <span class="dot ${state.dot}"></span>
+                  <span class="dstate ${stateCls}">${stateTxt}</span>
+                  ${meterHtml}
+                </div>
               </div>
-              <div class="device-top-right">
-                <span class="state-badge ${state.cls}">${state.label}</span>
-                <button class="boost-btn ${boostActive ? 'active' : ''}"
-                        onclick="toggleBoost('${escapeHtml(d.ip)}')"
-                        ${available ? '' : 'disabled'}>
-                  ${boostLabel}
-                </button>
-                <span class="online-badge ${d.online ? 'online' : 'offline'}">${onlineLabel}</span>
-              </div>
-            </div>
-            ${(hasSocket || hasPowerMeter) ? `
-              <div class="device-middle">
-                ${hasSocket ? `
-                  <div class="mini-info">
-                    <div class="mini-label">Socket</div>
-                    <div class="mini-value"><span class="socket-badge ${socket.cls}">${socket.label}</span></div>
-                  </div>` : ''}
-                ${hasPowerMeter ? `
-                  <div class="mini-info">
-                    <div class="mini-label">Vermogensmeter</div>
-                    <div class="mini-value" style="display:flex;align-items:center;gap:0.5rem;">
-                      <span class="socket-badge ${powerMeter.cls}">${escapeHtml(powerMeter.label)}</span>
-                      <span style="font-size:0.78rem;color:hsl(224, 18%, 71%);">${Number(d.energy_today_kwh || 0).toFixed(2)} kWh</span>
-                    </div>
-                  </div>` : ''}
-              </div>` : ''}
-            <div class="device-bottom">
-              <div class="dot ${state.dot}"></div>
               <label class="toggle">
                 <input type="checkbox"
                   ${getToggleChecked(d) ? 'checked' : ''}
@@ -2688,9 +3260,19 @@
                   onchange="toggleDevice('${escapeHtml(d.ip)}')">
                 <span class="slider"></span>
               </label>
+            </div>
+            <div class="device-bright">
               <div class="bar">
                 <div class="fill" style="width: ${fillWidth}%"></div>
               </div>
+            </div>
+            <div class="device-chips">
+              <button class="boost-btn ${boostActive ? 'active' : ''}"
+                      onclick="toggleBoost('${escapeHtml(d.ip)}')"
+                      ${available ? '' : 'disabled'}>
+                ${boostLabel}
+              </button>
+              ${hasSocket ? `<span class="socket-badge ${socket.cls}">${escapeHtml(socket.label)}</span>` : ''}
             </div>
             ${manualBrightnessHtml}
             ${(d.linked_temperatures && d.linked_temperatures.length) ? `
@@ -2730,20 +3312,22 @@
       card.style.display = '';
       cont.innerHTML = '<div class="acc-grid">' + visible.map(acc => {
         const isTemp = acc.acc_type === 'temperature';
-        const onlineLabel = acc.online ? '● Online' : '● Offline';
-        const onlineCls   = acc.online ? 'online' : 'offline';
+        const offline = !acc.online;
+        const isActive = !isTemp && !offline && Number(acc.power || 0) > 5;
         const valueHtml = isTemp
-          ? `<div class="acc-tile-watt">${acc.temperature !== null && acc.temperature !== undefined ? acc.temperature : '—'}</div><div class="acc-tile-unit">°C</div>`
-          : `<div style="display:flex;align-items:baseline;gap:0.2rem;justify-content:flex-end;"><span class="acc-tile-watt">${Number(acc.power || 0).toFixed(0)}</span><span class="acc-tile-unit">W</span></div>
-             <div style="font-size:0.72rem;color:hsl(224, 18%, 73%);text-align:right;margin-top:0.1rem;line-height:1;">${Number(acc.energy_today_kwh || 0).toFixed(2)} kWh</div>`;
+          ? `<div class="acc-val">${acc.temperature !== null && acc.temperature !== undefined ? acc.temperature : '—'}<span class="acc-val-unit">°C</span></div>`
+          : `<div class="acc-val">${Number(acc.power || 0).toFixed(0)}<span class="acc-val-unit">W</span></div>`;
+        const subHtml = offline
+          ? '<div class="acc-sub offline">Offline</div>'
+          : (isTemp ? '' : `<div class="acc-sub">${Number(acc.energy_today_kwh || 0).toFixed(2)} kWh vandaag</div>`);
         return `
-          <div class="acc-tile">
-            <div class="acc-tile-icon${isTemp ? ' temp' : ''}">
-              <i class="mdi ${escapeHtml(acc.icon || 'mdi-power-plug')}" style="font-size:1.2rem;line-height:1"></i>
+          <div class="acc-tile${offline ? ' acc-offline' : ''}">
+            <div class="acc-tile-icon${isTemp ? ' temp' : ''}${isActive ? ' active' : ''}">
+              <i class="mdi ${escapeHtml(acc.icon || 'mdi-power-plug')}" style="font-size:1.25rem;line-height:1"></i>
             </div>
             <div class="acc-tile-info">
               <div class="acc-tile-name">${escapeHtml(acc.name)}</div>
-              <span class="acc-online-badge ${onlineCls}">${onlineLabel}</span>
+              ${subHtml}
             </div>
             <div class="acc-tile-power">
               ${valueHtml}
@@ -2990,19 +3574,22 @@
       const total = (hours.reduce((s, h) => s + h.radiation, 0) / 1000).toFixed(1);
       const peak = hours.reduce((best, h) => h.radiation > best.radiation ? h : best, hours[0] || {hour: 0, radiation: 0});
 
+      const nowHour = new Date().getHours();
       let bars = '';
       for (let i = 0; i < visible.length; i++) {
         const h = visible[i];
-        const pct = Math.max(4, Math.round((h.radiation / maxRad) * 100));
+        const pct = Math.max(3, Math.round((h.radiation / maxRad) * 100));
         const dim = h.radiation < 20 ? ' dim' : '';
-        bars += `<div class="forecast-col" data-hour="${h.hour}" data-rad="${Math.round(h.radiation)}" onclick="selectForecastBar(this)">
+        const isNow = day === 'today' && h.hour === nowHour;
+        const showLbl = h.hour % 3 === 0 || isNow;
+        bars += `<div class="forecast-col${isNow ? ' now' : ''}" data-hour="${h.hour}" data-rad="${Math.round(h.radiation)}" onclick="selectForecastBar(this)">
           <div class="forecast-bar${dim}" style="height:${pct}%"></div>
-          <div class="forecast-hour">${String(h.hour).padStart(2,'0')}</div>
+          <div class="forecast-hour">${showLbl ? String(h.hour).padStart(2,'0') : ''}</div>
         </div>`;
       }
 
       return `
-        <div class="forecast-tabs">
+        <div class="forecast-seg">
           <button class="forecast-tab${day==='today'?' active':''}" onclick="switchForecastDay('today')">Vandaag</button>
           <button class="forecast-tab${day==='tomorrow'?' active':''}" onclick="switchForecastDay('tomorrow')">Morgen</button>
         </div>
@@ -3011,8 +3598,8 @@
           ${bars}
         </div>
         <div class="forecast-meta">
-          <span>Piek: <strong>${String(peak.hour).padStart(2,'0')}:00</strong> &middot; ${Math.round(peak.radiation)} W/m²</span>
-          <span>Totaal: <strong>${total} kWh/m²</strong></span>
+          <span>Piek <strong>${String(peak.hour).padStart(2,'0')}:00</strong> · ${Math.round(peak.radiation)} W/m²</span>
+          <span>Totaal <strong>${total} kWh/m²</strong></span>
         </div>`;
     }
 
