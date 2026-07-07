@@ -643,6 +643,40 @@
       hideResetBtn();
     }
 
+    /* ── Vaste y-as bepalen bij eerste opbouw ──
+       De as wordt één keer berekend over het volledige bereik en daarna
+       vastgehouden tijdens zoomen/bijladen, zodat de lijnen niet verschuiven.
+       - net:         nullijn altijd zichtbaar; bij teruglevering ligt 0 in het midden
+       - temperature: vrij bereik met marge (0-lijn is hier niet relevant)
+       - overig (SolarBuffers/verbruikers): vanaf 0, die kunnen niet terugleveren */
+    function computeYBounds(values, type) {
+      let min = Infinity, max = -Infinity;
+      for (const v of values) {
+        if (v == null || !isFinite(v)) continue;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      if (min === Infinity) return { yMin: undefined, yMax: undefined };
+      if (type === 'net') {
+        if (min < 0) {
+          const m = Math.ceil(Math.max(Math.abs(min), Math.abs(max)) * 1.05) || 10;
+          return { yMin: -m, yMax: m };
+        }
+        return { yMin: 0, yMax: Math.ceil(max * 1.05) || 10 };
+      }
+      if (type === 'temperature') {
+        const pad = (max - min) * 0.08 || 1;
+        return { yMin: min - pad, yMax: max + pad };
+      }
+      return { yMin: 0, yMax: Math.ceil(max * 1.05) || 10 };
+    }
+
+    function yBoundsFor(instanceKey, values, type) {
+      const st = chartData[instanceKey];
+      if (st && st.yMin !== undefined) return { yMin: st.yMin, yMax: st.yMax };
+      return computeYBounds(values, type);
+    }
+
     /* ── Kleuren ── */
     function chartColor(alpha, type) {
       if (type === 'net')         return `hsla(220, 70%, 55%, ${alpha})`;
@@ -663,6 +697,7 @@
 
       const color = chartColor(1, type);
       const fill  = chartColor(0.18, type);
+      const { yMin, yMax } = yBoundsFor(instanceKey, values, type);
 
       chartInstances[instanceKey] = new Chart(canvas.getContext('2d'), {
         type: 'line',
@@ -681,7 +716,8 @@
           },
           scales: {
             x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
-            y: { ticks: { color: tickColor, callback: v => (unit==='°C'?v.toFixed(1):Math.round(v))+' '+unit }, grid: { color: gridColor } }
+            y: { min: yMin, max: yMax,
+                 ticks: { color: tickColor, callback: v => (unit==='°C'?v.toFixed(1):Math.round(v))+' '+unit }, grid: { color: gridColor } }
           }
         }
       });
@@ -694,6 +730,7 @@
       const purpleLine = isDark ? 'hsl(270,80%,72%)' : 'hsl(270,70%,55%)';
       const greenLine  = isDark ? 'hsl(145,75%,55%)' : 'hsl(145,65%,40%)';
       const zeroLine   = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)';
+      const { yMin, yMax } = yBoundsFor(instanceKey, values, 'net');
 
       chartInstances[instanceKey] = new Chart(canvas.getContext('2d'), {
         type: 'line',
@@ -744,6 +781,7 @@
           scales: {
             x: { ticks: { color: tickColor, maxTicksLimit: 6, maxRotation: 0 }, grid: { color: gridColor } },
             y: {
+              min: yMin, max: yMax,
               ticks: { color: tickColor, callback: v => Math.round(v) + ' W' },
               grid: {
                 color:     c => c.tick.value === 0 ? zeroLine : gridColor,
@@ -760,6 +798,8 @@
         labels, values, type, unit, pts, metric,
         originalFrom: pts[0]?.ts,
         originalTo:   pts[pts.length - 1]?.ts,
+        // Vaste y-as over het volledige bereik; blijft staan tijdens zoomen
+        ...computeYBounds(values, type),
       };
       buildChartOnCanvas(document.getElementById(canvasId), canvasId, labels, values, type, unit);
     }
