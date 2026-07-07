@@ -176,6 +176,10 @@
     .expand-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
 
     .chart-wrap { position: relative; height: 210px; }
+    /* Hammer.js zet inline touch-action:none → pagina scrollt niet meer over een
+       grafiek heen. pan-y geeft verticaal scrollen terug aan de browser; horizontaal
+       slepen en knijpen blijft voor de grafiek. */
+    .chart-wrap canvas { touch-action: pan-y !important; }
     .chart-loading, .chart-no-data {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -543,9 +547,11 @@
         },
         pan: {
           enabled: true, mode: 'x',
+          threshold: 10,  // korte tikjes/scroll-aanzetten starten geen pan
           onPanComplete: () => showResetBtn(canvasId),
         },
-        limits: { x: { minRange: 5 } },
+        // Niet voorbij de randen van de data kunnen pannen/zoomen
+        limits: { x: { min: 'original', max: 'original', minRange: 5 } },
       };
     }
 
@@ -708,6 +714,7 @@
         },
         options: {
           responsive: true, maintainAspectRatio: false,
+          resizeDelay: 200,  // demp re-layout bij adresbalk/rotatie op mobiel
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
@@ -762,6 +769,7 @@
         },
         options: {
           responsive: true, maintainAspectRatio: false,
+          resizeDelay: 200,  // demp re-layout bij adresbalk/rotatie op mobiel
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
