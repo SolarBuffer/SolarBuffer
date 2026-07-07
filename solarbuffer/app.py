@@ -350,6 +350,12 @@ def load_config():
         cfg["marstek_port"] = 30000
     if "marstek_max_power" not in cfg:
         cfg["marstek_max_power"] = 2000
+    if "marstek_invert_power" not in cfg:
+        # Marstek Open API: negatief = laden, positief = ontladen (omgekeerd
+        # t.o.v. de oude aanname). Uit te zetten als een model toch + = laden hanteert.
+        cfg["marstek_invert_power"] = True
+    if "zendure_max_power" not in cfg:
+        cfg["zendure_max_power"] = 800
     if "battery_priority" not in cfg:
         cfg["battery_priority"] = "boiler"
     if "battery_soc_threshold" not in cfg:
@@ -604,6 +610,9 @@ _bat_charge_start_kwh = None
 _bat_discharge_start_kwh = None
 _last_marstek_send = 0.0
 _last_marstek_power = None
+_last_zendure_send = 0.0
+_last_zendure_power = None
+_zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes)
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
 _p1_online = False
@@ -1265,6 +1274,12 @@ def settings_p1():
             cfg["marstek_max_power"] = int(request.form.get("marstek_max_power", 2000))
         except (ValueError, TypeError):
             cfg["marstek_max_power"] = 2000
+        if cfg.get("battery_type") == "marstek":
+            cfg["marstek_invert_power"] = "marstek_invert_power" in request.form
+        try:
+            cfg["zendure_max_power"] = int(request.form.get("zendure_max_power", 800))
+        except (ValueError, TypeError):
+            cfg["zendure_max_power"] = 800
         cfg["battery_priority"] = request.form.get("battery_priority", "boiler")
         try:
             cfg["battery_soc_threshold"] = int(request.form.get("battery_soc_threshold", 95))
@@ -1283,11 +1298,19 @@ def battery_debug():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
     cfg = load_config()
-    if cfg.get("battery_type") != "marstek":
-        return jsonify({"error": "Alleen beschikbaar voor Marstek"}), 400
+    bat_type = cfg.get("battery_type")
+    if bat_type not in ("marstek", "zendure"):
+        return jsonify({"error": "Alleen beschikbaar voor Marstek en Zendure"}), 400
     ips = cfg.get("battery_ips") or []
-    port = int(cfg.get("marstek_port") or 30000)
     results = {}
+    if bat_type == "zendure":
+        for ip in ips:
+            try:
+                results[ip] = {"properties/report": zendure_get_report(ip)}
+            except Exception as e:
+                results[ip] = {"properties/report": {"error": str(e)}}
+        return jsonify(results)
+    port = int(cfg.get("marstek_port") or 30000)
     for ip in ips:
         entry = {}
         for method in ("ES.GetStatus", "Bat.GetStatus"):
@@ -4408,6 +4431,8 @@ def control_loop():
     import_off_start = None
     prev_schedule_active_ips = set()
     _bat_tofull_active = False  # to_full mode actief voor accu-eerst bij max lading + boiler aan
+    _bat_saturated = False       # accu uitgeregeld: neemt overschot niet op → boiler vrijgeven
+    _bat_saturated_since = None  # start aanhoudende export terwijl accu zou moeten laden
 
     while True:
         try:
@@ -4967,6 +4992,25 @@ def control_loop():
                                 _bat_pw is not None and
                                 _bat_pw <= -(_total_max_charge - 50 * _num_bats)
                             )
+                            # Uitgeregeld-detectie: accu hoort het overschot op te
+                            # nemen maar doet dat niet (bijna vol, taper, of eigen
+                            # laadlimiet/socSet bereikt). Aanhoudende export zonder
+                            # max-lading → behandel als 'op max' zodat de boiler
+                            # vrijgave krijgt.
+                            if _bat_saturated:
+                                # Exit: accu laadt weer op max, of geen overschot
+                                # meer terwijl de boiler uit is (zelfde exit als to_full)
+                                if _bat_at_max or (not _any_sb_active and measured_power > 50):
+                                    _bat_saturated = False
+                                    _bat_saturated_since = None
+                            elif not _bat_at_max and measured_power < min(EXPORT_THRESHOLD, -50):
+                                if _bat_saturated_since is None:
+                                    _bat_saturated_since = now
+                                elif (now - _bat_saturated_since) >= 90:
+                                    _bat_saturated = True
+                            else:
+                                _bat_saturated_since = None
+                            _bat_at_max = _bat_at_max or _bat_saturated
                             # to_full state machine
                             if _bat_tofull_active:
                                 # Uitschakelconditie: boiler uit EN P1 > +50W (stop grid-import)
@@ -4997,6 +5041,8 @@ def control_loop():
                         else:
                             # SoC-drempel bereikt: accu standby, boiler is primaire regelaar.
                             _bat_tofull_active = False
+                            _bat_saturated = False
+                            _bat_saturated_since = None
                             if not _sb_can_run:
                                 _desired_perms = ["discharge_allowed"]
                             elif _force_no_discharge:
@@ -5035,7 +5081,25 @@ def control_loop():
                                 threading.Thread(
                                     target=set_marstek_control,
                                     args=(_marstek_ips[0], _marstek_port, _desired_mode,
-                                          _desired_perms, measured_power, _marstek_max),
+                                          _desired_perms, measured_power, _marstek_max,
+                                          cfg.get("marstek_invert_power", True)),
+                                    daemon=True,
+                                ).start()
+                    elif _bat_type == "zendure":
+                        _zendure_ips = cfg.get("battery_ips") or []
+                        _zendure_max = int(cfg.get("zendure_max_power") or 800)
+                        if _zendure_ips:
+                            if not enabled or not _p1_online:
+                                threading.Thread(
+                                    target=release_zendure_to_idle,
+                                    args=(_zendure_ips[0],),
+                                    daemon=True,
+                                ).start()
+                            else:
+                                threading.Thread(
+                                    target=set_zendure_control,
+                                    args=(_zendure_ips[0], _desired_mode,
+                                          _desired_perms, measured_power, _zendure_max),
                                     daemon=True,
                                 ).start()
                     elif _bat_token and _bat_control_ip and (
@@ -5497,15 +5561,20 @@ def release_marstek_to_auto(ip, port):
     return False
 
 
-def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000):
-    """Send a Passive-mode power setpoint to the Marstek battery.
+def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000, invert_power=True):
+    """Marstek blijft zoveel mogelijk in zijn eigen Auto-modus (eigen CT-regeling).
 
-    Setpoint is derived from mode+perms and the current P1 reading (measured_power):
-    - to_full          → charge at max_power (battery locks at max, boiler regulates)
-    - charge_only      → charge only from solar export: SP = max(0, -P1); standby on import
-    - no perms         → standby (0 W)
-    - discharge_only   → discharge proportional to grid import: SP = -min(P1, max); no charge
-    - both perms       → balance grid to 0 via SP = -P1 (charge on export, discharge on import)
+    Alleen als de accu vastgezet moet worden schrijft SolarBuffer een weekvullend
+    Manual-tijdschema (slot 0, 00:00-23:59, alle dagen) met een vast vermogen:
+
+    - to_full          → Manual @ max laadvermogen (accu vast op max, boiler regelt)
+    - geen permissies  → Manual @ 0 W (accu bevriezen zodat de boiler kan regelen)
+    - alleen laden     → export: Auto (eigen CT laadt het overschot)
+                         import: Manual @ 0 W (niet ontladen richting boiler
+                         bij legionella/schema/goedkoop tarief)
+    - alleen ontladen  → import: Auto (eigen CT compenseert het verbruik)
+                         export: Manual @ 0 W (overschot blijft zichtbaar voor de boiler)
+    - beide            → Auto (eigen nul-op-de-meter regeling)
     """
     global _last_battery_permissions, _last_battery_mode, _last_marstek_send, _last_marstek_power
 
@@ -5517,40 +5586,201 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000)
     discharge_only = (desired_perms == ["discharge_allowed"])
 
     if mode == "to_full":
-        # Battery locked at max charge power; boiler is the regulating device.
-        target_power = max_power
-    elif charge_only:
-        # Charge from solar export only — no grid charging, no discharge.
-        # SP = clamp(-P1, 0, max): export (P1<0) → charge at |P1|, import (P1>0) → standby.
-        target_power = int(max(0, min(max_power, -measured_power)))
+        action, target_power = "manual", max_power
     elif not perms:
-        target_power = 0
+        action, target_power = "manual", 0
+    elif charge_only:
+        if measured_power < -50:
+            action, target_power = "auto", None
+        elif measured_power > 50:
+            action, target_power = "manual", 0
+        else:
+            return True  # dode zone rond 0 W: behoud de huidige actie
     elif discharge_only:
-        # Discharge proportional to grid import; no charging.
-        # SP = -clamp(P1, 0, max): import (P1>0) → discharge at P1, export → standby.
-        target_power = -int(max(0, min(max_power, measured_power)))
+        if measured_power > 50:
+            action, target_power = "auto", None
+        elif measured_power < -50:
+            action, target_power = "manual", 0
+        else:
+            return True  # dode zone rond 0 W: behoud de huidige actie
     else:
-        # Both permissions: balance grid to 0 via SP = -P1.
-        target_power = int(max(-max_power, min(max_power, -measured_power)))
+        action, target_power = "auto", None
 
-    mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
-    power_changed = abs(target_power - (_last_marstek_power or 0)) > 25
-    needs_refresh = (now - _last_marstek_send) > 240
+    # Manual-schema blijft staan tot we het herschrijven (geen cd_time zoals bij
+    # Passive), dus alleen een trage keep-alive tegen externe wijzigingen.
+    needs_refresh = (now - _last_marstek_send) > 1800
 
-    if not mode_changed and not power_changed and not needs_refresh:
+    if action == "auto":
+        if _last_battery_mode == "auto" and not needs_refresh:
+            return True
+        try:
+            result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
+            if result.get("result", {}).get("set_result"):
+                _last_battery_permissions = desired_perms
+                _last_battery_mode = "auto"
+                _last_marstek_power = None
+                _last_marstek_send = now
+                return True
+        except Exception as e:
+            print(f"Marstek control error ({ip}:{port}): {e}")
+        return False
+
+    power_changed = (_last_marstek_power is None or
+                     abs(target_power - _last_marstek_power) > 25)
+    if _last_battery_mode == "manual" and not power_changed and not needs_refresh:
         return True
 
     try:
-        cfg_obj = {"mode": "Passive", "passive_cfg": {"power": target_power, "cd_time": 300}}
+        # Intern: positief = laden. Marstek Manual verwacht (vermoedelijk)
+        # negatief = laden → standaard omkeren (marstek_invert_power).
+        _send_power = -target_power if invert_power else target_power
+        cfg_obj = {
+            "mode": "Manual",
+            "manual_cfg": {
+                "time_num": 0,
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "week_set": 127,  # alle dagen (bit 0 = maandag)
+                "power": _send_power,
+                "enable": 1,
+            },
+        }
         result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": cfg_obj})
         if result.get("result", {}).get("set_result"):
             _last_battery_permissions = desired_perms
-            _last_battery_mode = mode
+            _last_battery_mode = "manual"
             _last_marstek_power = target_power
             _last_marstek_send = now
             return True
     except Exception as e:
         print(f"Marstek control error ({ip}:{port}): {e}")
+    return False
+
+
+# ================= ZENDURE LOKALE API (zenSDK) =================
+# SolarFlow 800/800 Plus/800 Pro, 1600 AC+, 2400 AC — lokale HTTP API op het
+# apparaat zelf (nieuwste firmware vereist). Uitlezen via GET /properties/report,
+# aansturen via POST /properties/write met het serienummer (sn) van de accu.
+# Zie https://github.com/Zendure/zenSDK
+
+def zendure_get_report(ip, timeout=3):
+    """Lees alle properties van de accu; cachet en passant het serienummer."""
+    r = requests.get(f"http://{ip}/properties/report", timeout=timeout)
+    r.raise_for_status()
+    data = r.json()
+    sn = data.get("sn") or data.get("deviceSn") or data.get("deviceId")
+    props = data.get("properties") or {}
+    if not sn:
+        sn = props.get("sn") or props.get("deviceSn")
+    if sn:
+        _zendure_sn[ip] = sn
+    return props
+
+
+def zendure_write_properties(ip, properties, timeout=3):
+    sn = _zendure_sn.get(ip)
+    if not sn:
+        zendure_get_report(ip, timeout=timeout)
+        sn = _zendure_sn.get(ip)
+    if not sn:
+        raise RuntimeError("Zendure serienummer onbekend (accu nog niet uitgelezen)")
+    r = requests.post(
+        f"http://{ip}/properties/write",
+        json={"sn": sn, "properties": properties},
+        timeout=timeout,
+    )
+    r.raise_for_status()
+    return True
+
+
+def release_zendure_to_idle(ip):
+    """Zet de Zendure op standby zodra SolarBuffer de regie loslaat.
+
+    De lokale API kent geen expliciete 'auto'-modus; smartMode=1 schrijft de
+    limieten alleen naar RAM, dus na een herstart van de accu gelden de eigen
+    instellingen weer.
+    """
+    global _last_battery_permissions, _last_battery_mode, _last_zendure_send, _last_zendure_power
+    now = time.time()
+    if _last_battery_mode == "idle" and (now - _last_zendure_send) < 240:
+        return True
+    try:
+        zendure_write_properties(ip, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
+        _last_battery_permissions = None
+        _last_battery_mode = "idle"
+        _last_zendure_power = None
+        _last_zendure_send = now
+        return True
+    except Exception as e:
+        print(f"Zendure idle-release error ({ip}): {e}")
+    return False
+
+
+def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800):
+    """Regel de Zendure op nul-op-de-meter; SolarBuffer is hier zelf de regelaar.
+
+    De lokale Zendure API kent geen eigen auto-modus (geen CT-regeling zoals de
+    Marstek), dus het setpoint wordt incrementeel geregeld: nieuw accuvermogen =
+    huidig accuvermogen + wat er nog op de P1 staat (export → meer laden,
+    import → minder laden / meer ontladen). Permissies begrenzen het bereik:
+    - to_full          → vast op max_power laden (accu vast op max, boiler regelt)
+    - charge_only      → alleen laden: clamp naar [0, max]
+    - geen perms       → standby (0 W)
+    - discharge_only   → alleen ontladen: clamp naar [-max, 0]
+    - beide perms      → vrij balanceren: clamp naar [-max, max]
+
+    Vertaling naar Zendure-properties (smartMode=1 → alleen RAM, flash-vriendelijk):
+    - SP > 0 (laden):    acMode=1, inputLimit=SP,  outputLimit=0
+    - SP < 0 (ontladen): acMode=2, outputLimit=-SP, inputLimit=0
+    - SP = 0 (standby):  acMode=1, inputLimit=0,   outputLimit=0
+    """
+    global _last_battery_permissions, _last_battery_mode, _last_zendure_send, _last_zendure_power
+
+    now = time.time()
+    desired_perms = sorted(perms)
+    max_power = int(max_power or 800)
+
+    charge_only = (desired_perms == ["charge_allowed"])
+    discharge_only = (desired_perms == ["discharge_allowed"])
+
+    if mode == "to_full":
+        target_power = max_power
+    elif not perms:
+        target_power = 0
+    else:
+        # Intern: positief = laden (battery_state power_w is andersom: <0 = laden)
+        _bat_now = -(battery_state.get("power_w") or 0)
+        _ideal = int(_bat_now - measured_power)
+        if charge_only:
+            target_power = max(0, min(max_power, _ideal))
+        elif discharge_only:
+            target_power = max(-max_power, min(0, _ideal))
+        else:
+            target_power = max(-max_power, min(max_power, _ideal))
+
+    mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
+    power_changed = abs(target_power - (_last_zendure_power or 0)) > 25
+    needs_refresh = (now - _last_zendure_send) > 240
+
+    if not mode_changed and not power_changed and not needs_refresh:
+        return True
+
+    if target_power > 0:
+        props = {"smartMode": 1, "acMode": 1, "inputLimit": target_power, "outputLimit": 0}
+    elif target_power < 0:
+        props = {"smartMode": 1, "acMode": 2, "outputLimit": -target_power, "inputLimit": 0}
+    else:
+        props = {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
+
+    try:
+        zendure_write_properties(ip, props)
+        _last_battery_permissions = desired_perms
+        _last_battery_mode = mode
+        _last_zendure_power = target_power
+        _last_zendure_send = now
+        return True
+    except Exception as e:
+        print(f"Zendure control error ({ip}): {e}")
     return False
 
 
@@ -5627,6 +5857,7 @@ def battery_poll_loop():
             if bat_type == "marstek":
                 port = int(cfg.get("marstek_port") or 30000)
                 max_power = int(cfg.get("marstek_max_power") or 2000)
+                invert = cfg.get("marstek_invert_power", True)
                 soc_list, power_list = [], []
                 any_online = False
                 for ip in ips:
@@ -5639,9 +5870,10 @@ def battery_poll_loop():
                         if soc is not None:
                             soc_list.append(float(soc))
                         if bp is not None:
-                            # Marstek: positive = charging → negate to match SolarBuffer convention
-                            # (power_w < 0 = charging, power_w > 0 = discharging)
-                            power_list.append(-float(bp))
+                            # SolarBuffer-conventie: power_w < 0 = laden, > 0 = ontladen.
+                            # invert=True → Marstek negatief = laden (zelfde als wij, niets doen)
+                            # invert=False → Marstek positief = laden (omdraaien)
+                            power_list.append(float(bp) if invert else -float(bp))
                         else:
                             # bat_power missing for this model — use Bat.GetStatus flags as proxy
                             try:
@@ -5664,7 +5896,45 @@ def battery_poll_loop():
                         "voltage_v": None,
                         "current_a": None,
                         "cycles": None,
-                        "mode": "Passive",
+                        "mode": _last_battery_mode or "Manual",
+                        "permissions": None,
+                        "max_consumption_w": max_power,
+                        "max_production_w": max_power,
+                        "online": True,
+                    })
+                else:
+                    battery_state["online"] = False
+
+            elif bat_type == "zendure":
+                max_power = int(cfg.get("zendure_max_power") or 800)
+                soc_list, power_list = [], []
+                any_online = False
+                for ip in ips:
+                    try:
+                        props = zendure_get_report(ip)
+                        any_online = True
+                        soc = props.get("electricLevel")
+                        charge_w = props.get("outputPackPower")    # laden (positief)
+                        discharge_w = props.get("packInputPower")  # ontladen (positief)
+                        if soc is not None:
+                            soc_list.append(float(soc))
+                        # SolarBuffer-conventie: power_w < 0 = laden, > 0 = ontladen
+                        p = 0.0
+                        if charge_w is not None:
+                            p -= float(charge_w)
+                        if discharge_w is not None:
+                            p += float(discharge_w)
+                        power_list.append(p)
+                    except Exception:
+                        pass
+                if any_online:
+                    battery_state.update({
+                        "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
+                        "power_w": round(sum(power_list), 1) if power_list else None,
+                        "voltage_v": None,
+                        "current_a": None,
+                        "cycles": None,
+                        "mode": _last_battery_mode or "Passive",
                         "permissions": None,
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,

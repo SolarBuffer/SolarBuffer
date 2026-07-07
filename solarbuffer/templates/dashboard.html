@@ -2752,7 +2752,7 @@
 
 {% block footer %}
 <div class="footer">Live data · Verversing elke seconde</div>
-<div class="footer">Version 6.0.0</div>
+<div class="footer">Version 0.6.1</div>
 {% endblock %}
 
 {% block scripts %}
@@ -2852,10 +2852,12 @@
                 pw < -5 ? 'hsl(145,55%,40%)' : pw > 5 ? 'hsl(32,90%,48%)' : 'hsl(224, 18%, 76%)';
             }
             const isMarstek = data.battery_type === 'marstek';
+            const isZendure = data.battery_type === 'zendure';
+            const isThirdParty = isMarstek || isZendure;
             const kwhEl = document.getElementById('batKwhDay');
             const chToday = bat.charge_today_kwh;
             const disToday = bat.discharge_today_kwh;
-            if (!isMarstek && chToday !== null && chToday !== undefined) {
+            if (!isThirdParty && chToday !== null && chToday !== undefined) {
               kwhEl.innerHTML =
                 `<span style="color:hsl(145,55%,40%)">↑${Number(chToday).toFixed(2)}</span>` +
                 `<span style="color:hsl(224, 18%, 83%);margin:0 0.15rem">/</span>` +
@@ -2864,15 +2866,16 @@
             } else {
               kwhEl.textContent = '';
             }
-            document.getElementById('batVoltRow').style.display = isMarstek ? 'none' : '';
-            document.getElementById('batForceTofullRow').style.display = isMarstek ? 'none' : '';
+            document.getElementById('batVoltRow').style.display = isThirdParty ? 'none' : '';
+            document.getElementById('batForceTofullRow').style.display = isThirdParty ? 'none' : '';
             const batIconEl = document.getElementById('batBrandIcon');
-            const batLogoSrc = isMarstek ? '/static/icons/battery-marstek.png' : '/static/icons/battery-homewizard.png';
+            const batLogoSrc = isMarstek ? '/static/icons/battery-marstek.png' :
+                               isZendure ? '/static/icons/battery-zendure.png' : '/static/icons/battery-homewizard.png';
             const existingImg = batIconEl.querySelector('img');
             if (!existingImg || existingImg.src !== location.origin + batLogoSrc) {
               batIconEl.innerHTML = `<img src="${batLogoSrc}" width="22" height="22" alt="">`;
             }
-            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto' };
+            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto', manual: 'Schema', idle: 'Standby' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
             const isToFull = !!data.battery_force_tofull;

@@ -264,6 +264,7 @@
     html[data-theme="dark"] .prio-option:checked + .prio-card .prio-icon { background: hsl(32, 85%, 50%); color: #fff; }
     html[data-theme="dark"] .prio-label { color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .prio-sub   { color: hsl(224, 18%, 74%); }
+    .bat-type-grid { grid-template-columns: 1fr 1fr 1fr; }
     .bat-type-grid .prio-icon { background: transparent !important; width: auto; height: auto; border-radius: 0; }
     .bat-type-grid .prio-icon img { border-radius: 50%; display: block; }
     .bat-type-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
@@ -329,7 +330,7 @@
             <label>Batterijtype</label>
             <div class="prio-grid bat-type-grid">
               <input type="radio" class="prio-option" name="battery_type" value="homewizard" id="bt_hw"
-                     {% if config.battery_type != 'marstek' %}checked{% endif %}
+                     {% if config.battery_type not in ('marstek', 'zendure') %}checked{% endif %}
                      onchange="updateBatteryType()">
               <label class="prio-card" for="bt_hw">
                 <div class="prio-icon">
@@ -341,13 +342,24 @@
 
               <input type="radio" class="prio-option" name="battery_type" value="marstek" id="bt_marstek"
                      {% if config.battery_type == 'marstek' %}checked{% endif %}
-                     onchange="updateBatteryType()" disabled>
-              <label class="prio-card" for="bt_marstek" style="opacity:0.45;cursor:not-allowed;pointer-events:none;">
+                     onchange="updateBatteryType()">
+              <label class="prio-card" for="bt_marstek">
                 <div class="prio-icon">
                   <img src="/static/icons/battery-marstek.png" width="44" height="44" alt="Marstek">
                 </div>
                 <span class="prio-label">Marstek</span>
-                <span class="prio-sub">Tijdelijk niet beschikbaar</span>
+                <span class="prio-sub">Venus via Open API (UDP)</span>
+              </label>
+
+              <input type="radio" class="prio-option" name="battery_type" value="zendure" id="bt_zendure"
+                     {% if config.battery_type == 'zendure' %}checked{% endif %}
+                     onchange="updateBatteryType()">
+              <label class="prio-card" for="bt_zendure">
+                <div class="prio-icon">
+                  <img src="/static/icons/battery-zendure.png" width="44" height="44" alt="Zendure">
+                </div>
+                <span class="prio-label">Zendure</span>
+                <span class="prio-sub">SolarFlow via lokale API</span>
               </label>
             </div>
           </div>
@@ -421,8 +433,38 @@
                 <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Max. laad- én ontlaadvermogen van je accu</div>
               </div>
             </div>
+            <div class="toggle-row" style="margin-bottom:0.75rem;">
+              <label for="marstekInvertPower" style="cursor:pointer;">
+                Omgekeerde +/− (negatief = laden)
+                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);font-weight:400;">Zet uit als de accu ontlaadt terwijl hij zou moeten laden</div>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" id="marstekInvertPower" name="marstek_invert_power"
+                       {% if config.marstek_invert_power is not defined or config.marstek_invert_power %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+            </div>
             <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
               Stel de Open API in via de Marstek app en configureer een statisch IP-adres voor je accu.
+              De accu blijft normaal in zijn eigen Auto-modus; alleen om het vermogen vast te zetten
+              (boiler-vrijgave of stilstand) schrijft SolarBuffer een tijdschema in slot 0 —
+              een eigen handmatig schema in slot 0 wordt dan overschreven.
+            </div>
+          </div>
+
+          <!-- Zendure-specifieke velden -->
+          <div id="zendureFields" style="display:none;">
+            <div class="field-group">
+              <label for="zendure_max_power">Max. vermogen (W)</label>
+              <input type="number" id="zendure_max_power" name="zendure_max_power"
+                     min="100" max="10000" step="100"
+                     value="{{ config.zendure_max_power or 800 }}">
+              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Max. laad- én ontlaadvermogen van je accu (SolarFlow 800: 800 W, 2400 AC: 2400 W)</div>
+            </div>
+            <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
+              Werkt met SolarFlow 800 (Plus/Pro), 1600 AC+ en 2400 AC (Pro) met de nieuwste firmware.
+              Configureer een statisch IP-adres voor je accu. Als SolarBuffer uitstaat wordt de accu op
+              standby gezet; na een herstart van de accu gelden de eigen instellingen weer.
             </div>
           </div>
           <div class="field-group">
@@ -488,13 +530,17 @@
 
     function updateBatteryType() {
       var isMarstek = document.getElementById('bt_marstek').checked;
-      document.getElementById('hwFields').style.display = isMarstek ? 'none' : 'block';
+      var isZendure = document.getElementById('bt_zendure').checked;
+      var isHw = !isMarstek && !isZendure;
+      document.getElementById('hwFields').style.display = isHw ? 'block' : 'none';
       document.getElementById('marstekFields').style.display = isMarstek ? 'block' : 'none';
+      document.getElementById('zendureFields').style.display = isZendure ? 'block' : 'none';
       document.querySelectorAll('#batteryIpsList #hwTokenRow').forEach(function(el) {
-        el.style.display = isMarstek ? 'none' : 'flex';
+        el.style.display = isHw ? 'flex' : 'none';
       });
       document.getElementById('batteryIpsLabel').firstChild.textContent =
-        isMarstek ? 'IP-adres(sen) Marstek  ' : 'IP-adres(sen) HWE-BAT  ';
+        isMarstek ? 'IP-adres(sen) Marstek  ' :
+        isZendure ? 'IP-adres(sen) Zendure  ' : 'IP-adres(sen) HWE-BAT  ';
     }
 
     (function() {
@@ -658,6 +704,7 @@
         + '<div class="row-pair-status" style="display:none;margin-top:0.4rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>';
       list.appendChild(row);
       updateAddBtn();
+      updateBatteryType();  // verberg token-veld bij Marstek/Zendure
     }
 
     function removeIpRow(btn) {
