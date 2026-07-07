@@ -253,12 +253,17 @@
     }
     @media (orientation: landscape) { .fs-landscape { display: flex; } }
 
-    /* Header balk: canvas raakt deze NOOIT aan */
+    /* Header balk: canvas raakt deze NOOIT aan.
+       Safe-area insets: in landscape zitten notch/afgeronde hoeken links of
+       rechts — houd de knoppen daar vandaan. */
     .fs-header {
       flex-shrink: 0;
       display: flex; align-items: center;
       gap: 0.5rem;
-      padding: 0.3rem 0.6rem;
+      padding: calc(0.3rem + env(safe-area-inset-top, 0px))
+               calc(0.6rem + env(safe-area-inset-right, 0px))
+               0.3rem
+               calc(0.6rem + env(safe-area-inset-left, 0px));
       background: var(--bg);
       border-bottom: 1px solid var(--card-border);
     }
@@ -270,14 +275,19 @@
     }
     .fs-header-btn {
       flex-shrink: 0;
-      height: 2.25rem; padding: 0 0.75rem;
+      height: 2.75rem; padding: 0 1rem;
       display: flex; align-items: center; justify-content: center;
       background: var(--card-bg); border: 1.5px solid var(--card-border);
-      border-radius: 0.5rem; color: var(--text); cursor: pointer;
-      font-size: 0.78rem; font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      border-radius: 0.6rem; color: var(--text); cursor: pointer;
+      font-size: 0.82rem; font-family: 'Space Grotesk', sans-serif; font-weight: 600;
       touch-action: manipulation;
+      position: relative;
     }
-    .fs-header-btn.close-btn { width: 2.25rem; padding: 0; border-radius: 50%; }
+    /* Onzichtbaar vergrote raakzone rondom de knoppen */
+    .fs-header-btn::after {
+      content: ''; position: absolute; inset: -10px;
+    }
+    .fs-header-btn.close-btn { width: 2.75rem; padding: 0; border-radius: 50%; font-size: 1rem; }
     .fs-header-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
     #fsResetBtn { display: none; }
 
@@ -377,7 +387,7 @@
         <div class="fs-title" id="fsTitle"></div>
         <button class="fs-header-btn" id="fsResetBtn" onclick="resetZoom('__fs__')">↺ Reset</button>
         <button class="fs-header-btn close-btn" id="fsCloseBtn" onclick="closeFullscreen()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
         </button>
       </div>
       <div class="fs-chart-wrap">
@@ -548,7 +558,12 @@
         pan: {
           enabled: true, mode: 'x',
           threshold: 10,  // korte tikjes/scroll-aanzetten starten geen pan
-          onPanComplete: () => showResetBtn(canvasId),
+          onPanComplete: ({ chart }) => {
+            showResetBtn(canvasId);
+            // Na slepen de buffer hercentreren zodat je verder kunt slepen
+            clearTimeout(_zoomTimers[canvasId]);
+            _zoomTimers[canvasId] = setTimeout(() => refetchForZoom(canvasId, chart), 500);
+          },
         },
         // Niet voorbij de randen van de data kunnen pannen/zoomen
         limits: { x: { min: 'original', max: 'original', minRange: 5 } },
@@ -577,31 +592,56 @@
 
       const fromTs = state.pts[minIdx].ts;
       const toTs   = state.pts[maxIdx].ts;
+      const rangeSeconds = toTs - fromTs;
 
       // Sla over als zichtbaar bereik meer dan 92% van het huidig bereik is
+      // (alleen bij de originele volledige weergave — bij een gebufferd venster
+      // moet slepen juist wél een hercentrering triggeren)
       const fullRange = state.pts[state.pts.length - 1].ts - state.pts[0].ts;
-      if ((toTs - fromTs) > fullRange * 0.92) return;
+      if (state.viewFrom == null && (toTs - fromTs) > fullRange * 0.92) return;
+
+      // Sla over als het zichtbare venster (vrijwel) gelijk is aan de vorige fetch
+      // — voorkomt een lus na programmatisch inzoomen op de buffer
+      if (state.viewFrom != null &&
+          Math.abs(fromTs - state.viewFrom) < rangeSeconds * 0.02 &&
+          Math.abs(toTs   - state.viewTo)   < rangeSeconds * 0.02) return;
+
+      // Buffer: haal één vensterbreedte extra op links en rechts, zodat je na
+      // het inzoomen door de tijd kunt blijven slepen zonder vast te lopen
+      const fetchFrom = Math.max(state.originalFrom ?? fromTs, fromTs - rangeSeconds);
+      const fetchTo   = Math.min(state.originalTo   ?? toTs,   toTs + rangeSeconds);
 
       _refetching.add(canvasId);
       try {
-        const res  = await fetch(`/api/history?metric=${encodeURIComponent(state.metric)}&from=${fromTs}&to=${toTs}`);
+        const res  = await fetch(`/api/history?metric=${encodeURIComponent(state.metric)}&from=${fetchFrom}&to=${fetchTo}`);
         const json = await res.json();
         const pts  = json.data || [];
         if (pts.length < 2) return;
 
-        const rangeSeconds = toTs - fromTs;
-        const sampled = lttb(pts, 500);
+        const sampled = lttb(pts, 1500);
         const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
         const values  = sampled.map(p => p.v);
 
         // Update state; originalFrom/To uit 'state' blijft behouden (voor Reset-knop)
-        chartData[canvasId] = { ...state, pts: sampled, labels, values };
+        chartData[canvasId] = { ...state, pts: sampled, labels, values,
+                                viewFrom: fromTs, viewTo: toTs };
 
-        // Herbouw grafiek: schone aanpak, geen verouderde zoom-indices
+        // Herbouw grafiek met de buffer en zoom in op het zichtbare venster
         const canvas = canvasId === '__fs__'
           ? document.getElementById('fsCanvas')
           : document.getElementById(canvasId);
         buildChartOnCanvas(canvas, canvasId, labels, values, state.type, state.unit);
+
+        const chartNew = chartInstances[canvasId];
+        let i0 = sampled.findIndex(p => p.ts >= fromTs);
+        if (i0 < 0) i0 = 0;
+        let i1 = i0 + 1;
+        for (let j = sampled.length - 1; j > i0; j--) {
+          if (sampled[j].ts <= toTs) { i1 = j; break; }
+        }
+        if (chartNew && i1 > i0 + 1 && (i0 > 0 || i1 < sampled.length - 1)) {
+          chartNew.zoomScale('x', { min: i0, max: i1 }, 'none');
+        }
         showResetBtn(canvasId);
         if (canvasId === '__fs__') requestAnimationFrame(initFsReadout);
       } catch(e) {
@@ -635,7 +675,8 @@
             const sampled = lttb(pts, 500);
             const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
             const values  = sampled.map(p => p.v);
-            chartData[canvasId] = { ...state, pts: sampled, labels, values };
+            chartData[canvasId] = { ...state, pts: sampled, labels, values,
+                                    viewFrom: null, viewTo: null };
             const canvas = canvasId === '__fs__'
               ? document.getElementById('fsCanvas')
               : document.getElementById(canvasId);
