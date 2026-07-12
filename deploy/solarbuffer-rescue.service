@@ -1,0 +1,6 @@
+[Unit]
+Description=SolarBuffer rescue (zelfherstel na crash)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/solarbuffer-rescue.sh

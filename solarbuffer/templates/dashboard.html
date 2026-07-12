@@ -2752,7 +2752,7 @@
 
 {% block footer %}
 <div class="footer">Live data · Verversing elke seconde</div>
-<div class="footer">Version 0.6.1</div>
+<div class="footer">Version 0.6.2</div>
 {% endblock %}
 
 {% block scripts %}
@@ -3228,6 +3228,7 @@
       if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
       if (d.started && d.on && d.price_triggered) return { label: "Goedkoop tarief", cls: "waiting", dot: "active" };
       if (d.started && d.on) return { label: "Actief", cls: "running", dot: "active" };
+      if (d.temp_shutoff_until && Date.now() / 1000 < d.temp_shutoff_until) return { label: "Op temperatuur", cls: "waiting", dot: "" };
       if (batteryBlocksStart) return { label: "Geblokkeerd", cls: "import", dot: "" };
       return { label: "Uit", cls: "off", dot: "" };
     }

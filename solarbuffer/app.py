@@ -159,6 +159,10 @@ def load_config():
         cfg["vacation_legionella"] = False
     if "gas_enabled" not in cfg:
         cfg["gas_enabled"] = False
+    if "temp_shutoff_enabled" not in cfg:
+        cfg["temp_shutoff_enabled"] = False
+    if "temp_shutoff_retry_min" not in cfg:
+        cfg["temp_shutoff_retry_min"] = 10
 
     # Migreer oude solaredge_* keys naar generieke inverter_* keys
     if "solaredge_enabled" in cfg and "inverter_enabled" not in cfg:
@@ -266,6 +270,8 @@ def load_config():
             user["ntfy_notify_schedule"] = True
         if "ntfy_notify_offline" not in user:
             user["ntfy_notify_offline"] = True
+        if "ntfy_notify_temp_shutoff" not in user:
+            user["ntfy_notify_temp_shutoff"] = True
         if "role" not in user:
             user["role"] = "admin"
 
@@ -638,6 +644,17 @@ _hw_update_cond = threading.Condition()
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 30
 MAX_BRIGHTNESS = 100
+
+# ================= TEMPERATUUR-UITSCHAKELING =================
+# Boiler op temperatuur: PID volledig uitgeregeld terwijl de eigen
+# vermogensmeter alleen nog standby-vermogen (3-10W) meet.
+TEMP_SHUTOFF_MIN_W = 3        # ondergrens standby-vermogen (W)
+TEMP_SHUTOFF_MAX_W = 10       # bovengrens standby-vermogen (W)
+TEMP_SHUTOFF_CONFIRM = 60     # criteria moeten zo lang aanhouden (s)
+TEMP_SHUTOFF_RETRY_MIN = 5    # minimale instelbare wachttijd (minuten)
+TEMP_SHUTOFF_RETRY_MAX = 60   # maximale instelbare wachttijd (minuten)
+TEMP_SHUTOFF_RETRY_DEFAULT = 10  # standaard wachttijd (minuten)
+TEMP_SHUTOFF_NOTIFY_RESET_W = 100  # boiler verwarmt weer echt → melding mag opnieuw
 
 # ================= ANTI-LEGIONELLA =================
 LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
@@ -1410,6 +1427,9 @@ def settings_solarbuffers():
     if request.method == "POST":
         old_cfg = load_config()
         cfg["shelly_devices"] = parse_devices_from_request(request)
+        cfg["temp_shutoff_enabled"] = request.form.get("temp_shutoff_enabled") == "on"
+        cfg["temp_shutoff_retry_min"] = max(TEMP_SHUTOFF_RETRY_MIN, min(TEMP_SHUTOFF_RETRY_MAX,
+            safe_int(request.form.get("temp_shutoff_retry_min", ""), TEMP_SHUTOFF_RETRY_DEFAULT)))
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
@@ -1520,6 +1540,7 @@ def status_json():
             "legionella_start": s.get("legionella_start"),
             "boost_until": s.get("boost_until"),
             "price_triggered": s.get("price_triggered", False),
+            "temp_shutoff_until": s.get("temp_shutoff_until"),
             "energy_today_kwh": round(s.get("energy_today_kwh", 0.0), 3),
             "linked_temperatures": linked_temp_map.get(d["ip"], []),
         })
@@ -2132,7 +2153,7 @@ def location():
             cfg["longitude"] = lon
             save_config(cfg)
             global _forecast_cache
-            _forecast_cache = {"data": None, "ts": 0}
+            _forecast_cache = {"data": None, "ts": 0, "error": None, "error_ts": 0}
             write_audit_log("location_updated", {"lat": lat, "lon": lon})
             return redirect("/dashboard")
     return render_template("location.html", dark_mode=get_user_dark_mode(),
@@ -3737,6 +3758,9 @@ def init_device_states(devices):
                 "legionella_start": s.get("legionella_start"),
                 "boost_until": None,
                 "price_triggered": False,
+                "temp_shutoff_since": None,
+                "temp_shutoff_until": None,
+                "temp_shutoff_notified": False,
                 "pre_schedule_started": None,
                 "pre_schedule_brightness": None,
                 "pre_schedule_freeze": None,
@@ -3866,6 +3890,9 @@ def _device_status_label(st):
         return "Bevroren"
     if st.get("started") and st.get("on"):
         return "Actief"
+    until = st.get("temp_shutoff_until")
+    if until and time.time() < until:
+        return "Op temperatuur"
     return "Uit"
 
 
@@ -4311,11 +4338,19 @@ def _socket_offline_unstarted(device):
             and not st["power_socket_on"])
 
 
+def _temp_shutoff_blocked(device):
+    """True zolang een boiler op temperatuur in de 10-minuten wachttijd zit."""
+    until = get_device_state(device).get("temp_shutoff_until")
+    return bool(until and time.time() < until)
+
+
 def higher_priorities_started_and_frozen(devices_sorted, priority):
     for d in devices_sorted:
         if d["priority"] < priority:
             if _socket_offline_unstarted(d):
                 continue  # socket unreachable → transparent to priority chain
+            if _temp_shutoff_blocked(d):
+                continue  # boiler op temperatuur → transparent to priority chain
             st = get_device_state(d)
             if not st["started"] or not st["freeze"]:
                 return False
@@ -4339,6 +4374,8 @@ def get_next_startable_device(devices_sorted):
             continue
         if _socket_offline_unstarted(d):
             continue  # socket unreachable → skip, try next priority
+        if _temp_shutoff_blocked(d):
+            continue  # boiler op temperatuur → wachttijd loopt nog, skip
         if prio == 1:
             return d
         if higher_priorities_started_and_frozen(devices_sorted, prio):
@@ -4932,6 +4969,66 @@ def control_loop():
 
             non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled and d["ip"] not in boost_handled and d["ip"] not in schedule_handled]
 
+            # ================= TEMPERATUUR-UITSCHAKELING =================
+            # Boiler op temperatuur: PID volledig uitgeregeld terwijl de eigen
+            # vermogensmeter alleen standby-vermogen (3-10W) meet. Houdt dit
+            # 1 minuut aan, dan wordt de boiler naar minimaal afgeregeld en
+            # uitgeschakeld. Na 10 minuten mag hij opnieuw starten om te
+            # checken of hij weer warmte kan opnemen (set/reset per boiler).
+            if cfg.get("temp_shutoff_enabled", False):
+                _ts_retry_min = max(TEMP_SHUTOFF_RETRY_MIN, min(TEMP_SHUTOFF_RETRY_MAX,
+                                    safe_int(cfg.get("temp_shutoff_retry_min", TEMP_SHUTOFF_RETRY_DEFAULT), TEMP_SHUTOFF_RETRY_DEFAULT)))
+                # Boost, tijdschema en anti-legionella forceren verwarming:
+                # daar geen detectie en geen doorlopende 1-minuut-teller.
+                _ts_ips = {d["ip"] for d in non_legionella}
+                for d in devices_sorted:
+                    if d["ip"] not in _ts_ips:
+                        device_states[d["ip"]]["temp_shutoff_since"] = None
+                for d in non_legionella:
+                    ip = d["ip"]
+                    st = device_states[ip]
+                    # Alleen mogelijk met een gekoppelde vermogensmeter
+                    if not d.get("power_meter"):
+                        st["temp_shutoff_since"] = None
+                        continue
+                    # Boiler verwarmt weer echt (>100W): temperatuur is gezakt,
+                    # de volgende temp-uitschakeling mag opnieuw een melding sturen
+                    if (st.get("power") or 0) > TEMP_SHUTOFF_NOTIFY_RESET_W:
+                        st["temp_shutoff_notified"] = False
+                    at_temp = (
+                        st["started"]
+                        and st["online"]
+                        and st.get("power_meter_online")
+                        and not st.get("manual_override")
+                        and st["brightness"] >= FREEZE_AT
+                        and TEMP_SHUTOFF_MIN_W <= (st.get("power") or 0) <= TEMP_SHUTOFF_MAX_W
+                    )
+                    if at_temp:
+                        if st.get("temp_shutoff_since") is None:
+                            st["temp_shutoff_since"] = now
+                        elif (now - st["temp_shutoff_since"]) >= TEMP_SHUTOFF_CONFIRM:
+                            st["temp_shutoff_since"] = None
+                            st["temp_shutoff_until"] = now + _ts_retry_min * 60
+                            st["price_triggered"] = False
+                            reset_device_to_off(ip)
+                            print(f"Temp-uitschakeling: {d.get('name', ip)} ({ip}) op temperatuur → uit, nieuwe startpoging over {_ts_retry_min} min")
+                            write_audit_log("temp_shutoff", {"ip": ip, "name": d.get("name", ip), "retry_min": _ts_retry_min})
+                            # Eenmalige melding: pas weer na een echte verwarmingsronde (>100W)
+                            if not st.get("temp_shutoff_notified"):
+                                st["temp_shutoff_notified"] = True
+                                send_notification(
+                                    f"<b>{d.get('name', ip)}</b> is op temperatuur en uitgeschakeld. "
+                                    f"Zodra de temperatuur zakt en er teruglevering is, start hij automatisch weer.",
+                                    event_key="ntfy_notify_temp_shutoff"
+                                )
+                    else:
+                        st["temp_shutoff_since"] = None
+            else:
+                for d in devices_sorted:
+                    st = device_states[d["ip"]]
+                    st["temp_shutoff_since"] = None
+                    st["temp_shutoff_until"] = None
+
             # ================= BATTERIJ PRIORITEIT =================
             battery_blocks_start = False
             _bat_cfg_enabled = cfg.get("battery_enabled", False)
@@ -5405,6 +5502,7 @@ def settings_ntfy():
         user["ntfy_notify_legionella"] = "ntfy_notify_legionella" in request.form
         user["ntfy_notify_schedule"] = "ntfy_notify_schedule" in request.form
         user["ntfy_notify_offline"] = "ntfy_notify_offline" in request.form
+        user["ntfy_notify_temp_shutoff"] = "ntfy_notify_temp_shutoff" in request.form
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:

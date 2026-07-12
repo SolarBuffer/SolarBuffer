@@ -1,0 +1,9 @@
+[Unit]
+Description=SolarBuffer rescue timer (controleert elke 10 minuten)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target
