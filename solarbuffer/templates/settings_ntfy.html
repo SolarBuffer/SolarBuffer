@@ -278,6 +278,11 @@
                    {% if user.ntfy_notify_offline %}checked{% endif %}>
             Apparaat niet bereikbaar
           </label>
+          <label class="toggle-row">
+            <input type="checkbox" name="ntfy_notify_temp_shutoff"
+                   {% if user.ntfy_notify_temp_shutoff %}checked{% endif %}>
+            Boiler op temperatuur uitgeschakeld
+          </label>
         </div>
       </div>
 

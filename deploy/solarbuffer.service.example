@@ -1,0 +1,19 @@
+[Unit]
+Description=SolarBuffer
+After=network-online.target
+Wants=network-online.target
+# Belangrijk voor het rescue-mechanisme: na 6 mislukte starts binnen
+# 2 minuten stopt systemd met proberen en gaat de unit naar 'failed'.
+# Pas dan grijpt solarbuffer-rescue in (pull en zo nodig rollback).
+StartLimitIntervalSec=120
+StartLimitBurst=6
+
+[Service]
+User=solarbuffer
+WorkingDirectory=/home/solarbuffer/SolarBuffer/solarbuffer
+ExecStart=/usr/bin/python3 app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
