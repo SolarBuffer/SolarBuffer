@@ -2752,7 +2752,7 @@
 
 {% block footer %}
 <div class="footer">Live data · Verversing elke seconde</div>
-<div class="footer">Version 0.6.1</div>
+<div class="footer">Version 0.6.2</div>
 {% endblock %}
 
 {% block scripts %}
@@ -3213,6 +3213,16 @@
         return { label: "Actief", badge: `Actief · ${devName(running)}`, sub: `${running.length} actieve buffer${n(running.length)}${frozen.length > 0 ? ` · ${frozen.length} bevroren` : ""}`, cls: "running", icon: SVG_FIRE };
       }
 
+      // Alle buffers op temperatuur: er kan niets meer starten, dus geen
+      // "Wachten op teruglevering" tonen
+      const nowSec = Date.now() / 1000;
+      const atTemp = devices.filter(d => d.temp_shutoff_until && nowSec < d.temp_shutoff_until);
+      if (atTemp.length > 0 && atTemp.length === devices.length) {
+        const SVG_THERMO = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15,13V5A3,3 0 0,0 12,2A3,3 0 0,0 9,5V13A5,5 0 1,0 15,13M12,4A1,1 0 0,1 13,5V8H11V5A1,1 0 0,1 12,4Z"/></svg>';
+        const nextRetry = Math.min(...atTemp.map(d => d.temp_shutoff_until));
+        return { label: "Op temperatuur", badge: `Op temperatuur · ${devName(atTemp)}`, sub: `Nieuwe startpoging over ${formatCountdown(nextRetry)}`, cls: "waiting", icon: SVG_THERMO };
+      }
+
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
       const SVG_BATTERY_BLOCK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67,4H14V2H10V4H8.33A1.33,1.33 0 0,0 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67A1.33,1.33 0 0,0 17,20.67V5.33C17,4.6 16.4,4 15.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg>';
       if (data.battery_blocks_start && started.length === 0) return { label: "Geblokkeerd", badge: "Geblokkeerd · Accu laadt eerst", sub: "Wacht tot accu op maximaal vermogen laadt", cls: "import", icon: SVG_BATTERY_BLOCK };
@@ -3223,17 +3233,22 @@
 
     function getDeviceState(d, batteryBlocksStart) {
       if (d.pending_start || d.waiting_for_power_socket) return { label: "Opstarten", cls: "pending", dot: "pending" };
-      if (!d.online) return { label: "", cls: "", dot: "" };
+      const atTemp = d.temp_shutoff_until && Date.now() / 1000 < d.temp_shutoff_until;
+      const tempState = { label: `Op temperatuur (${formatCountdown(d.temp_shutoff_until)})`, cls: "waiting", dot: "" };
+      // Socket uit tijdens de temp-wachttijd maakt de dimmer stroomloos:
+      // toon dan toch "Op temperatuur" in plaats van een leeg label
+      if (!d.online) return atTemp ? tempState : { label: "", cls: "", dot: "" };
       if (d.boost_until && Date.now() / 1000 < d.boost_until) return { label: "Boost", cls: "boost", dot: "active" };
       if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
       if (d.started && d.on && d.price_triggered) return { label: "Goedkoop tarief", cls: "waiting", dot: "active" };
       if (d.started && d.on) return { label: "Actief", cls: "running", dot: "active" };
+      if (atTemp) return tempState;
       if (batteryBlocksStart) return { label: "Geblokkeerd", cls: "import", dot: "" };
       return { label: "Uit", cls: "off", dot: "" };
     }
 
-    function formatBoostCountdown(boostUntil) {
-      const remaining = Math.max(0, Math.ceil(boostUntil - Date.now() / 1000));
+    function formatCountdown(until) {
+      const remaining = Math.max(0, Math.ceil(until - Date.now() / 1000));
       const m = Math.floor(remaining / 60);
       const s = remaining % 60;
       return `${m}:${String(s).padStart(2, "0")}`;
@@ -3285,7 +3300,7 @@
         const safeId = d.ip.replace(/\./g, "_").replace(/:/g, "_");
         const currentBrightness = Math.round(Number(d.brightness || 0));
         const boostActive = !!(d.boost_until && Date.now() / 1000 < d.boost_until);
-        const boostLabel = boostActive ? `Stop boost (${formatBoostCountdown(d.boost_until)})` : "Boost";
+        const boostLabel = boostActive ? `Stop boost (${formatCountdown(d.boost_until)})` : "Boost";
 
         // Handmatige helderheid alleen tonen als PID uitstaat
         const manualBrightnessHtml = !pidEnabled ? `
@@ -3313,8 +3328,10 @@
         const socketReady = hasSocket && d.power_socket_online;
         const stateTxt = d.online
           ? (state.label || 'Uit')
-          : (socketReady ? 'Klaar om te starten' : 'Offline');
-        const stateCls = d.online ? (state.cls || 'off') : (socketReady ? 'off' : 'offline');
+          : (state.label || (socketReady ? 'Klaar om te starten' : 'Offline'));
+        const stateCls = d.online
+          ? (state.cls || 'off')
+          : (state.label ? state.cls : (socketReady ? 'off' : 'offline'));
         let meterHtml = '';
         if (hasPowerMeter) {
           meterHtml = d.power_meter_online === false
