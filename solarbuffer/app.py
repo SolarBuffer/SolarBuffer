@@ -6344,6 +6344,11 @@ def history_metrics_api():
         for acc in cfg.get("accessories", [])
         if acc.get("record_history")
     }
+    solar_acc_names = {
+        (acc.get("name") or acc.get("id", "")).strip()
+        for acc in cfg.get("accessories", [])
+        if acc.get("record_history") and acc.get("is_solar")
+    }
 
     filtered = []
     for m in all_metrics:
@@ -6354,7 +6359,15 @@ def history_metrics_api():
         else:
             filtered.append(m)
 
-    return jsonify({"metrics": filtered})
+    # Zonnepanelen-metrics apart doorgeven: de grafiekenpagina toont opwek
+    # dan positief (omhoog) met een eigen schaal en kleur
+    solar_metrics = [
+        m for m in filtered
+        if m.startswith("acc:") and m.endswith(":power")
+        and m.split(":", 2)[1] in solar_acc_names
+    ]
+
+    return jsonify({"metrics": filtered, "solar_metrics": solar_metrics})
 
 
 # ================= P1 POLL =================
