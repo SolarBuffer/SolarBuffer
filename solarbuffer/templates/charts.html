@@ -620,7 +620,7 @@
 
         const sampled = lttb(pts, 1500);
         const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
-        const values  = sampled.map(p => p.v);
+        const values  = sampled.map(p => chartValue(state.type, p.v));
 
         // Update state; originalFrom/To uit 'state' blijft behouden (voor Reset-knop)
         chartData[canvasId] = { ...state, pts: sampled, labels, values,
@@ -674,7 +674,7 @@
             const rangeSeconds = state.originalTo - state.originalFrom;
             const sampled = lttb(pts, 500);
             const labels  = sampled.map(p => fmtTs(p.ts, rangeSeconds));
-            const values  = sampled.map(p => p.v);
+            const values  = sampled.map(p => chartValue(state.type, p.v));
             chartData[canvasId] = { ...state, pts: sampled, labels, values,
                                     viewFrom: null, viewTo: null };
             const canvas = canvasId === '__fs__'
@@ -715,6 +715,12 @@
         const pad = (max - min) * 0.08 || 1;
         return { yMin: min - pad, yMax: max + pad };
       }
+      if (type === 'solar') {
+        // Waarden zijn al omgeklapt (opwek = positief); klein negatief
+        // standby-verbruik 's nachts blijft zichtbaar
+        return { yMin: min < 0 ? Math.floor(min * 1.05) : 0,
+                 yMax: Math.max(10, Math.ceil(max * 1.05)) };
+      }
       return { yMin: 0, yMax: Math.ceil(max * 1.05) || 10 };
     }
 
@@ -728,6 +734,7 @@
     function chartColor(alpha, type) {
       if (type === 'net')         return `hsla(220, 70%, 55%, ${alpha})`;
       if (type === 'power')       return `hsla(145, 55%, 40%, ${alpha})`;
+      if (type === 'solar')       return `hsla(32,  90%, 48%, ${alpha})`;
       if (type === 'temperature') return `hsla(0,   80%, 55%, ${alpha})`;
       return `hsla(260, 60%, 55%, ${alpha})`;
     }
@@ -979,6 +986,14 @@
       return res.json();
     }
 
+    let _solarMetrics = new Set();
+
+    /* Zonnepanelen meten opwek als negatief vermogen; in de grafiek klappen
+       we het teken om zodat meer opwek omhoog gaat */
+    function chartValue(type, v) {
+      return type === 'solar' ? -v : v;
+    }
+
     function metricLabel(metric) {
       if (metric === 'net_power')
         return ['Netvermogen', 'Verbruik (paars) · teruglevering (groen)', 'W', 'net'];
@@ -987,7 +1002,10 @@
       const am = metric.match(/^acc:(.+):(power|temperature)$/);
       if (am) {
         if (am[2] === 'temperature') return [am[1] + ' — Temp.', 'Gemeten temperatuur', '°C', 'temperature'];
-        if (am[2] === 'power')       return [am[1] + ' — Vermogen', 'Gemeten vermogen', 'W', 'power'];
+        if (am[2] === 'power') {
+          if (_solarMetrics.has(metric)) return [am[1] + ' — Opwek', 'Opgewekt vermogen', 'W', 'solar'];
+          return [am[1] + ' — Vermogen', 'Gemeten vermogen', 'W', 'power'];
+        }
       }
       return [metric, '', '', 'other'];
     }
@@ -1052,7 +1070,7 @@
           const { from, to } = getTimeRange();
           const sampled = lttb(pts, 500);
           const labels  = sampled.map(p => fmtTs(p.ts, to - from));
-          const values  = sampled.map(p => p.v);
+          const values  = sampled.map(p => chartValue(type, p.v));
           loading.style.display = 'none';
           canvas.style.display  = 'block';
           buildChart(cid, labels, values, type, unit, sampled, m);
@@ -1067,6 +1085,7 @@
     async function fetchMetrics() {
       const res  = await fetch('/api/history/metrics');
       const json = await res.json();
+      _solarMetrics = new Set(json.solar_metrics || []);
       return (json.metrics || []).filter(m =>
         m === 'net_power' ||
         /^device:.+:power$/.test(m) ||
