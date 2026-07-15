@@ -625,6 +625,10 @@
       background: hsl(215, 80%, 58%);
     }
 
+    .dot.offline {
+      background: #ef4444;
+    }
+
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -3237,7 +3241,14 @@
       const tempState = { label: `Op temperatuur (${formatCountdown(d.temp_shutoff_until)})`, cls: "waiting", dot: "" };
       // Socket uit tijdens de temp-wachttijd maakt de dimmer stroomloos:
       // toon dan toch "Op temperatuur" in plaats van een leeg label
-      if (!d.online) return atTemp ? tempState : { label: "", cls: "", dot: "" };
+      if (!d.online) {
+        if (atTemp) return tempState;
+        // Geparkeerd achter een uitgeschakelde socket is normaal (geen alarm);
+        // staat de socket aan maar blijft de dimmer onbereikbaar → echt offline
+        const socketParked = hasConfiguredSocket(d) && d.power_socket_online && !d.power_socket_on;
+        if (socketParked) return { label: "", cls: "", dot: "" };
+        return { label: "Offline", cls: "offline", dot: "offline" };
+      }
       if (d.boost_until && Date.now() / 1000 < d.boost_until) return { label: "Boost", cls: "boost", dot: "active" };
       if (d.freeze) return { label: "Bevroren", cls: "freeze", dot: "freeze" };
       if (d.started && d.on && d.price_triggered) return { label: "Goedkoop tarief", cls: "waiting", dot: "active" };
@@ -3296,7 +3307,7 @@
         const fillWidth = available ? getVisualBrightness(d.brightness) : 0;
         const hasSocket = hasConfiguredSocket(d);
         const hasPowerMeter = hasConfiguredPowerMeter(d);
-        const onlineLabel = d.online ? "● Online" : (hasSocket && d.power_socket_online ? "● Offline - Ready to start" : "● Offline");
+        const onlineLabel = d.online ? "● Online" : (hasSocket && d.power_socket_online && !d.power_socket_on ? "● Offline - Ready to start" : "● Offline");
         const safeId = d.ip.replace(/\./g, "_").replace(/:/g, "_");
         const currentBrightness = Math.round(Number(d.brightness || 0));
         const boostActive = !!(d.boost_until && Date.now() / 1000 < d.boost_until);
