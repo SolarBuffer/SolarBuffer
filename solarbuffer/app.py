@@ -2305,6 +2305,7 @@ def toggle_shelly(ip):
         # Handmatig inschakelen annuleert de temp-wachttijd
         st["temp_shutoff_until"] = None
         st["temp_shutoff_since"] = None
+        st["temp_shutoff_silent_restart"] = False
         ready = ensure_power_socket_on(device)
         if not ready:
             write_audit_log("device_toggle_waiting_for_power_socket", {"device_ip": ip})
@@ -2368,6 +2369,7 @@ def set_brightness_manual(ip):
         # Handmatig inschakelen annuleert de temp-wachttijd
         st["temp_shutoff_until"] = None
         st["temp_shutoff_since"] = None
+        st["temp_shutoff_silent_restart"] = False
         if has_power_socket(device):
             ready = ensure_power_socket_on(device)
             if not ready:
@@ -3767,6 +3769,7 @@ def init_device_states(devices):
                 "temp_shutoff_since": None,
                 "temp_shutoff_until": None,
                 "temp_shutoff_notified": False,
+                "temp_shutoff_silent_restart": False,
                 "pre_schedule_started": None,
                 "pre_schedule_brightness": None,
                 "pre_schedule_freeze": None,
@@ -4146,6 +4149,7 @@ def _handle_mqtt_command(prefix, topic, payload):
             # Handmatig inschakelen annuleert de temp-wachttijd
             st["temp_shutoff_until"] = None
             st["temp_shutoff_since"] = None
+            st["temp_shutoff_silent_restart"] = False
             ensure_power_socket_on(device)
             st["on"] = True
             st["manual_override"] = True
@@ -4428,6 +4432,15 @@ def graceful_off_device(ip):
     set_shelly(MIN_BRIGHTNESS, True, ip)
     time.sleep(1)
     set_shelly(0, False, ip)
+
+
+def _consume_silent_restart(ip):
+    """True als deze start de stille herstart na een temp-uitschakeling is."""
+    st = device_states[ip]
+    if st.get("temp_shutoff_silent_restart"):
+        st["temp_shutoff_silent_restart"] = False
+        return True
+    return False
 
 
 def reset_device_to_off(ip):
@@ -4974,12 +4987,13 @@ def control_loop():
                         set_shelly(st["brightness"], True, ip)
                         mark_device_activity(d)
                         offline_since_map.pop(ip, None)
-                        if st.get("price_triggered"):
-                            price_ct_now = get_current_price_ct()
-                            price_label = f" ({price_ct_now:.1f} ct/kWh)" if price_ct_now is not None else ""
-                            send_notification(f"💶 <b>{d.get('name', ip)}</b> gestart op goedkoop stroomtarief{price_label}.", event_key="ntfy_notify_start")
-                        else:
-                            send_notification(f"☀️ <b>{d.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
+                        if not _consume_silent_restart(ip):
+                            if st.get("price_triggered"):
+                                price_ct_now = get_current_price_ct()
+                                price_label = f" ({price_ct_now:.1f} ct/kWh)" if price_ct_now is not None else ""
+                                send_notification(f"💶 <b>{d.get('name', ip)}</b> gestart op goedkoop stroomtarief{price_label}.", event_key="ntfy_notify_start")
+                            else:
+                                send_notification(f"☀️ <b>{d.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
 
             if measured_power <= EXPORT_THRESHOLD:
                 if export_start is None:
@@ -5030,6 +5044,9 @@ def control_loop():
                             st["temp_shutoff_since"] = None
                             st["temp_shutoff_until"] = now + _ts_retry_min * 60
                             st["price_triggered"] = False
+                            # De herstart na de wachttijd verloopt stil: de
+                            # temp-melding belooft die al, geen extra startbericht
+                            st["temp_shutoff_silent_restart"] = True
                             reset_device_to_off(ip)
                             print(f"Temp-uitschakeling: {d.get('name', ip)} ({ip}) op temperatuur → uit, nieuwe startpoging over {_ts_retry_min} min")
                             write_audit_log("temp_shutoff", {"ip": ip, "name": d.get("name", ip), "retry_min": _ts_retry_min})
@@ -5254,7 +5271,8 @@ def control_loop():
                                 set_shelly(MIN_BRIGHTNESS, True, ip)
                                 mark_device_activity(next_dev)
                                 offline_since_map.pop(ip, None)
-                                send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
+                                if not _consume_silent_restart(ip):
+                                    send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
                         export_start = None
                     else:
                         st["started"] = True
@@ -5270,7 +5288,8 @@ def control_loop():
                         set_shelly(MIN_BRIGHTNESS, True, ip)
                         mark_device_activity(next_dev)
                         offline_since_map.pop(ip, None)
-                        send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
+                        if not _consume_silent_restart(ip):
+                            send_notification(f"☀️ <b>{next_dev.get('name', ip)}</b> gestart op zonnestroom.", event_key="ntfy_notify_start")
                         export_start = None
 
             # === DYNAMISCH TARIEF ===
@@ -5316,7 +5335,8 @@ def control_loop():
                                 set_shelly(b, True, ip)
                                 mark_device_activity(next_dev)
                                 offline_since_map.pop(ip, None)
-                                send_notification(f"💶 <b>{next_dev.get('name', ip)}</b> gestart op goedkoop stroomtarief ({price_ct:.1f} ct/kWh).", event_key="ntfy_notify_start")
+                                if not _consume_silent_restart(ip):
+                                    send_notification(f"💶 <b>{next_dev.get('name', ip)}</b> gestart op goedkoop stroomtarief ({price_ct:.1f} ct/kWh).", event_key="ntfy_notify_start")
                         else:
                             st["started"] = True
                             st["pending_start"] = False
@@ -5329,7 +5349,8 @@ def control_loop():
                             set_shelly(b, True, ip)
                             mark_device_activity(next_dev)
                             offline_since_map.pop(ip, None)
-                            send_notification(f"💶 <b>{next_dev.get('name', ip)}</b> gestart op goedkoop stroomtarief ({price_ct:.1f} ct/kWh).", event_key="ntfy_notify_start")
+                            if not _consume_silent_restart(ip):
+                                send_notification(f"💶 <b>{next_dev.get('name', ip)}</b> gestart op goedkoop stroomtarief ({price_ct:.1f} ct/kWh).", event_key="ntfy_notify_start")
 
             # Price-triggered apparaten niet via PID regelen — houd op vast vermogen
             non_price_regulated = [d for d in non_legionella if not device_states[d["ip"]].get("price_triggered")]
