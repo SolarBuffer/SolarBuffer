@@ -157,6 +157,33 @@
     .btn-row { display: flex; gap: 0.75rem; }
     .btn-row .btn-primary { flex: 1; }
 
+    /* Regelsnelheid-slider (Ki-actie) */
+    .field-wide { grid-column: 1 / -1; }
+    .ki-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .ki-slider-row .ki-end {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: hsl(224, 18%, 67%);
+      white-space: nowrap;
+    }
+    input[type="range"].ki-slider {
+      flex: 1;
+      min-width: 0;
+      accent-color: hsl(32, 95%, 52%);
+      cursor: pointer;
+    }
+    .ki-value {
+      margin-top: 0.35rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: hsl(224, 26%, 30%);
+      text-align: center;
+    }
+
     @media (max-width: 480px) {
       .expert-grid { grid-template-columns: 1fr; }
     }
@@ -168,6 +195,8 @@
     html[data-theme="dark"] .toggle-row { color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .field-label { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .field-help { color: hsl(224, 18%, 69%); }
+    html[data-theme="dark"] .ki-value { color: hsl(224, 18%, 85%); }
+    html[data-theme="dark"] .ki-slider-row .ki-end { color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .input-with-unit { border-color: hsl(224, 38%, 19%); }
     html[data-theme="dark"] .input-with-unit:focus-within { border-color: hsl(32, 75%, 52%); }
     html[data-theme="dark"] .input-with-unit input { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 95%); }
@@ -320,6 +349,18 @@
               <span class="unit">s</span>
             </div>
           </div>
+          <div class="field field-wide">
+            <span class="field-label">Regelsnelheid</span>
+            <span class="field-help">Hoe vlot de regeling het vermogen bijstuurt. Dubbelklik op de slider voor standaard.</span>
+            <div class="ki-slider-row">
+              <span class="ki-end">Trager −20%</span>
+              <input type="range" class="ki-slider" name="PID_KI_ADJUST" id="kiAdjust"
+                     min="-20" max="20" step="1"
+                     value="{{ config.expert_settings.get('PID_KI_ADJUST', 0) if config.expert_settings else 0 }}">
+              <span class="ki-end">+20% Sneller</span>
+            </div>
+            <div class="ki-value" id="kiAdjustLabel"></div>
+          </div>
         </div>
       </div>
 
@@ -370,5 +411,18 @@
     }
     document.getElementById('expertMode').addEventListener('change', updateExpertVisibility);
     updateExpertVisibility();
+
+    // Regelsnelheid-slider: live label in begrijpelijke taal
+    const kiSlider = document.getElementById('kiAdjust');
+    function updateKiLabel() {
+      const v = parseInt(kiSlider.value, 10) || 0;
+      const label = document.getElementById('kiAdjustLabel');
+      if (v === 0)    label.textContent = 'Standaard regelsnelheid';
+      else if (v > 0) label.textContent = `+${v}% sneller — reageert vlotter op veranderingen`;
+      else            label.textContent = `−${Math.abs(v)}% trager — regelt rustiger en stabieler`;
+    }
+    kiSlider.addEventListener('input', updateKiLabel);
+    kiSlider.addEventListener('dblclick', () => { kiSlider.value = 0; updateKiLabel(); });
+    updateKiLabel();
   </script>
 {% endblock %}
