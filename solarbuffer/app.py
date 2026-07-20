@@ -60,7 +60,8 @@ DEFAULT_EXPERT_SETTINGS = {
     "PID_NEUTRAL_HIGH": 45,
     "POWER_SOCKET_DELAY": 5,
     "POWER_SOCKET_HOLD_SECONDS": 60,
-    "BOOST_DURATION": 900
+    "BOOST_DURATION": 900,
+    "PID_KI_ADJUST": 0
 }
 
 # ===== DYNAMIC PRICING =====
@@ -655,6 +656,7 @@ TEMP_SHUTOFF_RETRY_MIN = 5    # minimale instelbare wachttijd (minuten)
 TEMP_SHUTOFF_RETRY_MAX = 60   # maximale instelbare wachttijd (minuten)
 TEMP_SHUTOFF_RETRY_DEFAULT = 10  # standaard wachttijd (minuten)
 TEMP_SHUTOFF_NOTIFY_RESET_W = 100  # boiler verwarmt weer echt → melding mag opnieuw
+TEMP_SHUTOFF_REARM_HEAT_SEC = 15 * 60  # melding pas opnieuw na ≥15 min echte verwarming
 
 # ================= ANTI-LEGIONELLA =================
 LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
@@ -3770,6 +3772,7 @@ def init_device_states(devices):
                 "temp_shutoff_until": None,
                 "temp_shutoff_notified": False,
                 "temp_shutoff_silent_restart": False,
+                "temp_heating_since": None,
                 "pre_schedule_started": None,
                 "pre_schedule_brightness": None,
                 "pre_schedule_freeze": None,
@@ -4451,6 +4454,7 @@ def reset_device_to_off(ip):
     state["started"] = False
     state["pending_start"] = False
     state["manual_override"] = False
+    state["temp_heating_since"] = None
     state["saturated_since"] = None
     state["min_since"] = None
     state["waiting_for_power_socket"] = False
@@ -4545,6 +4549,14 @@ def control_loop():
 
             init_device_states(devices)
             init_device_pids(devices)
+
+            # Regelsnelheid: Ki-actie ±20% instelbaar via expert settings
+            _ki_adjust = max(-20, min(20, int(settings.get("PID_KI_ADJUST", 0) or 0)))
+            _ki_eff = PID_KI * (1 + _ki_adjust / 100.0)
+            for _pid in device_pids.values():
+                if _pid.Ki != _ki_eff:
+                    _pid.tunings = (PID_KP, _ki_eff, PID_KD)
+
             now = time.time()
 
             for d in devices:
@@ -5025,10 +5037,10 @@ def control_loop():
                     if not d.get("power_meter"):
                         st["temp_shutoff_since"] = None
                         continue
-                    # Boiler verwarmt weer echt (>100W): temperatuur is gezakt,
-                    # de volgende temp-uitschakeling mag opnieuw een melding sturen
-                    if (st.get("power") or 0) > TEMP_SHUTOFF_NOTIFY_RESET_W:
-                        st["temp_shutoff_notified"] = False
+                    # Boiler verwarmt weer echt (>100W): onthoud wanneer deze
+                    # verwarmingsronde begon (korte dips beëindigen hem niet)
+                    if (st.get("power") or 0) > TEMP_SHUTOFF_NOTIFY_RESET_W and st.get("temp_heating_since") is None:
+                        st["temp_heating_since"] = now
                     at_temp = (
                         st["started"]
                         and st["online"]
@@ -5047,10 +5059,17 @@ def control_loop():
                             # De herstart na de wachttijd verloopt stil: de
                             # temp-melding belooft die al, geen extra startbericht
                             st["temp_shutoff_silent_restart"] = True
+                            # Alleen na een substantiële verwarmingsronde (boiler
+                            # was echt leeggebruikt) mag er opnieuw een melding
+                            # komen; korte top-ups na de wachttijd blijven stil
+                            heat_start = st.get("temp_heating_since")
+                            if heat_start and (now - heat_start) >= TEMP_SHUTOFF_REARM_HEAT_SEC:
+                                st["temp_shutoff_notified"] = False
                             reset_device_to_off(ip)
                             print(f"Temp-uitschakeling: {d.get('name', ip)} ({ip}) op temperatuur → uit, nieuwe startpoging over {_ts_retry_min} min")
                             write_audit_log("temp_shutoff", {"ip": ip, "name": d.get("name", ip), "retry_min": _ts_retry_min})
-                            # Eenmalige melding: pas weer na een echte verwarmingsronde (>100W)
+                            # Eenmalige melding: pas weer na een substantiële
+                            # verwarmingsronde (≥15 min boven 100W)
                             if not st.get("temp_shutoff_notified"):
                                 st["temp_shutoff_notified"] = True
                                 send_notification(
