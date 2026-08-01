@@ -329,6 +329,44 @@ def load_config():
                 if "code" not in cmd:
                     cmd["code"] = ""
 
+    if "automations" not in cfg or not isinstance(cfg["automations"], list):
+        cfg["automations"] = []
+    for rule in cfg["automations"]:
+        if "id" not in rule:
+            rule["id"] = str(uuid.uuid4())
+        if "name" not in rule:
+            rule["name"] = "Automatisering"
+        if "enabled" not in rule:
+            rule["enabled"] = True
+        if "hold_seconds" not in rule:
+            rule["hold_seconds"] = 60
+        if "conditions" not in rule or not isinstance(rule["conditions"], dict):
+            rule["conditions"] = {}
+        cond = rule["conditions"]
+        cond.setdefault("p1_enabled", False)
+        cond.setdefault("p1_operator", "<=")
+        cond.setdefault("p1_value", -50)
+        cond.setdefault("boiler_enabled", False)
+        cond.setdefault("boiler_device_ip", "")
+        cond.setdefault("boiler_operator", ">=")
+        cond.setdefault("boiler_value", 95)
+        cond.setdefault("accessory_enabled", False)
+        cond.setdefault("accessory_id", "")
+        cond.setdefault("accessory_operator", ">=")
+        cond.setdefault("accessory_value", 100)
+        cond.setdefault("time_enabled", False)
+        cond.setdefault("start_time", "00:00")
+        cond.setdefault("end_time", "23:59")
+        cond.setdefault("days", [0, 1, 2, 3, 4, 5, 6])
+        if "action_type" not in rule:
+            rule["action_type"] = "broadlink"
+        rule.setdefault("broadlink_id", "")
+        rule.setdefault("ir_device_id", "")
+        rule.setdefault("command_id", "")
+        rule.setdefault("socket_type", "shelly")
+        rule.setdefault("socket_ip", "")
+        rule.setdefault("socket_action", "on")
+
     if "battery_enabled" not in cfg:
         cfg["battery_enabled"] = False
     if "battery_type" not in cfg:
@@ -373,11 +411,17 @@ def load_config():
     return cfg
 
 
+_config_save_lock = threading.Lock()
+
+
 def save_config(data):
-    tmp = CONFIG_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
-    os.replace(tmp, CONFIG_FILE)
+    # Uniek tempbestand per aanroep zodat gelijktijdige save_config-calls (bijv. een
+    # achtergrondlus + een HTTP-request) elkaars tempbestand nooit kunnen wegkapen.
+    tmp = f"{CONFIG_FILE}.{os.getpid()}.{threading.get_ident()}.tmp"
+    with _config_save_lock:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+        os.replace(tmp, CONFIG_FILE)
 
 
 def load_state():
@@ -3424,6 +3468,293 @@ def broadlink_send_command(bl_id, ir_id, cmd_id):
         return jsonify(success=True)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+
+# ================= AUTOMATISERINGEN =================
+# Regel = voorwaarden (P1-vermogen / boiler-% / tijdvenster) die een aaneengesloten
+# periode (hold_seconds) waar moeten zijn, gevolgd door één actie (Broadlink-commando
+# of stopcontact aan/uit). Elke regel vuurt éénmalig per keer dat de voorwaarden van
+# niet-waar naar waar-en-volgehouden gaan (rand-getriggerd), zodat een IR "aan"-toets
+# die eigenlijk een toggle is niet herhaaldelijk verstuurd wordt zolang de voorwaarden
+# aanhouden.
+_automation_state = {}  # rule_id -> {"since": float|None, "fired": bool}
+
+
+def _evaluate_automation_conditions(cond):
+    now = datetime.now()
+
+    if cond.get("time_enabled"):
+        if now.weekday() not in (cond.get("days") or []):
+            return False
+        try:
+            sh, sm = map(int, cond["start_time"].split(":"))
+            eh, em = map(int, cond["end_time"].split(":"))
+        except (KeyError, ValueError, AttributeError):
+            return False
+        cur_minutes = now.hour * 60 + now.minute
+        if not ((sh * 60 + sm) <= cur_minutes < (eh * 60 + em)):
+            return False
+
+    if cond.get("p1_enabled"):
+        try:
+            value = float(cond.get("p1_value", 0))
+        except (TypeError, ValueError):
+            value = 0
+        if cond.get("p1_operator") == ">=":
+            if not (current_power >= value):
+                return False
+        else:
+            if not (current_power <= value):
+                return False
+
+    if cond.get("boiler_enabled"):
+        st = device_states.get(cond.get("boiler_device_ip", ""))
+        if not st:
+            return False
+        try:
+            value = float(cond.get("boiler_value", 0))
+        except (TypeError, ValueError):
+            value = 0
+        brightness = st.get("brightness", 0)
+        if cond.get("boiler_operator") == "<=":
+            if not (brightness <= value):
+                return False
+        else:
+            if not (brightness >= value):
+                return False
+
+    if cond.get("accessory_enabled"):
+        st = accessory_states.get(cond.get("accessory_id", ""))
+        if not st or st.get("power") is None:
+            return False
+        try:
+            value = float(cond.get("accessory_value", 0))
+        except (TypeError, ValueError):
+            value = 0
+        power = st.get("power", 0)
+        if cond.get("accessory_operator") == "<=":
+            if not (power <= value):
+                return False
+        else:
+            if not (power >= value):
+                return False
+
+    # Een regel zonder één enkele actieve voorwaarde zou anders altijd "waar" zijn.
+    if not (cond.get("p1_enabled") or cond.get("boiler_enabled") or cond.get("accessory_enabled") or cond.get("time_enabled")):
+        return False
+
+    return True
+
+
+def _execute_automation_action(rule, cfg):
+    action_type = rule.get("action_type", "broadlink")
+
+    if action_type == "socket":
+        ok = set_power_socket(rule.get("socket_type", "shelly"), rule.get("socket_ip", ""),
+                               rule.get("socket_action", "on") == "on")
+        return ok, "" if ok else "Kan stopcontact niet aansturen"
+
+    bl = next((b for b in cfg.get("broadlink_devices", []) if b["id"] == rule.get("broadlink_id")), None)
+    if not bl:
+        return False, "Broadlink-apparaat niet gevonden"
+    ir = next((d for d in bl.get("ir_devices", []) if d["id"] == rule.get("ir_device_id")), None)
+    if not ir:
+        return False, "IR-apparaat niet gevonden"
+    cmd = next((c for c in ir.get("commands", []) if c["id"] == rule.get("command_id")), None)
+    if not cmd:
+        return False, "Commando niet gevonden"
+    dev = _broadlink_connect(bl["ip"], bl.get("mac", ""), bl.get("devtype", 0))
+    if not dev:
+        return False, "Kan geen verbinding maken met Broadlink"
+    try:
+        import base64
+        dev.send_data(base64.b64decode(cmd["code"]))
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
+@app.route("/settings/automations")
+def settings_automations():
+    if not require_login():
+        return redirect("/login")
+    if not is_current_user_admin():
+        return redirect("/dashboard")
+    cfg = load_config()
+    boiler_devices = [{"ip": d["ip"], "name": d["name"]} for d in cfg.get("shelly_devices", [])]
+    power_accessories = [
+        {"id": a["id"], "name": a["name"]}
+        for a in cfg.get("accessories", [])
+        if a.get("acc_type", "power") == "power" and not a.get("is_solar", False)
+    ]
+    return render_template(
+        "settings_automations.html",
+        config=cfg,
+        boiler_devices=boiler_devices,
+        power_accessories=power_accessories,
+        broadlink_available=BROADLINK_AVAILABLE,
+        dark_mode=get_user_dark_mode(),
+    )
+
+
+@app.route("/api/automations", methods=["POST"])
+def create_automation():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    data = request.get_json(force=True) or {}
+    cfg = load_config()
+    new_rule = _build_automation_from_request(data)
+    if not new_rule:
+        return jsonify(success=False, error="Ongeldige gegevens"), 400
+    cfg["automations"].append(new_rule)
+    save_config(cfg)
+    write_audit_log("automation_added", {"name": new_rule["name"]})
+    return jsonify(success=True, automation=new_rule)
+
+
+@app.route("/api/automations/<rule_id>", methods=["PUT"])
+def update_automation(rule_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    data = request.get_json(force=True) or {}
+    cfg = load_config()
+    rule = next((r for r in cfg.get("automations", []) if r["id"] == rule_id), None)
+    if not rule:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    updated = _build_automation_from_request(data, existing_id=rule_id)
+    if not updated:
+        return jsonify(success=False, error="Ongeldige gegevens"), 400
+    cfg["automations"] = [updated if r["id"] == rule_id else r for r in cfg["automations"]]
+    save_config(cfg)
+    _automation_state.pop(rule_id, None)
+    write_audit_log("automation_updated", {"name": updated["name"]})
+    return jsonify(success=True, automation=updated)
+
+
+@app.route("/api/automations/<rule_id>", methods=["DELETE"])
+def delete_automation(rule_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    cfg = load_config()
+    before = len(cfg.get("automations", []))
+    cfg["automations"] = [r for r in cfg.get("automations", []) if r["id"] != rule_id]
+    if len(cfg["automations"]) == before:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    save_config(cfg)
+    _automation_state.pop(rule_id, None)
+    write_audit_log("automation_deleted", {"id": rule_id})
+    return jsonify(success=True)
+
+
+@app.route("/api/automations/<rule_id>/test", methods=["POST"])
+def test_automation(rule_id):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    cfg = load_config()
+    rule = next((r for r in cfg.get("automations", []) if r["id"] == rule_id), None)
+    if not rule:
+        return jsonify(success=False, error="Niet gevonden"), 404
+    ok, error = _execute_automation_action(rule, cfg)
+    if not ok:
+        return jsonify(success=False, error=error or "Uitvoeren mislukt"), 502
+    write_audit_log("automation_tested", {"name": rule.get("name", "")})
+    return jsonify(success=True)
+
+
+def _build_automation_from_request(data, existing_id=None):
+    name = str(data.get("name") or "Automatisering").strip()[:60]
+    conditions_in = data.get("conditions") or {}
+    days = conditions_in.get("days", [])
+    if not isinstance(days, list):
+        days = []
+    conditions = {
+        "p1_enabled": bool(conditions_in.get("p1_enabled")),
+        "p1_operator": conditions_in.get("p1_operator") if conditions_in.get("p1_operator") in ("<=", ">=") else "<=",
+        "p1_value": _safe_number(conditions_in.get("p1_value"), -50),
+        "boiler_enabled": bool(conditions_in.get("boiler_enabled")),
+        "boiler_device_ip": str(conditions_in.get("boiler_device_ip") or ""),
+        "boiler_operator": conditions_in.get("boiler_operator") if conditions_in.get("boiler_operator") in ("<=", ">=") else ">=",
+        "boiler_value": _safe_number(conditions_in.get("boiler_value"), 95),
+        "accessory_enabled": bool(conditions_in.get("accessory_enabled")),
+        "accessory_id": str(conditions_in.get("accessory_id") or ""),
+        "accessory_operator": conditions_in.get("accessory_operator") if conditions_in.get("accessory_operator") in ("<=", ">=") else ">=",
+        "accessory_value": _safe_number(conditions_in.get("accessory_value"), 100),
+        "time_enabled": bool(conditions_in.get("time_enabled")),
+        "start_time": str(conditions_in.get("start_time") or "00:00"),
+        "end_time": str(conditions_in.get("end_time") or "23:59"),
+        "days": sorted({int(d) for d in days if isinstance(d, (int, float)) and 0 <= int(d) <= 6}) or [0, 1, 2, 3, 4, 5, 6],
+    }
+    try:
+        hold_seconds = max(0, int(data.get("hold_seconds", 60)))
+    except (TypeError, ValueError):
+        hold_seconds = 60
+
+    action_type = "socket" if data.get("action_type") == "socket" else "broadlink"
+    rule = {
+        "id": existing_id or str(uuid.uuid4()),
+        "name": name,
+        "enabled": bool(data.get("enabled", True)),
+        "conditions": conditions,
+        "hold_seconds": hold_seconds,
+        "action_type": action_type,
+        "broadlink_id": str(data.get("broadlink_id") or ""),
+        "ir_device_id": str(data.get("ir_device_id") or ""),
+        "command_id": str(data.get("command_id") or ""),
+        "socket_type": data.get("socket_type") if data.get("socket_type") in ("shelly", "homewizard") else "shelly",
+        "socket_ip": str(data.get("socket_ip") or "").strip(),
+        "socket_action": "off" if data.get("socket_action") == "off" else "on",
+    }
+    if action_type == "broadlink" and not rule["command_id"]:
+        return None
+    if action_type == "socket" and not rule["socket_ip"]:
+        return None
+    return rule
+
+
+def _safe_number(value, default):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def automation_loop():
+    while True:
+        try:
+            cfg = load_config()
+            now_ts = time.time()
+            for rule in cfg.get("automations", []):
+                rule_id = rule["id"]
+                if not rule.get("enabled", True):
+                    _automation_state.pop(rule_id, None)
+                    continue
+                met = _evaluate_automation_conditions(rule.get("conditions", {}))
+                st = _automation_state.setdefault(rule_id, {"since": None, "fired": False})
+                if not met:
+                    st["since"] = None
+                    st["fired"] = False
+                    continue
+                if st["since"] is None:
+                    st["since"] = now_ts
+                hold = rule.get("hold_seconds", 60)
+                if not st["fired"] and (now_ts - st["since"]) >= hold:
+                    ok, error = _execute_automation_action(rule, cfg)
+                    st["fired"] = True
+                    write_audit_log(
+                        "automation_fired" if ok else "automation_fire_failed",
+                        {"name": rule.get("name", ""), "error": error} if not ok else {"name": rule.get("name", "")},
+                    )
+        except Exception as e:
+            print(f"Automation loop fout: {e}")
+        time.sleep(5)
 
 
 @app.route("/set_gas_enabled", methods=["POST"])
@@ -6530,6 +6861,7 @@ if __name__ == "__main__":
     threading.Thread(target=inverter_poll_loop, daemon=True).start()
     threading.Thread(target=battery_poll_loop, daemon=True).start()
     threading.Thread(target=broadlink_poll_loop, daemon=True).start()
+    threading.Thread(target=automation_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
