@@ -1,0 +1,823 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: white; border: 1.5px solid hsl(224, 20%, 85%);
+      border-radius: 999px; padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem; font-weight: 600; color: hsl(224, 26%, 30%);
+      text-decoration: none; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s; margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .section-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: hsl(224, 18%, 71%);
+      margin: 1.25rem 0 0.5rem;
+    }
+    .section-label:first-of-type { margin-top: 0; }
+
+    .rule-card {
+      background: white; border: 1px solid hsl(224, 20%, 88%);
+      border-radius: 0.875rem; box-shadow: 0 4px 16px -6px hsla(32, 95%, 52%, 0.10);
+      padding: 1rem; margin-bottom: 0.85rem;
+    }
+    .rule-card.disabled { opacity: 0.55; }
+    .rule-head { display: flex; align-items: center; gap: 0.75rem; }
+    .rule-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: hsl(32, 100%, 95%); color: hsl(32, 95%, 48%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 1.1rem;
+    }
+    .rule-info { flex: 1; min-width: 0; }
+    .rule-name { font-weight: 600; font-size: 0.95rem; }
+    .rule-sub { font-size: 0.78rem; color: hsl(224, 18%, 65%); margin-top: 0.15rem; line-height: 1.4; }
+    .rule-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+
+    .btn-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid hsl(224, 20%, 85%); background: transparent;
+      color: hsl(224, 18%, 67%); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-icon:hover { background: hsl(224, 20%, 93%); color: hsl(224, 26%, 20%); }
+    .btn-icon.danger:hover { background: hsl(0, 80%, 95%); color: hsl(0, 65%, 48%); border-color: hsl(0, 60%, 85%); }
+
+    .rule-menu-wrap { position: relative; }
+    .rule-menu {
+      display: none;
+      position: absolute; top: calc(100% + 6px); right: 0;
+      background: white; border: 1px solid hsl(224, 20%, 88%);
+      border-radius: 0.7rem; box-shadow: 0 14px 34px -10px rgba(0,0,0,0.22);
+      min-width: 190px; overflow: hidden; z-index: 20;
+    }
+    .rule-menu.open { display: block; }
+    .rule-menu-item {
+      display: flex; align-items: center; gap: 0.65rem;
+      width: 100%; padding: 0.75rem 0.95rem;
+      background: transparent; border: none; text-align: left;
+      font-size: 0.88rem; font-weight: 500; color: hsl(224, 26%, 20%);
+      cursor: pointer; transition: background 0.15s; font-family: 'Inter', sans-serif;
+    }
+    .rule-menu-item:hover { background: hsl(224, 20%, 95%); }
+    .rule-menu-item.danger { color: hsl(0, 65%, 48%); }
+    .rule-menu-item.danger:hover { background: hsl(0, 80%, 96%); }
+    .rule-menu-item i { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+    .rule-menu-divider { height: 1px; background: hsl(224, 20%, 91%); margin: 0.25rem 0; }
+
+    @media (max-width: 600px) {
+      .btn-icon { width: 40px; height: 40px; }
+      .rule-menu-item { padding: 0.85rem 1rem; font-size: 0.92rem; }
+    }
+
+    .rule-body {
+      border-top: 1px solid hsl(224, 20%, 91%); margin-top: 0.85rem; padding-top: 0.75rem;
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+    .rule-chip {
+      font-size: 0.76rem; font-weight: 600; color: hsl(224, 26%, 30%);
+      background: hsl(224, 25%, 96%); border: 1px solid hsl(224, 20%, 89%);
+      border-radius: 999px; padding: 0.25rem 0.65rem;
+    }
+    .rule-chip.action { color: hsl(25, 85%, 35%); background: hsl(32, 100%, 96%); border-color: hsl(32, 80%, 75%); }
+
+    .add-btn {
+      display: flex; align-items: center; gap: 0.4rem; justify-content: center;
+      width: 100%; padding: 0.7rem 0.75rem;
+      border: 1.5px dashed hsl(224, 18%, 82%); border-radius: 0.65rem;
+      background: transparent; color: hsl(224, 18%, 55%);
+      font-size: 0.88rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s; margin-top: 0.25rem;
+    }
+    .add-btn:hover { background: hsl(224, 20%, 94%); }
+
+    .empty-state {
+      padding: 1.5rem; text-align: center; color: hsl(224, 18%, 73%); font-size: 0.88rem;
+      background: white; border: 1px solid hsl(224, 20%, 88%); border-radius: 0.875rem;
+    }
+
+    .toggle { position: relative; width: 40px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: hsl(224, 20%, 80%);
+      border-radius: 999px; transition: background 0.2s; cursor: pointer;
+    }
+    .slider::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%; background: white;
+      transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+    .toggle input:checked + .slider::after { transform: translateX(16px); }
+
+    /* ===== Modal ===== */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 200;
+      align-items: flex-start; justify-content: center; padding: 1rem;
+      overflow-y: auto;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white; border-radius: 1rem;
+      padding: 1.5rem; width: 100%; max-width: 460px;
+      box-shadow: 0 20px 60px -10px rgba(0,0,0,0.3);
+      margin: 1.5rem 0 2rem;
+    }
+    .modal h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; }
+
+    .field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.85rem; }
+    .field:last-child { margin-bottom: 0; }
+    .field-label { font-size: 0.82rem; font-weight: 600; color: hsl(224, 18%, 60%); }
+    .field input, .field select {
+      width: 100%; height: 42px; padding: 0 0.75rem;
+      border: 1.5px solid hsl(224, 20%, 82%); border-radius: 0.5rem;
+      font-size: 0.95rem; font-family: 'Inter', sans-serif;
+      background-color: white; color: hsl(224, 26%, 14%); outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus, .field select:focus { border-color: hsl(32, 85%, 55%); }
+    .field-time { width: auto; min-width: 130px; max-width: 160px; }
+
+    .cond-block {
+      border: 1px solid hsl(224, 20%, 89%); border-radius: 0.65rem;
+      padding: 0.75rem 0.85rem; margin-bottom: 0.65rem;
+    }
+    .cond-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    }
+    .cond-title { font-size: 0.88rem; font-weight: 600; }
+    .cond-fields { margin-top: 0.75rem; display: none; }
+    .cond-fields.open { display: block; }
+    .cond-row { display: flex; gap: 0.5rem; align-items: flex-end; }
+    .cond-row .field { flex: 1; margin-bottom: 0; min-width: 0; }
+    .cond-row .field-op { flex: 0 0 72px; }
+
+    .day-picker { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+    .day-btn {
+      width: 36px; height: 36px; border-radius: 0.5rem;
+      border: 1.5px solid hsl(224, 20%, 84%); background: white;
+      color: hsl(224, 26%, 30%); font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .day-btn.active { background: hsl(32, 95%, 52%); border-color: hsl(32, 95%, 52%); color: white; }
+
+    .action-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.85rem; }
+    .action-tab {
+      flex: 1; padding: 0.55rem; text-align: center; cursor: pointer;
+      border: 1.5px solid hsl(224, 20%, 84%); border-radius: 0.5rem;
+      font-size: 0.85rem; font-weight: 600; color: hsl(224, 18%, 55%);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .action-tab.active { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(25, 85%, 38%); }
+    .action-fields { display: none; }
+    .action-fields.open { display: block; }
+
+    .btn-row { display: flex; gap: 0.6rem; margin-top: 1.1rem; }
+    .btn-primary {
+      display: block; width: 100%;
+      background: hsl(32, 95%, 52%); color: white;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      font-size: 0.95rem; padding: 0.65rem;
+      border: none; border-radius: 0.5rem; cursor: pointer;
+      transition: background 0.2s; text-align: center;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); }
+    .btn-secondary {
+      display: block; width: 100%;
+      background: hsl(224, 20%, 95%); color: hsl(224, 26%, 30%);
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      font-size: 0.95rem; padding: 0.65rem;
+      border: 1px solid hsl(224, 20%, 84%); border-radius: 0.5rem;
+      cursor: pointer; text-align: center; transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: hsl(224, 20%, 88%); }
+    .btn-row .btn-primary, .btn-row .btn-secondary { flex: 1; }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      background: hsl(224, 26%, 16%); color: white;
+      padding: 0.6rem 1.2rem; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 600; white-space: nowrap;
+      opacity: 0; transition: opacity 0.2s; z-index: 300; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .toast.error { background: hsl(0, 65%, 48%); }
+    .toast.success { background: hsl(145, 60%, 36%); }
+
+    .unavailable-banner {
+      display: flex; align-items: center; gap: 0.65rem;
+      background: hsl(37, 90%, 92%); color: hsl(30, 80%, 28%);
+      border-radius: 0.6rem; padding: 0.75rem 0.9rem;
+      font-size: 0.84rem; font-weight: 500; margin-bottom: 1rem; line-height: 1.4;
+    }
+    .hint { font-size: 0.75rem; color: hsl(224, 18%, 70%); line-height: 1.4; margin-top: 0.2rem; }
+
+    /* DARK MODE */
+    html[data-theme="dark"] body { background: hsl(224, 38%, 12%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 17%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .section-label { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .rule-card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); }
+    html[data-theme="dark"] .rule-sub { color: hsl(224, 18%, 68%); }
+    html[data-theme="dark"] .rule-icon { background: hsl(32, 25%, 26%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .rule-body { border-color: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .rule-chip { background: hsl(224, 38%, 18%); border-color: hsl(224, 38%, 22%); color: hsl(224, 18%, 88%); }
+    html[data-theme="dark"] .rule-chip.action { background: hsl(32, 25%, 22%); border-color: hsl(32, 45%, 38%); color: hsl(32, 80%, 70%); }
+    html[data-theme="dark"] .btn-icon { border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .btn-icon:hover { background: hsl(224, 38%, 17%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .btn-icon.danger:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 62%); border-color: hsl(0, 40%, 36%); }
+    html[data-theme="dark"] .rule-menu { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); box-shadow: 0 14px 34px -10px rgba(0,0,0,0.4); }
+    html[data-theme="dark"] .rule-menu-item { color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .rule-menu-item:hover { background: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .rule-menu-item.danger { color: hsl(0, 65%, 65%); }
+    html[data-theme="dark"] .rule-menu-item.danger:hover { background: hsl(0, 25%, 24%); }
+    html[data-theme="dark"] .rule-menu-divider { background: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .add-btn { border-color: hsl(224, 38%, 22%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .add-btn:hover { background: hsl(224, 38%, 16%); }
+    html[data-theme="dark"] .empty-state { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .slider { background: hsl(224, 38%, 22%); }
+    html[data-theme="dark"] .modal { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field-label { color: hsl(224, 18%, 68%); }
+    html[data-theme="dark"] .field input, html[data-theme="dark"] .field select { background-color: hsl(224, 38%, 14%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field input:focus, html[data-theme="dark"] .field select:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .cond-block { border-color: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .cond-title { color: hsl(224, 18%, 92%); }
+    html[data-theme="dark"] .day-btn { background: hsl(224, 38%, 14%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 85%); }
+    html[data-theme="dark"] .day-btn.active { background: hsl(32, 95%, 52%); border-color: hsl(32, 95%, 52%); color: white; }
+    html[data-theme="dark"] .action-tab { border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .action-tab.active { background: hsl(32, 25%, 22%); border-color: hsl(32, 60%, 48%); color: hsl(32, 85%, 70%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(224, 38%, 17%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .unavailable-banner { background: hsl(37, 25%, 24%); color: hsl(37, 80%, 70%); }
+    html[data-theme="dark"] .hint { color: hsl(224, 18%, 68%); }
+</style>
+{% endblock %}
+
+{% block tagline %}<p>Automatiseringen</p>{% endblock %}
+
+{% block content %}
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    {% if not broadlink_available %}
+    <div class="unavailable-banner">
+      <i class="mdi mdi-alert-outline" style="font-size:1.2rem;flex-shrink:0"></i>
+      <span>python-broadlink is niet geïnstalleerd. Broadlink-commando's als actie zijn hierdoor niet beschikbaar, stopcontacten wel.</span>
+    </div>
+    {% endif %}
+
+    <div class="section-label">Automatiseringen</div>
+    <div id="ruleList">
+      {% if not config.automations %}
+      <div class="empty-state" id="emptyState">Nog geen automatiseringen. Voeg er een toe om bijvoorbeeld een Broadlink-commando of stopcontact te laten reageren op je P1-vermogen, boilerpercentage of een tijdvenster.</div>
+      {% endif %}
+    </div>
+    <button class="add-btn" onclick="openRuleModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+      Automatisering toevoegen
+    </button>
+
+    <!-- Modal: automatisering toevoegen/bewerken -->
+    <div class="modal-overlay" id="ruleModal">
+      <div class="modal">
+        <h3 id="ruleModalTitle"><i class="mdi mdi-robot-outline" style="color:hsl(32,95%,52%)"></i> Automatisering toevoegen</h3>
+        <input type="hidden" id="ruleId">
+
+        <div class="field">
+          <label class="field-label">Naam</label>
+          <input type="text" id="ruleName" placeholder="Bijv. Airco aan bij overschot" maxlength="60">
+        </div>
+
+        <div class="section-label" style="margin-top:1rem;">Voorwaarden (allemaal tegelijk waar, moet aanhouden)</div>
+
+        <div class="cond-block">
+          <div class="cond-head">
+            <span class="cond-title">P1-vermogen</span>
+            <label class="toggle"><input type="checkbox" id="condP1Enabled" onchange="toggleCondFields('condP1')"><span class="slider"></span></label>
+          </div>
+          <div class="cond-fields" id="condP1Fields">
+            <div class="cond-row">
+              <div class="field">
+                <label class="field-label">Waarde (W, negatief = teruglevering)</label>
+                <input type="number" id="condP1Value" value="-50" step="1">
+              </div>
+              <div class="field field-op">
+                <label class="field-label">&nbsp;</label>
+                <select id="condP1Op">
+                  <option value="<=">≤</option>
+                  <option value=">=">≥</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cond-block">
+          <div class="cond-head">
+            <span class="cond-title">Boilerpercentage</span>
+            <label class="toggle"><input type="checkbox" id="condBoilerEnabled" onchange="toggleCondFields('condBoiler')"><span class="slider"></span></label>
+          </div>
+          <div class="cond-fields" id="condBoilerFields">
+            <div class="field">
+              <label class="field-label">SolarBuffer</label>
+              <select id="condBoilerDevice">
+                {% for d in boiler_devices %}
+                <option value="{{ d.ip }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="cond-row">
+              <div class="field">
+                <label class="field-label">Percentage (%)</label>
+                <input type="number" id="condBoilerValue" value="95" min="0" max="100" step="1">
+              </div>
+              <div class="field field-op">
+                <label class="field-label">&nbsp;</label>
+                <select id="condBoilerOp">
+                  <option value=">=">≥</option>
+                  <option value="<=">≤</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cond-block">
+          <div class="cond-head">
+            <span class="cond-title">Verbruiker</span>
+            <label class="toggle"><input type="checkbox" id="condAccessoryEnabled" onchange="toggleCondFields('condAccessory')"><span class="slider"></span></label>
+          </div>
+          <div class="cond-fields" id="condAccessoryFields">
+            {% if power_accessories %}
+            <div class="field">
+              <label class="field-label">Verbruiker</label>
+              <select id="condAccessoryDevice">
+                {% for a in power_accessories %}
+                <option value="{{ a.id }}">{{ a.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="cond-row">
+              <div class="field">
+                <label class="field-label">Vermogen (W)</label>
+                <input type="number" id="condAccessoryValue" value="100" step="1">
+              </div>
+              <div class="field field-op">
+                <label class="field-label">&nbsp;</label>
+                <select id="condAccessoryOp">
+                  <option value=">=">≥</option>
+                  <option value="<=">≤</option>
+                </select>
+              </div>
+            </div>
+            {% else %}
+            <p class="hint">Nog geen verbruikers ingesteld. Voeg er een toe bij Instellingen → Voeg verbruikers toe.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="cond-block">
+          <div class="cond-head">
+            <span class="cond-title">Tijdvenster</span>
+            <label class="toggle"><input type="checkbox" id="condTimeEnabled" onchange="toggleCondFields('condTime')"><span class="slider"></span></label>
+          </div>
+          <div class="cond-fields" id="condTimeFields">
+            <div class="field">
+              <label class="field-label">Dag(en)</label>
+              <div class="day-picker" id="condDays">
+                <button type="button" class="day-btn active" data-day="0">Ma</button>
+                <button type="button" class="day-btn active" data-day="1">Di</button>
+                <button type="button" class="day-btn active" data-day="2">Wo</button>
+                <button type="button" class="day-btn active" data-day="3">Do</button>
+                <button type="button" class="day-btn active" data-day="4">Vr</button>
+                <button type="button" class="day-btn active" data-day="5">Za</button>
+                <button type="button" class="day-btn active" data-day="6">Zo</button>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Begintijd</label>
+              <input type="time" id="condStart" value="00:00" class="field-time">
+            </div>
+            <div class="field">
+              <label class="field-label">Eindtijd</label>
+              <input type="time" id="condEnd" value="23:59" class="field-time">
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Moet aanhouden voor (seconden)</label>
+          <input type="number" id="ruleHold" value="60" min="0" step="1">
+          <span class="hint">Voorwaarden moeten deze tijd onafgebroken waar zijn voordat de actie wordt uitgevoerd.</span>
+        </div>
+
+        <div class="section-label">Actie</div>
+        <div class="action-tabs">
+          <div class="action-tab active" id="tabBroadlink" onclick="selectActionType('broadlink')">Broadlink-commando</div>
+          <div class="action-tab" id="tabSocket" onclick="selectActionType('socket')">Stopcontact</div>
+        </div>
+
+        <div class="action-fields open" id="actionBroadlinkFields">
+          <div class="field">
+            <label class="field-label">Broadlink-apparaat</label>
+            <select id="actionBlDevice" onchange="onBlDeviceChange()"></select>
+          </div>
+          <div class="field">
+            <label class="field-label">IR-apparaat</label>
+            <select id="actionIrDevice" onchange="onIrDeviceChange()"></select>
+          </div>
+          <div class="field">
+            <label class="field-label">Commando</label>
+            <select id="actionCommand"></select>
+          </div>
+        </div>
+
+        <div class="action-fields" id="actionSocketFields">
+          <div class="field">
+            <label class="field-label">Type</label>
+            <select id="actionSocketType">
+              <option value="shelly">Shelly</option>
+              <option value="homewizard">HomeWizard Energy Socket</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">IP-adres</label>
+            <input type="text" id="actionSocketIp" placeholder="192.168.178.x">
+          </div>
+          <div class="field">
+            <label class="field-label">Actie</label>
+            <select id="actionSocketAction">
+              <option value="on">Aanzetten</option>
+              <option value="off">Uitzetten</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:0.25rem;">
+          <div class="cond-head">
+            <span class="cond-title">Automatisering actief</span>
+            <label class="toggle"><input type="checkbox" id="ruleEnabled" checked><span class="slider"></span></label>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="closeModal('ruleModal')">Annuleren</button>
+          <button class="btn-primary" onclick="submitRule()">Opslaan</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    var BROADLINK_DEVICES = {{ config.broadlink_devices | tojson }};
+    var RULES = {{ config.automations | tojson }};
+    var DAY_NAMES = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + (type || '') + ' show';
+      setTimeout(function() { t.className = 'toast ' + (type || ''); }, 2800);
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // ===== RIJ-MENU (PUNTJES) =====
+    function closeRuleMenus() {
+      document.querySelectorAll('.rule-menu.open').forEach(function(m) { m.classList.remove('open'); });
+    }
+
+    function toggleRuleMenu(id, ev) {
+      if (ev) ev.stopPropagation();
+      var menu = document.getElementById('rule-menu-' + id);
+      var wasOpen = menu.classList.contains('open');
+      closeRuleMenus();
+      if (!wasOpen) menu.classList.add('open');
+    }
+
+    document.addEventListener('click', closeRuleMenus);
+
+    // ===== CONDITIE-BLOKKEN IN/UITKLAPPEN =====
+    function toggleCondFields(prefix) {
+      var enabled = document.getElementById(prefix + 'Enabled').checked;
+      document.getElementById(prefix + 'Fields').classList.toggle('open', enabled);
+    }
+
+    document.querySelectorAll('#condDays .day-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { btn.classList.toggle('active'); });
+    });
+
+    // ===== ACTIE-TABS =====
+    var currentActionType = 'broadlink';
+    function selectActionType(type) {
+      currentActionType = type;
+      document.getElementById('tabBroadlink').classList.toggle('active', type === 'broadlink');
+      document.getElementById('tabSocket').classList.toggle('active', type === 'socket');
+      document.getElementById('actionBroadlinkFields').classList.toggle('open', type === 'broadlink');
+      document.getElementById('actionSocketFields').classList.toggle('open', type === 'socket');
+    }
+
+    // ===== CASCADING SELECTS VOOR BROADLINK-ACTIE =====
+    function populateBlDeviceSelect(selectedBlId, selectedIrId, selectedCmdId) {
+      var sel = document.getElementById('actionBlDevice');
+      sel.innerHTML = '';
+      if (BROADLINK_DEVICES.length === 0) {
+        sel.innerHTML = '<option value="">— Geen Broadlink-apparaten —</option>';
+      }
+      BROADLINK_DEVICES.forEach(function(bl) {
+        var opt = document.createElement('option');
+        opt.value = bl.id;
+        opt.textContent = bl.name;
+        sel.appendChild(opt);
+      });
+      if (selectedBlId) sel.value = selectedBlId;
+      onBlDeviceChange(selectedIrId, selectedCmdId);
+    }
+
+    function onBlDeviceChange(selectedIrId, selectedCmdId) {
+      var blId = document.getElementById('actionBlDevice').value;
+      var bl = BROADLINK_DEVICES.find(function(b) { return b.id === blId; });
+      var sel = document.getElementById('actionIrDevice');
+      sel.innerHTML = '';
+      var irDevices = bl ? bl.ir_devices : [];
+      if (irDevices.length === 0) {
+        sel.innerHTML = '<option value="">— Geen IR-apparaten —</option>';
+      }
+      irDevices.forEach(function(ir) {
+        var opt = document.createElement('option');
+        opt.value = ir.id;
+        opt.textContent = ir.name;
+        sel.appendChild(opt);
+      });
+      if (selectedIrId) sel.value = selectedIrId;
+      onIrDeviceChange(selectedCmdId);
+    }
+
+    function onIrDeviceChange(selectedCmdId) {
+      var blId = document.getElementById('actionBlDevice').value;
+      var irId = document.getElementById('actionIrDevice').value;
+      var bl = BROADLINK_DEVICES.find(function(b) { return b.id === blId; });
+      var ir = bl ? bl.ir_devices.find(function(d) { return d.id === irId; }) : null;
+      var sel = document.getElementById('actionCommand');
+      sel.innerHTML = '';
+      var commands = ir ? ir.commands : [];
+      if (commands.length === 0) {
+        sel.innerHTML = '<option value="">— Geen commando\'s —</option>';
+      }
+      commands.forEach(function(cmd) {
+        var opt = document.createElement('option');
+        opt.value = cmd.id;
+        opt.textContent = cmd.name;
+        sel.appendChild(opt);
+      });
+      if (selectedCmdId) sel.value = selectedCmdId;
+    }
+
+    // ===== MODAL OPENEN (NIEUW / BEWERKEN) =====
+    function openRuleModal(rule) {
+      document.getElementById('ruleModalTitle').innerHTML =
+        '<i class="mdi mdi-robot-outline" style="color:hsl(32,95%,52%)"></i> Automatisering ' + (rule ? 'bewerken' : 'toevoegen');
+      document.getElementById('ruleId').value = rule ? rule.id : '';
+      document.getElementById('ruleName').value = rule ? rule.name : '';
+      document.getElementById('ruleEnabled').checked = rule ? rule.enabled : true;
+      document.getElementById('ruleHold').value = rule ? rule.hold_seconds : 60;
+
+      var cond = rule ? rule.conditions : {};
+      document.getElementById('condP1Enabled').checked = !!cond.p1_enabled;
+      document.getElementById('condP1Value').value = cond.p1_value ?? -50;
+      document.getElementById('condP1Op').value = cond.p1_operator || '<=';
+      toggleCondFields('condP1');
+
+      document.getElementById('condBoilerEnabled').checked = !!cond.boiler_enabled;
+      if (cond.boiler_device_ip) document.getElementById('condBoilerDevice').value = cond.boiler_device_ip;
+      document.getElementById('condBoilerValue').value = cond.boiler_value ?? 95;
+      document.getElementById('condBoilerOp').value = cond.boiler_operator || '>=';
+      toggleCondFields('condBoiler');
+
+      var accEnabled = document.getElementById('condAccessoryEnabled');
+      if (accEnabled) {
+        accEnabled.checked = !!cond.accessory_enabled;
+        var accDevice = document.getElementById('condAccessoryDevice');
+        if (accDevice && cond.accessory_id) accDevice.value = cond.accessory_id;
+        var accValue = document.getElementById('condAccessoryValue');
+        if (accValue) accValue.value = cond.accessory_value ?? 100;
+        var accOp = document.getElementById('condAccessoryOp');
+        if (accOp) accOp.value = cond.accessory_operator || '>=';
+        toggleCondFields('condAccessory');
+      }
+
+      document.getElementById('condTimeEnabled').checked = !!cond.time_enabled;
+      document.getElementById('condStart').value = cond.start_time || '00:00';
+      document.getElementById('condEnd').value = cond.end_time || '23:59';
+      var days = cond.days || [0,1,2,3,4,5,6];
+      document.querySelectorAll('#condDays .day-btn').forEach(function(btn) {
+        btn.classList.toggle('active', days.indexOf(parseInt(btn.dataset.day)) !== -1);
+      });
+      toggleCondFields('condTime');
+
+      var actionType = rule ? rule.action_type : 'broadlink';
+      selectActionType(actionType);
+      populateBlDeviceSelect(rule ? rule.broadlink_id : '', rule ? rule.ir_device_id : '', rule ? rule.command_id : '');
+      document.getElementById('actionSocketType').value = rule ? rule.socket_type : 'shelly';
+      document.getElementById('actionSocketIp').value = rule ? rule.socket_ip : '';
+      document.getElementById('actionSocketAction').value = rule ? rule.socket_action : 'on';
+
+      document.getElementById('ruleModal').classList.add('open');
+    }
+
+    // ===== OPSLAAN =====
+    function submitRule() {
+      var id = document.getElementById('ruleId').value;
+      var payload = {
+        name: document.getElementById('ruleName').value.trim(),
+        enabled: document.getElementById('ruleEnabled').checked,
+        hold_seconds: parseInt(document.getElementById('ruleHold').value, 10) || 0,
+        conditions: {
+          p1_enabled: document.getElementById('condP1Enabled').checked,
+          p1_operator: document.getElementById('condP1Op').value,
+          p1_value: parseFloat(document.getElementById('condP1Value').value),
+          boiler_enabled: document.getElementById('condBoilerEnabled').checked,
+          boiler_device_ip: document.getElementById('condBoilerDevice').value || '',
+          boiler_operator: document.getElementById('condBoilerOp').value,
+          boiler_value: parseFloat(document.getElementById('condBoilerValue').value),
+          accessory_enabled: document.getElementById('condAccessoryEnabled').checked,
+          accessory_id: (document.getElementById('condAccessoryDevice') || {}).value || '',
+          accessory_operator: (document.getElementById('condAccessoryOp') || {}).value || '>=',
+          accessory_value: parseFloat((document.getElementById('condAccessoryValue') || {}).value || 100),
+          time_enabled: document.getElementById('condTimeEnabled').checked,
+          start_time: document.getElementById('condStart').value,
+          end_time: document.getElementById('condEnd').value,
+          days: Array.from(document.querySelectorAll('#condDays .day-btn.active')).map(function(b) { return parseInt(b.dataset.day); }),
+        },
+        action_type: currentActionType,
+        broadlink_id: document.getElementById('actionBlDevice').value || '',
+        ir_device_id: document.getElementById('actionIrDevice').value || '',
+        command_id: document.getElementById('actionCommand').value || '',
+        socket_type: document.getElementById('actionSocketType').value,
+        socket_ip: document.getElementById('actionSocketIp').value.trim(),
+        socket_action: document.getElementById('actionSocketAction').value,
+      };
+      if (!payload.name) { showToast('Voer een naam in', 'error'); return; }
+      if (!payload.conditions.p1_enabled && !payload.conditions.boiler_enabled && !payload.conditions.accessory_enabled && !payload.conditions.time_enabled) {
+        showToast('Zet minstens één voorwaarde aan', 'error'); return;
+      }
+      if (currentActionType === 'broadlink' && !payload.command_id) { showToast('Kies een Broadlink-commando', 'error'); return; }
+      if (currentActionType === 'socket' && !payload.socket_ip) { showToast('Vul een IP-adres in voor het stopcontact', 'error'); return; }
+
+      var url = id ? '/api/automations/' + id : '/api/automations';
+      var method = id ? 'PUT' : 'POST';
+      fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Opslaan mislukt', 'error'); return; }
+          if (id) {
+            var idx = RULES.findIndex(function(r) { return r.id === id; });
+            if (idx !== -1) RULES[idx] = data.automation;
+          } else {
+            RULES.push(data.automation);
+          }
+          renderRules();
+          closeModal('ruleModal');
+          showToast('Opgeslagen', 'success');
+        })
+        .catch(function() { showToast('Fout bij opslaan', 'error'); });
+    }
+
+    // ===== VERWIJDEREN =====
+    function deleteRule(id, name) {
+      if (!confirm('Automatisering "' + name + '" verwijderen?')) return;
+      fetch('/api/automations/' + id, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Mislukt', 'error'); return; }
+          RULES = RULES.filter(function(r) { return r.id !== id; });
+          renderRules();
+          showToast('Verwijderd', 'success');
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    // ===== AAN/UIT TOGGLEN VANUIT DE LIJST =====
+    function toggleRuleEnabled(id, enabled) {
+      var rule = RULES.find(function(r) { return r.id === id; });
+      if (!rule) return;
+      var payload = Object.assign({}, rule, { enabled: enabled });
+      fetch('/api/automations/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) { showToast(data.error || 'Mislukt', 'error'); return; }
+          var idx = RULES.findIndex(function(r) { return r.id === id; });
+          if (idx !== -1) RULES[idx] = data.automation;
+          renderRules();
+        })
+        .catch(function() { showToast('Fout', 'error'); });
+    }
+
+    // ===== TESTEN =====
+    function testRule(id, btn) {
+      btn.disabled = true;
+      fetch('/api/automations/' + id + '/test', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          if (!data.success) { showToast(data.error || 'Testen mislukt', 'error'); return; }
+          showToast('Actie uitgevoerd', 'success');
+        })
+        .catch(function() { btn.disabled = false; showToast('Fout bij testen', 'error'); });
+    }
+
+    // ===== SAMENVATTING TEKST =====
+    function summarizeConditions(cond) {
+      var parts = [];
+      if (cond.p1_enabled) parts.push('P1 ' + (cond.p1_operator === '>=' ? '≥' : '≤') + ' ' + cond.p1_value + ' W');
+      if (cond.boiler_enabled) {
+        var dev = document.querySelector('#condBoilerDevice option[value="' + CSS.escape(cond.boiler_device_ip || '') + '"]');
+        var devName = dev ? dev.textContent : (cond.boiler_device_ip || '?');
+        parts.push(devName + ' ' + (cond.boiler_operator === '<=' ? '≤' : '≥') + ' ' + cond.boiler_value + '%');
+      }
+      if (cond.accessory_enabled) {
+        var accEl = document.querySelector('#condAccessoryDevice option[value="' + CSS.escape(cond.accessory_id || '') + '"]');
+        var accName = accEl ? accEl.textContent : (cond.accessory_id || '?');
+        parts.push(accName + ' ' + (cond.accessory_operator === '<=' ? '≤' : '≥') + ' ' + cond.accessory_value + ' W');
+      }
+      if (cond.time_enabled) {
+        var days = (cond.days || []).map(function(d) { return DAY_NAMES[d]; }).join('');
+        parts.push((cond.start_time || '') + '–' + (cond.end_time || '') + ' (' + days + ')');
+      }
+      return parts.length ? parts.join(' · ') : 'Geen voorwaarden';
+    }
+
+    function summarizeAction(rule) {
+      if (rule.action_type === 'socket') {
+        return (rule.socket_action === 'off' ? 'Uit: ' : 'Aan: ') + (rule.socket_type === 'homewizard' ? 'HomeWizard' : 'Shelly') + ' ' + rule.socket_ip;
+      }
+      var bl = BROADLINK_DEVICES.find(function(b) { return b.id === rule.broadlink_id; });
+      var ir = bl ? bl.ir_devices.find(function(d) { return d.id === rule.ir_device_id; }) : null;
+      var cmd = ir ? ir.commands.find(function(c) { return c.id === rule.command_id; }) : null;
+      if (!bl || !ir || !cmd) return 'Broadlink-commando (niet gevonden)';
+      return ir.name + ' → ' + cmd.name;
+    }
+
+    // ===== LIJST RENDEREN =====
+    function renderRules() {
+      var list = document.getElementById('ruleList');
+      if (RULES.length === 0) {
+        list.innerHTML = '<div class="empty-state" id="emptyState">Nog geen automatiseringen. Voeg er een toe om bijvoorbeeld een Broadlink-commando of stopcontact te laten reageren op je P1-vermogen, boilerpercentage of een tijdvenster.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      RULES.forEach(function(rule) {
+        var card = document.createElement('div');
+        card.className = 'rule-card' + (rule.enabled ? '' : ' disabled');
+        card.innerHTML =
+          '<div class="rule-head">' +
+            '<div class="rule-icon"><i class="mdi mdi-robot-outline"></i></div>' +
+            '<div class="rule-info">' +
+              '<div class="rule-name">' + escHtml(rule.name) + '</div>' +
+              '<div class="rule-sub">Aanhouden: ' + rule.hold_seconds + 's</div>' +
+            '</div>' +
+            '<div class="rule-actions">' +
+              '<label class="toggle"><input type="checkbox" ' + (rule.enabled ? 'checked' : '') + ' onchange="toggleRuleEnabled(\'' + rule.id + '\', this.checked)"><span class="slider"></span></label>' +
+              '<div class="rule-menu-wrap">' +
+                '<button class="btn-icon" title="Meer" onclick="toggleRuleMenu(\'' + rule.id + '\', event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"/></svg></button>' +
+                '<div class="rule-menu" id="rule-menu-' + rule.id + '">' +
+                  '<button class="rule-menu-item" onclick="closeRuleMenus(); testRule(\'' + rule.id + '\', this)"><i class="mdi mdi-play-outline"></i> Test uitvoeren</button>' +
+                  '<button class="rule-menu-item" onclick="closeRuleMenus(); openRuleModal(RULES.find(function(r){return r.id===\'' + rule.id + '\';}))"><i class="mdi mdi-pencil-outline"></i> Bewerken</button>' +
+                  '<div class="rule-menu-divider"></div>' +
+                  '<button class="rule-menu-item danger" onclick="closeRuleMenus(); deleteRule(\'' + rule.id + '\', ' + JSON.stringify(rule.name) + ')"><i class="mdi mdi-trash-can-outline"></i> Verwijderen</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="rule-body">' +
+            '<span class="rule-chip">' + escHtml(summarizeConditions(rule.conditions)) + '</span>' +
+            '<span class="rule-chip action">' + escHtml(summarizeAction(rule)) + '</span>' +
+          '</div>';
+        list.appendChild(card);
+      });
+    }
+
+    renderRules();
+  </script>
+{% endblock %}

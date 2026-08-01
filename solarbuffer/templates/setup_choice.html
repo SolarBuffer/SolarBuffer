@@ -9,6 +9,7 @@
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -108,19 +109,40 @@
       box-shadow: 0 8px 32px -8px hsla(32, 95%, 52%, 0.12);
       padding: 1.5rem;
       margin-bottom: 1rem;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .card:hover {
+      box-shadow: 0 12px 40px -8px hsla(32, 95%, 52%, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 0.65rem;
+      background: hsl(32, 100%, 94%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-icon .mdi {
+      font-size: 1.3rem;
+      color: hsl(32, 90%, 50%);
     }
 
     .card h2 {
       font-size: 1.1rem;
       font-weight: 700;
-      margin-bottom: 0.4rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .card-icon {
-      font-size: 1.2rem;
     }
 
     .card-desc {
@@ -215,8 +237,8 @@
     }
 
     .upload-icon {
-      font-size: 1.5rem;
-      margin-bottom: 0.3rem;
+      font-size: 1.6rem;
+      margin-bottom: 0.4rem;
       color: hsl(32, 80%, 52%);
     }
 
@@ -268,7 +290,10 @@
 
     <!-- Nieuwe installatie -->
     <div class="card">
-      <h2><span class="card-icon">&#10024;</span> Nieuwe installatie</h2>
+      <div class="card-head">
+        <div class="card-icon"><i class="mdi mdi-rocket-launch-outline"></i></div>
+        <h2>Nieuwe installatie</h2>
+      </div>
       <p class="card-desc">
         Start met een lege configuratie en doorloop de installatiewizard.
         Ideaal als je SolarBuffer voor het eerst instelt.
@@ -280,7 +305,10 @@
 
     <!-- Back-up importeren -->
     <div class="card">
-      <h2><span class="card-icon">&#128190;</span> Back-up importeren</h2>
+      <div class="card-head">
+        <div class="card-icon"><i class="mdi mdi-backup-restore"></i></div>
+        <h2>Back-up importeren</h2>
+      </div>
       <p class="card-desc">
         Herstel al je instellingen vanuit een eerder geëxporteerde back-up.
         Apparaten, schema's en expert-parameters worden direct hersteld.
@@ -289,7 +317,7 @@
         enctype="multipart/form-data" id="importForm">
         <div class="file-upload-area" id="dropZone">
           <input type="file" name="config_file" id="configFile" accept=".json" onchange="handleFileSelect(this)">
-          <div class="upload-icon">&#8679;</div>
+          <div class="upload-icon"><i class="mdi mdi-tray-arrow-up"></i></div>
           <div class="upload-label">Klik om een back-upbestand te kiezen</div>
           <div class="upload-hint">Alleen .json bestanden (solarbuffer_config.json)</div>
           <div class="file-name" id="fileName"></div>

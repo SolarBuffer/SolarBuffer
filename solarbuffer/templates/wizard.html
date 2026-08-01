@@ -46,11 +46,12 @@
         }
 
         .container {
+            position: relative;
             width: 100%;
             max-width: 920px;
             background: white;
             border: 1px solid hsl(224, 20%, 88%);
-            border-radius: .75rem;
+            border-radius: 1.25rem;
             box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
             padding: 2rem;
         }
@@ -60,9 +61,12 @@
             margin-bottom: 1.5rem;
         }
 
-        .header .icon {
-            font-size: 2rem;
-            color: hsl(32, 95%, 52%);
+        .header .logo-mark {
+            width: 64px;
+            height: 64px;
+            border-radius: 1rem;
+            box-shadow: 0 10px 28px -8px hsla(32, 95%, 52%, 0.45);
+            margin-bottom: .5rem;
         }
 
         .header h1 {
@@ -98,7 +102,7 @@
 
         .progress-fill {
             height: 100%;
-            width: 33.33%;
+            width: 50%;
             background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
             border-radius: 999px;
             transition: width .25s ease;
@@ -106,7 +110,7 @@
 
         .progress-steps {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: .75rem;
         }
 
@@ -114,7 +118,7 @@
             text-align: center;
             padding: .75rem;
             border: 1px solid hsl(224, 20%, 88%);
-            border-radius: .65rem;
+            border-radius: .85rem;
             background: hsl(224, 30%, 98%);
             transition: .2s ease;
         }
@@ -157,7 +161,7 @@
 
         .step-card {
             border: 1px solid hsl(224, 20%, 88%);
-            border-radius: .75rem;
+            border-radius: 1rem;
             padding: 1.25rem;
             background: hsl(224, 30%, 98%);
         }
@@ -185,14 +189,14 @@
         input[type="password"],
         select {
             width: 100%;
-            height: 46px;
+            height: 48px;
             padding: 0 .75rem;
             border: 1px solid hsl(224, 20%, 88%);
-            border-radius: .5rem;
+            border-radius: .65rem;
             font-size: 1rem;
             font-family: 'Inter', sans-serif;
             transition: border-color .3s;
-            line-height: 46px;
+            line-height: 48px;
             background: white;
             -webkit-appearance: none;
             appearance: none;
@@ -235,13 +239,18 @@
             font-size: 1rem;
             padding: .75rem 1rem;
             border: none;
-            border-radius: .5rem;
+            border-radius: .7rem;
             cursor: pointer;
-            transition: background .3s;
+            transition: background .2s, transform .15s;
         }
 
         button:hover {
             background: hsl(32, 85%, 45%);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0) scale(.98);
         }
 
         .status {
@@ -292,7 +301,7 @@
         .device-card {
             background: white;
             border: 1px solid hsl(224, 20%, 88%);
-            border-radius: .75rem;
+            border-radius: 1rem;
             padding: 1.1rem 1.1rem 1.25rem;
             margin-bottom: 1rem;
         }
@@ -301,15 +310,36 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 1rem;
+            gap: .75rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .device-card-title {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            min-width: 0;
+        }
+
+        .device-number {
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            background: hsl(32, 100%, 94%);
+            color: hsl(32, 90%, 46%);
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: .8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .device-card-label {
-            font-size: .72rem;
+            font-size: .95rem;
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .07em;
-            color: hsl(224, 18%, 71%);
+            color: hsl(224, 26%, 16%);
         }
 
         .remove-btn {
@@ -345,72 +375,46 @@
             gap: .65rem;
         }
 
-        .section-card {
-            border: 1px solid hsl(224, 20%, 88%);
-            border-radius: .65rem;
-            padding: 1rem;
-            background: hsl(224, 30%, 98%);
-        }
-
-        .section-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1rem;
-            margin-bottom: .35rem;
-        }
-
-        .section-subtitle {
-            font-size: .85rem;
-            color: hsl(224, 18%, 67%);
-            margin-bottom: .9rem;
-        }
-
-        .expert-toggle {
-            display: flex;
+        .advanced-toggle {
+            all: unset;
+            display: inline-flex;
             align-items: center;
-            gap: .65rem;
+            gap: .4rem;
+            margin-top: 1rem;
+            padding: .45rem .8rem;
+            font-size: .8rem;
             font-weight: 600;
+            color: hsl(224, 18%, 46%);
+            background: hsl(224, 20%, 95%);
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background .15s, color .15s;
         }
 
-        .expert-toggle input[type="checkbox"] {
-            width: 1rem;
-            height: 1rem;
-            accent-color: hsl(32, 95%, 52%);
+        .advanced-toggle:hover {
+            background: hsl(224, 20%, 90%);
         }
 
-        .expert-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .85rem;
+        .advanced-toggle.open {
+            background: hsl(32, 100%, 94%);
+            color: hsl(32, 90%, 42%);
         }
 
-        .field-full {
-            grid-column: span 2;
+        .advanced-toggle .chevron {
+            flex-shrink: 0;
+            transition: transform .2s ease;
         }
 
-        .expert-grid .field {
-            display: flex;
-            flex-direction: column;
-            gap: .35rem;
-            min-width: 0;
-            padding: .85rem;
-            border: 1px solid hsl(224, 20%, 90%);
-            border-radius: .55rem;
-            background: white;
+        .advanced-toggle.open .chevron {
+            transform: rotate(180deg);
         }
 
-        .field-label {
-            font-size: .88rem;
-            font-weight: 600;
-            color: hsl(224, 26%, 14%);
-            line-height: 1.2;
-            word-break: break-word;
+        .device-advanced {
+            display: none;
         }
 
-        .field-help {
-            font-size: .74rem;
-            color: hsl(224, 18%, 67%);
-            line-height: 1.2;
-            min-height: 1rem;
+        .device-advanced.open {
+            display: block;
         }
 
         .input-with-unit {
@@ -466,6 +470,14 @@
             margin-bottom: .75rem;
         }
 
+        .subsection-hint {
+            font-size: .75rem;
+            color: hsl(224, 18%, 71%);
+            margin-bottom: .75rem;
+            margin-top: -.35rem;
+            line-height: 1.45;
+        }
+
         .inline-actions {
             display: flex;
             gap: .75rem;
@@ -500,7 +512,7 @@
 
         .wizard-actions {
             display: flex;
-            justify-content: space-between;
+            align-items: center;
             gap: .75rem;
             margin-top: 1rem;
         }
@@ -511,15 +523,54 @@
             gap: .75rem;
         }
 
-        .cancel-btn,
+        .wizard-actions .right {
+            flex: 1;
+        }
+
+        .wizard-actions .right button {
+            width: 100%;
+        }
+
         .prev-btn {
             background: hsl(224, 18%, 95%);
             color: hsl(224, 26%, 20%);
         }
 
-        .cancel-btn:hover,
         .prev-btn:hover {
             background: hsl(224, 18%, 90%);
+        }
+
+        .icon-btn {
+            flex-shrink: 0;
+            width: 50px;
+            height: 50px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .7rem;
+        }
+
+        .close-btn {
+            all: unset;
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: hsl(224, 18%, 95%);
+            color: hsl(224, 18%, 45%);
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .close-btn:hover {
+            background: hsl(224, 18%, 89%);
+            color: hsl(224, 26%, 20%);
         }
 
         .hidden { display: none !important; }
@@ -582,23 +633,26 @@
             background: hsl(224, 38%, 16%);
             border-color: hsl(224, 38%, 19%);
         }
-        html[data-theme="dark"] .device-card-label { color: hsl(224, 18%, 70%); }
+        html[data-theme="dark"] .device-card-label { color: hsl(224, 18%, 92%); }
+        html[data-theme="dark"] .device-number {
+            background: hsl(37, 65%, 24%);
+            color: hsl(37, 90%, 72%);
+        }
         html[data-theme="dark"] .remove-btn { background: hsl(0, 30%, 30%); color: hsl(0, 60%, 65%); }
         html[data-theme="dark"] .remove-btn:hover { background: hsl(0, 35%, 36%); }
         html[data-theme="dark"] .field-group > label { color: hsl(224, 18%, 74%); }
         html[data-theme="dark"] .subsection { border-color: hsl(224, 38%, 19%); }
         html[data-theme="dark"] .subsection-title { color: hsl(224, 18%, 70%); }
-        html[data-theme="dark"] .section-card {
-            background: hsl(224, 38%, 17%);
-            border-color: hsl(224, 38%, 20%);
+        html[data-theme="dark"] .subsection-hint { color: hsl(224, 18%, 70%); }
+        html[data-theme="dark"] .advanced-toggle {
+            color: hsl(224, 18%, 70%);
+            background: hsl(224, 38%, 19%);
         }
-        html[data-theme="dark"] .section-subtitle { color: hsl(224, 18%, 75%); }
-        html[data-theme="dark"] .expert-grid .field {
-            background: hsl(224, 38%, 17%);
-            border-color: hsl(224, 38%, 20%);
+        html[data-theme="dark"] .advanced-toggle:hover { background: hsl(224, 38%, 23%); }
+        html[data-theme="dark"] .advanced-toggle.open {
+            background: hsl(37, 65%, 24%);
+            color: hsl(37, 90%, 72%);
         }
-        html[data-theme="dark"] .field-label { color: hsl(224, 18%, 95%); }
-        html[data-theme="dark"] .field-help  { color: hsl(224, 18%, 75%); }
         html[data-theme="dark"] .input-with-unit {
             background: hsl(224, 38%, 17%);
             border-color: hsl(224, 38%, 20%);
@@ -612,46 +666,57 @@
             border-color: hsl(224, 38%, 20%);
             color: hsl(224, 18%, 75%);
         }
-        html[data-theme="dark"] .cancel-btn,
         html[data-theme="dark"] .prev-btn {
             background: hsl(224, 38%, 18%);
             color: hsl(224, 18%, 90%);
         }
-        html[data-theme="dark"] .cancel-btn:hover,
         html[data-theme="dark"] .prev-btn:hover {
             background: hsl(224, 38%, 20%);
         }
+        html[data-theme="dark"] .close-btn {
+            background: hsl(224, 38%, 18%);
+            color: hsl(224, 18%, 70%);
+        }
+        html[data-theme="dark"] .close-btn:hover {
+            background: hsl(224, 38%, 22%);
+            color: hsl(224, 18%, 92%);
+        }
 
         @media (max-width: 640px) {
+            body {
+                padding: 0;
+            }
+
             .container {
                 max-width: 100%;
+                min-height: 100vh;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
                 padding: 1.25rem;
+                padding-bottom: 1rem;
             }
 
-            .expert-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .field-full {
-                grid-column: span 1;
-            }
-
-            .wizard-actions,
-            .wizard-actions .left,
-            .wizard-actions .right,
-            .inline-actions,
-            .progress-steps {
+            .inline-actions {
                 display: flex;
                 flex-direction: column;
             }
 
             .two-col { grid-template-columns: 1fr; }
 
-            .inline-actions button,
-            .wizard-actions button {
+            .inline-actions button {
                 width: 100%;
-                height: 44px;
-                border-radius: .65rem;
+                height: 50px;
+                border-radius: .75rem;
+            }
+
+            .wizard-actions button {
+                height: 50px;
+                border-radius: .75rem;
+            }
+
+            html[data-theme="dark"] .container {
+                box-shadow: none;
             }
         }
     </style>
@@ -659,10 +724,14 @@
 
 <body>
     <div class="container" role="main">
+        <button type="button" class="close-btn" onclick="cancelWizard()" aria-label="Annuleren" title="Annuleren">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+        </button>
+
         <div class="header" role="banner">
-            <div class="icon" aria-hidden="true">☀️</div>
+            <img class="logo-mark" src="{{ url_for('static', filename='icons/icon-192.png') }}" alt="SolarBuffer">
             <h1><span class="solar">Solar</span>Buffer Wizard</h1>
-            <p>Configureer stap voor stap je P1-meter, SolarBuffers en optionele expertinstellingen.</p>
+            <p>Configureer stap voor stap je P1-meter en SolarBuffers.</p>
         </div>
 
         <div class="wizard-progress">
@@ -678,10 +747,6 @@
                 <div class="progress-step" id="progressStep2">
                     <div class="step-number">Stap 2</div>
                     <div class="step-label">SolarBuffers</div>
-                </div>
-                <div class="progress-step" id="progressStep3">
-                    <div class="step-number">Stap 3</div>
-                    <div class="step-label">Expertmodus</div>
                 </div>
             </div>
         </div>
@@ -708,9 +773,6 @@
                 </div>
 
                 <div class="wizard-actions">
-                    <div class="left">
-                        <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
-                    </div>
                     <div class="right">
                         <button type="button" onclick="goToStep(2)">Volgende</button>
                     </div>
@@ -734,261 +796,15 @@
                     </div>
 
                     <div class="scan-status" id="deviceScanStatus"></div>
-                </div>
-
-                <div class="wizard-actions">
-                    <div class="left">
-                        <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
-                        <button type="button" class="prev-btn" onclick="goToStep(1)">Vorige</button>
-                    </div>
-                    <div class="right">
-                        <button type="button" onclick="goToStep(3)">Volgende</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="wizard-step" id="step3">
-                <div class="step-card">
-                    <div class="step-title">Stap 3 · Expertmodus</div>
-                    <div class="step-subtitle">
-                        Expertmodus is optioneel. Zet deze alleen aan als je de regelwaarden handmatig wilt instellen.
-                    </div>
-
-                    <div class="section-card">
-                        <label class="expert-toggle" for="expertMode">
-                            <input type="checkbox" id="expertMode" name="expert_mode" {% if config.expert_mode
-                                %}checked{% endif %}>
-                            Expertmodus inschakelen
-                        </label>
-
-                        <div class="section-subtitle" style="margin:.5rem 0 0 0;">
-                            Uitgeschakeld gebruikt de standaardinstellingen.
-                        </div>
-
-                        <div id="expertSettingsBox" style="display:none; margin-top:1rem;">
-                            <button type="button" id="toggleExpertBtn" style="margin-bottom:.75rem;">
-                                Toon expertinstellingen
-                            </button>
-
-                            <div class="expert-grid" id="expertGrid" style="display:none;">
-                                <div class="field">
-                                    <label class="field-label" for="EXPORT_THRESHOLD">Inschakeldrempel</label>
-                                    <div class="field-help">Start bij teruglevering</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="EXPORT_THRESHOLD" name="EXPORT_THRESHOLD"
-                                            value="{{ config.expert_settings.EXPORT_THRESHOLD if config.expert_settings else -50 }}">
-                                        <span class="unit">W</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="EXPORT_DELAY">Inschakelvertraging</label>
-                                    <div class="field-help">Wachttijd voor inschakelen</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="EXPORT_DELAY" name="EXPORT_DELAY"
-                                            value="{{ config.expert_settings.EXPORT_DELAY if config.expert_settings else 15 }}">
-                                        <span class="unit">s</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="FREEZE_AT">Bevriezen bij</label>
-                                    <div class="field-help">Bevries op hoge stand</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="FREEZE_AT" name="FREEZE_AT"
-                                            value="{{ config.expert_settings.FREEZE_AT if config.expert_settings else 95 }}">
-                                        <span class="unit">%</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="FREEZE_CONFIRM">Bevestiging bevriezen</label>
-                                    <div class="field-help">Tijd vóór bevriezen</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="FREEZE_CONFIRM" name="FREEZE_CONFIRM"
-                                            value="{{ config.expert_settings.FREEZE_CONFIRM if config.expert_settings else 2 }}">
-                                        <span class="unit">s</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="IMPORT_UNFREEZE_THRESHOLD">Vrijgave
-                                        importdrempel</label>
-                                    <div class="field-help">Bevriezing loslaten bij netafname</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="IMPORT_UNFREEZE_THRESHOLD"
-                                            name="IMPORT_UNFREEZE_THRESHOLD"
-                                            value="{{ config.expert_settings.IMPORT_UNFREEZE_THRESHOLD if config.expert_settings else 200 }}">
-                                        <span class="unit">W</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="UNFREEZE_DELAY">Vrijgavevertraging</label>
-                                    <div class="field-help">Wachttijd voor vrijgeven</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="UNFREEZE_DELAY" name="UNFREEZE_DELAY"
-                                            value="{{ config.expert_settings.UNFREEZE_DELAY if config.expert_settings else 5 }}">
-                                        <span class="unit">s</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="IMPORT_OFF_THRESHOLD">Uitschakeldrempel
-                                        import</label>
-                                    <div class="field-help">Schakel uit bij afname</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="IMPORT_OFF_THRESHOLD" name="IMPORT_OFF_THRESHOLD"
-                                            value="{{ config.expert_settings.IMPORT_OFF_THRESHOLD if config.expert_settings else 300 }}">
-                                        <span class="unit">W</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="OFF_DELAY">Uitschakelvertraging</label>
-                                    <div class="field-help">Wachttijd voor uitschakelen</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="OFF_DELAY" name="OFF_DELAY"
-                                            value="{{ config.expert_settings.OFF_DELAY if config.expert_settings else 120 }}">
-                                        <span class="unit">s</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="PID_NEUTRAL_LOW">PID-neutraal laag</label>
-                                    <div class="field-help">Ondergrens neutrale zone</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="PID_NEUTRAL_LOW" name="PID_NEUTRAL_LOW"
-                                            value="{{ config.expert_settings.PID_NEUTRAL_LOW if config.expert_settings else -5 }}">
-                                        <span class="unit">W</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="PID_NEUTRAL_HIGH">PID-neutraal hoog</label>
-                                    <div class="field-help">Bovengrens neutrale zone</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="PID_NEUTRAL_HIGH" name="PID_NEUTRAL_HIGH"
-                                            value="{{ config.expert_settings.PID_NEUTRAL_HIGH if config.expert_settings else 45 }}">
-                                        <span class="unit">W</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="POWER_SOCKET_DELAY">Power socket
-                                        startvertraging</label>
-                                    <div class="field-help">Wachttijd na inschakelen socket</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="POWER_SOCKET_DELAY" name="POWER_SOCKET_DELAY"
-                                            value="{{ config.expert_settings.POWER_SOCKET_DELAY if config.expert_settings else 5 }}">
-                                        <span class="unit">s</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="POWER_SOCKET_HOLD_SECONDS">Power socket
-                                        nalooptijd</label>
-                                    <div class="field-help">Uitschakelen na laatste activatie</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="POWER_SOCKET_HOLD_SECONDS"
-                                            name="POWER_SOCKET_HOLD_SECONDS"
-                                            value="{{ config.expert_settings.POWER_SOCKET_HOLD_SECONDS if config.expert_settings else 3600 }}">
-                                        <span class="unit">s</span>
-                                    </div>
-                                </div>
-
-                                <div class="field">
-                                    <label class="field-label" for="BOOST_DURATION">Boost duur</label>
-                                    <div class="field-help">Hoe lang een apparaat op 100% draait bij boost</div>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="BOOST_DURATION"
-                                            name="BOOST_DURATION"
-                                            value="{{ config.expert_settings.BOOST_DURATION if config.expert_settings else 900 }}">
-                                        <span class="unit">s</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="section-card" style="margin-top:1rem;">
-                                <div class="section-title">MQTT / Home Assistant</div>
-                                <div class="section-subtitle">Koppel SolarBuffer met Home Assistant via MQTT. Standaard uitgeschakeld.</div>
-
-                                <label class="expert-toggle" for="mqttEnabled">
-                                    <input type="checkbox" id="mqttEnabled" name="mqtt_enabled"
-                                        {% if config.mqtt_enabled %}checked{% endif %}>
-                                    MQTT inschakelen
-                                </label>
-
-                                <div id="mqttFields" style="display:none; margin-top:1rem;">
-                                    <div class="expert-grid">
-                                        <div class="field field-full">
-                                            <label class="field-label" for="mqttBroker">MQTT Broker</label>
-                                            <div class="field-help">IP-adres of hostnaam van je MQTT broker (bijv. Home Assistant)</div>
-                                            <input type="text" id="mqttBroker" name="mqtt_broker"
-                                                placeholder="Bijv. 192.168.178.100"
-                                                value="{{ config.mqtt_broker or '' }}">
-                                        </div>
-
-                                        <div class="field">
-                                            <label class="field-label" for="mqttPort">Poort</label>
-                                            <div class="field-help">Standaard 1883 (tcp)</div>
-                                            <input type="number" id="mqttPort" name="mqtt_port"
-                                                value="{{ config.mqtt_port or 1883 }}" min="1" max="65535">
-                                        </div>
-
-                                        <div class="field">
-                                            <label class="field-label" for="mqttPublishInterval">Publiceer-interval (s)</label>
-                                            <div class="field-help">Status publiceren elke N seconden</div>
-                                            <input type="number" id="mqttPublishInterval" name="mqtt_publish_interval"
-                                                value="{{ config.mqtt_publish_interval or 30 }}" min="5" max="3600">
-                                        </div>
-
-                                        <div class="field">
-                                            <label class="field-label" for="mqttUsername">Gebruikersnaam</label>
-                                            <div class="field-help">Laat leeg als niet vereist</div>
-                                            <input type="text" id="mqttUsername" name="mqtt_username"
-                                                autocomplete="off" placeholder="mqtt_user"
-                                                value="{{ config.mqtt_username or '' }}">
-                                        </div>
-
-                                        <div class="field">
-                                            <label class="field-label" for="mqttPassword">Wachtwoord</label>
-                                            <div class="field-help">Laat leeg als niet vereist</div>
-                                            <input type="password" id="mqttPassword" name="mqtt_password"
-                                                autocomplete="new-password" placeholder="••••••••"
-                                                value="{{ config.mqtt_password or '' }}">
-                                        </div>
-
-                                        <div class="field">
-                                            <label class="field-label" for="mqttTopicPrefix">Topic prefix</label>
-                                            <div class="field-help">Basisnaam voor alle MQTT topics</div>
-                                            <input type="text" id="mqttTopicPrefix" name="mqtt_topic_prefix"
-                                                placeholder="solarbuffer"
-                                                value="{{ config.mqtt_topic_prefix or 'solarbuffer' }}">
-                                        </div>
-
-                                        <div class="field">
-                                            <label class="field-label">HA Auto-discovery</label>
-                                            <div class="field-help">Entiteiten automatisch registreren in Home Assistant</div>
-                                            <label class="expert-toggle" for="mqttHaDiscovery" style="margin-top:.5rem;">
-                                                <input type="checkbox" id="mqttHaDiscovery" name="mqtt_ha_discovery"
-                                                    {% if config.mqtt_ha_discovery is not defined or config.mqtt_ha_discovery %}checked{% endif %}>
-                                                HA Discovery inschakelen
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
                 </div>
 
                 <div class="wizard-actions">
                     <div class="left">
-                        <button type="button" class="cancel-btn" onclick="cancelWizard()">Annuleren</button>
-                        <button type="button" class="prev-btn" onclick="goToStep(2)">Vorige</button>
+                        <button type="button" class="prev-btn icon-btn" onclick="goToStep(1)" aria-label="Vorige" title="Vorige">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+                        </button>
                     </div>
                     <div class="right">
                         <button type="submit">Opslaan</button>
@@ -1015,7 +831,7 @@
                 step.classList.toggle('active', index + 1 === currentStep);
             });
 
-            for (let i = 1; i <= 3; i++) {
+            for (let i = 1; i <= 2; i++) {
                 const el = document.getElementById(`progressStep${i}`);
                 el.classList.remove('active', 'done');
 
@@ -1027,7 +843,7 @@
             }
 
             const fill = document.getElementById('progressFill');
-            fill.style.width = currentStep === 1 ? '33.33%' : currentStep === 2 ? '66.66%' : '100%';
+            fill.style.width = currentStep === 1 ? '50%' : '100%';
         }
 
         function validateStep(step) {
@@ -1193,48 +1009,6 @@
             }
         }
 
-        function toggleExpertSettings() {
-            const grid = document.getElementById('expertGrid');
-            const btn = document.getElementById('toggleExpertBtn');
-
-            if (!grid || !btn) return;
-
-            const isVisible = grid.style.display === 'grid';
-
-            if (isVisible) {
-                grid.style.display = 'none';
-                btn.textContent = 'Toon expertinstellingen';
-            } else {
-                grid.style.display = 'grid';
-                btn.textContent = 'Verberg expertinstellingen';
-            }
-        }
-
-        function updateExpertModeVisibility() {
-            const expertMode = document.getElementById('expertMode');
-            const expertBox = document.getElementById('expertSettingsBox');
-            const grid = document.getElementById('expertGrid');
-            const btn = document.getElementById('toggleExpertBtn');
-
-            if (!expertMode || !expertBox) return;
-
-            if (expertMode.checked) {
-                expertBox.style.display = 'block';
-                if (grid) grid.style.display = 'none';
-                if (btn) btn.textContent = 'Toon expertinstellingen';
-            } else {
-                expertBox.style.display = 'none';
-            }
-        }
-
-        function updateMqttVisibility() {
-            const mqttEnabled = document.getElementById('mqttEnabled');
-            const mqttFields = document.getElementById('mqttFields');
-            if (!mqttEnabled || !mqttFields) return;
-            mqttFields.style.display = mqttEnabled.checked ? 'block' : 'none';
-        }
-
-
         function addDevice(
             name = '',
             ip = '',
@@ -1258,7 +1032,10 @@
             card.setAttribute('data-device', '');
             card.innerHTML = `
         <div class="device-card-header">
-            <span class="device-card-label">SolarBuffer</span>
+            <div class="device-card-title">
+                <span class="device-number">1</span>
+                <span class="device-card-label">SolarBuffer</span>
+            </div>
             <button type="button" class="remove-btn" onclick="removeDevice(this)" title="Verwijderen">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
             </button>
@@ -1280,41 +1057,49 @@
             </div>
         </div>
 
-        <div class="subsection">
-            <div class="subsection-title">Power meter</div>
-            <div class="two-col">
-                <div class="field-group" style="margin-bottom:0;">
-                    <label>Type</label>
-                    <select name="power_meter[]">${createPowerMeterOptions(power_meter)}</select>
-                </div>
-                <div class="field-group" style="margin-bottom:0;">
-                    <label>IP-adres</label>
-                    <input type="text" name="power_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+        <button type="button" class="advanced-toggle" onclick="toggleDeviceAdvanced(this)">
+            <span>Slimme stekker &amp; vermogensmeter</span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41,8.59L12,13.17L16.59,8.59L18,10L12,16L6,10L7.41,8.59Z"/></svg>
+        </button>
+
+        <div class="device-advanced">
+            <div class="subsection">
+                <div class="subsection-title">Slimme stekker</div>
+                <div class="two-col">
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>Type</label>
+                        <select name="power_socket_type[]">${createPowerSocketOptions(power_socket_type)}</select>
+                    </div>
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>IP-adres</label>
+                        <input type="text" name="power_socket_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="subsection">
-            <div class="subsection-title">Power socket</div>
-            <div class="two-col">
-                <div class="field-group" style="margin-bottom:0;">
-                    <label>Type</label>
-                    <select name="power_socket_type[]">${createPowerSocketOptions(power_socket_type)}</select>
-                </div>
-                <div class="field-group" style="margin-bottom:0;">
-                    <label>IP-adres</label>
-                    <input type="text" name="power_socket_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+            <div class="subsection">
+                <div class="subsection-title">Vermogensmeter</div>
+                <div class="subsection-hint">Geen externe vermogensmeter? Vul dan het IP-adres van de Slimme stekker in.</div>
+                <div class="two-col">
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>Type</label>
+                        <select name="power_meter[]">${createPowerMeterOptions(power_meter)}</select>
+                    </div>
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>IP-adres</label>
+                        <input type="text" name="power_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="subsection">
-            <div class="subsection-title">Anti-legionella</div>
-            <div class="field-group" style="margin-bottom:0;">
-                <label>Inhoud boiler</label>
-                <div class="input-with-unit" style="max-width:160px;">
-                    <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" value="${escapeHtml(boiler_volume || 100)}">
-                    <span class="unit">L</span>
+            <div class="subsection">
+                <div class="subsection-title">Anti-legionella</div>
+                <div class="field-group" style="margin-bottom:0;">
+                    <label>Inhoud boiler</label>
+                    <div class="input-with-unit" style="max-width:160px;">
+                        <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" value="${escapeHtml(boiler_volume || 100)}">
+                        <span class="unit">L</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1332,6 +1117,14 @@
             updatePowerSocketState(card);
             updatePriorities();
             updateDeviceNumbers();
+
+            const hasAdvancedData = Boolean(power_meter) || Boolean(power_socket_type) ||
+                (Number(boiler_volume) && Number(boiler_volume) !== 100);
+            if (hasAdvancedData) {
+                const toggleBtn = card.querySelector('.advanced-toggle');
+                if (toggleBtn) toggleDeviceAdvanced(toggleBtn);
+            }
+
             return true;
         }
 
@@ -1370,10 +1163,19 @@
         function updateDeviceNumbers() {
             const cards = document.querySelectorAll('.device-card[data-device]');
             cards.forEach((card, i) => {
-                card.querySelector('.device-card-label').textContent = `SolarBuffer ${i + 1}`;
+                card.querySelector('.device-card-label').textContent = 'SolarBuffer';
+                const numberBadge = card.querySelector('.device-number');
+                if (numberBadge) numberBadge.textContent = String(i + 1);
                 const removeBtn = card.querySelector('.remove-btn');
                 if (removeBtn) removeBtn.style.display = cards.length > 1 ? 'flex' : 'none';
             });
+        }
+
+        function toggleDeviceAdvanced(btn) {
+            const panel = btn.nextElementSibling;
+            if (!panel) return;
+            const isOpen = panel.classList.toggle('open');
+            btn.classList.toggle('open', isOpen);
         }
 
         function renderScanResults(data, addedCount, skippedCount) {
@@ -1557,26 +1359,9 @@
             const savedP1 = "{{ config.p1_ip or '' }}";
             const devices = {{ config.shelly_devices| tojson or[]
         }};
-        const expertMode = document.getElementById('expertMode');
 
         if (savedP1) {
             document.getElementById('p1ip').value = savedP1;
-        }
-
-        if (expertMode) {
-            expertMode.addEventListener('change', updateExpertModeVisibility);
-        }
-        updateExpertModeVisibility();
-
-        const mqttEnabled = document.getElementById('mqttEnabled');
-        if (mqttEnabled) {
-            mqttEnabled.addEventListener('change', updateMqttVisibility);
-        }
-        updateMqttVisibility();
-
-        const toggleBtn = document.getElementById('toggleExpertBtn');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', toggleExpertSettings);
         }
 
         if (devices.length > 0) {
