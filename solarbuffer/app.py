@@ -5293,6 +5293,9 @@ def control_loop():
                             st["min_since"] = None
                             if st["brightness"] < MIN_BRIGHTNESS:
                                 st["brightness"] = MIN_BRIGHTNESS
+                            if ip in device_pids:
+                                device_pids[ip].set_auto_mode(False)
+                                device_pids[ip].set_auto_mode(True, last_output=st["brightness"])
                             set_shelly(st["brightness"], True, ip)
                             mark_device_activity(d)
                         continue
@@ -5327,6 +5330,9 @@ def control_loop():
                         st["min_since"] = None
                         if st["brightness"] < MIN_BRIGHTNESS:
                             st["brightness"] = MIN_BRIGHTNESS
+                        if ip in device_pids:
+                            device_pids[ip].set_auto_mode(False)
+                            device_pids[ip].set_auto_mode(True, last_output=st["brightness"])
                         set_shelly(st["brightness"], True, ip)
                         mark_device_activity(d)
                         offline_since_map.pop(ip, None)
