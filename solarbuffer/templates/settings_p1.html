@@ -517,17 +517,6 @@
       return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
 
-    function updatePairIpHint() {
-      // legacy stub — no longer used
-      var inputs = document.querySelectorAll('#batteryIpsList input[name="battery_ip[]"]');
-      var ip = '';
-      for (var i = 0; i < inputs.length; i++) {
-        var v = inputs[i].value.trim();
-        if (v) { ip = v; break; }
-      }
-      document.getElementById('pairIpHint').textContent = ip || '—';
-    }
-
     function updateBatteryType() {
       var isMarstek = document.getElementById('bt_marstek').checked;
       var isZendure = document.getElementById('bt_zendure').checked;
@@ -550,8 +539,6 @@
       cb.addEventListener('change', update);
       update();
       updateBatteryType();
-      document.getElementById('batteryIpsList').addEventListener('input', updatePairIpHint);
-      updatePairIpHint();
     })();
 
     var _rowPairTimers = new WeakMap();
