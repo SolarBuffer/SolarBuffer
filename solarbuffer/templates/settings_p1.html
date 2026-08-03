@@ -615,7 +615,7 @@
       doRequest();
       var interval = setInterval(function() {
         countdown++;
-        if (countdown >= 30) {
+        if (countdown >= 15) {
           clearInterval(interval);
           _rowPairTimers.delete(row);
           btn.disabled = false; btn.textContent = 'Koppelen';
@@ -656,7 +656,7 @@
       sendPairP1Request();
       _pairP1Interval = setInterval(function() {
         _pairP1Countdown++;
-        if (_pairP1Countdown >= 30) {
+        if (_pairP1Countdown >= 15) {
           stopPairingP1();
           setPairP1Status('Timeout — knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
           return;
