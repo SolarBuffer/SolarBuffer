@@ -661,8 +661,10 @@ _bat_charge_start_kwh = None
 _bat_discharge_start_kwh = None
 _last_marstek_send = 0.0
 _last_marstek_power = None
+_marstek_control_lock = threading.Lock()
 _last_zendure_send = 0.0
 _last_zendure_power = None
+_zendure_control_lock = threading.Lock()
 _zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes)
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
@@ -6044,20 +6046,25 @@ def marstek_udp(ip, port, method, params=None, timeout=3):
 def release_marstek_to_auto(ip, port):
     """Switch the Marstek battery back to its own automatic mode."""
     global _last_battery_permissions, _last_battery_mode, _last_marstek_send, _last_marstek_power
-    now = time.time()
-    if _last_battery_mode == "auto" and (now - _last_marstek_send) < 240:
-        return True
+    if not _marstek_control_lock.acquire(blocking=False):
+        return False
     try:
-        result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
-        if result.get("result", {}).get("set_result"):
-            _last_battery_permissions = None
-            _last_battery_mode = "auto"
-            _last_marstek_power = None
-            _last_marstek_send = now
+        now = time.time()
+        if _last_battery_mode == "auto" and (now - _last_marstek_send) < 240:
             return True
-    except Exception as e:
-        print(f"Marstek auto-release error ({ip}:{port}): {e}")
-    return False
+        try:
+            result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
+            if result.get("result", {}).get("set_result"):
+                _last_battery_permissions = None
+                _last_battery_mode = "auto"
+                _last_marstek_power = None
+                _last_marstek_send = now
+                return True
+        except Exception as e:
+            print(f"Marstek auto-release error ({ip}:{port}): {e}")
+        return False
+    finally:
+        _marstek_control_lock.release()
 
 
 def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000, invert_power=True):
@@ -6077,83 +6084,88 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
     """
     global _last_battery_permissions, _last_battery_mode, _last_marstek_send, _last_marstek_power
 
-    now = time.time()
-    desired_perms = sorted(perms)
-    max_power = int(max_power or 2000)
+    if not _marstek_control_lock.acquire(blocking=False):
+        return False
+    try:
+        now = time.time()
+        desired_perms = sorted(perms)
+        max_power = int(max_power or 2000)
 
-    charge_only = (desired_perms == ["charge_allowed"])
-    discharge_only = (desired_perms == ["discharge_allowed"])
+        charge_only = (desired_perms == ["charge_allowed"])
+        discharge_only = (desired_perms == ["discharge_allowed"])
 
-    if mode == "to_full":
-        action, target_power = "manual", max_power
-    elif not perms:
-        action, target_power = "manual", 0
-    elif charge_only:
-        if measured_power < -50:
-            action, target_power = "auto", None
-        elif measured_power > 50:
+        if mode == "to_full":
+            action, target_power = "manual", max_power
+        elif not perms:
             action, target_power = "manual", 0
+        elif charge_only:
+            if measured_power < -50:
+                action, target_power = "auto", None
+            elif measured_power > 50:
+                action, target_power = "manual", 0
+            else:
+                return True  # dode zone rond 0 W: behoud de huidige actie
+        elif discharge_only:
+            if measured_power > 50:
+                action, target_power = "auto", None
+            elif measured_power < -50:
+                action, target_power = "manual", 0
+            else:
+                return True  # dode zone rond 0 W: behoud de huidige actie
         else:
-            return True  # dode zone rond 0 W: behoud de huidige actie
-    elif discharge_only:
-        if measured_power > 50:
             action, target_power = "auto", None
-        elif measured_power < -50:
-            action, target_power = "manual", 0
-        else:
-            return True  # dode zone rond 0 W: behoud de huidige actie
-    else:
-        action, target_power = "auto", None
 
-    # Manual-schema blijft staan tot we het herschrijven (geen cd_time zoals bij
-    # Passive), dus alleen een trage keep-alive tegen externe wijzigingen.
-    needs_refresh = (now - _last_marstek_send) > 1800
+        # Manual-schema blijft staan tot we het herschrijven (geen cd_time zoals bij
+        # Passive), dus alleen een trage keep-alive tegen externe wijzigingen.
+        needs_refresh = (now - _last_marstek_send) > 1800
 
-    if action == "auto":
-        if _last_battery_mode == "auto" and not needs_refresh:
+        if action == "auto":
+            if _last_battery_mode == "auto" and not needs_refresh:
+                return True
+            try:
+                result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
+                if result.get("result", {}).get("set_result"):
+                    _last_battery_permissions = desired_perms
+                    _last_battery_mode = "auto"
+                    _last_marstek_power = None
+                    _last_marstek_send = now
+                    return True
+            except Exception as e:
+                print(f"Marstek control error ({ip}:{port}): {e}")
+            return False
+
+        power_changed = (_last_marstek_power is None or
+                         abs(target_power - _last_marstek_power) > 25)
+        if _last_battery_mode == "manual" and not power_changed and not needs_refresh:
             return True
+
         try:
-            result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
+            # Intern: positief = laden. Marstek Manual verwacht (vermoedelijk)
+            # negatief = laden → standaard omkeren (marstek_invert_power).
+            _send_power = -target_power if invert_power else target_power
+            cfg_obj = {
+                "mode": "Manual",
+                "manual_cfg": {
+                    "time_num": 0,
+                    "start_time": "00:00",
+                    "end_time": "23:59",
+                    "week_set": 127,  # alle dagen (bit 0 = maandag)
+                    "power": _send_power,
+                    "enable": 1,
+                },
+            }
+            result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": cfg_obj})
             if result.get("result", {}).get("set_result"):
                 _last_battery_permissions = desired_perms
-                _last_battery_mode = "auto"
-                _last_marstek_power = None
+                _last_battery_mode = "manual"
+                _last_marstek_power = target_power
                 _last_marstek_send = now
                 return True
         except Exception as e:
             print(f"Marstek control error ({ip}:{port}): {e}")
         return False
-
-    power_changed = (_last_marstek_power is None or
-                     abs(target_power - _last_marstek_power) > 25)
-    if _last_battery_mode == "manual" and not power_changed and not needs_refresh:
-        return True
-
-    try:
-        # Intern: positief = laden. Marstek Manual verwacht (vermoedelijk)
-        # negatief = laden → standaard omkeren (marstek_invert_power).
-        _send_power = -target_power if invert_power else target_power
-        cfg_obj = {
-            "mode": "Manual",
-            "manual_cfg": {
-                "time_num": 0,
-                "start_time": "00:00",
-                "end_time": "23:59",
-                "week_set": 127,  # alle dagen (bit 0 = maandag)
-                "power": _send_power,
-                "enable": 1,
-            },
-        }
-        result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": cfg_obj})
-        if result.get("result", {}).get("set_result"):
-            _last_battery_permissions = desired_perms
-            _last_battery_mode = "manual"
-            _last_marstek_power = target_power
-            _last_marstek_send = now
-            return True
-    except Exception as e:
-        print(f"Marstek control error ({ip}:{port}): {e}")
-    return False
+    finally:
+        _marstek_control_lock.release()
 
 
 # ================= ZENDURE LOKALE API (zenSDK) =================
@@ -6200,19 +6212,24 @@ def release_zendure_to_idle(ip):
     instellingen weer.
     """
     global _last_battery_permissions, _last_battery_mode, _last_zendure_send, _last_zendure_power
-    now = time.time()
-    if _last_battery_mode == "idle" and (now - _last_zendure_send) < 240:
-        return True
+    if not _zendure_control_lock.acquire(blocking=False):
+        return False
     try:
-        zendure_write_properties(ip, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
-        _last_battery_permissions = None
-        _last_battery_mode = "idle"
-        _last_zendure_power = None
-        _last_zendure_send = now
-        return True
-    except Exception as e:
-        print(f"Zendure idle-release error ({ip}): {e}")
-    return False
+        now = time.time()
+        if _last_battery_mode == "idle" and (now - _last_zendure_send) < 240:
+            return True
+        try:
+            zendure_write_properties(ip, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
+            _last_battery_permissions = None
+            _last_battery_mode = "idle"
+            _last_zendure_power = None
+            _last_zendure_send = now
+            return True
+        except Exception as e:
+            print(f"Zendure idle-release error ({ip}): {e}")
+        return False
+    finally:
+        _zendure_control_lock.release()
 
 
 def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800):
@@ -6235,52 +6252,57 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800):
     """
     global _last_battery_permissions, _last_battery_mode, _last_zendure_send, _last_zendure_power
 
-    now = time.time()
-    desired_perms = sorted(perms)
-    max_power = int(max_power or 800)
-
-    charge_only = (desired_perms == ["charge_allowed"])
-    discharge_only = (desired_perms == ["discharge_allowed"])
-
-    if mode == "to_full":
-        target_power = max_power
-    elif not perms:
-        target_power = 0
-    else:
-        # Intern: positief = laden (battery_state power_w is andersom: <0 = laden)
-        _bat_now = -(battery_state.get("power_w") or 0)
-        _ideal = int(_bat_now - measured_power)
-        if charge_only:
-            target_power = max(0, min(max_power, _ideal))
-        elif discharge_only:
-            target_power = max(-max_power, min(0, _ideal))
-        else:
-            target_power = max(-max_power, min(max_power, _ideal))
-
-    mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
-    power_changed = abs(target_power - (_last_zendure_power or 0)) > 25
-    needs_refresh = (now - _last_zendure_send) > 240
-
-    if not mode_changed and not power_changed and not needs_refresh:
-        return True
-
-    if target_power > 0:
-        props = {"smartMode": 1, "acMode": 1, "inputLimit": target_power, "outputLimit": 0}
-    elif target_power < 0:
-        props = {"smartMode": 1, "acMode": 2, "outputLimit": -target_power, "inputLimit": 0}
-    else:
-        props = {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
-
+    if not _zendure_control_lock.acquire(blocking=False):
+        return False
     try:
-        zendure_write_properties(ip, props)
-        _last_battery_permissions = desired_perms
-        _last_battery_mode = mode
-        _last_zendure_power = target_power
-        _last_zendure_send = now
-        return True
-    except Exception as e:
-        print(f"Zendure control error ({ip}): {e}")
-    return False
+        now = time.time()
+        desired_perms = sorted(perms)
+        max_power = int(max_power or 800)
+
+        charge_only = (desired_perms == ["charge_allowed"])
+        discharge_only = (desired_perms == ["discharge_allowed"])
+
+        if mode == "to_full":
+            target_power = max_power
+        elif not perms:
+            target_power = 0
+        else:
+            # Intern: positief = laden (battery_state power_w is andersom: <0 = laden)
+            _bat_now = -(battery_state.get("power_w") or 0)
+            _ideal = int(_bat_now - measured_power)
+            if charge_only:
+                target_power = max(0, min(max_power, _ideal))
+            elif discharge_only:
+                target_power = max(-max_power, min(0, _ideal))
+            else:
+                target_power = max(-max_power, min(max_power, _ideal))
+
+        mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
+        power_changed = abs(target_power - (_last_zendure_power or 0)) > 25
+        needs_refresh = (now - _last_zendure_send) > 240
+
+        if not mode_changed and not power_changed and not needs_refresh:
+            return True
+
+        if target_power > 0:
+            props = {"smartMode": 1, "acMode": 1, "inputLimit": target_power, "outputLimit": 0}
+        elif target_power < 0:
+            props = {"smartMode": 1, "acMode": 2, "outputLimit": -target_power, "inputLimit": 0}
+        else:
+            props = {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
+
+        try:
+            zendure_write_properties(ip, props)
+            _last_battery_permissions = desired_perms
+            _last_battery_mode = mode
+            _last_zendure_power = target_power
+            _last_zendure_send = now
+            return True
+        except Exception as e:
+            print(f"Zendure control error ({ip}): {e}")
+        return False
+    finally:
+        _zendure_control_lock.release()
 
 
 # ================= HOMEWIZARD BATTERY API =================
