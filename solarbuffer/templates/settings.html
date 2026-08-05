@@ -285,6 +285,19 @@
     .ts-connect-btn:hover    { background: hsl(32, 90%, 45%); }
     .ts-connect-btn:disabled { opacity: 0.6; cursor: default; }
 
+    .ts-logout-btn {
+      display: block; width: 100%; margin-top: 0.75rem;
+      padding: 0.6rem; font-size: 0.88rem; font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      background: transparent; color: hsl(0, 65%, 48%);
+      border: 1.5px solid hsl(0, 60%, 82%); border-radius: 0.5rem; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .ts-logout-btn:hover    { background: hsl(0, 80%, 96%); }
+    .ts-logout-btn:disabled { opacity: 0.6; cursor: default; }
+    html[data-theme="dark"] .ts-logout-btn { color: hsl(0, 65%, 65%); border-color: hsl(0, 40%, 36%); }
+    html[data-theme="dark"] .ts-logout-btn:hover { background: hsl(0, 25%, 24%); }
+
     /* ===== DARK MODE TOGGLE ===== */
     .settings-item.clickable { cursor: pointer; user-select: none; }
     .dark-pill {
@@ -806,6 +819,7 @@
               <span class="ts-row-label">Hostnaam</span>
               <span class="ts-row-val">http://solarbuffer:5001</span>
             </div>
+            <button class="ts-logout-btn" id="tsLogoutBtn" onclick="tsLogout()">Loskoppelen</button>
           </div>
           <div id="tsDisconnected" style="display:none">
             <button class="ts-connect-btn" id="tsConnectBtn" onclick="tsConnect()">Verbinden</button>
@@ -1347,6 +1361,26 @@
         .then(r => r.json())
         .then(() => { _tsWaitingForAuth = true; setTimeout(tsFetchStatus, 2000); })
         .catch(() => { btn.disabled = false; btn.textContent = 'Verbinden'; });
+    }
+
+    function tsLogout() {
+      if (!confirm('Tailscale-verbinding verbreken? Je moet daarna opnieuw inloggen om weer op afstand te kunnen verbinden.')) return;
+      const btn = document.getElementById('tsLogoutBtn');
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      fetch('/tailscale_logout', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false;
+          btn.textContent = 'Loskoppelen';
+          if (!data.success) { alert('Loskoppelen mislukt: ' + (data.error || 'onbekende fout')); return; }
+          tsFetchStatus();
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.textContent = 'Loskoppelen';
+          alert('Fout bij loskoppelen.');
+        });
     }
 
     function tsCopyUrl() {
