@@ -2842,6 +2842,34 @@ def tailscale_connect():
     return jsonify({"success": True})
 
 
+@app.route("/tailscale_logout", methods=["POST"])
+def tailscale_logout():
+    global _tailscale_auth_url
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+
+    _tailscale_auth_url = None
+    try:
+        result = subprocess.run(
+            ["sudo", "tailscale", "logout"],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode != 0:
+            # Backup: zonder sudo, voor het geval passwordless sudo niet is
+            # ingesteld voor dit commando (of tailscaled al als huidige user draait).
+            result = subprocess.run(
+                ["tailscale", "logout"],
+                capture_output=True, text=True, timeout=15
+            )
+        if result.returncode == 0:
+            write_audit_log("tailscale_logout", {"user": safe_session_username()})
+            return jsonify({"success": True})
+        error = (result.stderr or result.stdout or "onbekende fout").strip()
+        return jsonify({"success": False, "error": error}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # ================= TIJDSCHEMA ROUTES =================
 def _valid_time(t):
     return bool(re.match(r"^\d{2}:\d{2}$", str(t)))
