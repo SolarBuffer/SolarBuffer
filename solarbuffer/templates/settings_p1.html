@@ -417,6 +417,13 @@
 
           <!-- Marstek-specifieke velden -->
           <div id="marstekFields" style="display:none;">
+            <div class="field-group">
+              <button type="button" class="btn-secondary" id="marstekScanBtn" onclick="scanMarstek()" style="width:auto;padding:0.5rem 0.9rem;font-size:0.85rem;">
+                Marstek-accu's zoeken op netwerk
+              </button>
+              <div id="marstekScanStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+              <div id="marstekScanResults"></div>
+            </div>
             <div style="display:flex;gap:1rem;">
               <div class="field-group" style="flex:1;">
                 <label for="marstek_port">UDP-poort</label>
@@ -549,6 +556,69 @@
       statusEl.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
       statusEl.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
       statusEl.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
+    }
+
+    function useMarstekIp(ip) {
+      var rows = document.querySelectorAll('#batteryIpsList .battery-ip-row input[name="battery_ip[]"]');
+      var target = null;
+      for (var i = 0; i < rows.length; i++) {
+        if (!rows[i].value.trim()) { target = rows[i]; break; }
+      }
+      if (!target) {
+        addIpRow();
+        rows = document.querySelectorAll('#batteryIpsList .battery-ip-row input[name="battery_ip[]"]');
+        target = rows[rows.length - 1];
+      }
+      target.value = ip;
+      target.focus();
+    }
+
+    function scanMarstek() {
+      var btn = document.getElementById('marstekScanBtn');
+      var statusEl = document.getElementById('marstekScanStatus');
+      var resultsEl = document.getElementById('marstekScanResults');
+      var port = parseInt(document.getElementById('marstek_port').value, 10) || 30000;
+
+      btn.disabled = true;
+      btn.textContent = 'Zoeken…';
+      resultsEl.innerHTML = '';
+      setRowStatus(statusEl, '<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Zoeken op het netwerk… (kan enkele seconden duren)</span>', 'wait');
+
+      fetch('/api/battery/scan_marstek', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: port })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = "Marstek-accu's zoeken op netwerk";
+          if (!data.success) {
+            setRowStatus(statusEl, 'Fout: ' + (data.error || 'onbekend'), 'error');
+            return;
+          }
+          if (!data.devices || data.devices.length === 0) {
+            setRowStatus(statusEl, 'Geen Marstek-accu\'s gevonden op dit netwerk. Controleer of Local API aanstaat in de Marstek-app en of de poort klopt.', 'error');
+            return;
+          }
+          setRowStatus(statusEl, data.devices.length + ' apparaat' + (data.devices.length === 1 ? '' : 'en') + ' gevonden.', 'success');
+          data.devices.forEach(function(d) {
+            var item = document.createElement('div');
+            item.style.cssText = 'display:flex;align-items:center;gap:0.5rem;border:1px solid hsl(224, 18%, 90%);border-radius:0.5rem;padding:0.5rem 0.75rem;margin-top:0.4rem;';
+            item.innerHTML = '<div style="flex:1;min-width:0;">'
+              + '<div style="font-weight:600;font-size:0.88rem;">' + escapeHtml(d.device || 'Marstek') + ' — ' + escapeHtml(d.ip) + '</div>'
+              + '<div style="font-size:0.75rem;color:hsl(224, 18%, 65%);">' + escapeHtml(d.wifi_name || '') + '</div>'
+              + '</div>'
+              + '<button type="button" class="btn-secondary" style="white-space:nowrap;padding:0.4rem 0.65rem;font-size:0.82rem;">Gebruiken</button>';
+            item.querySelector('button').addEventListener('click', function() { useMarstekIp(d.ip); });
+            resultsEl.appendChild(item);
+          });
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = "Marstek-accu's zoeken op netwerk";
+          setRowStatus(statusEl, 'Verbindingsfout tijdens scannen.', 'error');
+        });
     }
 
     function pairRow(btn) {
@@ -699,7 +769,6 @@
       if (list.querySelectorAll('.battery-ip-row').length <= 1) return;
       btn.closest('.battery-ip-row').remove();
       updateAddBtn();
-      updatePairIpHint();
     }
 
     function updateAddBtn() {
