@@ -1421,6 +1421,23 @@ def battery_pair():
         return jsonify(success=False, error=str(e))
 
 
+@app.route("/api/battery/scan_marstek", methods=["POST"])
+def battery_scan_marstek():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    try:
+        port = int(data.get("port") or 30000)
+    except (TypeError, ValueError):
+        port = 30000
+    try:
+        devices = marstek_discover(port=port)
+        write_audit_log("marstek_scan", {"found": len(devices)})
+        return jsonify(success=True, devices=devices)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
 @app.route("/api/battery/pair_p1", methods=["POST"])
 def battery_pair_p1():
     if not require_login():
@@ -6041,6 +6058,43 @@ def marstek_udp(ip, port, method, params=None, timeout=3):
         sock.sendto(payload, (ip, int(port)))
         data, _ = sock.recvfrom(4096)
         return json.loads(data.decode())
+
+
+def marstek_discover(port=30000, timeout=2.5):
+    """Marstek.GetDevice broadcast: vindt Marstek-accu's op het lokale subnet
+    (Open API Rev 2.0, §3.1.1). Stuurt één broadcast en verzamelt alle
+    antwoorden die binnen `timeout` seconden terugkomen."""
+    payload = json.dumps({"id": 0, "method": "Marstek.GetDevice", "params": {"ble_mac": "0"}}).encode()
+    local_ip = get_local_ip()
+    broadcast_addr = str(ipaddress.ip_network(f"{local_ip}/24", strict=False).broadcast_address)
+
+    found = {}
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.sendto(payload, (broadcast_addr, int(port)))
+        deadline = time.time() + timeout
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            sock.settimeout(remaining)
+            try:
+                data, addr = sock.recvfrom(4096)
+            except socket.timeout:
+                break
+            try:
+                result = json.loads(data.decode()).get("result", {})
+            except Exception:
+                continue
+            ip = result.get("ip") or addr[0]
+            found[ip] = {
+                "ip": ip,
+                "device": result.get("device", ""),
+                "ver": result.get("ver"),
+                "ble_mac": result.get("ble_mac", ""),
+                "wifi_name": result.get("wifi_name", ""),
+            }
+    return list(found.values())
 
 
 def release_marstek_to_auto(ip, port):
