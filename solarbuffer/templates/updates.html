@@ -367,7 +367,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.6.4</span>
+          <span class="version-badge new">v0.6.5</span>
+          <span class="update-date-small">7 aug</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-fix">Bugfix</span>
+          <div class="update-title">Batterijrechten bij volle accu gecorrigeerd</div>
+          <div class="update-body">Zodra de accu de ingestelde SoC-drempel had bereikt en de boiler stilstond, kreeg de accu voorheen geen enkel recht meer (niet laden, niet ontladen) — waardoor 's avonds onnodig stroom van het net werd gehaald terwijl de accu nog vol zat. De accu krijgt in die situatie nu "alleen ontladen", zodat hij het huishoudverbruik kan opvangen; zodra de boiler weer actief gaat regelen wordt dat recht automatisch weer ingetrokken. Ook tijdens de temperatuur-wachttijd van de boiler (waarin hij sowieso niet kan starten) krijgt de accu nu weer gewoon laadrecht, zodat resterend zonoverschot niet verloren gaat naar het net.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.5" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.6.4</span>
           <span class="update-date-small">1 aug</span>
         </div>
         <div class="update-divider"></div>
