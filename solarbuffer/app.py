@@ -5584,12 +5584,12 @@ def control_loop():
                                 _desired_perms = ["discharge_allowed"]
                             elif _force_no_discharge:
                                 _desired_perms = ["charge_allowed"]
-                            elif _any_sb_active and _pid_at_max:
-                                # Boiler op 100%: accu absorbeert restoverschot
-                                _desired_perms = ["charge_allowed"]
+                            elif _any_sb_active:
+                                # Boiler regelt actief: geen ontlaadrecht, alleen laden als hij op max staat
+                                _desired_perms = ["charge_allowed"] if _pid_at_max else []
                             else:
-                                # Boiler regelt (of nog uit): accu standby
-                                _desired_perms = []
+                                # Boiler staat nog uit: accu mag huishoudverbruik opvangen
+                                _desired_perms = ["discharge_allowed"]
                     else:  # solarbuffer eerst
                         _desired_mode = "zero"
                         if not _sb_can_run:
