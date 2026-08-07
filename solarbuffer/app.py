@@ -5502,6 +5502,15 @@ def control_loop():
                             for d in non_legionella
                         )
                     )
+                    # Boiler zit vast in de temperatuur-wachttijd en kan deze cyclus
+                    # sowieso niet starten → geen reden om laadrecht aan de accu te
+                    # onthouden (overschot 'zichtbaar houden voor de boiler' heeft
+                    # dan geen zin, hij mag toch niet starten).
+                    _temp_shutoff_blocking_all = (
+                        cfg.get("temp_shutoff_enabled", False)
+                        and bool(non_legionella)
+                        and all(_temp_shutoff_blocked(d) for d in non_legionella)
+                    )
 
                     _force_tofull = cfg.get("battery_force_tofull", False)
                     # Auto-uitschakelen als SoC 100% bereikt
@@ -5588,8 +5597,13 @@ def control_loop():
                                 # Boiler regelt actief: geen ontlaadrecht, alleen laden als hij op max staat
                                 _desired_perms = ["charge_allowed"] if _pid_at_max else []
                             else:
-                                # Boiler staat nog uit: accu mag huishoudverbruik opvangen
-                                _desired_perms = ["discharge_allowed"]
+                                # Boiler staat nog uit: accu mag huishoudverbruik opvangen.
+                                # Zit de boiler in de temp-wachttijd (kan toch niet starten),
+                                # dan mag de accu het overschot ook gewoon opladen.
+                                _desired_perms = (
+                                    ["charge_allowed", "discharge_allowed"]
+                                    if _temp_shutoff_blocking_all else ["discharge_allowed"]
+                                )
                     else:  # solarbuffer eerst
                         _desired_mode = "zero"
                         if not _sb_can_run:
@@ -5599,7 +5613,10 @@ def control_loop():
                         elif _any_sb_active:
                             _desired_perms = ["charge_allowed"] if _pid_at_max else []
                         else:
-                            _desired_perms = ["discharge_allowed"]
+                            _desired_perms = (
+                                ["charge_allowed", "discharge_allowed"]
+                                if _temp_shutoff_blocking_all else ["discharge_allowed"]
+                            )
 
                 _bat_type = cfg.get("battery_type", "homewizard")
                 if battery_state.get("online"):
