@@ -6495,15 +6495,22 @@ def battery_poll_loop():
     _bat_day_date = bl.get("date")
     _bat_charge_start_kwh = bl.get("charge_start_kwh")
     _bat_discharge_start_kwh = bl.get("discharge_start_kwh")
+    _marstek_fail_streak = 0
     while True:
+        poll_interval = 5
         try:
             cfg = load_config()
             ips = cfg.get("battery_ips") or []
             bat_type = cfg.get("battery_type", "homewizard")
+            if bat_type == "marstek":
+                # Marstek raadt zelf max. 1x per 60s pollen aan; te vaak gericht
+                # bevragen maakt de Local API onbetrouwbaar/onbereikbaar. 15s is
+                # een compromis tussen regelsnelheid en stabiliteit.
+                poll_interval = 15
 
             if not cfg.get("battery_enabled") or not ips:
                 battery_state["online"] = False
-                time.sleep(5)
+                time.sleep(poll_interval)
                 continue
 
             if bat_type == "marstek":
@@ -6542,6 +6549,7 @@ def battery_poll_loop():
                     except Exception:
                         pass
                 if any_online:
+                    _marstek_fail_streak = 0
                     battery_state.update({
                         "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
                         "power_w": round(sum(power_list), 1) if power_list else None,
@@ -6556,6 +6564,18 @@ def battery_poll_loop():
                     })
                 else:
                     battery_state["online"] = False
+                    _marstek_fail_streak += 1
+                    # Sommige Marstek-firmwares stoppen na verloop van tijd met reageren
+                    # op gerichte UDP-verzoeken totdat er weer een broadcast-discovery
+                    # langskomt (bekend, ook door gebruikers gerapporteerd). Stuur na een
+                    # paar mislukte pollrondes een discovery-broadcast om de accu te
+                    # 'wekken', in plaats van eindeloos hetzelfde gerichte verzoek te
+                    # blijven herhalen.
+                    if _marstek_fail_streak >= 3 and _marstek_fail_streak % 3 == 0:
+                        try:
+                            marstek_discover(port=port)
+                        except Exception:
+                            pass
 
             elif bat_type == "zendure":
                 max_power = int(cfg.get("zendure_max_power") or 800)
@@ -6599,7 +6619,7 @@ def battery_poll_loop():
                 tokens = cfg.get("battery_tokens", [])
                 if not any(t for t in tokens):
                     battery_state["online"] = False
-                    time.sleep(5)
+                    time.sleep(poll_interval)
                     continue
                 soc_list, power_total, voltage_list = [], 0.0, []
                 import_total, export_total = 0.0, 0.0
@@ -6677,7 +6697,7 @@ def battery_poll_loop():
 
         except Exception:
             battery_state["online"] = False
-        time.sleep(5)
+        time.sleep(poll_interval)
 
 
 def broadlink_poll_loop():
