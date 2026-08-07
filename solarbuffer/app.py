@@ -5324,6 +5324,38 @@ def control_loop():
             # --- Einde tijdschema override ---
 
             if not enabled:
+                # Automatische besturing uit: SolarBuffer regelt geen apparaten meer,
+                # maar de accu moet vrij blijven om zelf te blijven bijladen/ontladen
+                # (bv. handmatig een boiler op een vast percentage laten draaien terwijl
+                # er nog zonoverschot is) in plaats van vast te blijven zitten op de
+                # laatst gestuurde permissies.
+                if cfg.get("battery_enabled") and battery_state.get("online"):
+                    _bat_type = cfg.get("battery_type", "homewizard")
+                    if _bat_type == "marstek":
+                        _marstek_ips = cfg.get("battery_ips") or []
+                        if _marstek_ips:
+                            threading.Thread(
+                                target=release_marstek_to_auto,
+                                args=(_marstek_ips[0], int(cfg.get("marstek_port") or 30000)),
+                                daemon=True,
+                            ).start()
+                    elif _bat_type == "zendure":
+                        _zendure_ips = cfg.get("battery_ips") or []
+                        if _zendure_ips:
+                            threading.Thread(
+                                target=set_zendure_control,
+                                args=(_zendure_ips[0], "zero", ["charge_allowed", "discharge_allowed"],
+                                      measured_power, int(cfg.get("zendure_max_power") or 800)),
+                                daemon=True,
+                            ).start()
+                    else:
+                        _bat_token = cfg.get("battery_control_token", "").strip()
+                        if _bat_token and p1_ip:
+                            threading.Thread(
+                                target=set_battery_control,
+                                args=(p1_ip, _bat_token, "zero", ["charge_allowed", "discharge_allowed"]),
+                                daemon=True,
+                            ).start()
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
