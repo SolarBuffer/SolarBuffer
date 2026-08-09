@@ -685,8 +685,11 @@ _tailscale_auth_url = None
 _hw_update_running = False
 _hw_update_done = False
 _hw_update_success = False
+_hw_update_error = ""
 _hw_update_log = []
 _hw_update_cond = threading.Condition()
+_APT_LOCK_MAX_RETRIES = 8
+_APT_LOCK_RETRY_WAIT = 15
 
 # ================= CONTROL CONSTANTS =================
 MIN_BRIGHTNESS = 30
@@ -2648,30 +2651,63 @@ def system_updates_check():
 
 
 def _stream_proc(proc):
+    captured = []
     for raw in proc.stdout:
         line = raw.rstrip()
         if line:
+            captured.append(line)
             with _hw_update_cond:
                 _hw_update_log.append(line)
                 _hw_update_cond.notify_all()
     proc.wait()
-    return proc.returncode
+    return proc.returncode, captured
+
+
+def _is_apt_lock_error(lines):
+    return any(
+        "could not get lock" in ln.lower() or "dpkg frontend lock" in ln.lower()
+        for ln in lines
+    )
 
 
 def _run_apt_upgrade_worker(username):
-    global _hw_update_running, _hw_update_done, _hw_update_success
+    global _hw_update_running, _hw_update_done, _hw_update_success, _hw_update_error
     env = {"DEBIAN_FRONTEND": "noninteractive", "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"}
     write_audit_log("system_upgrade_started", {"user": username})
+    error_summary = ""
 
     def run_step(label, cmd):
         with _hw_update_cond:
             _hw_update_log.append(f">>> {label}")
             _hw_update_cond.notify_all()
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1, env=env
-        )
-        return _stream_proc(proc)
+        attempt = 0
+        while True:
+            attempt += 1
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1, env=env
+            )
+            returncode, captured = _stream_proc(proc)
+            if returncode == 0:
+                return returncode, ""
+            if _is_apt_lock_error(captured) and attempt < _APT_LOCK_MAX_RETRIES:
+                with _hw_update_cond:
+                    _hw_update_log.append(
+                        f">>> Pakketbeheer is bezet (waarschijnlijk een automatische "
+                        f"achtergrondupdate van het systeem) — nieuwe poging over "
+                        f"{_APT_LOCK_RETRY_WAIT}s ({attempt}/{_APT_LOCK_MAX_RETRIES})"
+                    )
+                    _hw_update_cond.notify_all()
+                time.sleep(_APT_LOCK_RETRY_WAIT)
+                continue
+            error_lines = [ln.strip() for ln in captured if ln.strip().startswith("E:")]
+            if error_lines:
+                summary = error_lines[-1]
+            elif captured:
+                summary = captured[-1].strip()
+            else:
+                summary = f"{label} gaf foutcode {returncode}"
+            return returncode, summary
 
     try:
         # Stap 1: herstel onderbroken dpkg-configuratie
@@ -2689,10 +2725,10 @@ def _run_apt_upgrade_worker(username):
         ])
 
         # Stap 3: pakketlijsten vernieuwen
-        run_step("apt-get update", ["sudo", "apt-get", "update"])
+        _, err_update = run_step("apt-get update", ["sudo", "apt-get", "update"])
 
         # Stap 4: volledige upgrade
-        returncode = run_step("apt-get full-upgrade", [
+        returncode, err_upgrade = run_step("apt-get full-upgrade", [
             "sudo", "apt-get", "full-upgrade", "-y",
             "-o", "Dpkg::Progress-Fancy=0",
             "-o", "APT::Color=0",
@@ -2700,9 +2736,12 @@ def _run_apt_upgrade_worker(username):
             "-o", "Dpkg::Options::=--force-confold",
         ])
         success = returncode == 0
+        if not success:
+            error_summary = err_upgrade or err_update or f"apt-get full-upgrade gaf foutcode {returncode}"
         write_audit_log("system_upgrade_run", {"returncode": returncode})
     except Exception as e:
         success = False
+        error_summary = str(e)
         with _hw_update_cond:
             _hw_update_log.append(f"Fout: {e}")
             _hw_update_cond.notify_all()
@@ -2710,6 +2749,7 @@ def _run_apt_upgrade_worker(username):
         _hw_update_running = False
         _hw_update_done = True
         _hw_update_success = success
+        _hw_update_error = error_summary
         _hw_update_cond.notify_all()
 
 
@@ -2721,22 +2761,27 @@ def system_update_status():
         running=_hw_update_running,
         done=_hw_update_done,
         success=_hw_update_success,
+        error=_hw_update_error,
         log_count=len(_hw_update_log),
     )
 
 
 @app.route("/run_system_update")
 def run_system_update():
-    global _hw_update_running, _hw_update_done, _hw_update_success, _hw_update_log
+    global _hw_update_running, _hw_update_done, _hw_update_success, _hw_update_error, _hw_update_log
     if not require_login():
         return Response("data: {\"error\": \"unauthorized\"}\n\n", mimetype="text/event-stream"), 401
 
     reset = request.args.get("reset") == "1"
-    if reset or (not _hw_update_running and not _hw_update_done):
+    # Nooit een tweede worker starten terwijl er al eentje loopt (voorkomt dat twee
+    # apt-get-processen tegelijk draaien en elkaars dpkg-lock blokkeren) — reset=1
+    # mag alleen een NIEUWE run starten als de vorige al klaar is of nooit liep.
+    if not _hw_update_running and (reset or not _hw_update_done):
         with _hw_update_cond:
             _hw_update_log = []
             _hw_update_done = False
             _hw_update_success = False
+            _hw_update_error = ""
             _hw_update_running = True
         threading.Thread(
             target=_run_apt_upgrade_worker,
@@ -2755,13 +2800,14 @@ def run_system_update():
                 batch = _hw_update_log[idx:]
                 done = _hw_update_done
                 success = _hw_update_success
+                error = _hw_update_error
 
             for i, line in enumerate(batch):
                 yield f"id: {idx + i}\ndata: {json.dumps({'line': line})}\n\n"
             idx += len(batch)
 
             if done and idx >= len(_hw_update_log):
-                yield f"data: {json.dumps({'done': True, 'success': success})}\n\n"
+                yield f"data: {json.dumps({'done': True, 'success': success, 'error': error})}\n\n"
                 break
 
     return Response(generate(), mimetype="text/event-stream",
@@ -4414,6 +4460,16 @@ def _publish_ha_discovery(client, prefix, devices):
             "unique_id": f"solarbuffer_{uid}_status",
             "state_topic": f"{prefix}/device/{uid}/status",
             "icon": "mdi:information-outline",
+            "availability_topic": f"{prefix}/availability",
+            "device": base_device,
+        })
+        pub(f"homeassistant/sensor/solarbuffer_{uid}_power/config", {
+            "name": f"{dname} Vermogen",
+            "unique_id": f"solarbuffer_{uid}_power",
+            "state_topic": f"{prefix}/device/{uid}/power",
+            "unit_of_measurement": "%",
+            "state_class": "measurement",
+            "icon": "mdi:water-boiler",
             "availability_topic": f"{prefix}/availability",
             "device": base_device,
         })
