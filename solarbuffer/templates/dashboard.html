@@ -2809,6 +2809,10 @@
             batCard.style.display = '';
             const bat = data.battery;
             const batOnline = bat.online;
+            // control_online weerspiegelt of de laad/ontlaad-rechten zelf succesvol
+            // opgehaald zijn (bij HomeWizard via de P1-groepsstatus) — dat is niet
+            // hetzelfde als of de individueel ingevoerde accu-meting bereikbaar is.
+            const batControlOnline = bat.control_online !== undefined ? bat.control_online : batOnline;
             document.getElementById('batOnlineDot').style.background =
               batOnline ? 'hsl(145,55%,50%)' : 'hsl(0,60%,60%)';
 
@@ -2822,7 +2826,7 @@
             else permLabel = 'Geblokkeerd';
             const prioEl = document.getElementById('batPrioLabel');
             const permEl = document.getElementById('batPermLabel');
-            if (batOnline) {
+            if (batControlOnline) {
               prioEl.textContent = data.battery_priority === 'battery' ? 'Batterij-prio' : 'Boiler-prio';
               prioEl.className = 'buffer-status-badge ' + (data.battery_priority === 'battery' ? 'freeze' : 'standby');
               prioEl.style.display = '';
