@@ -650,6 +650,7 @@ battery_state = {
     "soc": None, "power_w": None, "voltage_v": None, "current_a": None,
     "frequency_hz": None, "energy_import_kwh": None, "energy_export_kwh": None,
     "cycles": None, "mode": None, "permissions": None, "online": False,
+    "control_online": False,
     "max_consumption_w": 0, "max_production_w": 0,
     "charge_today_kwh": None, "discharge_today_kwh": None,
 }
@@ -6566,6 +6567,7 @@ def battery_poll_loop():
 
             if not cfg.get("battery_enabled") or not ips:
                 battery_state["online"] = False
+                battery_state["control_online"] = False
                 time.sleep(poll_interval)
                 continue
 
@@ -6617,9 +6619,11 @@ def battery_poll_loop():
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,
                         "online": True,
+                        "control_online": True,
                     })
                 else:
                     battery_state["online"] = False
+                    battery_state["control_online"] = False
                     _marstek_fail_streak += 1
                     # Sommige Marstek-firmwares stoppen na verloop van tijd met reageren
                     # op gerichte UDP-verzoeken totdat er weer een broadcast-discovery
@@ -6667,14 +6671,17 @@ def battery_poll_loop():
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,
                         "online": True,
+                        "control_online": True,
                     })
                 else:
                     battery_state["online"] = False
+                    battery_state["control_online"] = False
 
             else:  # homewizard
                 tokens = cfg.get("battery_tokens", [])
                 if not any(t for t in tokens):
                     battery_state["online"] = False
+                    battery_state["control_online"] = False
                     time.sleep(poll_interval)
                     continue
                 soc_list, power_total, voltage_list = [], 0.0, []
@@ -6748,11 +6755,15 @@ def battery_poll_loop():
                         battery_state["permissions"] = ctrl.get("permissions")
                         battery_state["max_consumption_w"] = ctrl.get("max_consumption_w", 0) or 0
                         battery_state["max_production_w"] = ctrl.get("max_production_w", 0) or 0
+                        battery_state["control_online"] = True
                     except Exception:
-                        pass
+                        battery_state["control_online"] = False
+                else:
+                    battery_state["control_online"] = False
 
         except Exception:
             battery_state["online"] = False
+            battery_state["control_online"] = False
         time.sleep(poll_interval)
 
 
