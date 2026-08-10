@@ -869,7 +869,8 @@
 
     .online-badge,
     .state-badge,
-    .socket-badge {
+    .socket-badge,
+    .chip-temp-badge {
       font-size: 0.68rem;
       font-weight: 600;
       padding: 0.2rem 0.55rem;
@@ -877,6 +878,16 @@
       letter-spacing: 0.03em;
       white-space: nowrap;
     }
+
+    .chip-temp-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: hsl(200, 70%, 94%);
+      color: hsl(200, 80%, 30%);
+    }
+
+    .chip-temp-badge i { font-size: 0.85rem; line-height: 1; }
 
     .online-badge.online {
       background: hsl(145, 55%, 90%);
@@ -1556,6 +1567,7 @@
     html[data-theme="dark"] .socket-badge.off     { background: hsl(0, 30%, 30%);  color: hsl(0, 60%, 72%); }
     html[data-theme="dark"] .socket-badge.pending { background: hsl(32, 40%, 32%); color: hsl(32, 80%, 72%); }
     html[data-theme="dark"] .socket-badge.on      { background: hsl(145, 32%, 28%); color: hsl(145, 55%, 72%); }
+    html[data-theme="dark"] .chip-temp-badge      { background: hsl(200, 28%, 24%); color: hsl(200, 60%, 72%); }
 
     html[data-theme="dark"] .control-row { background: hsl(224, 38%, 17%); }
     html[data-theme="dark"] .control-label .sub { color: hsl(224, 18%, 75%); }
@@ -3386,6 +3398,9 @@
                 ${boostLabel}
               </button>
               ${hasSocket ? `<span class="socket-badge ${socket.cls}">${escapeHtml(socket.label)}</span>` : ''}
+              ${d.chip_temp !== null && d.chip_temp !== undefined
+                ? `<span class="chip-temp-badge"><i class="mdi mdi-thermometer"></i>Chip ${Number(d.chip_temp).toFixed(0)}&thinsp;°C</span>`
+                : ''}
             </div>
             ${manualBrightnessHtml}
             ${(d.linked_temperatures && d.linked_temperatures.length) ? `
