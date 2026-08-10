@@ -1598,6 +1598,7 @@ def status_json():
             "started": s.get("started", False),
             "pending_start": s.get("pending_start", False),
             "power": s.get("power", 0),
+            "chip_temp": s.get("chip_temp"),
             "power_meter": d.get("power_meter"),
             "power_ip": d.get("power_ip"),
             "power_socket_type": d.get("power_socket_type", ""),
@@ -4068,6 +4069,40 @@ def get_shelly_temperature(ip, channel=100):
     return None
 
 
+def get_shelly_chip_temperature(ip):
+    """Interne chiptemperatuur van de SolarBuffer-dimmer zelf (niet een losse
+    temp-probe). Zoekt in de volledige statusrespons naar het eerste tC-veld,
+    want de exacte plek daarvan verschilt per component/firmware."""
+    try:
+        r = requests.get(f"http://{ip}/rpc/Shelly.GetStatus", timeout=2)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+
+        def _find_tc(obj):
+            if isinstance(obj, dict):
+                tc = obj.get("tC")
+                if isinstance(tc, (int, float)):
+                    return tc
+                for v in obj.values():
+                    found = _find_tc(v)
+                    if found is not None:
+                        return found
+            elif isinstance(obj, list):
+                for v in obj:
+                    found = _find_tc(v)
+                    if found is not None:
+                        return found
+            return None
+
+        tc = _find_tc(data)
+        if tc is not None:
+            return round(float(tc), 1)
+    except Exception:
+        pass
+    return None
+
+
 # ================= POWER SOCKET HELPERS =================
 def has_power_socket(device):
     return bool((device.get("power_socket_type") or "").strip() and (device.get("power_socket_ip") or "").strip())
@@ -4186,6 +4221,7 @@ def init_device_states(devices):
                 "freeze": False, "started": False, "pending_start": False,
                 "saturated_since": None, "min_since": None,
                 "last_active_time": s.get("last_active_time", time.time()), "power": 0,
+                "chip_temp": None,
                 "power_socket_on": False, "power_socket_online": False,
                 "power_socket_last_on_command": 0,
                 "waiting_for_power_socket": False, "power_socket_ready_at": None,
@@ -5003,6 +5039,7 @@ def control_loop():
 
                 if now - last_online_check.get(ip, 0) > online_check_interval:
                     device_states[ip]["online"] = check_shelly_online(ip)
+                    device_states[ip]["chip_temp"] = get_shelly_chip_temperature(ip)
                     if pm_type == "shelly":
                         device_states[ip]["power_meter_online"] = check_http_device_online(pm_ip, "/rpc/Shelly.GetStatus")
                     elif pm_type == "homewizard":
