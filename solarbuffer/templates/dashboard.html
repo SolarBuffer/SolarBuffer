@@ -885,9 +885,30 @@
       gap: 0.25rem;
       background: hsl(200, 70%, 94%);
       color: hsl(200, 80%, 30%);
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
     }
 
     .chip-temp-badge i { font-size: 0.85rem; line-height: 1; }
+
+    .info-popover {
+      position: absolute;
+      z-index: 50;
+      background: hsl(224, 30%, 15%);
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.35rem 0.6rem;
+      border-radius: 0.4rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .info-popover.visible { opacity: 1; }
 
     .online-badge.online {
       background: hsl(145, 55%, 90%);
@@ -3175,6 +3196,28 @@
       .catch(err => console.error("Brightness error:", err));
     }
 
+    function showInfoPopover(evt, text) {
+      evt.stopPropagation();
+      let pop = document.getElementById('infoPopover');
+      if (!pop) {
+        pop = document.createElement('div');
+        pop.id = 'infoPopover';
+        pop.className = 'info-popover';
+        document.body.appendChild(pop);
+      }
+      pop.textContent = text;
+      const rect = evt.currentTarget.getBoundingClientRect();
+      pop.style.left = Math.round(rect.left + window.scrollX) + 'px';
+      pop.style.top = Math.round(rect.bottom + window.scrollY + 6) + 'px';
+      pop.classList.add('visible');
+      clearTimeout(pop._hideTimer);
+      pop._hideTimer = setTimeout(() => pop.classList.remove('visible'), 2500);
+    }
+    document.addEventListener('click', function() {
+      const pop = document.getElementById('infoPopover');
+      if (pop) pop.classList.remove('visible');
+    });
+
     function escapeHtml(value) {
       return String(value ?? "")
         .replace(/&/g, "&amp;")
@@ -3399,7 +3442,7 @@
               </button>
               ${hasSocket ? `<span class="socket-badge ${socket.cls}">${escapeHtml(socket.label)}</span>` : ''}
               ${d.chip_temp !== null && d.chip_temp !== undefined
-                ? `<span class="chip-temp-badge"><i class="mdi mdi-thermometer"></i>Chip ${Number(d.chip_temp).toFixed(0)}&thinsp;°C</span>`
+                ? `<button type="button" class="chip-temp-badge" onclick="showInfoPopover(event, 'Interne chiptemperatuur van de dimmer')"><i class="mdi mdi-thermometer"></i>${Number(d.chip_temp).toFixed(0)}&thinsp;°C</button>`
                 : ''}
             </div>
             ${manualBrightnessHtml}
