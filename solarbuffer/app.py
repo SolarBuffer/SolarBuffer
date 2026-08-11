@@ -666,6 +666,7 @@ _marstek_control_lock = threading.Lock()
 _last_zendure_send = 0.0
 _last_zendure_power = None
 _zendure_control_lock = threading.Lock()
+_hw_battery_control_lock = threading.Lock()
 _zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes)
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
@@ -6563,24 +6564,36 @@ def set_battery_control(control_ip, token, mode, permissions):
     desired_perms = sorted(permissions)
     if _last_battery_permissions == desired_perms and _last_battery_mode == mode:
         return True
-    payload = {"mode": mode}
-    if mode != "to_full":
-        payload["permissions"] = permissions
+    # Zonder lock kunnen overlappende threads (control loop + handmatige route)
+    # gelijktijdig PUT-en met verschillende payloads; bij out-of-order aankomst
+    # wint dan niet per se de laatst bedoelde permissie-set, en de cache wordt
+    # bijgewerkt door welke thread het laatst terugkomt, niet welke request de
+    # accu het laatst echt bereikte → accu blijft op verouderde permissies staan.
+    if not _hw_battery_control_lock.acquire(blocking=False):
+        return False
     try:
-        r = requests.put(
-            f"https://{control_ip}/api/batteries",
-            headers={**_hw_v2_headers(token), "Content-Type": "application/json"},
-            json=payload,
-            timeout=3, verify=False,
-        )
-        if r.status_code == 200:
-            _last_battery_permissions = desired_perms
-            _last_battery_mode = mode
+        if _last_battery_permissions == desired_perms and _last_battery_mode == mode:
             return True
-        print(f"[BAT] set_battery_control mislukt: HTTP {r.status_code} → {r.text[:200]}")
-    except Exception as e:
-        print(f"[BAT] set_battery_control fout: {e}")
-    return False
+        payload = {"mode": mode}
+        if mode != "to_full":
+            payload["permissions"] = permissions
+        try:
+            r = requests.put(
+                f"https://{control_ip}/api/batteries",
+                headers={**_hw_v2_headers(token), "Content-Type": "application/json"},
+                json=payload,
+                timeout=3, verify=False,
+            )
+            if r.status_code == 200:
+                _last_battery_permissions = desired_perms
+                _last_battery_mode = mode
+                return True
+            print(f"[BAT] set_battery_control mislukt: HTTP {r.status_code} → {r.text[:200]}")
+        except Exception as e:
+            print(f"[BAT] set_battery_control fout: {e}")
+        return False
+    finally:
+        _hw_battery_control_lock.release()
 
 
 def battery_poll_loop():
