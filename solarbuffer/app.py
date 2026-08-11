@@ -667,6 +667,8 @@ _last_zendure_send = 0.0
 _last_zendure_power = None
 _zendure_control_lock = threading.Lock()
 _hw_battery_control_lock = threading.Lock()
+_last_hw_battery_send = 0.0
+HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
 _zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes)
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
@@ -5785,7 +5787,8 @@ def control_loop():
                                 ).start()
                     elif _bat_token and _bat_control_ip and (
                         sorted(_desired_perms) != (_last_battery_permissions or []) or
-                        _desired_mode != _last_battery_mode
+                        _desired_mode != _last_battery_mode or
+                        (now - _last_hw_battery_send) > HW_BATTERY_REFRESH_SECONDS
                     ):
                         threading.Thread(
                             target=set_battery_control,
@@ -6560,9 +6563,17 @@ def set_battery_permissions(control_ip, token, permissions):
 
 
 def set_battery_control(control_ip, token, mode, permissions):
-    global _last_battery_permissions, _last_battery_mode
+    global _last_battery_permissions, _last_battery_mode, _last_hw_battery_send
     desired_perms = sorted(permissions)
-    if _last_battery_permissions == desired_perms and _last_battery_mode == mode:
+    now = time.time()
+    # Keep-alive: ook als de cache al 'klopt', na verloop van tijd toch opnieuw
+    # bevestigen. Zonder dit blijft een eenmalige mismatch tussen de cache en de
+    # echte accustaat (bv. door een verlopen/mislukte PUT die niet als zodanig
+    # werd herkend) onopgemerkt staan totdat de gewenste permissies zelf weer
+    # wijzigen — dat kan uren duren als de situatie (boiler actief, SoC-drempel,
+    # etc.) niet verandert.
+    needs_refresh = (now - _last_hw_battery_send) > HW_BATTERY_REFRESH_SECONDS
+    if _last_battery_permissions == desired_perms and _last_battery_mode == mode and not needs_refresh:
         return True
     # Zonder lock kunnen overlappende threads (control loop + handmatige route)
     # gelijktijdig PUT-en met verschillende payloads; bij out-of-order aankomst
@@ -6572,7 +6583,9 @@ def set_battery_control(control_ip, token, mode, permissions):
     if not _hw_battery_control_lock.acquire(blocking=False):
         return False
     try:
-        if _last_battery_permissions == desired_perms and _last_battery_mode == mode:
+        now = time.time()
+        needs_refresh = (now - _last_hw_battery_send) > HW_BATTERY_REFRESH_SECONDS
+        if _last_battery_permissions == desired_perms and _last_battery_mode == mode and not needs_refresh:
             return True
         payload = {"mode": mode}
         if mode != "to_full":
@@ -6587,6 +6600,7 @@ def set_battery_control(control_ip, token, mode, permissions):
             if r.status_code == 200:
                 _last_battery_permissions = desired_perms
                 _last_battery_mode = mode
+                _last_hw_battery_send = now
                 return True
             print(f"[BAT] set_battery_control mislukt: HTTP {r.status_code} → {r.text[:200]}")
         except Exception as e:
