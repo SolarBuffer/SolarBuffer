@@ -193,7 +193,7 @@ def load_config():
     if "mqtt_ha_discovery" not in cfg:
         cfg["mqtt_ha_discovery"] = True
     if "mqtt_publish_interval" not in cfg:
-        cfg["mqtt_publish_interval"] = 30
+        cfg["mqtt_publish_interval"] = 5
 
     if "latitude" not in cfg:
         cfg["latitude"] = ""
