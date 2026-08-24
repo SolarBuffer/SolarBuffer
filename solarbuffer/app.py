@@ -978,7 +978,7 @@ def scan_network_for_devices():
 # Bewaart per apparaat/P1-meter het MAC-adres zodra het bekend is, zodat een
 # apparaat na een IP-wijziging (bv. nieuwe DHCP-lease) via een netwerkscan op
 # MAC teruggevonden kan worden in plaats van definitief onbereikbaar te blijven.
-MAC_RESCAN_AFTER = 120     # s: pas herkoppelen na deze onafgebroken offline-tijd
+MAC_RESCAN_AFTER = 30      # s: pas herkoppelen na deze onafgebroken offline-tijd
 MAC_RESCAN_COOLDOWN = 90   # s: minimale tijd tussen twee scanpogingen per apparaat
 AUX_MAC_RESCAN_COOLDOWN = 900  # s: stekker/vermogensmeter zijn minder urgent — max 1x per 15 min
 
@@ -5313,6 +5313,7 @@ def control_loop():
     offline_notified = set()
     mac_backfill_last_try = {}
     mac_rescan_last_try = {}
+    mac_rescan_debug_last_print = {}
     socket_unreachable_since_map = {}
     meter_unreachable_since_map = {}
     socket_mac_backfill_last_try = {}
@@ -5518,16 +5519,28 @@ def control_loop():
                 ip = d["ip"]
                 st = device_states[ip]
                 known_mac = (d.get("mac") or "").strip()
-                if not known_mac or st.get("online"):
+                if st.get("online"):
+                    continue
+                if not known_mac:
+                    if now - mac_rescan_debug_last_print.get(ip, 0) > 15:
+                        mac_rescan_debug_last_print[ip] = now
+                        print(f"MAC-herkoppeling [{ip}]: geen MAC-adres bekend, kan niet zoeken (eerst 1x online moeten zijn geweest)")
                     continue
                 if not unreachable_had_power_map.get(ip, True):
+                    if now - mac_rescan_debug_last_print.get(ip, 0) > 15:
+                        mac_rescan_debug_last_print[ip] = now
+                        print(f"MAC-herkoppeling [{ip}]: stekker had al geen stroom toen apparaat offline ging, scan overgeslagen")
                     continue
                 unreachable_for = now - unreachable_since_map.get(ip, now)
                 if unreachable_for < MAC_RESCAN_AFTER:
+                    if now - mac_rescan_debug_last_print.get(ip, 0) > 15:
+                        mac_rescan_debug_last_print[ip] = now
+                        print(f"MAC-herkoppeling [{ip}]: {int(unreachable_for)}s offline, wacht tot {MAC_RESCAN_AFTER}s")
                     continue
                 if now - mac_rescan_last_try.get(ip, 0) < MAC_RESCAN_COOLDOWN:
                     continue
                 mac_rescan_last_try[ip] = now
+                print(f"MAC-herkoppeling [{ip}]: {int(unreachable_for)}s offline, start scanpoging (MAC {known_mac})")
                 threading.Thread(target=try_relocate_device_by_mac, args=(ip, known_mac), daemon=True).start()
 
             energy_today_str = datetime.now().strftime("%Y-%m-%d")
