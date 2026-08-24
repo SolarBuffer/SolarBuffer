@@ -4525,6 +4525,14 @@ def maybe_turn_off_power_socket(device):
     last_cmd = st.get("power_socket_last_on_command", 0)
     if not st["power_socket_on"]:
         return
+    # Apparaat onbereikbaar én we kennen zijn MAC-adres: de IP-herkoppeling
+    # (control_loop) probeert het pas na MAC_RESCAN_AFTER seconden terug te
+    # vinden op het netwerk — een kortere stekker-nalooptijd zou de stekker
+    # allang stroomloos hebben gemaakt vóór die poging, waardoor een simpele
+    # IP-wijziging het apparaat alsnog definitief onbereikbaar maakt. Geef die
+    # poging voorrang door de effectieve wachttijd hierop af te stemmen.
+    if not st.get("online") and (device.get("mac") or "").strip():
+        hold_seconds = max(hold_seconds, MAC_RESCAN_AFTER + MAC_RESCAN_COOLDOWN)
     if last_cmd and (time.time() - last_cmd) >= hold_seconds:
         pstype = device.get("power_socket_type")
         psip = device.get("power_socket_ip")
