@@ -137,6 +137,8 @@ def load_config():
         cfg["shelly_devices"] = []
     if "p1_ip" not in cfg:
         cfg["p1_ip"] = ""
+    if "p1_mac" not in cfg:
+        cfg["p1_mac"] = ""
     if "expert_mode" not in cfg:
         cfg["expert_mode"] = False
     if "expert_settings" not in cfg or not isinstance(cfg["expert_settings"], dict):
@@ -289,6 +291,12 @@ def load_config():
             dev["power_socket_ip"] = ""
         if "boiler_volume" not in dev:
             dev["boiler_volume"] = 100
+        if "mac" not in dev:
+            dev["mac"] = ""
+        if "power_socket_mac" not in dev:
+            dev["power_socket_mac"] = ""
+        if "power_meter_mac" not in dev:
+            dev["power_meter_mac"] = ""
         normalized_devices.append(dev)
 
     cfg["shelly_devices"] = normalized_devices
@@ -673,6 +681,7 @@ _zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
 _p1_online = False
+_p1_mac_relocating = False
 current_brightness = 0
 current_gas_m3 = None      # meest recente meterstand (m³)
 gas_day_start_m3 = None    # meterstand bij start van vandaag
@@ -792,7 +801,8 @@ def detect_homewizard_p1(ip):
             return None
         possible_keys = ["meter_model", "smr_version", "active_tariff", "total_gas_m3"]
         if any(k in data for k in possible_keys):
-            return {"type": "homewizard_p1", "name": f"HomeWizard P1 ({ip})", "ip": ip}
+            mac = get_homewizard_mac(ip)
+            return {"type": "homewizard_p1", "name": f"HomeWizard P1 ({ip})", "ip": ip, "mac": mac or ""}
     except Exception:
         pass
     return None
@@ -815,7 +825,8 @@ def detect_shelly(ip):
             "name": data.get("name") or "SolarBuffer",
             "ip": ip,
             "model": model,
-            "gen": data.get("gen", 3)
+            "gen": data.get("gen", 3),
+            "mac": (data.get("mac") or "").strip()
         }
     except Exception:
         return None
@@ -953,6 +964,231 @@ def scan_network_for_devices():
             seen_shelly.add(d["ip"])
 
     return {"p1_meters": unique_p1, "shelly_devices": unique_shelly}
+
+
+# ================= MAC-HERKENNING (IP-herkoppeling) =================
+# Bewaart per apparaat/P1-meter het MAC-adres zodra het bekend is, zodat een
+# apparaat na een IP-wijziging (bv. nieuwe DHCP-lease) via een netwerkscan op
+# MAC teruggevonden kan worden in plaats van definitief onbereikbaar te blijven.
+MAC_RESCAN_AFTER = 120     # s: pas herkoppelen na deze onafgebroken offline-tijd
+MAC_RESCAN_COOLDOWN = 90   # s: minimale tijd tussen twee scanpogingen per apparaat
+AUX_MAC_RESCAN_COOLDOWN = 900  # s: stekker/vermogensmeter zijn minder urgent — max 1x per 15 min
+
+
+def get_mac_for_type(ip, dev_type):
+    t = (dev_type or "").lower().strip()
+    if t == "shelly":
+        return get_shelly_mac(ip)
+    elif t == "homewizard":
+        return get_homewizard_mac(ip)
+    return None
+
+
+def scan_subnet_for_mac(mac, dev_type):
+    """Zoek op het netwerk naar een IP waarvan het MAC-adres overeenkomt, voor
+    een gegeven apparaattype (shelly/homewizard). Voor stekkers en vermogensmeters,
+    die niet beperkt zijn tot het specifieke SolarBuffer-model of P1-meter."""
+    target = mac.upper()
+    ips = get_subnet_ips()
+    with ThreadPoolExecutor(max_workers=25) as executor:
+        futures = {executor.submit(get_mac_for_type, ip, dev_type): ip for ip in ips}
+        for future in as_completed(futures):
+            ip = futures[future]
+            try:
+                found_mac = future.result()
+                if found_mac and found_mac.upper() == target:
+                    return ip
+            except Exception:
+                pass
+    return None
+
+
+def get_shelly_mac(ip):
+    try:
+        r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.5)
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, dict):
+                return (data.get("mac") or "").strip() or None
+    except Exception:
+        pass
+    return None
+
+
+def get_homewizard_mac(ip):
+    try:
+        r = requests.get(f"http://{ip}/api", timeout=1.5)
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, dict):
+                return (data.get("serial") or "").strip() or None
+    except Exception:
+        pass
+    return None
+
+
+def backfill_shelly_mac(ip):
+    mac = get_shelly_mac(ip)
+    if not mac:
+        return
+    cfg = load_config()
+    changed = False
+    for dev in cfg.get("shelly_devices", []):
+        if dev.get("ip") == ip and not (dev.get("mac") or "").strip():
+            dev["mac"] = mac
+            changed = True
+    if changed:
+        save_config(cfg)
+
+
+def backfill_p1_mac(ip):
+    mac = get_homewizard_mac(ip)
+    if not mac:
+        return
+    cfg = load_config()
+    if cfg.get("p1_ip") == ip and not (cfg.get("p1_mac") or "").strip():
+        cfg["p1_mac"] = mac
+        save_config(cfg)
+
+
+def backfill_power_socket_mac(device_ip, socket_type, socket_ip):
+    mac = get_mac_for_type(socket_ip, socket_type)
+    if not mac:
+        return
+    cfg = load_config()
+    changed = False
+    for dev in cfg.get("shelly_devices", []):
+        if (dev.get("ip") == device_ip
+                and (dev.get("power_socket_ip") or "").strip() == socket_ip
+                and not (dev.get("power_socket_mac") or "").strip()):
+            dev["power_socket_mac"] = mac
+            changed = True
+    if changed:
+        save_config(cfg)
+
+
+def backfill_power_meter_mac(device_ip, meter_type, meter_ip):
+    mac = get_mac_for_type(meter_ip, meter_type)
+    if not mac:
+        return
+    cfg = load_config()
+    changed = False
+    for dev in cfg.get("shelly_devices", []):
+        if (dev.get("ip") == device_ip
+                and (dev.get("power_ip") or "").strip() == meter_ip
+                and not (dev.get("power_meter_mac") or "").strip()):
+            dev["power_meter_mac"] = mac
+            changed = True
+    if changed:
+        save_config(cfg)
+
+
+def try_relocate_power_socket_by_mac(device_ip, old_socket_ip, socket_type, mac):
+    try:
+        print(f"MAC-herkoppeling: zoek stekker {mac} terug (was {old_socket_ip})...")
+        found_ip = scan_subnet_for_mac(mac, socket_type)
+        if not found_ip or found_ip == old_socket_ip:
+            return
+        cfg = load_config()
+        changed = False
+        for dev in cfg.get("shelly_devices", []):
+            if (dev.get("ip") == device_ip
+                    and (dev.get("power_socket_mac") or "").upper() == mac.upper()):
+                dev["power_socket_ip"] = found_ip
+                changed = True
+        if changed:
+            save_config(cfg)
+            print(f"MAC-herkoppeling: stekker verplaatst van {old_socket_ip} naar {found_ip}")
+            write_audit_log("power_socket_ip_relocated",
+                             {"mac": mac, "device_ip": device_ip, "old_ip": old_socket_ip, "new_ip": found_ip})
+            send_notification(
+                f"🔄 Slimme stekker met IP {old_socket_ip} is niet meer bereikbaar; teruggevonden op {found_ip} via MAC-adres.",
+                event_key="ntfy_notify_offline")
+    except Exception as e:
+        print(f"MAC-herkoppeling stekker fout ({old_socket_ip}): {e}")
+
+
+def try_relocate_power_meter_by_mac(device_ip, old_meter_ip, meter_type, mac):
+    try:
+        print(f"MAC-herkoppeling: zoek vermogensmeter {mac} terug (was {old_meter_ip})...")
+        found_ip = scan_subnet_for_mac(mac, meter_type)
+        if not found_ip or found_ip == old_meter_ip:
+            return
+        cfg = load_config()
+        changed = False
+        for dev in cfg.get("shelly_devices", []):
+            if (dev.get("ip") == device_ip
+                    and (dev.get("power_meter_mac") or "").upper() == mac.upper()):
+                dev["power_ip"] = found_ip
+                changed = True
+        if changed:
+            save_config(cfg)
+            print(f"MAC-herkoppeling: vermogensmeter verplaatst van {old_meter_ip} naar {found_ip}")
+            write_audit_log("power_meter_ip_relocated",
+                             {"mac": mac, "device_ip": device_ip, "old_ip": old_meter_ip, "new_ip": found_ip})
+            send_notification(
+                f"🔄 Vermogensmeter met IP {old_meter_ip} is niet meer bereikbaar; teruggevonden op {found_ip} via MAC-adres.",
+                event_key="ntfy_notify_offline")
+    except Exception as e:
+        print(f"MAC-herkoppeling vermogensmeter fout ({old_meter_ip}): {e}")
+
+
+def try_relocate_device_by_mac(old_ip, mac):
+    if old_ip in device_states:
+        device_states[old_ip]["mac_relocating"] = True
+    try:
+        print(f"MAC-herkoppeling: zoek apparaat {mac} terug (was {old_ip})...")
+        result = scan_network_for_devices()
+        for cand in result["shelly_devices"]:
+            if cand.get("mac") and cand["ip"] != old_ip and cand["mac"].upper() == mac.upper():
+                cfg = load_config()
+                changed = False
+                for dev in cfg.get("shelly_devices", []):
+                    if dev.get("ip") == old_ip and (dev.get("mac") or "").upper() == mac.upper():
+                        dev["ip"] = cand["ip"]
+                        changed = True
+                if changed:
+                    save_config(cfg)
+                    if old_ip in device_states:
+                        device_states[cand["ip"]] = device_states.pop(old_ip)
+                    if old_ip in device_pids:
+                        device_pids[cand["ip"]] = device_pids.pop(old_ip)
+                    device_states[cand["ip"]]["mac_relocating"] = False
+                    print(f"MAC-herkoppeling: apparaat verplaatst van {old_ip} naar {cand['ip']}")
+                    write_audit_log("device_ip_relocated", {"mac": mac, "old_ip": old_ip, "new_ip": cand["ip"]})
+                    send_notification(
+                        f"🔄 Apparaat met IP {old_ip} is niet meer bereikbaar; teruggevonden op {cand['ip']} via MAC-adres.",
+                        event_key="ntfy_notify_offline")
+                return
+    except Exception as e:
+        print(f"MAC-herkoppeling fout ({old_ip}): {e}")
+    finally:
+        if old_ip in device_states:
+            device_states[old_ip]["mac_relocating"] = False
+
+
+def try_relocate_p1_by_mac(old_ip, mac):
+    global _p1_mac_relocating
+    _p1_mac_relocating = True
+    try:
+        print(f"MAC-herkoppeling: zoek P1-meter {mac} terug (was {old_ip})...")
+        result = scan_network_for_devices()
+        for cand in result["p1_meters"]:
+            if cand.get("mac") and cand["ip"] != old_ip and cand["mac"].upper() == mac.upper():
+                cfg = load_config()
+                if cfg.get("p1_ip") == old_ip and (cfg.get("p1_mac") or "").upper() == mac.upper():
+                    cfg["p1_ip"] = cand["ip"]
+                    save_config(cfg)
+                    print(f"MAC-herkoppeling: P1-meter verplaatst van {old_ip} naar {cand['ip']}")
+                    write_audit_log("p1_ip_relocated", {"mac": mac, "old_ip": old_ip, "new_ip": cand["ip"]})
+                    send_notification(
+                        f"🔄 P1-meter met IP {old_ip} is niet meer bereikbaar; teruggevonden op {cand['ip']} via MAC-adres.",
+                        event_key="ntfy_notify_offline")
+                return
+    except Exception as e:
+        print(f"MAC-herkoppeling P1 fout ({old_ip}): {e}")
+    finally:
+        _p1_mac_relocating = False
 
 
 # ================= ROUTES =================
@@ -1193,6 +1429,25 @@ def parse_devices_from_request(req):
     def get_val(lst, idx, default=""):
         return lst[idx] if idx < len(lst) else default
 
+    # Reeds bekende MAC-adressen behouden: het formulier zelf verstuurt geen
+    # MAC-velden, en zonder deze koppeling zou elke opslagactie de geleerde
+    # MAC-adressen (nodig voor IP-herkoppeling) weggooien. Stekker/meter-MAC
+    # wordt alleen behouden als het bijbehorende IP-adres ongewijzigd is —
+    # verandert dat IP, dan is het een ander fysiek apparaat.
+    existing_devices = load_config().get("shelly_devices", [])
+    known_macs_by_ip = {
+        (d.get("ip") or "").strip(): (d.get("mac") or "").strip()
+        for d in existing_devices
+    }
+    known_socket_macs = {
+        ((d.get("ip") or "").strip(), (d.get("power_socket_ip") or "").strip()): (d.get("power_socket_mac") or "").strip()
+        for d in existing_devices
+    }
+    known_meter_macs = {
+        ((d.get("ip") or "").strip(), (d.get("power_ip") or "").strip()): (d.get("power_meter_mac") or "").strip()
+        for d in existing_devices
+    }
+
     for i in range(row_count):
         name = get_val(names, i).strip()
         ip = get_val(ips, i).strip()
@@ -1211,6 +1466,9 @@ def parse_devices_from_request(req):
             "power_socket_type": ps_type if ps_type else "",
             "power_socket_ip": ps_ip if ps_ip else "",
             "boiler_volume": bv,
+            "mac": known_macs_by_ip.get(ip, ""),
+            "power_socket_mac": known_socket_macs.get((ip, ps_ip), ""),
+            "power_meter_mac": known_meter_macs.get((ip, pip), ""),
         })
     return devices
 
@@ -1596,6 +1854,7 @@ def status_json():
             "on": s.get("on", False),
             "brightness": s.get("brightness", 0),
             "online": s.get("online", False),
+            "mac_relocating": s.get("mac_relocating", False),
             "power_meter_online": s.get("power_meter_online", False),
             "freeze": s.get("freeze", False),
             "started": s.get("started", False),
@@ -1662,6 +1921,7 @@ def status_json():
 
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
+        p1_online=_p1_online, p1_mac_relocating=_p1_mac_relocating,
         devices=devices, expert_mode=cfg.get("expert_mode", False),
         expert_settings=get_runtime_settings(cfg),
         schedules=cfg.get("schedules", []),
@@ -3975,6 +4235,62 @@ def scan_devices():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/p1/reset_mac", methods=["POST"])
+def api_p1_reset_mac():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    cfg = load_config()
+    cfg["p1_mac"] = ""
+    save_config(cfg)
+    write_audit_log("p1_mac_reset", {})
+    p1_ip = (cfg.get("p1_ip") or "").strip()
+    if p1_ip:
+        threading.Thread(target=backfill_p1_mac, args=(p1_ip,), daemon=True).start()
+    return jsonify(success=True)
+
+
+@app.route("/api/device/reset_mac", methods=["POST"])
+def api_device_reset_mac():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    data = request.get_json(silent=True) or {}
+    ip = (data.get("ip") or "").strip()
+    field = (data.get("field") or "mac").strip()
+    if field not in ("mac", "power_socket_mac", "power_meter_mac"):
+        return jsonify({"error": "Ongeldig veld"}), 400
+    if not ip:
+        return jsonify({"error": "Geen IP-adres opgegeven"}), 400
+    cfg = load_config()
+    changed = False
+    target_dev = None
+    for dev in cfg.get("shelly_devices", []):
+        if dev.get("ip") == ip:
+            dev[field] = ""
+            changed = True
+            target_dev = dev
+    if not changed:
+        return jsonify({"error": "Apparaat niet gevonden in configuratie"}), 404
+    save_config(cfg)
+    write_audit_log("device_mac_reset", {"ip": ip, "field": field})
+    if field == "mac":
+        threading.Thread(target=backfill_shelly_mac, args=(ip,), daemon=True).start()
+    elif field == "power_socket_mac":
+        ps_type = (target_dev.get("power_socket_type") or "").strip()
+        ps_ip = (target_dev.get("power_socket_ip") or "").strip()
+        if ps_type and ps_ip:
+            threading.Thread(target=backfill_power_socket_mac, args=(ip, ps_type, ps_ip), daemon=True).start()
+    elif field == "power_meter_mac":
+        pm_type = (target_dev.get("power_meter") or "").strip()
+        pm_ip = (target_dev.get("power_ip") or "").strip() or ip
+        if pm_type and pm_ip != ip:
+            threading.Thread(target=backfill_power_meter_mac, args=(ip, pm_type, pm_ip), daemon=True).start()
+    return jsonify(success=True)
+
+
 # ================= SHELLY / POWER =================
 def set_shelly(brightness, on, ip):
     try:
@@ -4246,6 +4562,7 @@ def init_device_states(devices):
                 "energy_today_kwh": 0.0,
                 "energy_day_date": today_str if bl.get("date") == today_str else "",
                 "energy_day_start_wh": bl.get("start_wh") if bl.get("date") == today_str else None,
+                "mac_relocating": False,
             }
 
 
@@ -4971,7 +5288,17 @@ def control_loop():
     online_check_interval = 10
     last_online_check = {}
     offline_since_map = {}
+    unreachable_since_map = {}
+    unreachable_had_power_map = {}
     offline_notified = set()
+    mac_backfill_last_try = {}
+    mac_rescan_last_try = {}
+    socket_unreachable_since_map = {}
+    meter_unreachable_since_map = {}
+    socket_mac_backfill_last_try = {}
+    meter_mac_backfill_last_try = {}
+    socket_mac_rescan_last_try = {}
+    meter_mac_rescan_last_try = {}
     prev_active_sched_id = None
     export_start = None
     price_start = None
@@ -5055,14 +5382,75 @@ def control_loop():
                         device_states[ip]["power_socket_online"] = False
                     last_online_check[ip] = now
 
+                    if (device_states[ip]["online"]
+                            and not (d.get("mac") or "").strip()
+                            and now - mac_backfill_last_try.get(ip, 0) > 300):
+                        mac_backfill_last_try[ip] = now
+                        threading.Thread(target=backfill_shelly_mac, args=(ip,), daemon=True).start()
+
+                    # --- Vermogensmeter: MAC bijhouden + herkoppelen na lange onbereikbaarheid ---
+                    # Alleen relevant als het een apparaat is los van de SolarBuffer zelf
+                    # (staat power_ip leeg, dan is pm_ip == ip en dekt de MAC hierboven het al).
+                    if pm_type and pm_ip != ip:
+                        if device_states[ip]["power_meter_online"]:
+                            meter_unreachable_since_map.pop(ip, None)
+                            if (not (d.get("power_meter_mac") or "").strip()
+                                    and now - meter_mac_backfill_last_try.get(ip, 0) > 300):
+                                meter_mac_backfill_last_try[ip] = now
+                                threading.Thread(target=backfill_power_meter_mac, args=(ip, pm_type, pm_ip), daemon=True).start()
+                        else:
+                            if ip not in meter_unreachable_since_map:
+                                meter_unreachable_since_map[ip] = now
+                            meter_mac = (d.get("power_meter_mac") or "").strip()
+                            if (meter_mac
+                                    and now - meter_unreachable_since_map[ip] >= MAC_RESCAN_AFTER
+                                    and now - meter_mac_rescan_last_try.get(ip, 0) >= AUX_MAC_RESCAN_COOLDOWN):
+                                meter_mac_rescan_last_try[ip] = now
+                                threading.Thread(target=try_relocate_power_meter_by_mac,
+                                                  args=(ip, pm_ip, pm_type, meter_mac), daemon=True).start()
+
+                    # --- Slimme stekker: MAC bijhouden + herkoppelen na lange onbereikbaarheid ---
+                    # De stekker zelf blijft altijd via wifi bereikbaar zolang hij stroom
+                    # heeft, ongeacht of de relais aan of uit staat — dus geen uitzondering
+                    # nodig zoals bij de SolarBuffer-dimmer achter dezelfde stekker.
+                    if ps_type and ps_ip:
+                        if device_states[ip]["power_socket_online"]:
+                            socket_unreachable_since_map.pop(ip, None)
+                            if (not (d.get("power_socket_mac") or "").strip()
+                                    and now - socket_mac_backfill_last_try.get(ip, 0) > 300):
+                                socket_mac_backfill_last_try[ip] = now
+                                threading.Thread(target=backfill_power_socket_mac, args=(ip, ps_type, ps_ip), daemon=True).start()
+                        else:
+                            if ip not in socket_unreachable_since_map:
+                                socket_unreachable_since_map[ip] = now
+                            socket_mac = (d.get("power_socket_mac") or "").strip()
+                            if (socket_mac
+                                    and now - socket_unreachable_since_map[ip] >= MAC_RESCAN_AFTER
+                                    and now - socket_mac_rescan_last_try.get(ip, 0) >= AUX_MAC_RESCAN_COOLDOWN):
+                                socket_mac_rescan_last_try[ip] = now
+                                threading.Thread(target=try_relocate_power_socket_by_mac,
+                                                  args=(ip, ps_ip, ps_type, socket_mac), daemon=True).start()
+
             # --- Watchdog: track offline timestamps ---
             for d in devices:
                 ip = d["ip"]
                 if not device_states[ip]["online"]:
                     if ip not in offline_since_map:
                         offline_since_map[ip] = now
+                    if ip not in unreachable_since_map:
+                        unreachable_since_map[ip] = now
+                        # Momentopname: had de stekker stroom toen het apparaat
+                        # onbereikbaar raakte? De hold-timer (maybe_turn_off_power_socket)
+                        # kan de stekker later alsnog uitzetten omdat het apparaat
+                        # niet gestart is — dat mag de MAC-scan niet blokkeren als
+                        # er op het moment van uitvallen wél stroom was.
+                        unreachable_had_power_map[ip] = (
+                            (not has_power_socket(d)) or bool(device_states[ip].get("power_socket_on"))
+                        )
                 else:
                     offline_since_map.pop(ip, None)
+                    unreachable_since_map.pop(ip, None)
+                    unreachable_had_power_map.pop(ip, None)
 
             # --- Watchdog: started + offline >30s → reset so next priority can take over ---
             # Bepaal welke IPs vallen onder het actieve tijdschema: de watchdog
@@ -5096,6 +5484,31 @@ def control_loop():
                     offline_since_map.pop(ip, None)
                 elif device_states[ip].get("online"):
                     offline_notified.discard(ip)
+
+            # --- Watchdog: IP herkoppelen via MAC-adres na langdurig offline ---
+            # Een apparaat achter een schakelbare stekker is legitiem offline
+            # zolang de stekker uit staat (geen stroom) — dat is geen reden om
+            # te gaan zoeken naar een gewijzigd IP-adres. We toetsen dit aan de
+            # stekkerstatus op het moment dat het apparaat onbereikbaar raakte
+            # (unreachable_had_power_map), niet aan de huidige status: de
+            # hold-timer (maybe_turn_off_power_socket) kan de stekker intussen
+            # alsnog hebben uitgezet omdat het apparaat niet gestart is — dat mag
+            # een lopende IP-wijziging niet maskeren.
+            for d in devices:
+                ip = d["ip"]
+                st = device_states[ip]
+                known_mac = (d.get("mac") or "").strip()
+                if not known_mac or st.get("online"):
+                    continue
+                if not unreachable_had_power_map.get(ip, True):
+                    continue
+                unreachable_for = now - unreachable_since_map.get(ip, now)
+                if unreachable_for < MAC_RESCAN_AFTER:
+                    continue
+                if now - mac_rescan_last_try.get(ip, 0) < MAC_RESCAN_COOLDOWN:
+                    continue
+                mac_rescan_last_try[ip] = now
+                threading.Thread(target=try_relocate_device_by_mac, args=(ip, known_mac), daemon=True).start()
 
             energy_today_str = datetime.now().strftime("%Y-%m-%d")
             for d in devices:
@@ -7058,7 +7471,12 @@ def p1_poll_loop():
     gas_info = saved.get("__gas__", {})
     gas_day_start_m3 = gas_info.get("gas_day_start_m3")
     gas_day_date = gas_info.get("gas_day_date")
+    p1_offline_since = None
+    p1_mac_last_try = 0
+    p1_relocate_last_try = 0
     while True:
+        p1_ip = None
+        cfg = None
         try:
             cfg = load_config()
             p1_ip = cfg.get("p1_ip")
@@ -7066,6 +7484,10 @@ def p1_poll_loop():
                 data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
                 current_power = float(data.get("active_power_w", 0) or 0)
                 _p1_online = True
+                p1_offline_since = None
+                if not (cfg.get("p1_mac") or "").strip() and time.time() - p1_mac_last_try > 300:
+                    p1_mac_last_try = time.time()
+                    threading.Thread(target=backfill_p1_mac, args=(p1_ip,), daemon=True).start()
                 if cfg.get("gas_enabled"):
                     gas_raw = data.get("total_gas_m3")
                     if gas_raw is not None:
@@ -7077,6 +7499,15 @@ def p1_poll_loop():
                             save_state(force=True)
         except Exception:
             _p1_online = False
+            if p1_ip and cfg:
+                if p1_offline_since is None:
+                    p1_offline_since = time.time()
+                p1_mac = (cfg.get("p1_mac") or "").strip()
+                if (p1_mac
+                        and time.time() - p1_offline_since >= MAC_RESCAN_AFTER
+                        and time.time() - p1_relocate_last_try >= MAC_RESCAN_COOLDOWN):
+                    p1_relocate_last_try = time.time()
+                    threading.Thread(target=try_relocate_p1_by_mac, args=(p1_ip, p1_mac), daemon=True).start()
         time.sleep(1)
 
 

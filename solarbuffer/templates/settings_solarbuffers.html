@@ -540,6 +540,8 @@
       pi.readOnly = !enabled;
       pi.required = enabled;
       if (!enabled) pi.value = "";
+      const macGroup = card.querySelector('.meter-mac-group');
+      if (macGroup) macGroup.style.display = enabled ? '' : 'none';
     }
 
     function updateSocketState(card) {
@@ -550,9 +552,11 @@
       si.readOnly = !enabled;
       si.required = enabled;
       if (!enabled) si.value = "";
+      const macGroup = card.querySelector('.socket-mac-group');
+      if (macGroup) macGroup.style.display = enabled ? '' : 'none';
     }
 
-    function addDevice(name='', ip='', priority='', power_meter='', power_ip='', power_socket_type='', power_socket_ip='', boiler_volume=100) {
+    function addDevice(name='', ip='', priority='', power_meter='', power_ip='', power_socket_type='', power_socket_ip='', boiler_volume=100, mac='', power_socket_mac='', power_meter_mac='') {
       const container = document.getElementById('deviceContainer');
       if (container.children.length >= 5) { alert("Maximaal 5 SolarBuffers mogelijk."); return false; }
 
@@ -560,6 +564,7 @@
       const card = document.createElement('div');
       card.className = 'device-card';
       card.setAttribute('data-device', '');
+      card.dataset.mac = mac || '';
       card.innerHTML = `
         <div class="device-card-header">
           <span class="device-card-label">SolarBuffer</span>
@@ -584,6 +589,15 @@
           </div>
         </div>
 
+        <div class="field-group" style="margin-top:0.9rem;">
+          <label>MAC-adres</label>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <input type="text" class="device-mac-field" readonly style="flex:1;" value="${escapeHtml(mac || 'Wordt automatisch opgehaald zodra het apparaat online is')}">
+            <button type="button" class="device-mac-reset" title="Reset MAC-adres" style="border:1px solid hsl(224, 20%, 84%);padding:0.45rem 0.7rem;border-radius:0.5rem;background:hsl(224, 20%, 95%);color:hsl(224, 26%, 30%);font-size:0.82rem;font-weight:600;flex-shrink:0;cursor:pointer;">Reset</button>
+          </div>
+          <div class="device-mac-status" style="display:none;margin-top:0.4rem;padding:0.4rem 0.65rem;border-radius:0.5rem;font-size:0.78rem;border:1px solid transparent;"></div>
+        </div>
+
         <div class="subsection">
           <div class="subsection-title">Slimme stekker</div>
           <div class="two-col">
@@ -595,6 +609,14 @@
               <label>IP-adres</label>
               <input type="text" name="power_socket_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_socket_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
             </div>
+          </div>
+          <div class="field-group socket-mac-group" style="margin-top:0.9rem;${power_socket_type ? '' : 'display:none;'}">
+            <label>MAC-adres</label>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <input type="text" class="socket-mac-field" readonly style="flex:1;" value="${escapeHtml(power_socket_mac || 'Wordt automatisch opgehaald zodra de stekker online is')}">
+              <button type="button" class="socket-mac-reset" title="Reset MAC-adres" style="border:1px solid hsl(224, 20%, 84%);padding:0.45rem 0.7rem;border-radius:0.5rem;background:hsl(224, 20%, 95%);color:hsl(224, 26%, 30%);font-size:0.82rem;font-weight:600;flex-shrink:0;cursor:pointer;">Reset</button>
+            </div>
+            <div class="socket-mac-status" style="display:none;margin-top:0.4rem;padding:0.4rem 0.65rem;border-radius:0.5rem;font-size:0.78rem;border:1px solid transparent;"></div>
           </div>
         </div>
 
@@ -610,6 +632,14 @@
               <label>IP-adres</label>
               <input type="text" name="power_ip[]" placeholder="192.168.178.x" value="${escapeHtml(power_ip)}" pattern="^(\\d{1,3}\\.){3}\\d{1,3}$">
             </div>
+          </div>
+          <div class="field-group meter-mac-group" style="margin-top:0.9rem;${power_meter ? '' : 'display:none;'}">
+            <label>MAC-adres</label>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <input type="text" class="meter-mac-field" readonly style="flex:1;" value="${escapeHtml(power_meter_mac || 'Wordt automatisch opgehaald zodra de meter online is')}">
+              <button type="button" class="meter-mac-reset" title="Reset MAC-adres" style="border:1px solid hsl(224, 20%, 84%);padding:0.45rem 0.7rem;border-radius:0.5rem;background:hsl(224, 20%, 95%);color:hsl(224, 26%, 30%);font-size:0.82rem;font-weight:600;flex-shrink:0;cursor:pointer;">Reset</button>
+            </div>
+            <div class="meter-mac-status" style="display:none;margin-top:0.4rem;padding:0.4rem 0.65rem;border-radius:0.5rem;font-size:0.78rem;border:1px solid transparent;"></div>
           </div>
         </div>
 
@@ -629,6 +659,15 @@
 
       card.querySelector('select[name="power_meter[]"]').addEventListener('change', () => updatePowerIpState(card));
       card.querySelector('select[name="power_socket_type[]"]').addEventListener('change', () => updateSocketState(card));
+      card.querySelector('.device-mac-reset').addEventListener('click', () =>
+        resetDeviceMac(card, 'mac', '.device-mac-field', '.device-mac-status', '.device-mac-reset',
+          'Wordt automatisch opgehaald zodra het apparaat online is'));
+      card.querySelector('.socket-mac-reset').addEventListener('click', () =>
+        resetDeviceMac(card, 'power_socket_mac', '.socket-mac-field', '.socket-mac-status', '.socket-mac-reset',
+          'Wordt automatisch opgehaald zodra de stekker online is'));
+      card.querySelector('.meter-mac-reset').addEventListener('click', () =>
+        resetDeviceMac(card, 'power_meter_mac', '.meter-mac-field', '.meter-mac-status', '.meter-mac-reset',
+          'Wordt automatisch opgehaald zodra de meter online is'));
       updatePowerIpState(card);
       updateSocketState(card);
       updatePriorities();
@@ -640,6 +679,43 @@
       btn.closest('.device-card[data-device]').remove();
       normalizePriorities();
       updateDeviceNumbers();
+    }
+
+    function setMacStatus(el, msg, type) {
+      el.textContent = msg;
+      el.style.display = msg ? 'block' : 'none';
+      el.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
+      el.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
+      el.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
+    }
+
+    function resetDeviceMac(card, field, fieldSel, statusSel, btnSel, placeholder) {
+      const ip = (card.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+      const status = card.querySelector(statusSel);
+      const fieldEl = card.querySelector(fieldSel);
+      const btn = card.querySelector(btnSel);
+      if (!ip) { setMacStatus(status, 'Vul eerst een IP-adres in en sla op.', 'error'); return; }
+      btn.disabled = true;
+      fetch('/api/device/reset_mac', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: ip, field: field })
+      })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false;
+          if (data.success) {
+            if (field === 'mac') card.dataset.mac = '';
+            fieldEl.value = placeholder;
+            setMacStatus(status, 'MAC-adres gereset. Wordt opnieuw opgehaald zodra het apparaat bereikbaar is.', 'success');
+          } else {
+            setMacStatus(status, 'Fout: ' + (data.error || 'onbekend'), 'error');
+          }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          setMacStatus(status, 'Verbindingsfout tijdens resetten.', 'error');
+        });
     }
 
     async function doScan() {
@@ -670,6 +746,9 @@
               c.querySelector('input[name="power_ip[]"]').value = "";
               c.querySelector('select[name="power_socket_type[]"]').value = "";
               c.querySelector('input[name="power_socket_ip[]"]').value = "";
+              c.dataset.mac = d.mac || '';
+              const macF = c.querySelector('.device-mac-field');
+              if (macF) macF.value = d.mac || 'Wordt automatisch opgehaald zodra het apparaat online is';
               updatePowerIpState(c);
               updateSocketState(c);
               filled = true; added++; existingIps.push(ip); break;
@@ -677,7 +756,7 @@
           }
           if (!filled) {
             if (document.getElementById('deviceContainer').children.length >= 5) break;
-            if (addDevice(d.name || 'SolarBuffer', ip)) { added++; existingIps.push(ip); }
+            if (addDevice(d.name || 'SolarBuffer', ip, '', '', '', '', '', 100, d.mac || '')) { added++; existingIps.push(ip); }
           }
         }
         normalizePriorities(); updateDeviceNumbers();
@@ -735,7 +814,8 @@
           d.name, d.ip, d.priority,
           d.power_meter || "", d.power_ip || "",
           d.power_socket_type || "", d.power_socket_ip || "",
-          d.boiler_volume || 100
+          d.boiler_volume || 100, d.mac || "",
+          d.power_socket_mac || "", d.power_meter_mac || ""
         ));
       } else {
         addDevice();

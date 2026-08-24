@@ -3322,6 +3322,7 @@
       // toon dan toch "Op temperatuur" in plaats van een leeg label
       if (!d.online) {
         if (atTemp) return tempState;
+        if (d.mac_relocating) return { label: "Zoeken naar SolarBuffer…", cls: "pending", dot: "pending" };
         // Geparkeerd achter een uitgeschakelde socket is normaal (geen alarm);
         // staat de socket aan maar blijft de dimmer onbereikbaar → echt offline
         const socketParked = hasConfiguredSocket(d) && d.power_socket_online && !d.power_socket_on;
