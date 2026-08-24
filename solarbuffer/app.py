@@ -2831,6 +2831,24 @@ def install_required_pip_packages():
         pass
 
 
+def ensure_shelly_ble_available():
+    """Vangnet voor Pi's waar bleak buiten de in-app update-flow om ontbreekt
+    (bv. een handmatige 'git pull' via SSH, die install_required_pip_packages()
+    niet aanroept). Draait eenmalig bij opstarten in een achtergrondthread: als
+    de eerdere top-level import van shelly_ble mislukte, probeert dit bleak alsnog
+    te installeren en de module opnieuw te importeren, zonder de opstart te blokkeren."""
+    global shelly_ble, SHELLY_BLE_AVAILABLE
+    if SHELLY_BLE_AVAILABLE:
+        return
+    install_required_pip_packages()
+    try:
+        import importlib
+        shelly_ble = importlib.import_module("shelly_ble")
+        SHELLY_BLE_AVAILABLE = True
+    except ImportError:
+        pass
+
+
 # ================= FIRMWARE UPDATES =================
 
 def _check_shelly_firmware(device):
@@ -4574,7 +4592,7 @@ def get_socket_relay_state(power_socket_type, ip):
                 if isinstance(data, dict) and "output" in data:
                     return bool(data["output"])
         elif pst == "homewizard":
-            r = requests.get(f"http://{ip}/api/v1/data", timeout=2)
+            r = requests.get(f"http://{ip}/api/v1/state", timeout=2)
             if r.status_code == 200:
                 data = r.json()
                 if isinstance(data, dict) and "power_on" in data:
@@ -7760,6 +7778,7 @@ if __name__ == "__main__":
     threading.Thread(target=broadlink_poll_loop, daemon=True).start()
     threading.Thread(target=automation_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
+    threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
         def filter(self, record):
