@@ -367,7 +367,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.6.5</span>
+          <span class="version-badge new">v0.6.6</span>
+          <span class="update-date-small">24 aug</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Automatische IP-herkoppeling via MAC-adres</div>
+          <div class="update-body">Wijzigt het IP-adres van je SolarBuffer, P1-meter, slimme stekker of vermogensmeter (bijvoorbeeld door een nieuwe DHCP-lease), dan blijft SolarBuffer niet langer definitief zonder verbinding zitten. Elk MAC-adres wordt automatisch vastgelegd zodra een apparaat online is; blijft het daarna onbereikbaar, dan scant SolarBuffer het netwerk om het via zijn MAC-adres terug te vinden en werkt het IP-adres vanzelf bij. Het hoofdapparaat probeert dit na 30 seconden onbereikbaarheid, met een nieuwe poging elke 90 seconden; stekker en vermogensmeter zijn minder urgent en worden hooguit eens per 15 minuten opnieuw gezocht. Een apparaat achter een uitgeschakelde stekker wordt hierbij herkend als legitiem offline. In de instellingen bij P1-meter en elke SolarBuffer staat nu een MAC-adresveld met een Reset-knop, handig bij vervanging van hardware. Op het dashboard verschijnt tijdens een actieve zoekpoging de status "Zoeken naar SolarBuffer…".</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.6" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.6.5</span>
           <span class="update-date-small">7 aug</span>
         </div>
         <div class="update-divider"></div>
