@@ -4471,6 +4471,33 @@ def check_power_socket_online(power_socket_type, ip):
     return False
 
 
+def get_socket_relay_state(power_socket_type, ip):
+    """Live controle van de werkelijke relaisstand van de stekker (aan/uit),
+    onafhankelijk van onze eigen bijgehouden 'power_socket_on'-status — die
+    staat standaard op False voor een net aangemaakte device_states-entry
+    (bv. na een IP-wijziging) en weerspiegelt dan niet de fysieke werkelijkheid.
+    Retourneert None als de stekker zelf niet bereikbaar is (onbekend)."""
+    try:
+        pst = (power_socket_type or "").lower().strip()
+        if not pst or not ip:
+            return None
+        if pst == "shelly":
+            r = requests.get(f"http://{ip}/rpc/Switch.GetStatus?id=0", timeout=2)
+            if r.status_code == 200:
+                data = r.json()
+                if isinstance(data, dict) and "output" in data:
+                    return bool(data["output"])
+        elif pst == "homewizard":
+            r = requests.get(f"http://{ip}/api/v1/data", timeout=2)
+            if r.status_code == 200:
+                data = r.json()
+                if isinstance(data, dict) and "power_on" in data:
+                    return bool(data["power_on"])
+    except Exception:
+        pass
+    return None
+
+
 def mark_device_activity(device):
     st = get_device_state(device)
     now = time.time()
@@ -5461,13 +5488,23 @@ def control_loop():
                     if ip not in unreachable_since_map:
                         unreachable_since_map[ip] = now
                         # Momentopname: had de stekker stroom toen het apparaat
-                        # onbereikbaar raakte? De hold-timer (maybe_turn_off_power_socket)
-                        # kan de stekker later alsnog uitzetten omdat het apparaat
-                        # niet gestart is — dat mag de MAC-scan niet blokkeren als
-                        # er op het moment van uitvallen wél stroom was.
-                        unreachable_had_power_map[ip] = (
-                            (not has_power_socket(d)) or bool(device_states[ip].get("power_socket_on"))
-                        )
+                        # onbereikbaar raakte? We vragen de stekker zelf live naar
+                        # zijn relaisstand — onze eigen 'power_socket_on'-status is
+                        # onbetrouwbaar na een IP-wijziging (een nieuwe
+                        # device_states-entry begint altijd op False, ongeacht de
+                        # fysieke werkelijkheid, waardoor de scan anders permanent
+                        # geblokkeerd zou blijven). Is de stekker zelf ook niet
+                        # bereikbaar (relaisstand onbekend), dan gaan we uit van
+                        # 'had stroom' zodat een echte IP-wijziging niet onterecht
+                        # wordt gemaskeerd.
+                        if has_power_socket(d):
+                            _relay_state = get_socket_relay_state(
+                                (d.get("power_socket_type") or "").strip(),
+                                (d.get("power_socket_ip") or "").strip()
+                            )
+                            unreachable_had_power_map[ip] = (_relay_state is not False)
+                        else:
+                            unreachable_had_power_map[ip] = True
                 else:
                     offline_since_map.pop(ip, None)
                     unreachable_since_map.pop(ip, None)
