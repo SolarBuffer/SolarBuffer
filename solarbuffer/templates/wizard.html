@@ -510,6 +510,64 @@
             cursor: wait;
         }
 
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-wrapper input {
+            padding-right: 3rem;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: .9rem;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: hsl(224, 18%, 55%);
+            line-height: 1;
+        }
+
+        .toggle-password:hover {
+            color: hsl(224, 18%, 30%);
+        }
+
+        .ble-device-btn {
+            background: white;
+            border: 1px solid hsl(224, 20%, 82%);
+            border-radius: .5rem;
+            padding: .4rem .75rem;
+            font-size: .9rem;
+            color: hsl(224, 26%, 14%);
+            cursor: pointer;
+        }
+
+        .ble-device-btn:hover {
+            background: white;
+            border-color: hsl(215, 70%, 52%);
+            color: hsl(224, 26%, 14%);
+        }
+
+        .ble-device-btn.selected {
+            background: hsl(215, 70%, 52%);
+            border-color: hsl(215, 70%, 52%);
+            color: white;
+        }
+
+        html[data-theme="dark"] .toggle-password {
+            color: hsl(224, 18%, 65%);
+        }
+
+        html[data-theme="dark"] .toggle-password:hover {
+            color: hsl(224, 18%, 88%);
+        }
+
+        html[data-theme="dark"] .ble-device-btn {
+            background: hsl(224, 24%, 16%);
+            border-color: hsl(224, 20%, 32%);
+            color: hsl(224, 20%, 92%);
+        }
+
         .wizard-actions {
             display: flex;
             align-items: center;
@@ -783,19 +841,53 @@
                 <div class="step-card">
                     <div class="step-title">Stap 2 · SolarBuffers koppelen</div>
                     <div class="step-subtitle">
-                        Voeg je SolarBuffers toe. Je kunt apparaten laten scannen of handmatig meerdere apparaten
-                        toevoegen.
+                        Koppel je nieuwe SolarBuffer via Bluetooth. Lukt dat niet, dan kun je hieronder handmatig
+                        toevoegen of op IP-adres scannen.
                     </div>
 
-                    <div id="deviceContainer"></div>
+                    <div id="blePanel">
+                        <div class="inline-actions">
+                            <button type="button" class="scan-btn" id="bleSearchBtn" onclick="bleScan()">Zoek via
+                                Bluetooth</button>
+                        </div>
 
-                    <div class="inline-actions">
-                        <button type="button" id="addDeviceBtn" onclick="addDevice()">+ SolarBuffer toevoegen</button>
-                        <button type="button" class="scan-btn" id="scanDevicesBtn" onclick="scanDevices()">Zoek
-                            SolarBuffers</button>
+                        <div class="scan-status" id="bleScanStatus"></div>
+                        <div class="scan-results" id="bleResults"></div>
+
+                        <div id="bleProvisionForm" style="display:none; margin-top:.75rem;">
+                            <div class="field-group">
+                                <label for="bleSsid">WiFi-netwerk</label>
+                                <input type="text" id="bleSsid" placeholder="Netwerknaam">
+                            </div>
+                            <div class="field-group">
+                                <label for="blePassword">WiFi-wachtwoord</label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="blePassword" placeholder="Wachtwoord">
+                                    <span class="toggle-password" onclick="togglePassword('blePassword', this)">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="inline-actions">
+                                <button type="button" class="scan-btn" onclick="bleProvision()">Verbind SolarBuffer met
+                                    netwerk</button>
+                            </div>
+                        </div>
+
+                        <div class="scan-status" id="bleProvisionStatus"></div>
                     </div>
 
-                    <div class="scan-status" id="deviceScanStatus"></div>
+                    <div id="deviceContainer" style="margin-top:1rem;"></div>
+
+                    <div style="margin-top:.75rem;">
+                        <div class="inline-actions">
+                            <button type="button" id="addDeviceBtn" onclick="addDevice()">+ SolarBuffer
+                                toevoegen</button>
+                            <button type="button" class="scan-btn" id="scanDevicesBtn" onclick="scanDevices()">Zoek
+                                op IP-adres</button>
+                        </div>
+                        <div class="scan-status" id="deviceScanStatus"></div>
+                    </div>
 
                     <div class="status" id="statusMessage" role="alert" aria-live="polite"></div>
                 </div>
@@ -824,6 +916,21 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        const SVG_EYE = '<path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>';
+        const SVG_EYE_OFF = '<path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/>';
+
+        function togglePassword(fieldId, btn) {
+            const field = document.getElementById(fieldId);
+            const svg = btn.querySelector('svg');
+            if (field.type === "password") {
+                field.type = "text";
+                svg.innerHTML = SVG_EYE;
+            } else {
+                field.type = "password";
+                svg.innerHTML = SVG_EYE_OFF;
+            }
         }
 
         function updateWizardUI() {
@@ -904,6 +1011,10 @@
             currentStep = step;
             updateWizardUI();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (step === 2) {
+                bleScan();
+            }
         }
 
         function createPriorityOptions(selected = "") {
@@ -1338,6 +1449,123 @@
                 }
             } finally {
                 scanButtons.forEach(btn => btn.disabled = false);
+            }
+        }
+
+        let bleSelectedAddress = null;
+
+        function getProvisionedBleAddresses() {
+            try {
+                return new Set(JSON.parse(localStorage.getItem('sb_ble_provisioned') || '[]'));
+            } catch {
+                return new Set();
+            }
+        }
+
+        function rememberProvisionedBleAddress(address) {
+            const addresses = getProvisionedBleAddresses();
+            addresses.add(address);
+            localStorage.setItem('sb_ble_provisioned', JSON.stringify([...addresses]));
+        }
+
+        async function bleScan() {
+            const status = document.getElementById('bleScanStatus');
+            const results = document.getElementById('bleResults');
+            const btn = document.getElementById('bleSearchBtn');
+
+            bleSelectedAddress = null;
+            document.getElementById('bleProvisionForm').style.display = 'none';
+            document.getElementById('bleProvisionStatus').textContent = '';
+            btn.disabled = true;
+            status.textContent = 'Bluetooth wordt gescand (ca. 6 seconden)...';
+            results.innerHTML = '';
+            results.classList.remove('visible');
+
+            try {
+                const res = await fetch('/api/shelly/ble_scan', { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Bluetooth-scan mislukt');
+
+                const provisioned = getProvisionedBleAddresses();
+                const devices = (Array.isArray(data.devices) ? data.devices : [])
+                    .filter(d => !provisioned.has(d.address));
+                if (devices.length === 0) {
+                    results.innerHTML = '<p>Geen SolarBuffer gevonden. Zorg dat hij binnen bereik is en nog niet ' +
+                        'eerder gekoppeld is, en probeer opnieuw.</p>';
+                } else {
+                    results.innerHTML = '<h3>Gevonden via Bluetooth</h3><ul>' + devices.map(d => {
+                        const suffix = (d.address || '').replace(/[^0-9A-Fa-f]/g, '').slice(-4).toUpperCase();
+                        const label = 'SolarBuffer' + (suffix ? ' ' + suffix : '');
+                        return `<li><button type="button" class="ble-device-btn" data-address="${escapeHtml(d.address)}" ` +
+                            `title="${escapeHtml(d.name)}" onclick="selectBleDevice(this)">${escapeHtml(label)} (${d.rssi} dBm)</button></li>`;
+                    }).join('') + '</ul>';
+                }
+                results.classList.add('visible');
+                status.textContent = '';
+            } catch (err) {
+                status.textContent = err.message || 'Bluetooth-scan mislukt.';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function selectBleDevice(btn) {
+            bleSelectedAddress = btn.dataset.address;
+            document.querySelectorAll('.ble-device-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('bleProvisionForm').style.display = 'block';
+
+            const ssidField = document.getElementById('bleSsid');
+            if (!ssidField.value.trim()) {
+                try {
+                    const res = await fetch('/api/wifi/current_ssid', { headers: { 'Accept': 'application/json' } });
+                    const data = await res.json();
+                    if (res.ok && data.success && data.ssid) {
+                        ssidField.value = data.ssid;
+                    }
+                } catch {
+                    // Stil negeren: gebruiker kan de SSID nog altijd zelf invullen.
+                }
+            }
+        }
+
+        async function bleProvision() {
+            const status = document.getElementById('bleProvisionStatus');
+
+            if (!bleSelectedAddress) {
+                status.textContent = 'Selecteer eerst een gevonden SolarBuffer hierboven.';
+                return;
+            }
+
+            const ssid = document.getElementById('bleSsid').value.trim();
+            const password = document.getElementById('blePassword').value;
+
+            if (!ssid) {
+                status.textContent = 'Vul de netwerknaam in.';
+                return;
+            }
+
+            status.textContent = 'SolarBuffer wordt gekoppeld... dit kan tot 20 seconden duren.';
+
+            try {
+                const res = await fetch('/api/shelly/ble_provision', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: bleSelectedAddress, ssid, password })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Koppelen mislukt');
+
+                rememberProvisionedBleAddress(bleSelectedAddress);
+
+                status.textContent = 'SolarBuffer verbindt nu met het netwerk. Over ongeveer 15 seconden wordt ' +
+                    'automatisch opnieuw gescand — lukt de verbinding, dan worden de gegevens hieronder vanzelf ingevuld.';
+
+                setTimeout(() => {
+                    scanDevices();
+                }, 15000);
+            } catch (err) {
+                status.textContent = err.message || 'Koppelen via Bluetooth mislukt.';
             }
         }
 

@@ -3,6 +3,7 @@ import requests
 import time
 import json
 import os
+import sys
 import socket
 import ipaddress
 import subprocess
@@ -18,6 +19,13 @@ from flask import Flask, render_template, jsonify, request, redirect, session, s
 import io
 import threading
 from werkzeug.security import generate_password_hash, check_password_hash
+
+try:
+    import shelly_ble
+    SHELLY_BLE_AVAILABLE = True
+except ImportError:
+    shelly_ble = None
+    SHELLY_BLE_AVAILABLE = False
 
 try:
     import paho.mqtt.client as _mqtt_lib
@@ -2789,6 +2797,7 @@ def run_update_check():
 
         if has_changes:
             def delayed_restart():
+                install_required_pip_packages()
                 cfg = load_config()
                 sync_configured_devices_off(cfg.get("shelly_devices", []))
                 time.sleep(1.5)
@@ -2802,6 +2811,24 @@ def run_update_check():
         return jsonify(success=False, error="git pull duurde te lang (timeout)"), 500
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+
+REQUIRED_PIP_PACKAGES = ["bleak"]
+
+
+def install_required_pip_packages():
+    """Installeert ontbrekende Python-dependencies in de venv van het lopende proces
+    (sys.executable), zodat op al uitgerolde Pi's nieuwe imports (bv. bleak voor
+    Shelly BLE-pairing) automatisch aanwezig zijn na een git pull, zonder handmatige
+    SSH-actie. Faalt stil door: als dit misgaat mag de rest van de update/restart
+    gewoon doorgaan, de betreffende feature valt dan terug op zijn eigen ImportError-guard."""
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-q"] + REQUIRED_PIP_PACKAGES,
+            capture_output=True, text=True, timeout=90
+        )
+    except Exception:
+        pass
 
 
 # ================= FIRMWARE UPDATES =================
@@ -4245,6 +4272,65 @@ def scan_devices():
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/wifi/current_ssid", methods=["GET"])
+def api_wifi_current_ssid():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
+            capture_output=True, text=True, timeout=8
+        )
+        ssid = ""
+        for line in result.stdout.splitlines():
+            active, _, name = line.partition(":")
+            if active == "yes":
+                ssid = name
+                break
+        return jsonify(success=True, ssid=ssid)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
+@app.route("/api/shelly/ble_scan", methods=["GET"])
+def api_shelly_ble_scan():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    if not SHELLY_BLE_AVAILABLE:
+        return jsonify(success=False, error="Bluetooth-ondersteuning (bleak) is niet beschikbaar op deze hub"), 503
+    try:
+        devices = shelly_ble.scan()
+        return jsonify(success=True, devices=devices)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
+@app.route("/api/shelly/ble_provision", methods=["POST"])
+def api_shelly_ble_provision():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    if not SHELLY_BLE_AVAILABLE:
+        return jsonify(success=False, error="Bluetooth-ondersteuning (bleak) is niet beschikbaar op deze hub"), 503
+    data = request.get_json(silent=True) or {}
+    address = (data.get("address") or "").strip()
+    ssid = (data.get("ssid") or "").strip()
+    password = data.get("password") or ""
+    if not address or not ssid:
+        return jsonify(success=False, error="address en ssid zijn verplicht"), 400
+    try:
+        result = shelly_ble.provision_wifi(address, ssid, password)
+        write_audit_log("shelly_ble_provisioned", {"address": address, "ssid": ssid})
+        return jsonify(success=True, result=result)
+    except shelly_ble.ShellyBleError as e:
+        return jsonify(success=False, error=str(e)), 502
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
 
 
 @app.route("/api/p1/reset_mac", methods=["POST"])
