@@ -139,6 +139,8 @@ def load_config():
         cfg["p1_ip"] = ""
     if "p1_mac" not in cfg:
         cfg["p1_mac"] = ""
+    elif cfg["p1_mac"]:
+        cfg["p1_mac"] = format_mac(cfg["p1_mac"])
     if "expert_mode" not in cfg:
         cfg["expert_mode"] = False
     if "expert_settings" not in cfg or not isinstance(cfg["expert_settings"], dict):
@@ -293,10 +295,16 @@ def load_config():
             dev["boiler_volume"] = 100
         if "mac" not in dev:
             dev["mac"] = ""
+        elif dev["mac"]:
+            dev["mac"] = format_mac(dev["mac"])
         if "power_socket_mac" not in dev:
             dev["power_socket_mac"] = ""
+        elif dev["power_socket_mac"]:
+            dev["power_socket_mac"] = format_mac(dev["power_socket_mac"])
         if "power_meter_mac" not in dev:
             dev["power_meter_mac"] = ""
+        elif dev["power_meter_mac"]:
+            dev["power_meter_mac"] = format_mac(dev["power_meter_mac"])
         normalized_devices.append(dev)
 
     cfg["shelly_devices"] = normalized_devices
@@ -826,7 +834,7 @@ def detect_shelly(ip):
             "ip": ip,
             "model": model,
             "gen": data.get("gen", 3),
-            "mac": (data.get("mac") or "").strip()
+            "mac": format_mac(data.get("mac")) if data.get("mac") else ""
         }
     except Exception:
         return None
@@ -1003,13 +1011,23 @@ def scan_subnet_for_mac(mac, dev_type):
     return None
 
 
+def format_mac(raw_mac):
+    """Normaliseert een MAC-adres naar AA:BB:CC:DD:EE:FF — hoofdletters met
+    dubbele punten. Shelly en HomeWizard leveren dit los (bv. 'a8032a1b2c3d')."""
+    hex_only = re.sub(r"[^0-9a-fA-F]", "", raw_mac or "").upper()
+    if len(hex_only) != 12:
+        return (raw_mac or "").strip()
+    return ":".join(hex_only[i:i + 2] for i in range(0, 12, 2))
+
+
 def get_shelly_mac(ip):
     try:
         r = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.5)
         if r.status_code == 200:
             data = r.json()
             if isinstance(data, dict):
-                return (data.get("mac") or "").strip() or None
+                mac = (data.get("mac") or "").strip()
+                return format_mac(mac) if mac else None
     except Exception:
         pass
     return None
@@ -1021,7 +1039,8 @@ def get_homewizard_mac(ip):
         if r.status_code == 200:
             data = r.json()
             if isinstance(data, dict):
-                return (data.get("serial") or "").strip() or None
+                mac = (data.get("serial") or "").strip()
+                return format_mac(mac) if mac else None
     except Exception:
         pass
     return None
@@ -1429,23 +1448,15 @@ def parse_devices_from_request(req):
     def get_val(lst, idx, default=""):
         return lst[idx] if idx < len(lst) else default
 
-    # Reeds bekende MAC-adressen behouden: het formulier zelf verstuurt geen
-    # MAC-velden, en zonder deze koppeling zou elke opslagactie de geleerde
-    # MAC-adressen (nodig voor IP-herkoppeling) weggooien. Stekker/meter-MAC
-    # wordt alleen behouden als het bijbehorende IP-adres ongewijzigd is —
-    # verandert dat IP, dan is het een ander fysiek apparaat.
-    existing_devices = load_config().get("shelly_devices", [])
-    known_macs_by_ip = {
-        (d.get("ip") or "").strip(): (d.get("mac") or "").strip()
-        for d in existing_devices
-    }
-    known_socket_macs = {
-        ((d.get("ip") or "").strip(), (d.get("power_socket_ip") or "").strip()): (d.get("power_socket_mac") or "").strip()
-        for d in existing_devices
-    }
-    known_meter_macs = {
-        ((d.get("ip") or "").strip(), (d.get("power_ip") or "").strip()): (d.get("power_meter_mac") or "").strip()
-        for d in existing_devices
+    # Reeds bekende MAC-adressen behouden, gekoppeld op naam (niet op IP): het
+    # hele punt van MAC-herkenning is dat een IP-wijziging niet betekent dat
+    # het een ander fysiek apparaat is — koppelen op IP zou het geleerde
+    # MAC-adres juist weggooien op het moment dat je het nodig hebt (een IP
+    # wijzigen, of testen door het IP handmatig aan te passen). Alleen de
+    # expliciete Reset-knop wist een MAC-adres nog.
+    existing_by_name = {
+        (d.get("name") or "").strip(): d
+        for d in load_config().get("shelly_devices", [])
     }
 
     for i in range(row_count):
@@ -1459,6 +1470,7 @@ def parse_devices_from_request(req):
         ps_type = get_val(power_socket_types, i).strip().lower()
         ps_ip = get_val(power_socket_ips, i).strip()
         bv = max(10, safe_int(get_val(boiler_volumes, i, "100"), 100))
+        prev = existing_by_name.get(name, {})
         devices.append({
             "name": name, "ip": ip, "priority": prio,
             "power_meter": pm if pm else "",
@@ -1466,9 +1478,9 @@ def parse_devices_from_request(req):
             "power_socket_type": ps_type if ps_type else "",
             "power_socket_ip": ps_ip if ps_ip else "",
             "boiler_volume": bv,
-            "mac": known_macs_by_ip.get(ip, ""),
-            "power_socket_mac": known_socket_macs.get((ip, ps_ip), ""),
-            "power_meter_mac": known_meter_macs.get((ip, pip), ""),
+            "mac": (prev.get("mac") or "").strip(),
+            "power_socket_mac": (prev.get("power_socket_mac") or "").strip(),
+            "power_meter_mac": (prev.get("power_meter_mac") or "").strip(),
         })
     return devices
 
