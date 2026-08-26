@@ -160,6 +160,10 @@ def load_config():
             sched["device_ips"] = []
     if "anti_legionella_enabled" not in cfg:
         cfg["anti_legionella_enabled"] = False
+    if cfg.get("anti_legionella_mode") not in ("automatic", "manual"):
+        cfg["anti_legionella_mode"] = "automatic"
+    if "anti_legionella_triggers" not in cfg or not isinstance(cfg["anti_legionella_triggers"], list):
+        cfg["anti_legionella_triggers"] = []
     if "pid_enabled" not in cfg:
         cfg["pid_enabled"] = True
     if "schedules_enabled" not in cfg:
@@ -469,6 +473,7 @@ def save_state(force=False):
             "last_active_time": st.get("last_active_time", 0),
             "legionella_active": st.get("legionella_active", False),
             "legionella_start": st.get("legionella_start"),
+            "legionella_required": st.get("legionella_required", False),
         }
         for ip, st in device_states.items()
     }
@@ -740,6 +745,24 @@ TEMP_SHUTOFF_REARM_HEAT_SEC = 15 * 60  # melding pas opnieuw na ≥15 min echte 
 LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
 LEGIONELLA_RUN_SECONDS = 3 * 3600     # 3 uur op maximaal vermogen draaien
 anti_legionella_enabled = False
+
+
+def _legionella_trigger_due(triggers):
+    """Handmatige modus: waar op het exacte moment (dag + uur:minuut) van een
+    ingestelde trigger (bv. maandag 11:00). Apparaten die op dat moment
+    'legionella_required' staan, starten dan hun run — zie control_loop()."""
+    now = datetime.now()
+    weekday = now.weekday()
+    cur_hm = (now.hour, now.minute)
+    for trig in (triggers or []):
+        try:
+            day = int(trig.get("day"))
+            th, tm = map(int, trig.get("time", "").split(":"))
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if day == weekday and (th, tm) == cur_hm:
+            return True
+    return False
 
 # ================= FLASK =================
 app = Flask(__name__)
@@ -1890,6 +1913,7 @@ def status_json():
             "waiting_for_power_socket": s.get("waiting_for_power_socket", False),
             "legionella_active": s.get("legionella_active", False),
             "legionella_start": s.get("legionella_start"),
+            "legionella_required": s.get("legionella_required", False),
             "boost_until": s.get("boost_until"),
             "price_triggered": s.get("price_triggered", False),
             "temp_shutoff_until": s.get("temp_shutoff_until"),
@@ -1947,6 +1971,8 @@ def status_json():
         schedules=cfg.get("schedules", []),
         active_schedule=active_schedule_info,
         anti_legionella_enabled=anti_legionella_enabled,
+        anti_legionella_mode=cfg.get("anti_legionella_mode", "automatic"),
+        anti_legionella_triggers=cfg.get("anti_legionella_triggers", []),
         schedules_enabled=schedules_enabled,
         accessories=accessories,
         gas_enabled=cfg.get("gas_enabled", False), gas_today_m3=gas_today,
@@ -2016,6 +2042,41 @@ def toggle_anti_legionella():
     save_config(cfg)
     write_audit_log("anti_legionella_toggled", {"enabled": anti_legionella_enabled})
     return jsonify(success=True, enabled=anti_legionella_enabled)
+
+
+@app.route("/settings/anti_legionella_mode", methods=["POST"])
+def set_anti_legionella_mode():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    data = request.json or {}
+    mode = data.get("mode")
+    if mode not in ("automatic", "manual"):
+        return jsonify(success=False, error="Ongeldige modus"), 400
+
+    triggers = []
+    if mode == "manual":
+        raw_triggers = data.get("triggers") or []
+        if not isinstance(raw_triggers, list) or not raw_triggers:
+            return jsonify(success=False, error="Voeg minstens één trigger toe"), 400
+        for t in raw_triggers[:20]:
+            try:
+                day = int(t.get("day"))
+                time_str = str(t.get("time", ""))
+                th, tm = map(int, time_str.split(":"))
+                if not (0 <= day <= 6 and 0 <= th <= 23 and 0 <= tm <= 59):
+                    raise ValueError
+            except (TypeError, ValueError, AttributeError):
+                return jsonify(success=False, error="Ongeldige trigger"), 400
+            triggers.append({"day": day, "time": f"{th:02d}:{tm:02d}"})
+
+    cfg = load_config()
+    cfg["anti_legionella_mode"] = mode
+    cfg["anti_legionella_triggers"] = triggers
+    save_config(cfg)
+    write_audit_log("anti_legionella_mode_changed", {"mode": mode, "triggers": triggers})
+    return jsonify(success=True, mode=mode, triggers=triggers)
 
 
 @app.route("/vacation", methods=["POST"])
@@ -4697,6 +4758,7 @@ def init_device_states(devices):
                 "waiting_for_power_socket": False, "power_socket_ready_at": None,
                 "legionella_active": s.get("legionella_active", False),
                 "legionella_start": s.get("legionella_start"),
+                "legionella_required": s.get("legionella_required", False),
                 "boost_until": None,
                 "price_triggered": False,
                 "temp_shutoff_since": None,
@@ -5729,6 +5791,10 @@ def control_loop():
             # --- Anti-Legionella ---
             legionella_handled = set()
             if anti_legionella_enabled and (not vacation_mode or vacation_legionella):
+                legionella_manual = cfg.get("anti_legionella_mode") == "manual"
+                legionella_trigger_due = legionella_manual and _legionella_trigger_due(
+                    cfg.get("anti_legionella_triggers", [])
+                )
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
@@ -5737,14 +5803,24 @@ def control_loop():
                     legionella_run_seconds = int((d.get("boiler_volume", 100) / 100) * 3 * 3600)
 
                     if not st.get("legionella_active") and idle_too_long:
-                        if st.get("pre_legionella_started") is None:
-                            st["pre_legionella_started"] = st.get("started", False)
-                            st["pre_legionella_brightness"] = st.get("brightness", 0)
-                            st["pre_legionella_freeze"] = st.get("freeze", False)
-                        st["legionella_active"] = True
-                        st["legionella_start"] = now
-                        save_state(force=True)
-                        print(f"Anti-Legionella: cyclus gestart voor {ip}")
+                        if legionella_manual:
+                            # Automatisch modus start meteen; handmatig wacht tot de
+                            # eerstvolgende ingestelde trigger, en zet tot die tijd de vlag.
+                            if not st.get("legionella_required"):
+                                st["legionella_required"] = True
+                                save_state(force=True)
+                                print(f"Anti-Legionella: vereist voor {ip}, wacht op trigger")
+
+                        if (not legionella_manual) or legionella_trigger_due:
+                            if st.get("pre_legionella_started") is None:
+                                st["pre_legionella_started"] = st.get("started", False)
+                                st["pre_legionella_brightness"] = st.get("brightness", 0)
+                                st["pre_legionella_freeze"] = st.get("freeze", False)
+                            st["legionella_active"] = True
+                            st["legionella_start"] = now
+                            st["legionella_required"] = False
+                            save_state(force=True)
+                            print(f"Anti-Legionella: cyclus gestart voor {ip}")
 
                     if st.get("legionella_active"):
                         elapsed = now - (st.get("legionella_start") or now)
@@ -5826,6 +5902,7 @@ def control_loop():
                 for d in devices_sorted:
                     device_states[d["ip"]]["legionella_active"] = False
                     device_states[d["ip"]]["legionella_start"] = None
+                    device_states[d["ip"]]["legionella_required"] = False
                     device_states[d["ip"]]["pre_legionella_started"] = None
             # --- Einde Anti-Legionella ---
 
