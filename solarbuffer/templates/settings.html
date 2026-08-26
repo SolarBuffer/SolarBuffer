@@ -227,6 +227,60 @@
       color: hsl(224, 38%, 21%); font-size: 0.83rem; cursor: pointer;
     }
 
+    /* ===== ANTI-LEGIONELLA MODUS ===== */
+    .legionella-panel {
+      display: none;
+      padding: 0.9rem 1.1rem 1rem;
+      border-top: 1px solid hsl(224, 20%, 91%);
+      background: hsl(37, 40%, 98%);
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .legionella-mode-tabs { display: flex; gap: 0.5rem; }
+    .legionella-mode-tab {
+      flex: 1; padding: 0.5rem; text-align: center; cursor: pointer;
+      border: 1.5px solid hsl(224, 20%, 84%); border-radius: 0.5rem;
+      background: white; font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem; font-weight: 600; color: hsl(224, 18%, 55%);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .legionella-mode-tab.active { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(25, 85%, 38%); }
+    .legionella-mode-hint { font-size: 0.78rem; color: hsl(224, 18%, 68%); line-height: 1.4; }
+    .legionella-triggers { display: flex; flex-direction: column; gap: 0.5rem; }
+    .legionella-trigger-row { display: flex; gap: 0.5rem; align-items: center; }
+    .legionella-trigger-row select,
+    .legionella-trigger-row input[type="time"] {
+      box-sizing: border-box; height: 38px; padding: 0 0.5rem; border-radius: 0.5rem;
+      border: 1px solid hsl(224, 18%, 91%); font-size: 0.85rem;
+      font-family: 'Inter', sans-serif; line-height: normal;
+      background-color: white; color: hsl(224, 38%, 12%);
+    }
+    .legionella-trigger-row select { flex: 1; }
+    .legionella-trigger-row input[type="time"] { width: 110px; flex-shrink: 0; }
+    .legionella-trigger-remove {
+      box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; width: 38px; height: 38px; border-radius: 0.5rem;
+      border: 1px solid hsl(224, 18%, 90%); background: transparent;
+      color: hsl(224, 18%, 60%); cursor: pointer; font-size: 0.9rem;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .legionella-trigger-remove:hover { background: hsl(0, 80%, 96%); color: hsl(0, 65%, 48%); border-color: hsl(0, 60%, 85%); }
+    .legionella-add-btn {
+      align-self: flex-start; padding: 0.4rem 0.75rem; border-radius: 0.5rem;
+      border: 1.5px dashed hsl(224, 18%, 82%); background: transparent;
+      color: hsl(224, 18%, 55%); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .legionella-add-btn:hover { background: hsl(224, 20%, 94%); }
+    .legionella-btn-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.1rem; }
+    .legionella-save-feedback {
+      font-size: 0.78rem; color: hsl(145, 60%, 34%); font-weight: 600;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .legionella-save-feedback.show { opacity: 1; }
+    .vacation-save-btn:disabled { opacity: 0.6; cursor: default; }
+
     /* ===== VERBINDING ===== */
     .ts-badge {
       font-size: 0.7rem; font-weight: 700;
@@ -409,6 +463,20 @@
     html[data-theme="dark"] .vacation-cancel-btn { border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 80%); }
     html[data-theme="dark"] .vacation-deact-btn  { border-color: hsl(0,40%,42%); color: hsl(0,60%,65%); }
     html[data-theme="dark"] .vacation-deact-btn:hover { background: hsl(0,20%,28%); }
+
+    html[data-theme="dark"] .legionella-panel     { background: hsl(37, 12%, 22%); border-color: hsl(224, 38%, 17%); }
+    html[data-theme="dark"] .legionella-mode-tab  { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .legionella-mode-tab.active { background: hsl(32, 25%, 22%); border-color: hsl(32, 60%, 48%); color: hsl(32, 85%, 70%); }
+    html[data-theme="dark"] .legionella-mode-hint { color: hsl(224, 18%, 73%); }
+    html[data-theme="dark"] .legionella-trigger-row select,
+    html[data-theme="dark"] .legionella-trigger-row input[type="time"] {
+      background-color: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 20%); color: hsl(224, 18%, 95%);
+    }
+    html[data-theme="dark"] .legionella-trigger-remove { border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .legionella-trigger-remove:hover { background: hsl(0, 25%, 24%); color: hsl(0, 65%, 65%); border-color: hsl(0, 40%, 36%); }
+    html[data-theme="dark"] .legionella-add-btn   { border-color: hsl(224, 38%, 22%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .legionella-add-btn:hover { background: hsl(224, 38%, 16%); }
+    html[data-theme="dark"] .legionella-save-feedback { color: hsl(145, 55%, 62%); }
 
     html[data-theme="dark"] .ts-badge.on      { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 62%); }
     html[data-theme="dark"] .ts-badge.off     { background: hsl(224, 38%, 17%); color: hsl(224, 18%, 75%); }
@@ -680,6 +748,24 @@
               <input type="checkbox" id="legionella_toggle" onchange="toggleAntiLegionella()"/>
               <span class="slider"></span>
             </label>
+          </div>
+        </div>
+
+        <div class="legionella-panel" id="legionellaPanel">
+          <div class="legionella-mode-tabs">
+            <button type="button" class="legionella-mode-tab" id="legModeTabAuto" onclick="setLegionellaMode('automatic')">Automatisch</button>
+            <button type="button" class="legionella-mode-tab" id="legModeTabManual" onclick="setLegionellaMode('manual')">Handmatig</button>
+          </div>
+          <div class="legionella-mode-hint" id="legModeHint"></div>
+
+          <div id="legionellaManualFields" style="display:none; flex-direction:column; gap:0.6rem;">
+            <div class="legionella-triggers" id="legionellaTriggers"></div>
+            <button type="button" class="legionella-add-btn" onclick="addLegionellaTrigger()">+ Trigger toevoegen</button>
+            <div id="legionellaError" style="display:none; font-size:0.78rem; color:hsl(0,65%,48%);"></div>
+            <div class="legionella-btn-row">
+              <button class="vacation-save-btn" id="legionellaSaveBtn" onclick="saveLegionellaMode()">Opslaan</button>
+              <span class="legionella-save-feedback" id="legionellaSaveFeedback">✓ Opgeslagen</span>
+            </div>
           </div>
         </div>
 
@@ -1102,6 +1188,7 @@
         const alEnabled = !!data.anti_legionella_enabled;
         document.getElementById('legionella_toggle').checked = alEnabled;
         const alActive = (data.devices || []).filter(d => d.legionella_active);
+        const alRequired = (data.devices || []).filter(d => d.legionella_required);
         let alSub = 'Uitgeschakeld';
         if (alEnabled) {
           if (alActive.length > 0) {
@@ -1111,12 +1198,22 @@
             const h = Math.floor(remaining / 3600);
             const m = Math.floor((remaining % 3600) / 60);
             alSub = `Cyclus actief — ${h}u ${m < 10 ? '0' + m : m}m resterend`;
+          } else if (alRequired.length > 0) {
+            alSub = 'Wacht op ingestelde trigger';
           } else {
             alSub = 'Monitoring actief';
           }
         }
         document.getElementById('legionella_sub').textContent = alSub;
         document.getElementById('legionella_dot').className = 'dot' + (alEnabled ? ' active' : '');
+
+        document.getElementById('legionellaPanel').style.display = alEnabled ? 'flex' : 'none';
+        if (alEnabled && !_legionellaDirty) {
+          _legionellaMode = data.anti_legionella_mode || 'automatic';
+          _legionellaTriggers = (data.anti_legionella_triggers || []).map(t => ({ day: t.day, time: t.time }));
+          _applyLegionellaModeUI(_legionellaMode);
+          renderLegionellaTriggers();
+        }
 
         const schedsEnabled = !!data.schedules_enabled;
         document.getElementById('schedules_toggle').checked = schedsEnabled;
@@ -1163,6 +1260,107 @@
     function togglePID()            { fetch('/toggle_pid').then(() => setTimeout(loadBesturing, 300)); }
     function toggleAntiLegionella() { fetch('/toggle_anti_legionella').then(() => setTimeout(loadBesturing, 300)); }
     function toggleSchedules()      { fetch('/toggle_schedules').then(() => setTimeout(loadBesturing, 300)); }
+
+    // ===== ANTI-LEGIONELLA MODUS =====
+    let _legionellaDirty = false;
+    let _legionellaMode = 'automatic';
+    let _legionellaTriggers = [];
+    const LEGIONELLA_DAY_NAMES = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
+
+    function _applyLegionellaModeUI(mode) {
+      document.getElementById('legModeTabAuto').classList.toggle('active', mode === 'automatic');
+      document.getElementById('legModeTabManual').classList.toggle('active', mode === 'manual');
+      document.getElementById('legionellaManualFields').style.display = mode === 'manual' ? 'flex' : 'none';
+      document.getElementById('legModeHint').textContent = mode === 'automatic'
+        ? 'Start automatisch zodra een boiler 72 uur niet actief is geweest.'
+        : 'Start pas als een boiler 72 uur niet actief is geweest én een van onderstaande triggers wordt bereikt.';
+    }
+
+    function setLegionellaMode(mode) {
+      _legionellaDirty = true;
+      _legionellaMode = mode;
+      _applyLegionellaModeUI(mode);
+      if (mode === 'manual' && _legionellaTriggers.length === 0) {
+        addLegionellaTrigger();
+      }
+    }
+
+    function renderLegionellaTriggers() {
+      const cont = document.getElementById('legionellaTriggers');
+      cont.innerHTML = '';
+      _legionellaTriggers.forEach((trig, idx) => {
+        const row = document.createElement('div');
+        row.className = 'legionella-trigger-row';
+
+        const daySelect = document.createElement('select');
+        LEGIONELLA_DAY_NAMES.forEach((name, d) => {
+          const opt = document.createElement('option');
+          opt.value = d; opt.textContent = name;
+          if (d === trig.day) opt.selected = true;
+          daySelect.appendChild(opt);
+        });
+        daySelect.onchange = () => { _legionellaDirty = true; _legionellaTriggers[idx].day = parseInt(daySelect.value, 10); };
+
+        const timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.value = trig.time || '02:00';
+        timeInput.onchange = () => { _legionellaDirty = true; _legionellaTriggers[idx].time = timeInput.value; };
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'legionella-trigger-remove';
+        removeBtn.textContent = '✕';
+        removeBtn.onclick = () => { _legionellaDirty = true; _legionellaTriggers.splice(idx, 1); renderLegionellaTriggers(); };
+
+        row.appendChild(daySelect);
+        row.appendChild(timeInput);
+        row.appendChild(removeBtn);
+        cont.appendChild(row);
+      });
+    }
+
+    function addLegionellaTrigger() {
+      _legionellaDirty = true;
+      _legionellaTriggers.push({ day: 0, time: '02:00' });
+      renderLegionellaTriggers();
+    }
+
+    function saveLegionellaMode() {
+      const errorEl = document.getElementById('legionellaError');
+      const btn = document.getElementById('legionellaSaveBtn');
+      const feedback = document.getElementById('legionellaSaveFeedback');
+      errorEl.style.display = 'none';
+      feedback.classList.remove('show');
+      if (_legionellaMode === 'manual' && _legionellaTriggers.length === 0) {
+        errorEl.textContent = 'Voeg minstens één trigger toe.';
+        errorEl.style.display = '';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Opslaan…';
+      fetch('/settings/anti_legionella_mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: _legionellaMode, triggers: _legionellaTriggers })
+      }).then(r => r.json()).then(data => {
+        btn.disabled = false;
+        btn.textContent = 'Opslaan';
+        if (!data.success) {
+          errorEl.textContent = data.error || 'Opslaan mislukt';
+          errorEl.style.display = '';
+          return;
+        }
+        _legionellaDirty = false;
+        feedback.classList.add('show');
+        setTimeout(() => feedback.classList.remove('show'), 2500);
+        setTimeout(loadBesturing, 300);
+      }).catch(() => {
+        btn.disabled = false;
+        btn.textContent = 'Opslaan';
+        errorEl.textContent = 'Fout bij opslaan';
+        errorEl.style.display = '';
+      });
+    }
 
     let _vacationFormOpen = false;
 
