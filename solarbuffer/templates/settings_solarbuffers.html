@@ -190,99 +190,6 @@
     }
 
     /* Feature-toggle bovenaan */
-    .feature-card {
-      background: white;
-      border: 1px solid hsl(224, 20%, 88%);
-      border-radius: 0.75rem;
-      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
-      padding: 1rem 1.25rem;
-      margin-bottom: 1rem;
-    }
-    .feature-row {
-      display: flex;
-      align-items: center;
-      gap: 0.9rem;
-    }
-    .feature-retry {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      border-top: 1px solid hsl(224, 20%, 91%);
-      margin-top: 0.9rem;
-      padding-top: 0.9rem;
-    }
-    .feature-retry label {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: hsl(224, 18%, 67%);
-    }
-    .input-with-unit input:read-only {
-      background: hsl(224, 20%, 97%);
-      color: hsl(224, 18%, 75%);
-      cursor: default;
-    }
-    .feature-text { flex: 1; min-width: 0; }
-    .feature-label {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: hsl(224, 26%, 14%);
-    }
-    .info-btn {
-      all: unset;
-      width: 18px;
-      height: 18px;
-      border-radius: 999px;
-      background: hsl(215, 70%, 92%);
-      color: hsl(215, 70%, 45%);
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.7rem;
-      font-weight: 700;
-      font-style: italic;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: background 0.15s;
-    }
-    .info-btn:hover { background: hsl(215, 70%, 85%); }
-    .feature-info {
-      display: none;
-      margin-top: 0.75rem;
-      background: hsl(215, 75%, 96%);
-      border: 1px solid hsl(215, 60%, 88%);
-      border-radius: 0.5rem;
-      padding: 0.7rem 0.9rem;
-      font-size: 0.78rem;
-      color: hsl(215, 45%, 32%);
-      line-height: 1.5;
-    }
-    .feature-info.open { display: block; }
-    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
-    .toggle input { display: none; }
-    .toggle .slider {
-      position: absolute; inset: 0;
-      background: hsl(224, 20%, 88%);
-      border-radius: 12px;
-      transition: background 0.3s;
-    }
-    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
-    .toggle .slider::before {
-      content: "";
-      position: absolute;
-      width: 20px; height: 20px;
-      left: 2px; top: 2px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-      transition: transform 0.3s;
-    }
-    .toggle input:checked + .slider::before { transform: translateX(20px); }
-
     /* Actieknoppen */
     .action-row {
       display: flex;
@@ -435,15 +342,6 @@
     html[data-theme="dark"] .ble-device-btn:hover { background: hsl(224, 38%, 13%); }
     html[data-theme="dark"] .toggle-password { color: hsl(224, 18%, 65%); }
     html[data-theme="dark"] .toggle-password:hover { color: hsl(224, 18%, 88%); }
-    html[data-theme="dark"] .feature-card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
-    html[data-theme="dark"] .feature-label { color: hsl(224, 18%, 95%); }
-    html[data-theme="dark"] .info-btn { background: hsl(215, 45%, 25%); color: hsl(215, 75%, 72%); }
-    html[data-theme="dark"] .info-btn:hover { background: hsl(215, 45%, 32%); }
-    html[data-theme="dark"] .feature-info { background: hsl(215, 40%, 16%); border-color: hsl(215, 40%, 24%); color: hsl(215, 55%, 78%); }
-    html[data-theme="dark"] .feature-retry { border-color: hsl(224, 38%, 18%); }
-    html[data-theme="dark"] .feature-retry label { color: hsl(224, 18%, 74%); }
-    html[data-theme="dark"] .input-with-unit input:read-only { background: hsl(224, 38%, 16%); color: hsl(224, 18%, 70%); }
-    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(224, 38%, 22%); }
     html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 91%); }
     html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 17%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
     html[data-theme="dark"] .btn-secondary { background: hsl(224, 38%, 17%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 90%); }
@@ -459,40 +357,7 @@
       Instellingen
     </a>
 
-    <div class="warn-banner">
-      ⚠️ Bij opslaan worden alle actieve SolarBuffers uitgeschakeld.
-    </div>
-
     <form method="POST" action="/settings/solarbuffers" id="sbForm">
-
-      <div class="feature-card">
-        <div class="feature-row">
-          <div class="feature-text">
-            <div class="feature-label">
-              Uitschakelen bij bereikte temperatuur
-              <button type="button" class="info-btn" onclick="toggleTempInfo()" aria-label="Uitleg" aria-expanded="false" aria-controls="tempShutoffInfo">i</button>
-            </div>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" name="temp_shutoff_enabled" id="tempShutoffToggle" {% if config.temp_shutoff_enabled %}checked{% endif %}>
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div class="feature-info" id="tempShutoffInfo">
-          Schakelt een boiler automatisch uit zodra hij op temperatuur is
-          (PID volledig uitgeregeld en de vermogensmeter meet 1 minuut lang 3–10&nbsp;W).
-          Na de wachttijd volgt een nieuwe startpoging zolang er teruglevering is.
-          Werkt alleen voor SolarBuffers met een gekoppelde vermogensmeter.
-        </div>
-        <div class="feature-retry">
-          <label for="tempShutoffRetry">Wachttijd nieuwe startpoging (5–60 min)</label>
-          <div class="input-with-unit">
-            <input type="number" name="temp_shutoff_retry_min" id="tempShutoffRetry"
-                   min="5" max="60" step="1" value="{{ config.temp_shutoff_retry_min or 10 }}">
-            <span class="unit">min</span>
-          </div>
-        </div>
-      </div>
 
       <div class="subsection">
         <div class="subsection-title">Nieuwe SolarBuffer koppelen</div>
@@ -535,6 +400,10 @@
           <button type="button" class="btn-scan" id="scanBtn" onclick="doScan()">Zoek op IP-adres</button>
         </div>
         <div class="scan-status" id="scanStatus"></div>
+      </div>
+
+      <div class="warn-banner">
+        ⚠️ Bij opslaan worden alle actieve SolarBuffers uitgeschakeld.
       </div>
 
       <div class="btn-row">
@@ -994,30 +863,7 @@
       if (new Set(priorities).size !== priorities.length) { e.preventDefault(); alert('Elke prioriteit mag maar één keer voorkomen.'); }
     });
 
-    function toggleTempInfo() {
-      const info = document.getElementById('tempShutoffInfo');
-      const btn = document.querySelector('.info-btn');
-      const open = info.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-
-    function updateTempShutoffState() {
-      const toggle = document.getElementById('tempShutoffToggle');
-      const retry = document.getElementById('tempShutoffRetry');
-      retry.readOnly = !toggle.checked;
-    }
-    document.getElementById('tempShutoffToggle').addEventListener('change', updateTempShutoffState);
-
-    document.getElementById('sbForm').addEventListener('submit', function() {
-      // Wachttijd altijd binnen 5-60 min houden (backend begrenst ook)
-      const retry = document.getElementById('tempShutoffRetry');
-      const v = parseInt(retry.value, 10);
-      if (Number.isNaN(v)) retry.value = 10;
-      else retry.value = Math.max(5, Math.min(60, v));
-    });
-
     window.addEventListener('DOMContentLoaded', () => {
-      updateTempShutoffState();
       const devices = {{ config.shelly_devices | tojson or [] }};
       if (devices.length > 0) {
         devices.forEach(d => addDevice(
