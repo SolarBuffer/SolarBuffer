@@ -1800,9 +1800,6 @@ def settings_solarbuffers():
     if request.method == "POST":
         old_cfg = load_config()
         cfg["shelly_devices"] = parse_devices_from_request(request)
-        cfg["temp_shutoff_enabled"] = request.form.get("temp_shutoff_enabled") == "on"
-        cfg["temp_shutoff_retry_min"] = max(TEMP_SHUTOFF_RETRY_MIN, min(TEMP_SHUTOFF_RETRY_MAX,
-            safe_int(request.form.get("temp_shutoff_retry_min", ""), TEMP_SHUTOFF_RETRY_DEFAULT)))
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
@@ -1825,6 +1822,9 @@ def settings_expert():
         old_cfg = load_config()
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
+        cfg["temp_shutoff_enabled"] = request.form.get("temp_shutoff_enabled") == "on"
+        cfg["temp_shutoff_retry_min"] = max(TEMP_SHUTOFF_RETRY_MIN, min(TEMP_SHUTOFF_RETRY_MAX,
+            safe_int(request.form.get("temp_shutoff_retry_min", ""), TEMP_SHUTOFF_RETRY_DEFAULT)))
         cfg["dynamic_pricing_enabled"] = request.form.get("dynamic_pricing_enabled") == "on"
         try:
             cfg["price_threshold_ct"] = float(request.form.get("price_threshold_ct", "5").replace(",", "."))
@@ -2888,6 +2888,22 @@ def install_required_pip_packages():
             [sys.executable, "-m", "pip", "install", "-q"] + REQUIRED_PIP_PACKAGES,
             capture_output=True, text=True, timeout=90
         )
+    except Exception:
+        pass
+
+
+def ensure_bluetooth_unblocked():
+    """Sommige Hubs starten met de Bluetooth-radio rfkill-geblokkeerd (bv. vanuit
+    het fabrieksimage), waardoor bleak faalt met 'No powered bluetooth adapters
+    found' ook al is bleak zelf wel geïnstalleerd. Draait bij elke opstart in een
+    achtergrondthread en heft de blokkade automatisch op — geen SSH nodig. Faalt
+    stil: als dit misgaat blijft de Bluetooth-koppeling gewoon uit staan zoals
+    voorheen, zonder de opstart te blokkeren."""
+    try:
+        subprocess.run(["sudo", "rfkill", "unblock", "bluetooth"],
+                        capture_output=True, text=True, timeout=10)
+        subprocess.run(["sudo", "hciconfig", "hci0", "up"],
+                        capture_output=True, text=True, timeout=10)
     except Exception:
         pass
 
@@ -7855,6 +7871,7 @@ if __name__ == "__main__":
     threading.Thread(target=broadlink_poll_loop, daemon=True).start()
     threading.Thread(target=automation_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
+    threading.Thread(target=ensure_bluetooth_unblocked, daemon=True).start()
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
