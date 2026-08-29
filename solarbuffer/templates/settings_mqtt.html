@@ -233,6 +233,25 @@
         <button type="submit" class="btn-primary">Opslaan</button>
       </div>
     </form>
+
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-title">Zendure legacy-accu's (Hyper 2000 e.d.)</div>
+      <p style="font-size:0.8rem; color:hsl(224, 18%, 71%); margin-bottom:0.75rem; line-height:1.4;">
+        Installeert een lokale MQTT-broker (Mosquitto) op deze Hub, nodig om een
+        Zendure Hyper 2000/Hub/ACE via Bluetooth te koppelen (zie Instellingen →
+        Configuratie → P1 &amp; Batterij). Eenmalig nodig per Hub, veilig om
+        nogmaals te draaien.
+      </p>
+      <button type="button" class="btn-primary" id="zendureBrokerBtn"
+              onclick="installZendureBroker()" style="width:auto;display:inline-block;padding:0.6rem 1rem;">
+        Lokale broker installeren
+      </button>
+      <button type="button" class="btn-secondary" id="zendureBrokerRemoveBtn"
+              onclick="removeZendureBroker()" style="display:none;width:auto;padding:0.6rem 1rem;margin-left:0.5rem;">
+        Broker verwijderen
+      </button>
+      <div id="zendureBrokerStatus" style="display:none;margin-top:0.6rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -244,5 +263,101 @@
     }
     document.getElementById('mqttEnabled').addEventListener('change', updateMqttVisibility);
     updateMqttVisibility();
+
+    function setStatus(el, msg, type) {
+      el.textContent = msg;
+      el.style.display = msg ? 'block' : 'none';
+      el.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
+      el.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
+      el.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
+    }
+
+    function checkZendureBrokerStatus() {
+      var statusEl = document.getElementById('zendureBrokerStatus');
+      var installBtn = document.getElementById('zendureBrokerBtn');
+      var removeBtn = document.getElementById('zendureBrokerRemoveBtn');
+      fetch('/api/zendure/local_mqtt_status')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) return;
+          if (data.installed) {
+            setStatus(statusEl, 'Al geïnstalleerd — broker actief op ' + data.local_ip + ':' + data.port, 'success');
+            installBtn.style.display = 'none';
+            removeBtn.style.display = 'inline-block';
+          } else {
+            setStatus(statusEl, 'Nog niet geïnstalleerd op deze Hub.', 'wait');
+            installBtn.style.display = 'inline-block';
+            removeBtn.style.display = 'none';
+          }
+        })
+        .catch(function() {});
+    }
+
+    function removeZendureBroker() {
+      var confirmed = confirm(
+        'Weet je zeker dat je de lokale MQTT-broker wil verwijderen?\n\n' +
+        'Een eventueel gekoppelde Zendure legacy-accu kan dan niet meer via deze Hub ' +
+        'communiceren, tenzij je de broker later opnieuw installeert.'
+      );
+      if (!confirmed) return;
+
+      var btn = document.getElementById('zendureBrokerRemoveBtn');
+      var statusEl = document.getElementById('zendureBrokerStatus');
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      setStatus(statusEl, 'Broker wordt verwijderd…', 'wait');
+
+      fetch('/api/zendure/remove_local_mqtt', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = 'Broker verwijderen';
+          if (!data.success) {
+            setStatus(statusEl, 'Fout: ' + (data.error || 'onbekend'), 'error');
+            return;
+          }
+          checkZendureBrokerStatus();
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Broker verwijderen';
+          setStatus(statusEl, 'Verbindingsfout tijdens verwijderen.', 'error');
+        });
+    }
+    checkZendureBrokerStatus();
+
+    function installZendureBroker() {
+      var confirmed = confirm(
+        'Dit heeft alleen nut als er een Zendure legacy-thuisbatterij aan deze Hub ' +
+        'gekoppeld wordt (Hyper 2000, Hub1200/2000 of ACE 1500). Zonder zo\'n accu ' +
+        'installeert dit alleen nodeloos een MQTT-broker op de Hub.\n\n' +
+        'Doorgaan?'
+      );
+      if (!confirmed) return;
+
+      var btn = document.getElementById('zendureBrokerBtn');
+      var statusEl = document.getElementById('zendureBrokerStatus');
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      setStatus(statusEl, 'Mosquitto wordt geïnstalleerd en gestart, dit kan even duren…', 'wait');
+
+      fetch('/api/zendure/setup_local_mqtt', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = 'Lokale broker installeren';
+          if (!data.success) {
+            setStatus(statusEl, 'Fout: ' + (data.error || 'onbekend'), 'error');
+            return;
+          }
+          setStatus(statusEl, 'Broker draait op ' + data.local_ip + '. Je kunt nu een Zendure-accu via Bluetooth koppelen.', 'success');
+          checkZendureBrokerStatus();
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Lokale broker installeren';
+          setStatus(statusEl, 'Verbindingsfout tijdens installeren.', 'error');
+        });
+    }
   </script>
 {% endblock %}
