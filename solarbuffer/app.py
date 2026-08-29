@@ -4476,9 +4476,9 @@ def api_zendure_ble_provision():
     if not address or not ssid:
         return jsonify(success=False, error="address en ssid zijn verplicht"), 400
     try:
-        result = zendure_ble.provision_broker(address, ssid, password, iot_url)
+        zendure_ble.provision_broker(address, ssid, password, iot_url)
         write_audit_log("zendure_ble_provisioned", {"address": address, "ssid": ssid, "iot_url": iot_url})
-        return jsonify(success=True, result=result, iot_url=iot_url)
+        return jsonify(success=True, iot_url=iot_url)
     except zendure_ble.ZendureBleError as e:
         return jsonify(success=False, error=str(e)), 502
     except Exception as e:
@@ -7202,6 +7202,23 @@ def setup_zendure_local_mqtt_bridge():
         return {"success": False, "error": str(e)}
 
 
+def remove_zendure_local_mqtt_bridge():
+    """Tegenhanger van setup_zendure_local_mqtt_bridge(): zet Mosquitto uit en
+    verwijdert de installatie weer volledig van de Hub."""
+    try:
+        subprocess.run(["sudo", "systemctl", "stop", "mosquitto"],
+                        capture_output=True, text=True, timeout=15)
+        subprocess.run(["sudo", "systemctl", "disable", "mosquitto"],
+                        capture_output=True, text=True, timeout=15)
+        subprocess.run(["sudo", "rm", "-f", "/etc/mosquitto/conf.d/solarbuffer-zendure.conf"],
+                        capture_output=True, text=True, timeout=15)
+        subprocess.run(["sudo", "apt-get", "purge", "-y", "mosquitto"],
+                        capture_output=True, text=True, timeout=120)
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.route("/api/zendure/setup_local_mqtt", methods=["POST"])
 def api_zendure_setup_local_mqtt():
     if not require_login():
@@ -7211,6 +7228,32 @@ def api_zendure_setup_local_mqtt():
     result = setup_zendure_local_mqtt_bridge()
     write_audit_log("zendure_local_mqtt_setup", result)
     return jsonify(result)
+
+
+@app.route("/api/zendure/remove_local_mqtt", methods=["POST"])
+def api_zendure_remove_local_mqtt():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    result = remove_zendure_local_mqtt_bridge()
+    write_audit_log("zendure_local_mqtt_removed", result)
+    return jsonify(result)
+
+
+@app.route("/api/zendure/local_mqtt_status", methods=["GET"])
+def api_zendure_local_mqtt_status():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    try:
+        result = subprocess.run(["systemctl", "is-active", "mosquitto"],
+                                 capture_output=True, text=True, timeout=10)
+        installed = result.stdout.strip() == "active"
+    except Exception:
+        installed = False
+    return jsonify(success=True, installed=installed, local_ip=get_local_ip(), port=1883)
 
 
 # ================= ZENDURE LOKALE API (zenSDK) =================

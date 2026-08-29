@@ -7,26 +7,27 @@ onderscheppen, stuurt dit de eigen lokale broker (SolarBuffer Hub) rechtstreeks
 naar het apparaat via Bluetooth — hetzelfde commando dat het apparaat ook van de
 Zendure-app krijgt bij het instellen van wifi.
 
-UUIDs en payload-formaat overgenomen uit de community-tool solarflow-bt-manager:
-https://github.com/reinhard-brandstaedter/solarflow-bt-manager
-(src/solarflow-bt-manager.py). Dit is UNGEVERIFIEERD tegen een echte Hyper 2000 —
-de scan-functie (alleen lezen, geen verbinding) is veilig te testen; de
-schrijffunctie (provision_broker) stuurt een write-commando naar het apparaat en
-moet eerst voorzichtig tegen een los/niet-actief apparaat getest worden.
+UUIDs en payload-formaat geverifieerd tegen de officiële Zendure Home Assistant-
+integratie (device.py, bleMqtt()/bleCommand()):
+https://github.com/Zendure/Zendure-HA/blob/master/custom_components/zendure_ha/device.py
+Zowel de command-characteristic (SF_COMMAND_CHAR) als het iotUrl/ssid/password-
+commando komen daar 1-op-1 mee overeen. MQTT-topics (voor een latere fase) zijn
+daar te vinden als iot/{prodkey}/{deviceId}/properties/(read|write) en
+iot/{prodkey}/{deviceId}/function/invoke.
 """
 import asyncio
+import json
+import time
 
 from bleak import BleakClient, BleakScanner
 
 ZENDURE_GATT_SERVICE_UUID = "0000a002-0000-1000-8000-00805f9b34fb"
 ZENDURE_CMD_CHAR_UUID = "0000c304-0000-1000-8000-00805f9b34fb"
-ZENDURE_NOTIFY_CHAR_UUID = "0000c305-0000-1000-8000-00805f9b34fb"
 
 # Volledige supported-devices-lijst uit solarflow-bt-manager. Nuttig voor twee
 # dingen: (1) referentie welke apparaten dit BLE-provisioningpad ondersteunen
 # (SolarFlow 800 dus ook, naast de echte legacy-apparaten), en (2) later nodig
-# voor het samenstellen van de MQTT-topics, die volgens LibreZen de vorm
-# /<PRODUCT_ID>/<DEVICE_ID>/# hebben.
+# voor het samenstellen van de MQTT-topics: iot/<PRODKEY>/<DEVICE_ID>/...
 ZENDURE_PRODUCT_IDS = {
     "73bkTV": "Hub1200",
     "A8yh63": "Hub2000",
@@ -47,6 +48,15 @@ DEFAULT_TIMEOUT = 10.0
 
 class ZendureBleError(Exception):
     pass
+
+
+def _current_gmt_offset():
+    """bv. 'GMT+02:00' — dynamisch berekend i.p.v. hardcoded, want anders fout
+    zodra zomer-/wintertijd wisselt."""
+    offset_sec = -time.timezone if time.localtime().tm_isdst == 0 else -time.altzone
+    sign = "+" if offset_sec >= 0 else "-"
+    h, m = divmod(abs(offset_sec) // 60, 60)
+    return f"GMT{sign}{h:02d}:{m:02d}"
 
 
 async def _scan_zendure_devices(duration):
@@ -70,44 +80,26 @@ async def _scan_zendure_devices(duration):
     return sorted(found.values(), key=lambda d: d["rssi"], reverse=True)
 
 
-async def _send_command(address, payload, timeout):
-    """Schrijft één JSON-commando naar de command-characteristic en verzamelt
-    het notify-antwoord, indien het apparaat er een stuurt. Geen bevestigde
-    multi-frame lengte-header zoals bij Shelly — dit is een simpel schema van
-    één write gevolgd door eventuele notify-berichten."""
-    import json
+async def _ble_command(client, command):
+    """Eén JSON-commando naar de command-characteristic, zonder op antwoord te
+    wachten — zo doet de officiële Zendure-HA-integratie het ook (bleCommand()):
+    write-without-response, geen notify-subscriptie nodig."""
+    payload = json.dumps(command).encode("utf-8")
+    await client.write_gatt_char(ZENDURE_CMD_CHAR_UUID, payload, response=False)
 
-    response_chunks = []
-    response_event = asyncio.Event()
 
-    def on_notify(_char, data):
-        response_chunks.append(bytes(data))
-        response_event.set()
-
-    async with BleakClient(address) as client:
-        await client.start_notify(ZENDURE_NOTIFY_CHAR_UUID, on_notify)
-        try:
-            body = json.dumps(payload).encode("utf-8")
-            await asyncio.wait_for(
-                client.write_gatt_char(ZENDURE_CMD_CHAR_UUID, body, response=True),
-                timeout=timeout,
-            )
-            try:
-                await asyncio.wait_for(response_event.wait(), timeout=timeout)
-            except asyncio.TimeoutError:
-                pass  # niet elk commando geeft per se een notify terug
-        finally:
-            try:
-                await client.stop_notify(ZENDURE_NOTIFY_CHAR_UUID)
-            except Exception:
-                pass
-
-    if response_chunks:
-        try:
-            return json.loads(b"".join(response_chunks).decode("utf-8"))
-        except (UnicodeDecodeError, ValueError):
-            return {"raw": b"".join(response_chunks).hex()}
-    return {}
+async def _provision(address, ssid, password, iot_url, timeout):
+    async with BleakClient(address, timeout=timeout) as client:
+        await _ble_command(client, {
+            "iotUrl": iot_url,
+            "messageId": 1002,
+            "method": "token",
+            "password": password,
+            "ssid": ssid,
+            "timeZone": _current_gmt_offset(),
+            "token": "abcdefgh",
+        })
+        await _ble_command(client, {"messageId": 1003, "method": "station"})
 
 
 def scan(duration=6.0):
@@ -119,25 +111,8 @@ def scan(duration=6.0):
 def provision_broker(address, ssid, password, iot_url, timeout=DEFAULT_TIMEOUT):
     """Stuurt wifi-gegevens én het lokale broker-adres (iotUrl) naar het apparaat,
     zodat het voortaan met de SolarBuffer Hub praat in plaats van Zendure's cloud.
-
-    LET OP: dit is een schrijfcommando naar echte apparaathardware, gebaseerd op
-    een ongeverifieerd (community-gereverse-engineerd) protocol. Test dit eerst
-    tegen een apparaat dat niet actief aan het laden/ontladen is."""
-    config_payload = {
-        "iotUrl": iot_url,
-        "messageId": "1002",
-        "method": "token",
-        "password": password,
-        "ssid": ssid,
-        "timeZone": "GMT+02:00",
-        "token": "abcdefgh",
-    }
-    result = asyncio.run(_send_command(address, config_payload, timeout))
-    if isinstance(result, dict) and result.get("error"):
-        raise ZendureBleError(f"Zendure BLE-fout bij configureren: {result['error']}")
-
-    # Vervolgcommando dat de wifi-verbinding daadwerkelijk laat starten.
-    station_payload = {"messageId": "1003", "method": "station"}
-    asyncio.run(_send_command(address, station_payload, timeout))
-
-    return result
+    Protocol geverifieerd tegen de officiële Zendure-HA-broncode."""
+    try:
+        asyncio.run(_provision(address, ssid, password, iot_url, timeout))
+    except Exception as e:
+        raise ZendureBleError(f"Zendure BLE-fout bij koppelen: {e}") from e
