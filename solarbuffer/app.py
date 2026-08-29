@@ -28,6 +28,13 @@ except ImportError:
     SHELLY_BLE_AVAILABLE = False
 
 try:
+    import zendure_ble
+    ZENDURE_BLE_AVAILABLE = True
+except ImportError:
+    zendure_ble = None
+    ZENDURE_BLE_AVAILABLE = False
+
+try:
     import paho.mqtt.client as _mqtt_lib
     MQTT_AVAILABLE = True
 except ImportError:
@@ -2914,16 +2921,23 @@ def ensure_shelly_ble_available():
     niet aanroept). Draait eenmalig bij opstarten in een achtergrondthread: als
     de eerdere top-level import van shelly_ble mislukte, probeert dit bleak alsnog
     te installeren en de module opnieuw te importeren, zonder de opstart te blokkeren."""
-    global shelly_ble, SHELLY_BLE_AVAILABLE
-    if SHELLY_BLE_AVAILABLE:
-        return
-    install_required_pip_packages()
-    try:
-        import importlib
-        shelly_ble = importlib.import_module("shelly_ble")
-        SHELLY_BLE_AVAILABLE = True
-    except ImportError:
-        pass
+    global shelly_ble, SHELLY_BLE_AVAILABLE, zendure_ble, ZENDURE_BLE_AVAILABLE
+    if not SHELLY_BLE_AVAILABLE or not ZENDURE_BLE_AVAILABLE:
+        install_required_pip_packages()
+    if not SHELLY_BLE_AVAILABLE:
+        try:
+            import importlib
+            shelly_ble = importlib.import_module("shelly_ble")
+            SHELLY_BLE_AVAILABLE = True
+        except ImportError:
+            pass
+    if not ZENDURE_BLE_AVAILABLE:
+        try:
+            import importlib
+            zendure_ble = importlib.import_module("zendure_ble")
+            ZENDURE_BLE_AVAILABLE = True
+        except ImportError:
+            pass
 
 
 # ================= FIRMWARE UPDATES =================
@@ -4423,6 +4437,49 @@ def api_shelly_ble_provision():
         write_audit_log("shelly_ble_provisioned", {"address": address, "ssid": ssid})
         return jsonify(success=True, result=result)
     except shelly_ble.ShellyBleError as e:
+        return jsonify(success=False, error=str(e)), 502
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
+@app.route("/api/zendure/ble_scan", methods=["GET"])
+def api_zendure_ble_scan():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    if not ZENDURE_BLE_AVAILABLE:
+        return jsonify(success=False, error="Bluetooth-ondersteuning (bleak) is niet beschikbaar op deze hub"), 503
+    try:
+        devices = zendure_ble.scan()
+        return jsonify(success=True, devices=devices)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
+@app.route("/api/zendure/ble_provision", methods=["POST"])
+def api_zendure_ble_provision():
+    """Stuurt wifi + het lokale broker-adres naar een Zendure legacy-apparaat
+    (Hyper 2000 e.d.) via Bluetooth, zodat het voortaan lokaal via de op deze Hub
+    draaiende Mosquitto-broker praat in plaats van via Zendure's cloud."""
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    if not ZENDURE_BLE_AVAILABLE:
+        return jsonify(success=False, error="Bluetooth-ondersteuning (bleak) is niet beschikbaar op deze hub"), 503
+    data = request.get_json(silent=True) or {}
+    address = (data.get("address") or "").strip()
+    ssid = (data.get("ssid") or "").strip()
+    password = data.get("password") or ""
+    iot_url = (data.get("iot_url") or "").strip() or get_local_ip()
+    if not address or not ssid:
+        return jsonify(success=False, error="address en ssid zijn verplicht"), 400
+    try:
+        result = zendure_ble.provision_broker(address, ssid, password, iot_url)
+        write_audit_log("zendure_ble_provisioned", {"address": address, "ssid": ssid, "iot_url": iot_url})
+        return jsonify(success=True, result=result, iot_url=iot_url)
+    except zendure_ble.ZendureBleError as e:
         return jsonify(success=False, error=str(e)), 502
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
@@ -7077,6 +7134,85 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
         _marstek_control_lock.release()
 
 
+# ================= ZENDURE HYPER 2000 (LEGACY) — LOKALE MQTT VIA BLUETOOTH =======
+# De Hyper 2000 (net als Hub1200/Hub2000/Ace1500) ondersteunt zenSDK niet en praat
+# standaard uitsluitend met Zendure's eigen cloud-broker via onversleutelde MQTT.
+# In plaats van een DNS-omleiding op te zetten, wijzen we het apparaat rechtstreeks
+# naar de lokale Mosquitto-broker op deze Hub via het BLE-configuratiecommando
+# (zie zendure_ble.provision_broker) — dat stuurt de wifi-gegevens én het nieuwe
+# broker-adres (iotUrl) in één keer, precies zoals de Zendure-app dat ook doet.
+#
+# LET OP (belangrijke afweging voor de klant, niet alleen technisch): zodra het
+# apparaat naar de lokale broker wijst, praat het niet meer met Zendure's cloud.
+# De officiële Zendure-app verliest daardoor het zicht op dit apparaat — dat is
+# een bewuste keuze die de klant vooraf moet accepteren, geen bijwerking. Zie de
+# bevestigingsstap vóór ble_provision in settings_p1.html.
+#
+# Het exacte MQTT-topic/payloadformaat voor uitlezen en besturen via die lokale
+# broker is bewust nog niet geïmplementeerd: dat moet eerst tegen een echt
+# apparaat geverifieerd worden (bv. met `mosquitto_sub -v -t '#'`) voordat we er
+# schrijfcommando's naartoe sturen.
+#
+# Bronnen: https://github.com/Zendure/Zendure-HA/wiki/Local-Mqtt-(Legacy-Devices)
+#          https://github.com/coldtobi/LibreZen
+#          https://github.com/reinhard-brandstaedter/solarflow-bt-manager
+
+
+def setup_zendure_local_mqtt_bridge():
+    """Installeert en configureert een lokale MQTT-broker (Mosquitto) op de Hub,
+    zodat Zendure legacy-apparaten daar via Bluetooth-provisioning (iotUrl) naar
+    doorverwezen kunnen worden. Idempotent: kan veilig meerdere keren gedraaid
+    worden."""
+    local_ip = get_local_ip()
+
+    def apt_run(cmd, timeout=180):
+        """apt-get met dezelfde dpkg-lock-retry als run_system_update: als apt bezet
+        is met een achtergrondupdate, wachten en opnieuw proberen in plaats van
+        na een vaste timeout te falen."""
+        for attempt in range(1, _APT_LOCK_MAX_RETRIES + 1):
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            if result.returncode == 0:
+                return result
+            if _is_apt_lock_error(result.stdout.splitlines() + result.stderr.splitlines()) \
+                    and attempt < _APT_LOCK_MAX_RETRIES:
+                time.sleep(_APT_LOCK_RETRY_WAIT)
+                continue
+            return result
+        return result
+
+    try:
+        apt_run(["sudo", "apt-get", "update", "-qq"])
+        apt_run(["sudo", "apt-get", "install", "-y", "mosquitto"], timeout=300)
+
+        mosquitto_conf = "listener 1883 0.0.0.0\nallow_anonymous true\n"
+        with open("/tmp/solarbuffer_zendure_mosquitto.conf", "w", encoding="utf-8") as f:
+            f.write(mosquitto_conf)
+        subprocess.run(
+            ["sudo", "install", "-m", "644", "/tmp/solarbuffer_zendure_mosquitto.conf",
+             "/etc/mosquitto/conf.d/solarbuffer-zendure.conf"],
+            capture_output=True, text=True, timeout=15)
+
+        subprocess.run(["sudo", "systemctl", "enable", "--now", "mosquitto"],
+                        capture_output=True, text=True, timeout=15)
+        subprocess.run(["sudo", "systemctl", "restart", "mosquitto"],
+                        capture_output=True, text=True, timeout=15)
+
+        return {"success": True, "local_ip": local_ip}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.route("/api/zendure/setup_local_mqtt", methods=["POST"])
+def api_zendure_setup_local_mqtt():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    result = setup_zendure_local_mqtt_bridge()
+    write_audit_log("zendure_local_mqtt_setup", result)
+    return jsonify(result)
+
+
 # ================= ZENDURE LOKALE API (zenSDK) =================
 # SolarFlow 800/800 Plus/800 Pro, 1600 AC+, 2400 AC — lokale HTTP API op het
 # apparaat zelf (nieuwste firmware vereist). Uitlezen via GET /properties/report,
@@ -7878,4 +8014,4 @@ if __name__ == "__main__":
         def filter(self, record):
             return "HTTP/1." not in record.getMessage()
     logging.getLogger("werkzeug").addFilter(_NoRequestLogs())
-    app.run(host="0.0.0.0", port=5001)
+    app.run(host="0.0.0.0", port=5001, threaded=True)
