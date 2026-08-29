@@ -489,6 +489,45 @@
               Configureer een statisch IP-adres voor je accu. Als SolarBuffer uitstaat wordt de accu op
               standby gezet; na een herstart van de accu gelden de eigen instellingen weer.
             </div>
+
+            <div style="border-top:1px solid hsl(224, 18%, 90%);margin:0.9rem 0 0.75rem;padding-top:0.75rem;">
+              <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.35rem;">Hyper 2000 / Hub / ACE (legacy, via Bluetooth)</div>
+              <div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-bottom:0.6rem;">
+                Deze modellen ondersteunen bovenstaande verbinding niet en praten alleen via Zendure's
+                cloud. Koppel hieronder via Bluetooth om ze in plaats daarvan lokaal via deze Hub te
+                laten praten. Uitlezen en aansturen vanuit SolarBuffer is nog in ontwikkeling — dit
+                koppelt vooralsnog alleen het apparaat aan de lokale broker.
+              </div>
+
+              <div style="background:hsl(37,90%,95%);border:1px solid hsl(37,80%,80%);border-radius:0.5rem;padding:0.6rem 0.75rem;font-size:0.78rem;color:hsl(30,80%,28%);margin-bottom:0.75rem;">
+                Let op: na het koppelen verdwijnt het apparaat uit de officiële Zendure-app (die haalt
+                zijn gegevens via Zendure's cloud op, waar het apparaat dan niet meer mee praat).
+              </div>
+
+              <button type="button" class="btn-primary" id="zendureBleScanBtn" onclick="scanZendureBle()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">
+                Zoek via Bluetooth
+              </button>
+              <div id="zendureBleScanStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+              <div id="zendureBleScanResults"></div>
+
+              <div id="zendureBleProvisionPanel" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid hsl(224, 18%, 90%);">
+                <div id="zendureBleSelectedLabel" style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;"></div>
+                <div style="display:flex;gap:0.75rem;margin-bottom:0.6rem;">
+                  <div class="field-group" style="flex:1;margin-bottom:0;">
+                    <label for="zendureBleSsid">Wifi-netwerk</label>
+                    <input type="text" id="zendureBleSsid" placeholder="Netwerknaam">
+                  </div>
+                  <div class="field-group" style="flex:1;margin-bottom:0;">
+                    <label for="zendureBlePassword">Wifi-wachtwoord</label>
+                    <input type="password" id="zendureBlePassword" placeholder="Wachtwoord">
+                  </div>
+                </div>
+                <button type="button" class="btn-primary" id="zendureBleProvisionBtn" onclick="provisionZendureBle()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">
+                  Koppel via Bluetooth
+                </button>
+                <div id="zendureBleProvisionStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+              </div>
+            </div>
           </div>
           <div class="field-group">
             <label>Prioriteit</label>
@@ -634,6 +673,103 @@
           btn.disabled = false;
           btn.textContent = "Marstek-accu's zoeken op netwerk";
           setRowStatus(statusEl, 'Verbindingsfout tijdens scannen.', 'error');
+        });
+    }
+
+    var _zendureBleSelected = null;
+
+    function scanZendureBle() {
+      var btn = document.getElementById('zendureBleScanBtn');
+      var statusEl = document.getElementById('zendureBleScanStatus');
+      var resultsEl = document.getElementById('zendureBleScanResults');
+
+      btn.disabled = true;
+      btn.textContent = 'Zoeken…';
+      resultsEl.innerHTML = '';
+      document.getElementById('zendureBleProvisionPanel').style.display = 'none';
+      setRowStatus(statusEl, '<span style="display:inline-flex;align-items:center;gap:0.5rem;"><svg style="animation:spin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Bluetooth-apparaten zoeken… (kan enkele seconden duren)</span>', 'wait');
+
+      fetch('/api/zendure/ble_scan')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = 'Zoek via Bluetooth';
+          if (!data.success) {
+            setRowStatus(statusEl, 'Fout: ' + (data.error || 'onbekend'), 'error');
+            return;
+          }
+          if (!data.devices || data.devices.length === 0) {
+            setRowStatus(statusEl, 'Geen Zendure-apparaten gevonden via Bluetooth. Zorg dat het apparaat in de buurt staat.', 'error');
+            return;
+          }
+          setRowStatus(statusEl, data.devices.length + ' apparaat' + (data.devices.length === 1 ? '' : 'en') + ' gevonden.', 'success');
+          data.devices.forEach(function(d) {
+            var item = document.createElement('div');
+            item.style.cssText = 'display:flex;align-items:center;gap:0.5rem;border:1px solid hsl(224, 18%, 90%);border-radius:0.5rem;padding:0.5rem 0.75rem;margin-top:0.4rem;';
+            item.innerHTML = '<div style="flex:1;min-width:0;">'
+              + '<div style="font-weight:600;font-size:0.88rem;">' + escapeHtml(d.name || 'Zendure') + '</div>'
+              + '<div style="font-size:0.75rem;color:hsl(224, 18%, 65%);">' + escapeHtml(d.address) + '</div>'
+              + '</div>'
+              + '<button type="button" class="btn-secondary" style="white-space:nowrap;padding:0.4rem 0.65rem;font-size:0.82rem;">Selecteren</button>';
+            item.querySelector('button').addEventListener('click', function() { selectZendureBle(d); });
+            resultsEl.appendChild(item);
+          });
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Zoek via Bluetooth';
+          setRowStatus(statusEl, 'Verbindingsfout tijdens scannen.', 'error');
+        });
+    }
+
+    function selectZendureBle(device) {
+      _zendureBleSelected = device;
+      document.getElementById('zendureBleSelectedLabel').textContent = 'Geselecteerd: ' + (device.name || 'Zendure') + ' (' + device.address + ')';
+      document.getElementById('zendureBleProvisionPanel').style.display = 'block';
+      document.getElementById('zendureBleProvisionStatus').style.display = 'none';
+    }
+
+    function provisionZendureBle() {
+      if (!_zendureBleSelected) return;
+      var ssid = document.getElementById('zendureBleSsid').value.trim();
+      var password = document.getElementById('zendureBlePassword').value;
+      var statusEl = document.getElementById('zendureBleProvisionStatus');
+      if (!ssid) {
+        setRowStatus(statusEl, 'Vul een wifi-netwerknaam in.', 'error');
+        return;
+      }
+      var confirmed = confirm(
+        'Weet je zeker dat je "' + (_zendureBleSelected.name || 'dit apparaat') + '" wil koppelen aan de SolarBuffer Hub?\n\n' +
+        'Het apparaat verdwijnt hierna uit de officiële Zendure-app, want die haalt gegevens via ' +
+        'Zendure\'s eigen cloud op, waar het apparaat na deze koppeling niet meer mee praat. ' +
+        'Bespreek dit vooraf met de klant.'
+      );
+      if (!confirmed) return;
+
+      var btn = document.getElementById('zendureBleProvisionBtn');
+      btn.disabled = true;
+      btn.textContent = 'Koppelen…';
+      setRowStatus(statusEl, 'Bezig met koppelen via Bluetooth…', 'wait');
+
+      fetch('/api/zendure/ble_provision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: _zendureBleSelected.address, ssid: ssid, password: password })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = 'Koppel via Bluetooth';
+          if (!data.success) {
+            setRowStatus(statusEl, 'Fout: ' + (data.error || 'onbekend'), 'error');
+            return;
+          }
+          setRowStatus(statusEl, 'Gekoppeld. Het apparaat verbindt nu met de lokale broker (' + escapeHtml(data.iot_url || '') + ').', 'success');
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Koppel via Bluetooth';
+          setRowStatus(statusEl, 'Verbindingsfout tijdens koppelen.', 'error');
         });
     }
 
