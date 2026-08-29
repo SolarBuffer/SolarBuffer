@@ -727,6 +727,19 @@
       document.getElementById('zendureBleSelectedLabel').textContent = 'Geselecteerd: ' + (device.name || 'Zendure') + ' (' + device.address + ')';
       document.getElementById('zendureBleProvisionPanel').style.display = 'block';
       document.getElementById('zendureBleProvisionStatus').style.display = 'none';
+
+      var ssidField = document.getElementById('zendureBleSsid');
+      if (!ssidField.value.trim()) {
+        fetch('/api/wifi/current_ssid').then(function(r) { return r.json(); }).then(function(data) {
+          if (data.success && data.ssid) ssidField.value = data.ssid;
+        }).catch(function() {});
+      }
+      var passwordField = document.getElementById('zendureBlePassword');
+      if (!passwordField.value) {
+        fetch('/api/wifi/current_password').then(function(r) { return r.json(); }).then(function(data) {
+          if (data.success && data.password) passwordField.value = data.password;
+        }).catch(function() {});
+      }
     }
 
     function provisionZendureBle() {

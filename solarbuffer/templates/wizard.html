@@ -1527,6 +1527,19 @@
                     // Stil negeren: gebruiker kan de SSID nog altijd zelf invullen.
                 }
             }
+
+            const passwordField = document.getElementById('blePassword');
+            if (!passwordField.value) {
+                try {
+                    const res = await fetch('/api/wifi/current_password', { headers: { 'Accept': 'application/json' } });
+                    const data = await res.json();
+                    if (res.ok && data.success && data.password) {
+                        passwordField.value = data.password;
+                    }
+                } catch {
+                    // Stil negeren: gebruiker kan het wachtwoord nog altijd zelf invullen.
+                }
+            }
         }
 
         async function bleProvision() {
