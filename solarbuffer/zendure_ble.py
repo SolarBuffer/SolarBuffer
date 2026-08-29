@@ -18,6 +18,7 @@ import asyncio
 
 from bleak import BleakClient, BleakScanner
 
+ZENDURE_GATT_SERVICE_UUID = "0000a002-0000-1000-8000-00805f9b34fb"
 ZENDURE_CMD_CHAR_UUID = "0000c304-0000-1000-8000-00805f9b34fb"
 ZENDURE_NOTIFY_CHAR_UUID = "0000c305-0000-1000-8000-00805f9b34fb"
 
@@ -36,6 +37,9 @@ ZENDURE_PRODUCT_IDS = {
 }
 ZENDURE_HYPER2000_PRODUCT_ID = "ja72U0ha"
 
+# Fallback voor het geval een apparaat wél een leesbare naam uitzendt (niet
+# bevestigd voor de Hyper 2000 zelf — die adverteert alleen zijn MAC-adres als
+# naam, en is te herkennen aan ZENDURE_GATT_SERVICE_UUID hierboven).
 ZENDURE_KNOWN_NAMES = ("zendure", "solarflow", "hyper", "hub1200", "hub2000", "ace1500", "aio2400")
 
 DEFAULT_TIMEOUT = 10.0
@@ -50,7 +54,9 @@ async def _scan_zendure_devices(duration):
 
     def on_detect(device, adv):
         name = (device.name or adv.local_name or "").lower()
-        if not name or not any(known in name for known in ZENDURE_KNOWN_NAMES):
+        has_known_name = any(known in name for known in ZENDURE_KNOWN_NAMES)
+        has_zendure_service = ZENDURE_GATT_SERVICE_UUID in (adv.service_uuids or [])
+        if not has_known_name and not has_zendure_service:
             return
         found[device.address] = {
             "address": device.address,
