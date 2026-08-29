@@ -7077,6 +7077,110 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
         _marstek_control_lock.release()
 
 
+# ================= ZENDURE HYPER 2000 (LEGACY) — LOKALE MQTT VIA DNS-REDIRECT ====
+# De Hyper 2000 (net als Hub1200/Hub2000/Ace1500) ondersteunt zenSDK niet en praat
+# uitsluitend met Zendure's eigen cloud-broker via onversleutelde MQTT (poort 1883).
+# Door die cloud-hostnames lokaal om te leiden naar een broker op de Hub, blijft het
+# apparaat denken dat het met de cloud praat, terwijl het verkeer lokaal blijft.
+#
+# Vereist dat de router van de klant de Hub als DNS-server gebruikt (of in elk geval
+# voor deze hostnames) — dat is een netwerkwijziging die de klant/installateur zelf
+# in de router moet doorvoeren; dat kan niet automatisch vanaf de Hub.
+#
+# Het exacte MQTT-topic/payloadformaat voor uitlezen en besturen is bewust nog niet
+# geïmplementeerd: dat moet eerst tegen een echt apparaat geverifieerd worden (bv.
+# met `mosquitto_sub -v -t '#'` zodra de omleiding actief is) voordat we er
+# schrijfcommando's naartoe sturen.
+#
+# Bronnen: https://github.com/Zendure/Zendure-HA/wiki/Local-Mqtt-(Legacy-Devices)
+#          https://github.com/coldtobi/LibreZen
+ZENDURE_CLOUD_HOSTS = ["mq.zen-iot.com", "mqtt-eu.zen-iot.com"]
+
+
+def setup_zendure_local_mqtt_bridge():
+    """Installeert en configureert een lokale MQTT-broker (Mosquitto) en een lokale
+    DNS-resolver (dnsmasq) die Zendure's cloud-hostnames naar die broker omleidt.
+
+    Idempotent: kan veilig meerdere keren gedraaid worden. dnsmasq wordt bewust
+    alleen op het eigen LAN-IP van de Hub gebonden (niet 0.0.0.0), zodat het niet
+    botst met de systemd-resolved-stub die standaard al op poort 53 luistert.
+    """
+    local_ip = get_local_ip()
+
+    def apt_run(cmd, timeout=180):
+        """apt-get met dezelfde dpkg-lock-retry als run_system_update: als apt bezet
+        is met een achtergrondupdate, wachten en opnieuw proberen in plaats van
+        na een vaste timeout te falen."""
+        for attempt in range(1, _APT_LOCK_MAX_RETRIES + 1):
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            if result.returncode == 0:
+                return result
+            if _is_apt_lock_error(result.stdout.splitlines() + result.stderr.splitlines()) \
+                    and attempt < _APT_LOCK_MAX_RETRIES:
+                time.sleep(_APT_LOCK_RETRY_WAIT)
+                continue
+            return result
+        return result
+
+    try:
+        apt_run(["sudo", "apt-get", "update", "-qq"])
+        apt_run(["sudo", "apt-get", "install", "-y", "mosquitto", "dnsmasq"], timeout=300)
+
+        mosquitto_conf = "listener 1883 0.0.0.0\nallow_anonymous true\n"
+        with open("/tmp/solarbuffer_zendure_mosquitto.conf", "w", encoding="utf-8") as f:
+            f.write(mosquitto_conf)
+        subprocess.run(
+            ["sudo", "install", "-m", "644", "/tmp/solarbuffer_zendure_mosquitto.conf",
+             "/etc/mosquitto/conf.d/solarbuffer-zendure.conf"],
+            capture_output=True, text=True, timeout=15)
+
+        dnsmasq_overrides = "\n".join(f"address=/{host}/{local_ip}" for host in ZENDURE_CLOUD_HOSTS)
+        dnsmasq_conf = (
+            "# SolarBuffer: leidt Zendure's cloud-MQTT-hostnames lokaal om\n"
+            f"listen-address={local_ip}\n"
+            "bind-interfaces\n"
+            f"{dnsmasq_overrides}\n"
+            "no-resolv\n"
+            "server=1.1.1.1\n"
+            "server=8.8.8.8\n"
+        )
+        with open("/tmp/solarbuffer_zendure_dnsmasq.conf", "w", encoding="utf-8") as f:
+            f.write(dnsmasq_conf)
+        subprocess.run(
+            ["sudo", "install", "-m", "644", "/tmp/solarbuffer_zendure_dnsmasq.conf",
+             "/etc/dnsmasq.d/solarbuffer-zendure.conf"],
+            capture_output=True, text=True, timeout=15)
+
+        subprocess.run(["sudo", "systemctl", "enable", "--now", "mosquitto"],
+                        capture_output=True, text=True, timeout=15)
+        subprocess.run(["sudo", "systemctl", "restart", "mosquitto"],
+                        capture_output=True, text=True, timeout=15)
+        subprocess.run(["sudo", "systemctl", "enable", "--now", "dnsmasq"],
+                        capture_output=True, text=True, timeout=15)
+        subprocess.run(["sudo", "systemctl", "restart", "dnsmasq"],
+                        capture_output=True, text=True, timeout=15)
+
+        return {
+            "success": True,
+            "local_ip": local_ip,
+            "hint": f"Wijs de DNS-server van de router naar {local_ip} zodat de "
+                    "Zendure Hyper 2000 de omleiding daadwerkelijk gebruikt.",
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.route("/api/zendure/setup_local_mqtt", methods=["POST"])
+def api_zendure_setup_local_mqtt():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    result = setup_zendure_local_mqtt_bridge()
+    write_audit_log("zendure_local_mqtt_setup", result)
+    return jsonify(result)
+
+
 # ================= ZENDURE LOKALE API (zenSDK) =================
 # SolarFlow 800/800 Plus/800 Pro, 1600 AC+, 2400 AC — lokale HTTP API op het
 # apparaat zelf (nieuwste firmware vereist). Uitlezen via GET /properties/report,
@@ -7878,4 +7982,4 @@ if __name__ == "__main__":
         def filter(self, record):
             return "HTTP/1." not in record.getMessage()
     logging.getLogger("werkzeug").addFilter(_NoRequestLogs())
-    app.run(host="0.0.0.0", port=5001)
+    app.run(host="0.0.0.0", port=5001, threaded=True)
