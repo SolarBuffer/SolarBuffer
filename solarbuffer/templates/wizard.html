@@ -1454,18 +1454,18 @@
 
         let bleSelectedAddress = null;
 
+        // Alleen voor de duur van deze paginasessie onthouden — niet in
+        // localStorage, want een apparaat dat je hebt gekoppeld kan later
+        // (bv. na een factory reset) gewoon weer als "nieuw" gevonden moeten
+        // worden, ook in dezelfde browser.
+        const _bleProvisionedThisSession = new Set();
+
         function getProvisionedBleAddresses() {
-            try {
-                return new Set(JSON.parse(localStorage.getItem('sb_ble_provisioned') || '[]'));
-            } catch {
-                return new Set();
-            }
+            return _bleProvisionedThisSession;
         }
 
         function rememberProvisionedBleAddress(address) {
-            const addresses = getProvisionedBleAddresses();
-            addresses.add(address);
-            localStorage.setItem('sb_ble_provisioned', JSON.stringify([...addresses]));
+            _bleProvisionedThisSession.add(address);
         }
 
         async function bleScan() {
