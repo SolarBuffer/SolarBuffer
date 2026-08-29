@@ -4403,6 +4403,46 @@ def api_wifi_current_ssid():
         return jsonify(success=False, error=str(e)), 500
 
 
+@app.route("/api/wifi/current_password", methods=["GET"])
+def api_wifi_current_password():
+    """Haalt het wifi-wachtwoord van de actieve verbinding van de Hub zelf op,
+    zodat de Bluetooth-koppelwizard (SolarBuffer én Zendure) dat net als de SSID
+    automatisch kan invullen. NetworkManager bewaart dit lokaal; met de bestaande
+    passwordless sudo is dat gewoon uitleesbaar."""
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    try:
+        active = subprocess.run(
+            ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active"],
+            capture_output=True, text=True, timeout=8
+        )
+        conn_name = ""
+        for line in active.stdout.splitlines():
+            name, _, conn_type = line.partition(":")
+            if "wifi" in conn_type or "wireless" in conn_type:
+                conn_name = name
+                break
+        if not conn_name:
+            return jsonify(success=True, password="")
+
+        result = subprocess.run(
+            ["sudo", "nmcli", "-s", "-t", "-f", "802-11-wireless-security.psk",
+             "connection", "show", conn_name],
+            capture_output=True, text=True, timeout=8
+        )
+        password = ""
+        for line in result.stdout.splitlines():
+            _, _, value = line.partition(":")
+            if value:
+                password = value
+                break
+        return jsonify(success=True, password=password)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
 @app.route("/api/shelly/ble_scan", methods=["GET"])
 def api_shelly_ble_scan():
     if not require_login():
