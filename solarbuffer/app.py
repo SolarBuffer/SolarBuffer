@@ -436,6 +436,10 @@ def load_config():
         cfg["marstek_invert_power"] = True
     if "zendure_max_power" not in cfg:
         cfg["zendure_max_power"] = 800
+    if "battery_power_meter" not in cfg:
+        cfg["battery_power_meter"] = ""
+    if "battery_power_ip" not in cfg:
+        cfg["battery_power_ip"] = ""
     if "battery_priority" not in cfg:
         cfg["battery_priority"] = "boiler"
     if "battery_soc_threshold" not in cfg:
@@ -1656,6 +1660,8 @@ def settings_p1():
             cfg["marstek_max_power"] = 2000
         if cfg.get("battery_type") == "marstek":
             cfg["marstek_invert_power"] = "marstek_invert_power" in request.form
+        cfg["battery_power_meter"] = request.form.get("battery_power_meter", "").strip().lower()
+        cfg["battery_power_ip"] = request.form.get("battery_power_ip", "").strip()
         try:
             cfg["zendure_max_power"] = int(request.form.get("zendure_max_power", 800))
         except (ValueError, TypeError):
@@ -7089,13 +7095,24 @@ except Exception:
 
 # ================= MARSTEK UDP API =================
 
-def marstek_udp(ip, port, method, params=None, timeout=3):
+def marstek_udp(ip, port, method, params=None, timeout=3, retries=2):
+    """UDP heeft geen garantie op aankomst — een los pakketje op wifi levert geen
+    fout op, gewoon stilte. Zonder retry werd dat direct als 'offline'
+    geïnterpreteerd. Probeer daarom nog `retries` keer opnieuw bij een timeout
+    voordat we het echt opgeven."""
     payload = json.dumps({"id": 1, "method": method, "params": params or {"id": 0}}).encode()
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.settimeout(timeout)
-        sock.sendto(payload, (ip, int(port)))
-        data, _ = sock.recvfrom(4096)
-        return json.loads(data.decode())
+    last_error = None
+    for _attempt in range(retries + 1):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.settimeout(timeout)
+                sock.sendto(payload, (ip, int(port)))
+                data, _ = sock.recvfrom(4096)
+                return json.loads(data.decode())
+        except socket.timeout as e:
+            last_error = e
+            continue
+    raise last_error
 
 
 def marstek_discover(port=30000, timeout=2.5):
@@ -7595,6 +7612,27 @@ def set_battery_control(control_ip, token, mode, permissions):
         _hw_battery_control_lock.release()
 
 
+def get_battery_meter_power(cfg):
+    """Losse vermogensmeter (Shelly/HomeWizard) op het stopcontact van de accu,
+    optioneel te koppelen als de accu-API zelf geen bruikbaar vermogen geeft
+    (bv. Marstek Venus E 3.0 zonder bat_power). Geeft alleen de grootte terug —
+    de richting (laden/ontladen) komt uit de accu's eigen status."""
+    pm_type = (cfg.get("battery_power_meter") or "").lower()
+    pm_ip = (cfg.get("battery_power_ip") or "").strip()
+    if not pm_type or not pm_ip:
+        return None
+    try:
+        if pm_type == "shelly":
+            pw, _ = get_shelly_power_and_energy(pm_ip)
+        elif pm_type == "homewizard":
+            pw, _ = get_homewizard_power_and_energy(pm_ip)
+        else:
+            return None
+        return abs(float(pw)) if pw is not None else None
+    except Exception:
+        return None
+
+
 def battery_poll_loop():
     global battery_state, _bat_day_date, _bat_charge_start_kwh, _bat_discharge_start_kwh
     bl = load_energy_baselines().get("__battery__", {})
@@ -7628,11 +7666,19 @@ def battery_poll_loop():
                 any_online = False
                 for ip in ips:
                     try:
-                        r = marstek_udp(ip, port, "ES.GetStatus")
-                        data = r.get("result", {})
-                        any_online = True
-                        soc = data.get("bat_soc")
-                        bp = data.get("bat_power")
+                        try:
+                            r = marstek_udp(ip, port, "ES.GetStatus")
+                            data = r.get("result", {})
+                            any_online = True
+                            soc = data.get("bat_soc")
+                            bp = data.get("bat_power")
+                        except Exception:
+                            # ES.GetStatus gaf helemaal geen antwoord (bevestigd op
+                            # Venus E 3.0/V139: die methode bestaat daar niet). Niet
+                            # meteen als offline beschouwen — hieronder valt dit terug
+                            # op Bat.GetStatus, net als bij het "veld ontbreekt"-geval.
+                            soc = None
+                            bp = None
                         if soc is not None:
                             soc_list.append(float(soc))
                         if bp is not None:
@@ -7641,18 +7687,28 @@ def battery_poll_loop():
                             # invert=False → Marstek positief = laden (omdraaien)
                             power_list.append(float(bp) if invert else -float(bp))
                         else:
-                            # bat_power missing for this model — use Bat.GetStatus flags as proxy
+                            # bat_power ontbreekt (bevestigde firmwarebug op Venus E
+                            # 3.0/V242) of ES.GetStatus faalde helemaal — val terug op
+                            # Bat.GetStatus flags voor de richting. Voor de grootte
+                            # gebruiken we een gekoppelde vermogensmeter als die is
+                            # ingesteld (echte meting i.p.v. de ruwe max_power-gok).
                             try:
                                 br = marstek_udp(ip, port, "Bat.GetStatus")
                                 bd = br.get("result", {})
-                                if bd.get("charg_flag") is True:
+                                any_online = True
+                                charging = bd.get("charg_flag") is True
+                                discharging = bd.get("dischrg_flag") is True
+                                meter_w = get_battery_meter_power(cfg) if (charging or discharging) else None
+                                if meter_w is not None:
+                                    power_list.append(-meter_w if charging else meter_w)
+                                elif charging:
                                     power_list.append(-float(max_power))
-                                elif bd.get("dischrg_flag") is True:
+                                elif discharging:
                                     power_list.append(float(max_power))
                                 else:
                                     power_list.append(0.0)
                             except Exception:
-                                power_list.append(0.0)
+                                pass
                     except Exception:
                         pass
                 if any_online:
