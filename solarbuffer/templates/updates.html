@@ -367,7 +367,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.7.0</span>
+          <span class="version-badge new">v0.7.1</span>
+          <span class="update-date-small">31 aug</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Anti-Legionella schema's, Bluetooth-koppeling en Marstek-betrouwbaarheid</div>
+          <div class="update-body">Anti-Legionella kan nu Automatisch (op basis van een wekelijks schema) of Handmatig worden ingesteld via Instellingen → Configuratie. Bij tijdschema's is er een nieuw type "Verbieden": een SolarBuffer kan binnen een gekozen tijdvenster niet meer automatisch starten, zonder een al lopend apparaat te onderbreken. Expert-instellingen heeft nu een knop "Standaardwaarden herstellen" om alle expertvelden in één keer terug te zetten. Bij het koppelen van een SolarBuffer via Bluetooth wordt het wifi-wachtwoord voortaan automatisch ingevuld naast de netwerknaam, en een verbinding via ethernetkabel wordt nu herkend en getoond op het dashboard, dit bleef voorheen leeg. Een aantal kleinere problemen is daarbij verholpen: een Bluetooth-blokkade op de Hub wordt voortaan automatisch opgeheven bij elke opstart, een eerder gekoppeld en daarna gefactory-reset apparaat blijft niet langer onterecht verborgen bij een nieuwe Bluetooth-scan, de schema-knoppen "Aanzetten"/"Verbieden" op het dashboard reageerden niet meer goed na het wisselen, Expert-instellingen en Gebruikersbeheer waren op kleine schermen lastig te bedienen, en de installatiepagina van een nieuwe Hub probeerde onterecht lettertypen van internet te laden terwijl die nog geen verbinding heeft. Voor Marstek-accu's is de statusuitlezing betrouwbaarder gemaakt: op firmware die de hoofdstatusoproep niet beantwoordt, zoals Venus E 3.0, werd de accu voorheen onterecht als offline getoond met 0 W, dit valt nu automatisch terug op een tweede statusoproep. Optioneel is een losse Shelly- of HomeWizard-stekker op het stopcontact van de accu te koppelen (Instellingen → P1/Batterij) voor een exacte vermogensmeting op firmware die dit zelf niet goed teruggeeft. Tot slot, in bèta: Zendure Hyper 2000, Hub en ACE (legacy) kunnen via Bluetooth lokaal aan deze Hub gekoppeld worden in plaats van aan Zendure's cloud. Dit werkt door een bekende Zendure-firmwarebug nog niet betrouwbaar en wordt verder afgerond zodra Zendure dit met een firmware-update oplost.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.1" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.7.0</span>
           <span class="update-date-small">24 aug</span>
         </div>
         <div class="update-divider"></div>
