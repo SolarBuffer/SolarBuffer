@@ -257,12 +257,15 @@
 
     @media (max-width: 480px) {
       .expert-grid { grid-template-columns: 1fr; }
+      .feature-retry { flex-direction: column; align-items: flex-start; }
+      .feature-retry .input-with-unit { width: 100%; }
     }
 
     /* DARK MODE */
     html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
     html[data-theme="dark"] .card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
     html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .expert-reset-btn { color: hsl(224, 18%, 68%); }
     html[data-theme="dark"] .feature-label { color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .info-btn { background: hsl(215, 45%, 25%); color: hsl(215, 75%, 72%); }
     html[data-theme="dark"] .info-btn:hover { background: hsl(215, 45%, 32%); }
@@ -343,7 +346,13 @@
       </div>
 
       <div class="card" id="expertCard" style="display:none;">
-        <div class="card-title">Regelwaarden</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+          <div class="card-title" style="margin-bottom:0;">Regelwaarden</div>
+          <button type="button" class="expert-reset-btn" onclick="resetExpertDefaults()"
+                  style="background:none; border:none; padding:0; font-family:'Inter',sans-serif; font-size:0.78rem; font-weight:600; color:hsl(224,18%,55%); text-decoration:underline; cursor:pointer;">
+            Standaardwaarden herstellen
+          </button>
+        </div>
         <div class="expert-grid">
           <div class="field">
             <span class="field-label">Inschakeldrempel</span>
@@ -542,6 +551,32 @@
     kiSlider.addEventListener('input', updateKiLabel);
     kiSlider.addEventListener('dblclick', () => { kiSlider.value = 0; updateKiLabel(); });
     updateKiLabel();
+
+    // Regelwaarden terugzetten naar standaard (vult alleen de velden — pas
+    // definitief na klikken op Opslaan, zodat er nog een controlemoment is)
+    const EXPERT_DEFAULTS = {
+      EXPORT_THRESHOLD: -50,
+      EXPORT_DELAY: 15,
+      FREEZE_AT: 95,
+      FREEZE_CONFIRM: 2,
+      IMPORT_UNFREEZE_THRESHOLD: 200,
+      UNFREEZE_DELAY: 5,
+      IMPORT_OFF_THRESHOLD: 300,
+      OFF_DELAY: 120,
+      PID_NEUTRAL_LOW: -5,
+      PID_NEUTRAL_HIGH: 45,
+      POWER_SOCKET_DELAY: 5,
+      POWER_SOCKET_HOLD_SECONDS: 3600,
+      BOOST_DURATION: 900,
+      PID_KI_ADJUST: 0,
+    };
+    function resetExpertDefaults() {
+      for (const [name, value] of Object.entries(EXPERT_DEFAULTS)) {
+        const field = document.querySelector(`#expertCard [name="${name}"]`);
+        if (field) field.value = value;
+      }
+      updateKiLabel();
+    }
 
     // Uitschakelen bij bereikte temperatuur
     function toggleTempInfo() {

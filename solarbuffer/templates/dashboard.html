@@ -2754,6 +2754,17 @@
         <div class="sched-form-title" id="schedFormTitle">Nieuw tijdschema</div>
 
         <div>
+          <label>Type</label>
+          <div class="sched-days" id="schedType" style="gap:0.5rem;">
+            <button type="button" class="sched-day-btn active" data-type="start" style="padding:0.4rem 0.9rem;" onclick="setSchedType('start')">Aanzetten</button>
+            <button type="button" class="sched-day-btn" data-type="block" style="padding:0.4rem 0.9rem;" onclick="setSchedType('block')">Verbieden</button>
+          </div>
+          <div class="sched-devices-hint" id="schedTypeHint" style="margin-top:0.35rem;">
+            Zet het apparaat aan op een vast vermogen, ongeacht teruglevering.
+          </div>
+        </div>
+
+        <div>
           <label>Naam (optioneel)</label>
           <input type="text" id="schedName" placeholder="Bijv. Middag" maxlength="50">
         </div>
@@ -2782,7 +2793,7 @@
           </div>
         </div>
 
-        <div>
+        <div id="schedBrightnessField">
           <label>Vermogen: <span id="schedBrightnessVal">50</span>%</label>
           <div class="sched-brightness-row">
             <input type="range" id="schedBrightness" min="30" max="100" value="50"
@@ -3034,9 +3045,9 @@
             <span class="st-end">${s.end_time}</span>
           </div>
           <div class="sched-item-info">
-            <div class="sched-item-name">${escapeHtml(s.name || 'Tijdschema')}${activeNow ? '<span class="sched-live-badge">Actief</span>' : ''}</div>
+            <div class="sched-item-name">${escapeHtml(s.name || 'Tijdschema')}${s.type === 'block' ? '<span class="sched-live-badge" style="background:hsl(0,65%,48%);">Verboden</span>' : ''}${activeNow ? '<span class="sched-live-badge">Actief</span>' : ''}</div>
             <div class="sched-day-dots">${dayDots}</div>
-            <div class="sched-item-meta">${s.brightness}% vermogen · ${deviceStr}</div>
+            <div class="sched-item-meta">${s.type === 'block' ? 'Mag niet automatisch starten' : s.brightness + '% vermogen'} · ${deviceStr}</div>
           </div>
           <div class="sched-item-actions">
             <label class="sched-switch" title="${s.enabled ? 'Schema uitzetten' : 'Schema aanzetten'}">
@@ -3064,15 +3075,26 @@
     }
     // ===== EINDE VAKANTIESTAND =====
 
+    function setSchedType(type) {
+      document.querySelectorAll("#schedType .sched-day-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.type === type);
+      });
+      document.getElementById("schedBrightnessField").style.display = type === "block" ? "none" : "";
+      document.getElementById("schedTypeHint").textContent = type === "block"
+        ? "Voorkomt dat het apparaat in dit venster automatisch start (zon-overschot of goedkoop tarief). Een apparaat dat al draait, wordt er niet door gestopt."
+        : "Zet het apparaat aan op een vast vermogen, ongeacht teruglevering.";
+    }
+
     function openSchedForm(prefill) {
       editingSchedId = prefill ? prefill.id : null;
       document.getElementById("schedFormTitle").textContent = prefill ? "Schema bewerken" : "Nieuw tijdschema";
       document.getElementById("schedName").value = prefill ? (prefill.name || "") : "";
       document.getElementById("schedStart").value = prefill ? prefill.start_time : "08:00";
       document.getElementById("schedEnd").value = prefill ? prefill.end_time : "17:00";
-      document.getElementById("schedBrightness").value = prefill ? prefill.brightness : 50;
-      document.getElementById("schedBrightnessVal").textContent = prefill ? prefill.brightness : 50;
-      document.querySelectorAll(".sched-day-btn").forEach(btn => {
+      document.getElementById("schedBrightness").value = prefill ? (prefill.brightness || 50) : 50;
+      document.getElementById("schedBrightnessVal").textContent = prefill ? (prefill.brightness || 50) : 50;
+      setSchedType(prefill ? (prefill.type || "start") : "start");
+      document.querySelectorAll("#schedDays .sched-day-btn").forEach(btn => {
         const day = parseInt(btn.dataset.day);
         btn.classList.toggle("active", prefill ? prefill.days.includes(day) : false);
       });
@@ -3094,7 +3116,7 @@
       editingSchedId = null;
     }
 
-    document.querySelectorAll(".sched-day-btn").forEach(btn => {
+    document.querySelectorAll("#schedDays .sched-day-btn").forEach(btn => {
       btn.addEventListener("click", () => btn.classList.toggle("active"));
     });
 
@@ -3131,7 +3153,9 @@
 
       const device_ips = [];
       document.querySelectorAll("#schedDevices .sched-day-btn.active").forEach(btn => device_ips.push(btn.dataset.deviceIp));
-      const payload = { name, days, start_time: start, end_time: end, brightness, device_ips };
+      const type = document.querySelector("#schedType .sched-day-btn.active")?.dataset.type || "start";
+      const payload = { name, days, start_time: start, end_time: end, type, device_ips };
+      if (type === "start") payload.brightness = brightness;
       const url = editingSchedId ? "/schedules/" + encodeURIComponent(editingSchedId) : "/schedules";
       const method = editingSchedId ? "PUT" : "POST";
 
