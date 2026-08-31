@@ -2325,6 +2325,32 @@ def _wifi_get_current():
     return None
 
 
+def _ethernet_get_current():
+    """Geeft het IP-adres terug als de Hub via een bekabelde (ethernet) verbinding
+    online is, anders None."""
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "device,type,state", "dev"],
+            capture_output=True, text=True, timeout=5
+        )
+        eth_device = None
+        for line in result.stdout.splitlines():
+            parts = line.split(":")
+            if len(parts) >= 3 and parts[1] == "ethernet" and parts[2] == "connected":
+                eth_device = parts[0]
+                break
+        if not eth_device:
+            return None
+        ip_result = subprocess.run(
+            ["nmcli", "-g", "IP4.ADDRESS", "device", "show", eth_device],
+            capture_output=True, text=True, timeout=5
+        )
+        ip = ip_result.stdout.strip().split("/")[0]
+        return ip or None
+    except Exception:
+        return None
+
+
 def _wifi_connect_and_reboot(ssid, password):
     try:
         subprocess.run(
@@ -2396,8 +2422,12 @@ def network_current():
     if not require_login():
         return jsonify(error="unauthorized"), 401
     ssid = _wifi_get_current()
-    ip = get_local_ip() if ssid else None
-    return jsonify(ssid=ssid, ip=ip)
+    if ssid:
+        return jsonify(ssid=ssid, ip=get_local_ip(), connection_type="wifi")
+    eth_ip = _ethernet_get_current()
+    if eth_ip:
+        return jsonify(ssid=None, ip=eth_ip, connection_type="lan")
+    return jsonify(ssid=None, ip=None, connection_type=None)
 
 
 @app.route("/network/scan")
@@ -4438,6 +4468,16 @@ def api_wifi_current_password():
             if value:
                 password = value
                 break
+
+        # NetworkManager bewaart de PSK soms als de afgeleide 256-bit sleutel
+        # (64 hex-tekens) in plaats van de originele ASCII-wachtwoordtekst — dat
+        # gebeurt bij sommige verbindingsprofielen. Die sleutel is niet terug te
+        # rekenen naar het echte wachtwoord, dus dan liever leeg laten dan een
+        # onbruikbare waarde invullen die niet werkt op het andere apparaat.
+        is_raw_derived_key = len(password) == 64 and all(c in "0123456789abcdefABCDEF" for c in password)
+        if is_raw_derived_key:
+            password = ""
+
         return jsonify(success=True, password=password)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
