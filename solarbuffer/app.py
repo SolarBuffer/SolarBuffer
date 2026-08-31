@@ -3383,18 +3383,22 @@ def create_schedule():
         days = data.get("days", [])
         start_time = str(data.get("start_time", ""))
         end_time = str(data.get("end_time", ""))
+        sched_type = data.get("type") if data.get("type") in ("start", "block") else "start"
         brightness = data.get("brightness", 50)
         name = str(data.get("name", ""))[:50]
         if not isinstance(days, list) or not days:
             return jsonify(success=False, error="Geen dagen geselecteerd"), 400
         if not _valid_time(start_time) or not _valid_time(end_time):
             return jsonify(success=False, error="Ongeldige tijd (gebruik HH:MM)"), 400
-        try:
-            brightness = int(brightness)
-            if not (1 <= brightness <= 100):
-                raise ValueError
-        except (ValueError, TypeError):
-            return jsonify(success=False, error="Helderheid moet tussen 1 en 100 zijn"), 400
+        if sched_type == "start":
+            try:
+                brightness = int(brightness)
+                if not (1 <= brightness <= 100):
+                    raise ValueError
+            except (ValueError, TypeError):
+                return jsonify(success=False, error="Helderheid moet tussen 1 en 100 zijn"), 400
+        else:
+            brightness = None
         cfg = load_config()
         valid_ips = {d["ip"] for d in cfg.get("shelly_devices", [])}
         raw_ips = data.get("device_ips", [])
@@ -3402,6 +3406,7 @@ def create_schedule():
         new_sched = {
             "id": str(uuid.uuid4()),
             "name": name,
+            "type": sched_type,
             "days": sorted({int(d) for d in days if isinstance(d, (int, float)) and 0 <= int(d) <= 6}),
             "start_time": start_time,
             "end_time": end_time,
@@ -3432,13 +3437,17 @@ def update_schedule(sched_id):
         if idx is None:
             return jsonify(success=False, error="Niet gevonden"), 404
         sched = schedules[idx]
+        if "type" in data and data["type"] in ("start", "block"):
+            sched["type"] = data["type"]
         if "days" in data:
             sched["days"] = sorted({int(d) for d in data["days"] if isinstance(d, (int, float)) and 0 <= int(d) <= 6})
         if "start_time" in data and _valid_time(data["start_time"]):
             sched["start_time"] = str(data["start_time"])
         if "end_time" in data and _valid_time(data["end_time"]):
             sched["end_time"] = str(data["end_time"])
-        if "brightness" in data:
+        if sched.get("type", "start") == "block":
+            sched["brightness"] = None
+        elif "brightness" in data:
             try:
                 b = int(data["brightness"])
                 if 1 <= b <= 100:
@@ -5549,12 +5558,14 @@ def lower_priorities_off(devices_sorted, priority):
     return True
 
 
-def get_next_startable_device(devices_sorted):
+def get_next_startable_device(devices_sorted, blocked_ips=frozenset()):
     for d in devices_sorted:
         st = get_device_state(d)
         prio = d["priority"]
         if st["started"] or st.get("pending_start"):
             continue
+        if d["ip"] in blocked_ips:
+            continue  # verboden-venster actief voor dit apparaat
         if _socket_offline_unstarted(d):
             continue  # socket unreachable → skip, try next priority
         if _temp_shutoff_blocked(d):
@@ -5633,6 +5644,8 @@ def get_active_schedule(schedules):
     weekday = now.weekday()  # 0=maandag … 6=zondag
     current_minutes = now.hour * 60 + now.minute
     for sched in schedules:
+        if sched.get("type", "start") != "start":
+            continue
         if not sched.get("enabled", True):
             continue
         if weekday not in sched.get("days", []):
@@ -5645,6 +5658,37 @@ def get_active_schedule(schedules):
         if (sh * 60 + sm) <= current_minutes < (eh * 60 + em):
             return sched
     return None
+
+
+def get_blocked_device_ips(schedules, devices_sorted):
+    """Verboden-vensters ('type': 'block'): apparaten die hierin vallen mogen
+    niet automatisch starten (zon-overschot of goedkoop tarief), ongeacht
+    verder alles. Een al lopend apparaat wordt er niet door gestopt — dit
+    voorkomt alleen een nieuwe start."""
+    now = datetime.now()
+    weekday = now.weekday()
+    current_minutes = now.hour * 60 + now.minute
+    blocked = set()
+    for sched in schedules:
+        if sched.get("type") != "block":
+            continue
+        if not sched.get("enabled", True):
+            continue
+        if weekday not in sched.get("days", []):
+            continue
+        try:
+            sh, sm = map(int, sched["start_time"].split(":"))
+            eh, em = map(int, sched["end_time"].split(":"))
+        except (KeyError, ValueError):
+            continue
+        if not ((sh * 60 + sm) <= current_minutes < (eh * 60 + em)):
+            continue
+        device_ips = sched.get("device_ips") or []
+        if device_ips:
+            blocked.update(device_ips)
+        else:
+            blocked.update(d["ip"] for d in devices_sorted)
+    return blocked
 
 
 # ================= CONTROL LOOP =================
@@ -6616,8 +6660,10 @@ def control_loop():
             global _battery_blocks_start
             _battery_blocks_start = battery_blocks_start
 
+            blocked_ips = get_blocked_device_ips(cfg.get("schedules", []), non_legionella)
+
             if export_start is not None and (now - export_start) >= EXPORT_DELAY and not battery_blocks_start:
-                next_dev = get_next_startable_device(non_legionella)
+                next_dev = get_next_startable_device(non_legionella, blocked_ips)
                 if next_dev:
                     ip = next_dev["ip"]
                     st = device_states[ip]
@@ -6682,7 +6728,7 @@ def control_loop():
 
             PRICE_START_DELAY = 30
             if price_start is not None and (now - price_start) >= PRICE_START_DELAY and not battery_blocks_start:
-                next_dev = get_next_startable_device(non_legionella)
+                next_dev = get_next_startable_device(non_legionella, blocked_ips)
                 if next_dev:
                     ip = next_dev["ip"]
                     st = device_states[ip]
