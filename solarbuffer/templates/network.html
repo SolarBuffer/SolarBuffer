@@ -533,9 +533,13 @@
       const ssidEl = document.getElementById('currentSsid');
       const metaEl = document.getElementById('currentMeta');
       const badgeEl = document.getElementById('connectedBadge');
-      if (currentSsid) {
+      if (data.connection_type === 'wifi' && currentSsid) {
         ssidEl.textContent = currentSsid;
         if (data.ip) metaEl.textContent = 'IP-adres: ' + data.ip;
+        badgeEl.style.display = '';
+      } else if (data.connection_type === 'lan' && data.ip) {
+        ssidEl.textContent = 'LAN verbonden (kabel)';
+        metaEl.textContent = 'IP-adres: ' + data.ip;
         badgeEl.style.display = '';
       } else {
         ssidEl.textContent = 'Geen WiFi-verbinding';

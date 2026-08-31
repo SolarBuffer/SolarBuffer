@@ -1161,7 +1161,12 @@
     // ===== NETWERK SUBTEKST =====
     fetch('/network/current').then(r => r.json()).then(data => {
       const el = document.getElementById('wifiSubText');
-      if (el && data.ssid) el.textContent = 'Verbonden met ' + data.ssid;
+      if (!el) return;
+      if (data.connection_type === 'wifi' && data.ssid) {
+        el.textContent = 'Verbonden met ' + data.ssid;
+      } else if (data.connection_type === 'lan' && data.ip) {
+        el.textContent = 'LAN verbonden — ' + data.ip;
+      }
     }).catch(() => {});
 
     // ===== UPDATE BADGE =====
