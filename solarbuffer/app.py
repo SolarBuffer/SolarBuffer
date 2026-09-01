@@ -2864,13 +2864,56 @@ def set_brightness_manual(ip):
 
 
 UPDATE_DIR = "/home/solarbuffer/SolarBuffer"
+GIT_DEPLOY_KEY_PATH = "/home/solarbuffer/.ssh/solarbuffer_deploy_key"
+GIT_SSH_REMOTE = "git@github.com:SolarBuffer/SolarBuffer.git"
+
+
+def _git_update_env():
+    """Zodra de deploy key op deze Hub staat (handmatig via SSH neergezet, nooit
+    via deze repo zelf, want die is publiek totdat de hele vloot is overgezet),
+    gebruikt git die voor verkeer naar GitHub. Zonder de key: gewoon de normale
+    omgeving, dus de bestaande (publieke) remote blijft werken zoals altijd."""
+    if not os.path.isfile(GIT_DEPLOY_KEY_PATH):
+        return None
+    env = os.environ.copy()
+    env["GIT_SSH_COMMAND"] = (
+        f"ssh -i {GIT_DEPLOY_KEY_PATH} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+    )
+    return env
+
+
+def ensure_git_remote_uses_deploy_key():
+    """Zet de git-remote van UPDATE_DIR om naar SSH zodra de deploy key aanwezig
+    is. Idempotent en veilig om bij elke opstart en elke update-check te draaien;
+    doet niets zolang de key nog niet handmatig is uitgerold naar deze Hub."""
+    if not os.path.isfile(GIT_DEPLOY_KEY_PATH):
+        return
+    try:
+        os.chmod(GIT_DEPLOY_KEY_PATH, 0o600)
+    except Exception:
+        pass
+    try:
+        current = subprocess.run(
+            ["git", "remote", "get-url", "origin"], cwd=UPDATE_DIR,
+            capture_output=True, text=True, timeout=10
+        ).stdout.strip()
+        if current and current != GIT_SSH_REMOTE:
+            subprocess.run(
+                ["git", "remote", "set-url", "origin", GIT_SSH_REMOTE],
+                cwd=UPDATE_DIR, capture_output=True, timeout=10
+            )
+    except Exception:
+        pass
+
 
 @app.route("/check_updates_available")
 def check_updates_available():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
     try:
-        subprocess.run(["git", "fetch"], cwd=UPDATE_DIR, capture_output=True, timeout=15)
+        ensure_git_remote_uses_deploy_key()
+        subprocess.run(["git", "fetch"], cwd=UPDATE_DIR, capture_output=True,
+                        timeout=15, env=_git_update_env())
         local = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=UPDATE_DIR, capture_output=True, text=True
         ).stdout.strip()
@@ -2888,10 +2931,11 @@ def run_update_check():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
     try:
+        ensure_git_remote_uses_deploy_key()
         pull = subprocess.run(
             ["git", "pull"],
             cwd=UPDATE_DIR,
-            capture_output=True, text=True, timeout=60
+            capture_output=True, text=True, timeout=60, env=_git_update_env()
         )
         output = (pull.stdout + pull.stderr).strip() or "Geen uitvoer"
         already_up_to_date = "already up to date" in output.lower()
@@ -5036,7 +5080,9 @@ def startup_sync_devices():
 def _check_update_available():
     global _update_available
     try:
-        subprocess.run(["git", "fetch"], cwd=UPDATE_DIR, capture_output=True, timeout=15)
+        ensure_git_remote_uses_deploy_key()
+        subprocess.run(["git", "fetch"], cwd=UPDATE_DIR, capture_output=True,
+                        timeout=15, env=_git_update_env())
         local = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=UPDATE_DIR, capture_output=True, text=True
         ).stdout.strip()
@@ -5288,9 +5334,10 @@ def _handle_mqtt_command(prefix, topic, payload):
         def _do_update():
             global _update_available
             try:
+                ensure_git_remote_uses_deploy_key()
                 pull = subprocess.run(
                     ["git", "pull"], cwd=UPDATE_DIR,
-                    capture_output=True, text=True, timeout=60
+                    capture_output=True, text=True, timeout=60, env=_git_update_env()
                 )
                 output = (pull.stdout + pull.stderr).strip()
                 has_changes = pull.returncode == 0 and "already up to date" not in output.lower()
@@ -6586,7 +6633,10 @@ def control_loop():
                             _bat_saturated = False
                             _bat_saturated_since = None
                             if not _sb_can_run:
-                                _desired_perms = ["discharge_allowed"]
+                                # Boiler kan sowieso niet draaien (uitgezet of geen
+                                # bereikbare apparaten): niemand anders vangt het
+                                # overschot op, dus accu blijft volledig vrij.
+                                _desired_perms = ["charge_allowed", "discharge_allowed"]
                             elif _force_no_discharge:
                                 _desired_perms = ["charge_allowed"]
                             elif _any_sb_active:
@@ -6603,7 +6653,9 @@ def control_loop():
                     else:  # solarbuffer eerst
                         _desired_mode = "zero"
                         if not _sb_can_run:
-                            _desired_perms = ["discharge_allowed"]
+                            # Boiler kan sowieso niet draaien: niemand anders vangt
+                            # het overschot op, dus accu blijft volledig vrij.
+                            _desired_perms = ["charge_allowed", "discharge_allowed"]
                         elif _force_no_discharge:
                             _desired_perms = ["charge_allowed"]
                         elif _any_sb_active:
@@ -7720,7 +7772,7 @@ def battery_poll_loop():
                         "current_a": None,
                         "cycles": None,
                         "mode": _last_battery_mode or "Manual",
-                        "permissions": None,
+                        "permissions": _last_battery_permissions,
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,
                         "online": True,
@@ -7772,7 +7824,7 @@ def battery_poll_loop():
                         "current_a": None,
                         "cycles": None,
                         "mode": _last_battery_mode or "Passive",
-                        "permissions": None,
+                        "permissions": _last_battery_permissions,
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,
                         "online": True,
@@ -8233,6 +8285,7 @@ if __name__ == "__main__":
     threading.Thread(target=automation_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
     threading.Thread(target=ensure_bluetooth_unblocked, daemon=True).start()
+    threading.Thread(target=ensure_git_remote_uses_deploy_key, daemon=True).start()
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
