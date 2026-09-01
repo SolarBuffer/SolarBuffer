@@ -74,6 +74,33 @@
     }
     .field-group input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
     .field-group input:read-only { background: hsl(224, 20%, 97%); color: hsl(224, 18%, 60%); cursor: default; }
+    .field-group select {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(224, 20%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(224, 26%, 14%);
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+      padding-right: 2.5rem;
+      background-image:
+        linear-gradient(45deg, transparent 50%, hsl(224, 38%, 21%) 50%),
+        linear-gradient(135deg, hsl(224, 38%, 21%) 50%, transparent 50%);
+      background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+    }
+    .field-group select:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+
+    .two-col-row { display: flex; gap: 1rem; }
+    .two-col-row .field-group { flex: 1; min-width: 0; }
+    @media (max-width: 480px) {
+      .two-col-row { flex-direction: column; gap: 0; }
+    }
 
     .btn-scan {
       display: block;
@@ -158,6 +185,8 @@
     html[data-theme="dark"] .field-group input { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .field-group input:focus { border-color: hsl(32, 75%, 52%); }
     html[data-theme="dark"] .field-group input:read-only { background: hsl(224, 38%, 16%); color: hsl(224, 18%, 65%); }
+    html[data-theme="dark"] .field-group select { background-color: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field-group select:focus { border-color: hsl(32, 75%, 52%); }
     html[data-theme="dark"] .scan-status { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .scan-results { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
     html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 91%); }
@@ -440,15 +469,15 @@
               <div id="marstekScanStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
               <div id="marstekScanResults"></div>
             </div>
-            <div style="display:flex;gap:1rem;">
-              <div class="field-group" style="flex:1;">
+            <div class="two-col-row">
+              <div class="field-group">
                 <label for="marstek_port">UDP-poort</label>
                 <input type="number" id="marstek_port" name="marstek_port"
                        min="1024" max="65535" step="1"
                        value="{{ config.marstek_port or 30000 }}">
                 <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Stel in via de Marstek app (standaard 30000)</div>
               </div>
-              <div class="field-group" style="flex:1;">
+              <div class="field-group">
                 <label for="marstek_max_power">Max. vermogen (W)</label>
                 <input type="number" id="marstek_max_power" name="marstek_max_power"
                        min="100" max="10000" step="100"
@@ -472,6 +501,31 @@
               De accu blijft normaal in zijn eigen Auto-modus; alleen om het vermogen vast te zetten
               (boiler-vrijgave of stilstand) schrijft SolarBuffer een tijdschema in slot 0 —
               een eigen handmatig schema in slot 0 wordt dan overschreven.
+            </div>
+
+            <div style="border-top:1px solid hsl(224, 18%, 90%);margin:0.9rem 0 0.75rem;padding-top:0.75rem;">
+              <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.35rem;">Vermogensmeter op stopcontact accu (optioneel)</div>
+              <div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-bottom:0.6rem;">
+                Sommige Marstek-firmwares geven geen bruikbaar vermogen terug via de eigen API.
+                Koppel hier een losse Shelly- of HomeWizard-stekker op het stopcontact van de accu
+                voor een echte meting in plaats van een schatting.
+              </div>
+              <div class="two-col-row">
+                <div class="field-group">
+                  <label for="battery_power_meter">Type meter</label>
+                  <select id="battery_power_meter" name="battery_power_meter">
+                    <option value="" {% if not config.battery_power_meter %}selected{% endif %}>Geen</option>
+                    <option value="shelly" {% if config.battery_power_meter == 'shelly' %}selected{% endif %}>Shelly</option>
+                    <option value="homewizard" {% if config.battery_power_meter == 'homewizard' %}selected{% endif %}>HomeWizard</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="battery_power_ip">IP-adres meter</label>
+                  <input type="text" id="battery_power_ip" name="battery_power_ip"
+                         placeholder="192.168.178.x"
+                         value="{{ config.battery_power_ip or '' }}">
+                </div>
+              </div>
             </div>
           </div>
 
