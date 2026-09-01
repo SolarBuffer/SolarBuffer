@@ -696,6 +696,12 @@ battery_state = {
 }
 _battery_blocks_start = False
 _last_battery_permissions = None
+# _last_battery_permissions volgt alleen wat het laatst daadwerkelijk naar de
+# accu is gestuurd (bv. blijft hangen op een oude waarde als de accu al in
+# Auto-modus staat en er dus niets nieuws verstuurd wordt). Voor de dashboard-
+# weergave willen we wat de besturing dít cyclus wil, ongeacht of dat leidde
+# tot een nieuwe verzending, vandaar dit aparte veld.
+_current_battery_desired_perms = None
 _last_battery_mode = None
 _bat_day_date = None
 _bat_charge_start_kwh = None
@@ -6666,6 +6672,9 @@ def control_loop():
                                 if _temp_shutoff_blocking_all else ["discharge_allowed"]
                             )
 
+                global _current_battery_desired_perms
+                _current_battery_desired_perms = list(_desired_perms)
+
                 _bat_type = cfg.get("battery_type", "homewizard")
                 if battery_state.get("online"):
                     if _bat_type == "marstek":
@@ -7772,7 +7781,7 @@ def battery_poll_loop():
                         "current_a": None,
                         "cycles": None,
                         "mode": _last_battery_mode or "Manual",
-                        "permissions": _last_battery_permissions,
+                        "permissions": _current_battery_desired_perms,
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,
                         "online": True,
@@ -7824,7 +7833,7 @@ def battery_poll_loop():
                         "current_a": None,
                         "cycles": None,
                         "mode": _last_battery_mode or "Passive",
-                        "permissions": _last_battery_permissions,
+                        "permissions": _current_battery_desired_perms,
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,
                         "online": True,
