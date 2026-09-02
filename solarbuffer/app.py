@@ -7097,11 +7097,16 @@ def control_loop():
                             b = st["brightness"] + max_step
                         elif b < st["brightness"] - max_step:
                             b = st["brightness"] - max_step
-                    # back-calculation anti-windup: als de richtingsbeperking de output heeft aangepast,
-                    # herbereken de integraal zodat hij overeenkomt met de werkelijke output
+                    # back-calculation anti-windup: als de richtingsklem of de stap-limiter
+                    # de output heeft aangepast, schuif de integraal met exact dat verschil
+                    # mee, zodat de volgende cyclus vanaf de werkelijk toegepaste stand
+                    # verdergaat. Bewust geen set_auto_mode()-reset meer: die gooit ook het
+                    # geheugen voor de afgeleide en de dt-tijdmeting weg, en dat gebeurde bij
+                    # de stap-limiter (die tijdens een ramp vrijwel elke cyclus bijstelt) zo
+                    # vaak dat de PID nooit rustig kon opbouwen.
                     if b != b_pid:
-                        device_pids[ip].set_auto_mode(False)
-                        device_pids[ip].set_auto_mode(True, last_output=b)
+                        _pid = device_pids[ip]
+                        _pid._integral = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, _pid._integral + (b - b_pid)))
                     st["brightness"] = b
                     st["on"] = True
                     set_shelly(b, True, ip)
