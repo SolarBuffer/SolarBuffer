@@ -7083,6 +7083,20 @@ def control_loop():
                         b = max(b_pid, st["brightness"])
                     else:
                         b = b_pid
+                    # Stap-limiter: bij een trage P1-meter (bv. eens per ~10s een nieuw
+                    # telegram i.p.v. elke seconde) komt een verse meting soms als een
+                    # grote sprong binnen, en reageert de PID daar in één klap voluit op.
+                    # Bij "trager" op de regelsnelheid-schuif (negatieve _ki_adjust)
+                    # begrenzen we ook hoeveel de output per cyclus mag bewegen, zodat
+                    # de boiler geleidelijk naar de nieuwe stand regelt. Bij 0% of
+                    # sneller blijft dit ongelimiteerd, zoals nu.
+                    if _ki_adjust < 0:
+                        _step_frac = 1 - (-_ki_adjust / 30.0) * 0.95
+                        max_step = max(1, (MAX_BRIGHTNESS - MIN_BRIGHTNESS) * _step_frac)
+                        if b > st["brightness"] + max_step:
+                            b = st["brightness"] + max_step
+                        elif b < st["brightness"] - max_step:
+                            b = st["brightness"] - max_step
                     # back-calculation anti-windup: als de richtingsbeperking de output heeft aangepast,
                     # herbereken de integraal zodat hij overeenkomt met de werkelijke output
                     if b != b_pid:
