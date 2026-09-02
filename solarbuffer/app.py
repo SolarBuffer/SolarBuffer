@@ -759,8 +759,11 @@ MAX_BRIGHTNESS = 100
 
 # ================= TEMPERATUUR-UITSCHAKELING =================
 # Boiler op temperatuur: PID volledig uitgeregeld terwijl de eigen
-# vermogensmeter alleen nog standby-vermogen (3-10W) meet.
-TEMP_SHUTOFF_MIN_W = 3        # ondergrens standby-vermogen (W)
+# vermogensmeter alleen nog standby-vermogen (2-10W) meet. Ondergrens bewust
+# op 2 i.p.v. 3: bij een meting die net op de grens schommelt (bv. rond 3W)
+# viel de teller anders bij elke korte dip terug naar 0, waardoor de 60s
+# nooit onafgebroken werden gehaald.
+TEMP_SHUTOFF_MIN_W = 2        # ondergrens standby-vermogen (W)
 TEMP_SHUTOFF_MAX_W = 10       # bovengrens standby-vermogen (W)
 TEMP_SHUTOFF_CONFIRM = 60     # criteria moeten zo lang aanhouden (s)
 TEMP_SHUTOFF_RETRY_MIN = 5    # minimale instelbare wachttijd (minuten)
@@ -6640,7 +6643,7 @@ def control_loop():
 
             # ================= TEMPERATUUR-UITSCHAKELING =================
             # Boiler op temperatuur: PID volledig uitgeregeld terwijl de eigen
-            # vermogensmeter alleen standby-vermogen (3-10W) meet. Houdt dit
+            # vermogensmeter alleen standby-vermogen (2-10W) meet. Houdt dit
             # 1 minuut aan, dan wordt de boiler naar minimaal afgeregeld en
             # uitgeschakeld. Na 10 minuten mag hij opnieuw starten om te
             # checken of hij weer warmte kan opnemen (set/reset per boiler).
@@ -6701,6 +6704,16 @@ def control_loop():
                                     event_key="ntfy_notify_temp_shutoff"
                                 )
                     else:
+                        if st.get("temp_shutoff_since") is not None:
+                            print(
+                                f"Temp-uitschakeling: teller gereset voor {d.get('name', ip)} ({ip}) na "
+                                f"{now - st['temp_shutoff_since']:.0f}s — started={st['started']} "
+                                f"online={st['online']} power_meter_online={st.get('power_meter_online')} "
+                                f"manual_override={st.get('manual_override')} "
+                                f"brightness={st['brightness']} (FREEZE_AT={FREEZE_AT}) "
+                                f"power={st.get('power')} (venster {TEMP_SHUTOFF_MIN_W}-{TEMP_SHUTOFF_MAX_W}W)",
+                                flush=True
+                            )
                         st["temp_shutoff_since"] = None
             else:
                 for d in devices_sorted:
