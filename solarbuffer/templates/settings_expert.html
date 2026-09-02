@@ -458,7 +458,7 @@
             <span class="field-help">Uitschakelen na laatste activatie</span>
             <div class="input-with-unit">
               <input type="number" name="POWER_SOCKET_HOLD_SECONDS"
-                     value="{{ config.expert_settings.POWER_SOCKET_HOLD_SECONDS if config.expert_settings else 3600 }}">
+                     value="{{ config.expert_settings.POWER_SOCKET_HOLD_SECONDS if config.expert_settings else 60 }}">
               <span class="unit">s</span>
             </div>
           </div>
@@ -475,9 +475,9 @@
             <span class="field-label">Regelsnelheid</span>
             <span class="field-help">Hoe vlot de regeling het vermogen bijstuurt. Dubbelklik op de slider voor standaard.</span>
             <div class="ki-slider-row">
-              <span class="ki-end">Trager −20%</span>
+              <span class="ki-end">Trager −30%</span>
               <input type="range" class="ki-slider" name="PID_KI_ADJUST" id="kiAdjust"
-                     min="-20" max="20" step="1"
+                     min="-30" max="20" step="1"
                      value="{{ config.expert_settings.get('PID_KI_ADJUST', 0) if config.expert_settings else 0 }}">
               <span class="ki-end">+20% Sneller</span>
             </div>
@@ -558,15 +558,15 @@
       EXPORT_THRESHOLD: -50,
       EXPORT_DELAY: 15,
       FREEZE_AT: 95,
-      FREEZE_CONFIRM: 2,
+      FREEZE_CONFIRM: 5,
       IMPORT_UNFREEZE_THRESHOLD: 200,
       UNFREEZE_DELAY: 5,
-      IMPORT_OFF_THRESHOLD: 300,
+      IMPORT_OFF_THRESHOLD: 275,
       OFF_DELAY: 120,
       PID_NEUTRAL_LOW: -5,
       PID_NEUTRAL_HIGH: 45,
       POWER_SOCKET_DELAY: 5,
-      POWER_SOCKET_HOLD_SECONDS: 3600,
+      POWER_SOCKET_HOLD_SECONDS: 60,
       BOOST_DURATION: 900,
       PID_KI_ADJUST: 0,
     };
