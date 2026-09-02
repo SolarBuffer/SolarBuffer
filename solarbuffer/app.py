@@ -152,6 +152,16 @@ def load_config():
         cfg["shelly_devices"] = []
     if "p1_ip" not in cfg:
         cfg["p1_ip"] = ""
+    if "p1_source" not in cfg:
+        cfg["p1_source"] = "homewizard"
+    if "p1_shelly_ip" not in cfg:
+        cfg["p1_shelly_ip"] = ""
+    if "p1_shelly_channels" not in cfg:
+        cfg["p1_shelly_channels"] = []
+    if "p1_shelly_mac" not in cfg:
+        cfg["p1_shelly_mac"] = ""
+    elif cfg["p1_shelly_mac"]:
+        cfg["p1_shelly_mac"] = format_mac(cfg["p1_shelly_mac"])
     if "p1_mac" not in cfg:
         cfg["p1_mac"] = ""
     elif cfg["p1_mac"]:
@@ -720,6 +730,7 @@ _broadlink_online = {}  # bl_id -> bool
 current_power = 0
 _p1_online = False
 _p1_mac_relocating = False
+_p1_shelly_mac_relocating = False
 current_brightness = 0
 current_gas_m3 = None      # meest recente meterstand (m³)
 gas_day_start_m3 = None    # meterstand bij start van vandaag
@@ -888,6 +899,25 @@ def detect_shelly(ip):
         return None
 
 
+def detect_shelly_em(ip):
+    """Herkent een Shelly Pro EM/3EM op het netwerk voor de P1-brondetectie,
+    los van detect_shelly (SolarBuffer-dimmer) en detect_shelly_pm (checkt
+    apower, wat EM/3EM niet gebruikt)."""
+    result = probe_shelly_em(ip, timeout=1.2)
+    if not result:
+        return None
+    name = f"Shelly EM ({ip})"
+    mac = ""
+    try:
+        info = requests.get(f"http://{ip}/rpc/Shelly.GetDeviceInfo", timeout=1.2).json()
+        name = (info.get("name") or info.get("id") or name).strip()
+        if info.get("mac"):
+            mac = format_mac(info.get("mac"))
+    except Exception:
+        pass
+    return {"type": "shelly_em", "name": name, "ip": ip, "mac": mac, **result}
+
+
 DIMMER_MODELS = {"S3DM-0010WW", "0010WW"}
 
 
@@ -981,6 +1011,7 @@ def scan_network_for_devices():
     known_p1_ip = (load_config().get("p1_ip") or "").strip()
     found_p1 = []
     found_shelly = []
+    found_shelly_em = []
 
     with ThreadPoolExecutor(max_workers=25) as executor:
         future_map = {}
@@ -991,6 +1022,7 @@ def scan_network_for_devices():
                 continue
             future_map[executor.submit(detect_homewizard_p1, ip)] = ("p1", ip)
             future_map[executor.submit(detect_shelly, ip)] = ("shelly", ip)
+            future_map[executor.submit(detect_shelly_em, ip)] = ("shelly_em", ip)
 
         for future in as_completed(future_map):
             kind, ip = future_map[future]
@@ -1002,6 +1034,8 @@ def scan_network_for_devices():
                     found_p1.append(result)
                 elif kind == "shelly":
                     found_shelly.append(result)
+                elif kind == "shelly_em":
+                    found_shelly_em.append(result)
             except Exception as e:
                 print(f"Scan error ({ip}): {e}")
 
@@ -1019,7 +1053,14 @@ def scan_network_for_devices():
             unique_shelly.append(d)
             seen_shelly.add(d["ip"])
 
-    return {"p1_meters": unique_p1, "shelly_devices": unique_shelly}
+    unique_shelly_em = []
+    seen_shelly_em = set()
+    for d in found_shelly_em:
+        if d["ip"] not in seen_shelly_em:
+            unique_shelly_em.append(d)
+            seen_shelly_em.add(d["ip"])
+
+    return {"p1_meters": unique_p1, "shelly_devices": unique_shelly, "shelly_em_devices": unique_shelly_em}
 
 
 # ================= MAC-HERKENNING (IP-herkoppeling) =================
@@ -1115,6 +1156,16 @@ def backfill_p1_mac(ip):
     cfg = load_config()
     if cfg.get("p1_ip") == ip and not (cfg.get("p1_mac") or "").strip():
         cfg["p1_mac"] = mac
+        save_config(cfg)
+
+
+def backfill_p1_shelly_mac(ip):
+    mac = get_shelly_mac(ip)
+    if not mac:
+        return
+    cfg = load_config()
+    if cfg.get("p1_shelly_ip") == ip and not (cfg.get("p1_shelly_mac") or "").strip():
+        cfg["p1_shelly_mac"] = mac
         save_config(cfg)
 
 
@@ -1256,6 +1307,30 @@ def try_relocate_p1_by_mac(old_ip, mac):
         print(f"MAC-herkoppeling P1 fout ({old_ip}): {e}")
     finally:
         _p1_mac_relocating = False
+
+
+def try_relocate_p1_shelly_by_mac(old_ip, mac):
+    global _p1_shelly_mac_relocating
+    _p1_shelly_mac_relocating = True
+    try:
+        print(f"MAC-herkoppeling: zoek Shelly EM/3EM {mac} terug (was {old_ip})...")
+        result = scan_network_for_devices()
+        for cand in result["shelly_em_devices"]:
+            if cand.get("mac") and cand["ip"] != old_ip and cand["mac"].upper() == mac.upper():
+                cfg = load_config()
+                if cfg.get("p1_shelly_ip") == old_ip and (cfg.get("p1_shelly_mac") or "").upper() == mac.upper():
+                    cfg["p1_shelly_ip"] = cand["ip"]
+                    save_config(cfg)
+                    print(f"MAC-herkoppeling: Shelly EM/3EM verplaatst van {old_ip} naar {cand['ip']}")
+                    write_audit_log("p1_shelly_ip_relocated", {"mac": mac, "old_ip": old_ip, "new_ip": cand["ip"]})
+                    send_notification(
+                        f"🔄 Shelly EM/3EM met IP {old_ip} is niet meer bereikbaar; teruggevonden op {cand['ip']} via MAC-adres.",
+                        event_key="ntfy_notify_offline")
+                return
+    except Exception as e:
+        print(f"MAC-herkoppeling Shelly EM fout ({old_ip}): {e}")
+    finally:
+        _p1_shelly_mac_relocating = False
 
 
 # ================= ROUTES =================
@@ -1533,12 +1608,21 @@ def parse_devices_from_request(req):
     return devices
 
 
+def _p1_configured(cfg):
+    """Is er een bruikbare bron voor het live netvermogen ingesteld? Bij Shelly
+    als bron telt p1_ip niet mee, die is dan optioneel (alleen nog voor gas
+    en/of het aansturen van een HomeWizard-accu)."""
+    if cfg.get("p1_source") == "shelly":
+        return bool((cfg.get("p1_shelly_ip") or "").strip())
+    return bool((cfg.get("p1_ip") or "").strip())
+
+
 @app.route("/", methods=["GET", "POST"])
 def wizard():
     if not require_login():
         return redirect("/login")
     cfg = load_config()
-    if cfg.get("p1_ip") and cfg.get("shelly_devices"):
+    if _p1_configured(cfg) and cfg.get("shelly_devices"):
         return redirect("/dashboard")
     # On first boot (no config yet), show setup choice screen unless user chose fresh install
     if request.method == "GET" and not request.args.get("fresh"):
@@ -1546,6 +1630,14 @@ def wizard():
     if request.method == "POST":
         old_cfg = load_config()
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
+        cfg["p1_source"] = request.form.get("p1_source", "homewizard")
+        cfg["p1_shelly_ip"] = request.form.get("p1_shelly_ip", "").strip()
+        try:
+            cfg["p1_shelly_channels"] = sorted(set(
+                int(c) for c in request.form.getlist("p1_shelly_channels[]")
+            ))
+        except (ValueError, TypeError):
+            cfg["p1_shelly_channels"] = []
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
         cfg["shelly_devices"] = parse_devices_from_request(request)
@@ -1570,7 +1662,7 @@ def setup_choice():
     if not require_login():
         return redirect("/login")
     cfg = load_config()
-    if cfg.get("p1_ip") and cfg.get("shelly_devices"):
+    if _p1_configured(cfg) and cfg.get("shelly_devices"):
         return redirect("/dashboard")
     error = request.args.get("error", "")
     return render_template("setup_choice.html", error=error)
@@ -1604,7 +1696,7 @@ def setup_import():
     init_device_states(cfg["shelly_devices"])
     init_device_pids(cfg["shelly_devices"])
     write_audit_log("config_imported_firstboot", {"devices": len(cfg.get("shelly_devices", []))})
-    if cfg.get("p1_ip") and cfg.get("shelly_devices"):
+    if _p1_configured(cfg) and cfg.get("shelly_devices"):
         return redirect("/dashboard")
     return redirect("/?fresh=1")
 
@@ -1617,6 +1709,14 @@ def wizard_forced():
     if request.method == "POST":
         old_cfg = load_config()
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
+        cfg["p1_source"] = request.form.get("p1_source", "homewizard")
+        cfg["p1_shelly_ip"] = request.form.get("p1_shelly_ip", "").strip()
+        try:
+            cfg["p1_shelly_channels"] = sorted(set(
+                int(c) for c in request.form.getlist("p1_shelly_channels[]")
+            ))
+        except (ValueError, TypeError):
+            cfg["p1_shelly_channels"] = []
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
         cfg["shelly_devices"] = parse_devices_from_request(request)
@@ -1644,6 +1744,14 @@ def settings_p1():
     if request.method == "POST":
         old_cfg = load_config()
         cfg["p1_ip"] = request.form.get("p1ip", "").strip()
+        cfg["p1_source"] = request.form.get("p1_source", "homewizard")
+        cfg["p1_shelly_ip"] = request.form.get("p1_shelly_ip", "").strip()
+        try:
+            cfg["p1_shelly_channels"] = sorted(set(
+                int(c) for c in request.form.getlist("p1_shelly_channels[]")
+            ))
+        except (ValueError, TypeError):
+            cfg["p1_shelly_channels"] = []
         cfg["battery_enabled"] = "battery_enabled" in request.form
         cfg["battery_type"] = request.form.get("battery_type", "homewizard")
         raw_ips = request.form.getlist("battery_ip[]")
@@ -1683,6 +1791,22 @@ def settings_p1():
             write_audit_log("config_updated", changes)
         return redirect("/settings")
     return render_template("settings_p1.html", config=cfg, dark_mode=get_user_dark_mode())
+
+
+@app.route("/api/p1/shelly_probe", methods=["POST"])
+def api_p1_shelly_probe():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    data = request.get_json(force=True) or {}
+    ip = (data.get("ip") or "").strip()
+    if not ip:
+        return jsonify(success=False, error="Geen IP-adres opgegeven"), 400
+    result = probe_shelly_em(ip)
+    if not result:
+        return jsonify(success=False, error="Geen Shelly EM/3EM gevonden op dit IP-adres")
+    return jsonify(success=True, **result)
 
 
 @app.route("/api/battery/debug")
@@ -1884,7 +2008,7 @@ def dashboard():
     if not require_login():
         return redirect("/login")
     cfg = load_config()
-    if not cfg.get("p1_ip") or not cfg.get("shelly_devices"):
+    if not _p1_configured(cfg) or not cfg.get("shelly_devices"):
         return redirect("/")
     return render_template("dashboard.html", config=cfg, dark_mode=get_user_dark_mode())
 
@@ -4471,7 +4595,8 @@ def scan_devices():
         result = scan_network_for_devices()
         write_audit_log("network_scan", {
             "p1_found": len(result.get("p1_meters", [])),
-            "shelly_found": len(result.get("shelly_devices", []))
+            "shelly_found": len(result.get("shelly_devices", [])),
+            "shelly_em_found": len(result.get("shelly_em_devices", []))
         })
         return jsonify(result)
     except Exception as e:
@@ -4646,6 +4771,22 @@ def api_p1_reset_mac():
     return jsonify(success=True)
 
 
+@app.route("/api/p1/shelly/reset_mac", methods=["POST"])
+def api_p1_shelly_reset_mac():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify({"error": "Geen toegang"}), 403
+    cfg = load_config()
+    cfg["p1_shelly_mac"] = ""
+    save_config(cfg)
+    write_audit_log("p1_shelly_mac_reset", {})
+    shelly_ip = (cfg.get("p1_shelly_ip") or "").strip()
+    if shelly_ip:
+        threading.Thread(target=backfill_p1_shelly_mac, args=(shelly_ip,), daemon=True).start()
+    return jsonify(success=True)
+
+
 @app.route("/api/device/reset_mac", methods=["POST"])
 def api_device_reset_mac():
     if not require_login():
@@ -4704,6 +4845,55 @@ def check_shelly_online(ip):
         return r.status_code == 200
     except Exception:
         return False
+
+
+def probe_shelly_em(ip, timeout=3):
+    """Detecteert of dit een Shelly Pro 3EM in triphase-stand is (één EM-instance
+    met een kant-en-klaar totaalveld) of een Pro EM / 3EM in monophase-stand
+    (losse EM1-kanalen, elk een los circuit — niet zomaar bij elkaar op te
+    tellen, de gebruiker moet zelf aangeven welk(e) kanaal/kanalen de
+    hoofdaansluiting meten). Geeft {"mode": "triphase", "power": ...} of
+    {"mode": "channels", "channels": [{"id":0,"power":...}, ...]} terug."""
+    try:
+        r = requests.get(f"http://{ip}/rpc/EM.GetStatus?id=0", timeout=timeout)
+        if r.status_code == 200:
+            body = r.json()
+            if "total_act_power" in body:
+                return {"mode": "triphase", "power": body["total_act_power"]}
+    except Exception:
+        pass
+    channels = []
+    for ch_id in range(3):
+        try:
+            r = requests.get(f"http://{ip}/rpc/EM1.GetStatus?id={ch_id}", timeout=timeout)
+            if r.status_code != 200:
+                break
+            body = r.json()
+            if "act_power" not in body:
+                break
+            channels.append({"id": ch_id, "power": body["act_power"]})
+        except Exception:
+            break
+    if channels:
+        return {"mode": "channels", "channels": channels}
+    return None
+
+
+def get_shelly_em_power(ip, channels=None, timeout=2):
+    """Netvermogen via Shelly Pro EM/3EM. Zonder channels: driefasen-totaal
+    (EM.GetStatus). Met channels: som van de opgegeven EM1-kanalen. Zelfde
+    conventie als HomeWizard P1 (active_power_w): positief = van net,
+    negatief = teruglevering, dus geen omkering nodig."""
+    if not channels:
+        r = requests.get(f"http://{ip}/rpc/EM.GetStatus?id=0", timeout=timeout)
+        r.raise_for_status()
+        return float(r.json()["total_act_power"])
+    total = 0.0
+    for ch_id in channels:
+        r = requests.get(f"http://{ip}/rpc/EM1.GetStatus?id={ch_id}", timeout=timeout)
+        r.raise_for_status()
+        total += float(r.json()["act_power"])
+    return total
 
 
 def check_http_device_online(ip, path):
@@ -4929,7 +5119,7 @@ def maybe_turn_off_power_socket(device):
         return
     cfg = load_config()
     settings = get_runtime_settings(cfg)
-    hold_seconds = int(settings.get("POWER_SOCKET_HOLD_SECONDS", 3600) or 3600)
+    hold_seconds = int(settings.get("POWER_SOCKET_HOLD_SECONDS", 60) or 60)
     if st["started"] or st["on"] or st["brightness"] > 0 or st["waiting_for_power_socket"] or st.get("pending_start"):
         return
     last_cmd = st.get("power_socket_last_on_command", 0)
@@ -5822,7 +6012,7 @@ def control_loop():
             init_device_pids(devices)
 
             # Regelsnelheid: Ki-actie ±20% instelbaar via expert settings
-            _ki_adjust = max(-20, min(20, int(settings.get("PID_KI_ADJUST", 0) or 0)))
+            _ki_adjust = max(-30, min(20, int(settings.get("PID_KI_ADJUST", 0) or 0)))
             _ki_eff = PID_KI * (1 + _ki_adjust / 100.0)
             for _pid in device_pids.values():
                 if _pid.Ki != _ki_eff:
@@ -8163,22 +8353,53 @@ def p1_poll_loop():
     p1_offline_since = None
     p1_mac_last_try = 0
     p1_relocate_last_try = 0
+    p1_shelly_offline_since = None
+    p1_shelly_mac_last_try = 0
+    p1_shelly_relocate_last_try = 0
     while True:
         p1_ip = None
+        shelly_ip = None
         cfg = None
+        source = "homewizard"
         try:
             cfg = load_config()
-            p1_ip = cfg.get("p1_ip")
-            if p1_ip:
-                data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
-                current_power = float(data.get("active_power_w", 0) or 0)
-                _p1_online = True
-                p1_offline_since = None
-                if not (cfg.get("p1_mac") or "").strip() and time.time() - p1_mac_last_try > 300:
-                    p1_mac_last_try = time.time()
-                    threading.Thread(target=backfill_p1_mac, args=(p1_ip,), daemon=True).start()
-                if cfg.get("gas_enabled"):
-                    gas_raw = data.get("total_gas_m3")
+            source = cfg.get("p1_source", "homewizard")
+            hw_data = None
+
+            if source == "shelly":
+                shelly_ip = (cfg.get("p1_shelly_ip") or "").strip()
+                if shelly_ip:
+                    current_power = get_shelly_em_power(shelly_ip, cfg.get("p1_shelly_channels") or [])
+                    _p1_online = True
+                    p1_shelly_offline_since = None
+                    if not (cfg.get("p1_shelly_mac") or "").strip() and time.time() - p1_shelly_mac_last_try > 300:
+                        p1_shelly_mac_last_try = time.time()
+                        threading.Thread(target=backfill_p1_shelly_mac, args=(shelly_ip,), daemon=True).start()
+            else:
+                p1_ip = cfg.get("p1_ip")
+                if p1_ip:
+                    hw_data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
+                    current_power = float(hw_data.get("active_power_w", 0) or 0)
+                    _p1_online = True
+                    p1_offline_since = None
+                    if not (cfg.get("p1_mac") or "").strip() and time.time() - p1_mac_last_try > 300:
+                        p1_mac_last_try = time.time()
+                        threading.Thread(target=backfill_p1_mac, args=(p1_ip,), daemon=True).start()
+
+            # Gas komt altijd van de HomeWizard P1 meter, los van p1_source — een
+            # Shelly EM/3EM heeft geen DSMR/gas-aansluiting. Is p1_ip nog
+            # ingevuld (bv. ook gebruikt voor gas en/of accubediening), dan
+            # blijft gas gewoon werken ook als de stroommeting via Shelly loopt.
+            if cfg.get("gas_enabled"):
+                gas_data = hw_data
+                gas_ip = (cfg.get("p1_ip") or "").strip()
+                if gas_data is None and gas_ip:
+                    try:
+                        gas_data = requests.get(f"http://{gas_ip}/api/v1/data", timeout=2).json()
+                    except Exception:
+                        gas_data = None
+                if gas_data is not None:
+                    gas_raw = gas_data.get("total_gas_m3")
                     if gas_raw is not None:
                         current_gas_m3 = float(gas_raw)
                         today = datetime.now().date().isoformat()
@@ -8188,7 +8409,16 @@ def p1_poll_loop():
                             save_state(force=True)
         except Exception:
             _p1_online = False
-            if p1_ip and cfg:
+            if source == "shelly" and shelly_ip and cfg:
+                if p1_shelly_offline_since is None:
+                    p1_shelly_offline_since = time.time()
+                shelly_mac = (cfg.get("p1_shelly_mac") or "").strip()
+                if (shelly_mac
+                        and time.time() - p1_shelly_offline_since >= MAC_RESCAN_AFTER
+                        and time.time() - p1_shelly_relocate_last_try >= MAC_RESCAN_COOLDOWN):
+                    p1_shelly_relocate_last_try = time.time()
+                    threading.Thread(target=try_relocate_p1_shelly_by_mac, args=(shelly_ip, shelly_mac), daemon=True).start()
+            elif source != "shelly" and p1_ip and cfg:
                 if p1_offline_since is None:
                     p1_offline_since = time.time()
                 p1_mac = (cfg.get("p1_mac") or "").strip()
