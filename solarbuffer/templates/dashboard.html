@@ -2938,7 +2938,10 @@
             } else {
               kwhEl.textContent = '';
             }
-            document.getElementById('batVoltRow').style.display = isThirdParty ? 'none' : '';
+            // Deze rij toonde oorspronkelijk voltage (alleen HomeWizard), maar is
+            // hergebruikt voor de modusweergave hieronder — die is juist ook, of
+            // vooral, relevant voor Marstek/Zendure, dus niet meer verbergen.
+            document.getElementById('batVoltRow').style.display = '';
             document.getElementById('batForceTofullRow').style.display = isThirdParty ? 'none' : '';
             const batIconEl = document.getElementById('batBrandIcon');
             const batLogoSrc = isMarstek ? '/static/icons/battery-marstek.png' :
