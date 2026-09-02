@@ -367,7 +367,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.7.1</span>
+          <span class="version-badge new">v0.7.2</span>
+          <span class="update-date-small">2 sep</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Shelly als P1-bron, en een stabielere Marstek-koppeling</div>
+          <div class="update-body">Naast de HomeWizard P1-meter kun je nu ook een Shelly Pro EM of 3EM kiezen als bron voor het live netvermogen (Instellingen → Configuratie → P1/Batterij), handig als je slimme meter maar eens per 10 seconden ververst in plaats van elke seconde. SolarBuffer herkent het apparaat automatisch via een netwerkscan, bepaalt zelf of het een driefasen-totaal of losse kanalen betreft, en herstelt de koppeling automatisch via het MAC-adres als het IP-adres ooit wijzigt. Voor Marstek-accu's zijn daarnaast een aantal betrouwbaarheidsverbeteringen doorgevoerd: een gewenste wissel tussen Auto- en Handmatige modus moet nu kort aanhouden voordat SolarBuffer 'm echt naar de accu stuurt, in plaats van bij elke kleine schommeling in het vermogen meteen te wisselen, wat de accu's eigen regeling minder vaak onderbreekt. De batterijkaart op het dashboard toont nu ook de actuele modus (Auto/Handmatig), en de laad/ontlaad-pijl gebruikt bij een gekoppelde vermogensmeter voortaan het teken van die meter zelf in plaats van accu-vlaggen die niet altijd betrouwbaar bleken. Ook is een weergavefout verholpen waarbij de batterijkaart een verouderde status kon tonen, en blijft de accu niet langer onnodig geblokkeerd wanneer de boiler sowieso niet kan draaien (bijvoorbeeld met automatische besturing uit). Bij de temperatuur-uitschakeling is de ondergrens iets verruimd (2 W in plaats van 3 W) zodat een meting die net op de grens schommelt de wachttijd niet steeds laat resetten. Tot slot gaat de regelsnelheid-schuif ("trager") nu tot -30% en regelt ook echt merkbaar geleidelijker, niet alleen intern.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.2" target="_blank" rel="noopener">→ Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.7.1</span>
           <span class="update-date-small">31 aug</span>
         </div>
         <div class="update-divider"></div>

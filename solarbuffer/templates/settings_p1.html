@@ -296,11 +296,12 @@
     html[data-theme="dark"] .prio-label { color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .prio-sub   { color: hsl(224, 18%, 74%); }
     .bat-type-grid { grid-template-columns: 1fr 1fr 1fr; }
-    .bat-type-grid .prio-icon { background: transparent !important; width: auto; height: auto; border-radius: 0; }
-    .bat-type-grid .prio-icon img { border-radius: 50%; display: block; }
-    .bat-type-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
-    html[data-theme="dark"] .bat-type-grid .prio-icon { background: transparent !important; border-radius: 0; }
-    html[data-theme="dark"] .bat-type-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
+    .p1-source-grid { grid-template-columns: 1fr 1fr; }
+    .bat-type-grid .prio-icon, .p1-source-grid .prio-icon { background: transparent !important; width: auto; height: auto; border-radius: 0; }
+    .bat-type-grid .prio-icon img, .p1-source-grid .prio-icon img { border-radius: 50%; display: block; }
+    .bat-type-grid .prio-option:checked + .prio-card .prio-icon, .p1-source-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
+    html[data-theme="dark"] .bat-type-grid .prio-icon, html[data-theme="dark"] .p1-source-grid .prio-icon { background: transparent !important; border-radius: 0; }
+    html[data-theme="dark"] .bat-type-grid .prio-option:checked + .prio-card .prio-icon, html[data-theme="dark"] .p1-source-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
     .select-field {
       width: 100%;
       padding: 0.65rem 0.85rem;
@@ -331,31 +332,92 @@
 
     <form method="POST" action="/settings/p1">
       <div class="card">
-        <div class="card-title">P1-meter koppelen</div>
-        <div class="field-group">
-          <label for="p1ip">IP-adres P1-meter</label>
-          <input type="text" id="p1ip" name="p1ip"
-                 placeholder="Bijv. 192.168.178.21"
-                 value="{{ config.p1_ip or '' }}"
-                 pattern="^(\d{1,3}\.){3}\d{1,3}$" required>
-        </div>
-        <div class="field-group">
-          <label for="p1mac">MAC-adres P1-meter</label>
-          <div style="display:flex;gap:0.5rem;align-items:center;">
-            <input type="text" id="p1mac" readonly
-                   value="{{ config.p1_mac or 'Wordt automatisch opgehaald zodra de meter online is' }}"
-                   style="flex:1;">
+        <div class="card-title">Netmeting</div>
 
-            <button type="button" class="btn-secondary" id="p1MacResetBtn" onclick="resetP1Mac()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
-              Reset
-            </button>
+        <div class="field-group">
+          <label>Bron van live netvermogen</label>
+          <div class="prio-grid p1-source-grid">
+            <input type="radio" class="prio-option" name="p1_source" value="homewizard" id="p1src_hw"
+                   {% if config.p1_source != 'shelly' %}checked{% endif %}
+                   onchange="updateP1Source()">
+            <label class="prio-card" for="p1src_hw">
+              <div class="prio-icon">
+                <img src="/static/icons/battery-homewizard.png" width="44" height="44" alt="HomeWizard">
+              </div>
+              <span class="prio-label">HomeWizard P1-meter</span>
+              <span class="prio-sub">Standaard, via de slimme meter</span>
+            </label>
+
+            <input type="radio" class="prio-option" name="p1_source" value="shelly" id="p1src_shelly"
+                   {% if config.p1_source == 'shelly' %}checked{% endif %}
+                   onchange="updateP1Source()">
+            <label class="prio-card" for="p1src_shelly">
+              <div class="prio-icon">
+                <img src="/static/icons/shelly.png" width="44" height="44" alt="Shelly">
+              </div>
+              <span class="prio-label">Shelly Pro EM / 3EM</span>
+              <span class="prio-sub">Handig bij een trage slimme meter</span>
+            </label>
           </div>
-          <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Gebruikt om het IP-adres automatisch te herstellen als het wijzigt. Heb je een nieuwe P1-meter gekoppeld op dit IP-adres? Klik dan op Reset zodat het juiste MAC-adres opnieuw wordt opgehaald.</div>
-          <div id="p1MacStatus" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
         </div>
+
         <button type="button" class="btn-scan" id="scanBtn" onclick="doScan()">Scan netwerk</button>
         <div class="scan-status" id="scanStatus"></div>
         <div class="scan-results" id="scanResults"></div>
+
+        <div id="hwP1Fields">
+          <div class="field-group">
+            <label for="p1ip">IP-adres P1-meter</label>
+            <input type="text" id="p1ip" name="p1ip"
+                   placeholder="Bijv. 192.168.178.21"
+                   value="{{ config.p1_ip or '' }}"
+                   pattern="^(\d{1,3}\.){3}\d{1,3}$">
+            <div id="p1ipHint" style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;display:none;">Optioneel als je hierboven Shelly als bron kiest, nog wel nodig voor gasmeting en/of het aansturen van een HomeWizard-accu.</div>
+          </div>
+          <div class="field-group">
+            <label for="p1mac">MAC-adres P1-meter</label>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <input type="text" id="p1mac" readonly
+                     value="{{ config.p1_mac or 'Wordt automatisch opgehaald zodra de meter online is' }}"
+                     style="flex:1;">
+
+              <button type="button" class="btn-secondary" id="p1MacResetBtn" onclick="resetP1Mac()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
+                Reset
+              </button>
+            </div>
+            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Gebruikt om het IP-adres automatisch te herstellen als het wijzigt. Heb je een nieuwe P1-meter gekoppeld op dit IP-adres? Klik dan op Reset zodat het juiste MAC-adres opnieuw wordt opgehaald.</div>
+            <div id="p1MacStatus" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+          </div>
+        </div>
+
+        <div id="shellyP1Fields" style="display:none;">
+          <div class="field-group">
+            <label for="p1_shelly_ip">IP-adres Shelly Pro EM/3EM</label>
+            <input type="text" id="p1_shelly_ip" name="p1_shelly_ip"
+                   placeholder="Bijv. 192.168.178.30"
+                   value="{{ config.p1_shelly_ip or '' }}"
+                   pattern="^(\d{1,3}\.){3}\d{1,3}$">
+          </div>
+          <div class="field-group">
+            <label for="p1_shelly_mac">MAC-adres Shelly Pro EM/3EM</label>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <input type="text" id="p1_shelly_mac" readonly
+                     value="{{ config.p1_shelly_mac or 'Wordt automatisch opgehaald zodra het apparaat online is' }}"
+                     style="flex:1;">
+
+              <button type="button" class="btn-secondary" id="p1ShellyMacResetBtn" onclick="resetP1ShellyMac()" style="white-space:nowrap;padding:0.55rem 0.75rem;flex-shrink:0;">
+                Reset
+              </button>
+            </div>
+            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Gebruikt om het IP-adres automatisch te herstellen als het wijzigt. Heb je een nieuwe Shelly op dit IP-adres aangesloten? Klik dan op Reset zodat het juiste MAC-adres opnieuw wordt opgehaald.</div>
+            <div id="p1ShellyMacStatus" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+          </div>
+          <button type="button" class="btn-primary" id="shellyProbeBtn" onclick="probeShellyEm()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">
+            Kanalen zoeken
+          </button>
+          <div id="shellyProbeStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+          <div id="shellyChannelPicker"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -656,6 +718,79 @@
       update();
       updateBatteryType();
     })();
+
+    function updateP1Source() {
+      var isShelly = document.getElementById('p1src_shelly').checked;
+      document.getElementById('hwP1Fields').style.display = isShelly ? 'none' : 'block';
+      document.getElementById('shellyP1Fields').style.display = isShelly ? 'block' : 'none';
+      document.getElementById('p1ip').required = !isShelly;
+      document.getElementById('p1ipHint').style.display = isShelly ? 'block' : 'none';
+    }
+    updateP1Source();
+
+    function renderShellyChannelPicker(result, selected) {
+      var box = document.getElementById('shellyChannelPicker');
+      if (result.mode === 'triphase') {
+        box.innerHTML = '<div style="font-size:0.82rem;color:hsl(145,55%,32%);margin-top:0.5rem;">Driefasen-totaal gevonden (' + result.power.toFixed(0) + ' W nu), geen kanaalkeuze nodig.</div>';
+        return;
+      }
+      var rows = result.channels.map(function(ch) {
+        var checked = selected.indexOf(ch.id) !== -1 ? 'checked' : '';
+        return '<label style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border:1px solid hsl(224, 20%, 88%);border-radius:0.5rem;margin-top:0.4rem;cursor:pointer;">'
+          + '<input type="checkbox" name="p1_shelly_channels[]" value="' + ch.id + '" ' + checked + '>'
+          + '<span>Kanaal ' + (ch.id + 1) + ' &middot; nu <b>' + ch.power.toFixed(0) + ' W</b></span>'
+          + '</label>';
+      }).join('');
+      box.innerHTML = '<div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-top:0.6rem;margin-bottom:0.2rem;">Geen totaalveld gevonden, dit apparaat meet losse circuits. Vink aan welk(e) kanaal/kanalen je hoofdaansluiting meten (bij twijfel: schakel iets groots aan/uit en kijk welk kanaal reageert).</div>' + rows;
+    }
+
+    function probeShellyEm() {
+      var ip = document.getElementById('p1_shelly_ip').value.trim();
+      var status = document.getElementById('shellyProbeStatus');
+      var btn = document.getElementById('shellyProbeBtn');
+      if (!ip) {
+        status.style.display = 'block';
+        status.style.cssText += 'background:hsl(0,60%,95%);border-color:hsl(0,60%,85%);color:hsl(0,65%,36%);';
+        status.textContent = 'Vul eerst een IP-adres in.';
+        return;
+      }
+      btn.disabled = true;
+      status.style.display = 'block';
+      status.style.cssText += 'background:hsl(224, 20%, 96%);border-color:hsl(224, 20%, 88%);color:hsl(224, 18%, 45%);';
+      status.textContent = 'Bezig met zoeken…';
+      fetch('/api/p1/shelly_probe', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ip: ip})
+      }).then(r => r.json()).then(function(res) {
+        btn.disabled = false;
+        if (!res.success) {
+          status.style.cssText = status.style.cssText.replace(/background:[^;]+;|border-color:[^;]+;|color:[^;]+;/g, '')
+            + 'background:hsl(0,60%,95%);border-color:hsl(0,60%,85%);color:hsl(0,65%,36%);';
+          status.textContent = res.error || 'Niet gelukt.';
+          document.getElementById('shellyChannelPicker').innerHTML = '';
+          return;
+        }
+        status.style.display = 'none';
+        renderShellyChannelPicker(res, {{ (config.p1_shelly_channels or []) | tojson }});
+      }).catch(function() {
+        btn.disabled = false;
+        status.style.cssText = status.style.cssText.replace(/background:[^;]+;|border-color:[^;]+;|color:[^;]+;/g, '')
+          + 'background:hsl(0,60%,95%);border-color:hsl(0,60%,85%);color:hsl(0,65%,36%);';
+        status.textContent = 'Kon geen verbinding maken.';
+      });
+    }
+
+    {% if config.p1_source == 'shelly' and config.p1_shelly_ip %}
+    document.addEventListener('DOMContentLoaded', function() {
+      var box = document.getElementById('shellyChannelPicker');
+      {% if config.p1_shelly_channels %}
+      box.innerHTML = '<div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-top:0.6rem;">Nu ingesteld: kanaal {% for ch in config.p1_shelly_channels %}{{ ch + 1 }}{% if not loop.last %}, {% endif %}{% endfor %}. Klik op Kanalen zoeken om te controleren of dit nog klopt.</div>';
+      {% else %}
+      box.innerHTML = '<div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-top:0.6rem;">Nu ingesteld: driefasen-totaal.</div>';
+      {% endif %}
+    });
+    {% endif %}
 
     var _rowPairTimers = new WeakMap();
 
@@ -1018,6 +1153,40 @@
         });
     }
 
+    function resetP1ShellyMac() {
+      var btn = document.getElementById('p1ShellyMacResetBtn');
+      var status = document.getElementById('p1ShellyMacStatus');
+      var macField = document.getElementById('p1_shelly_mac');
+      btn.disabled = true;
+      fetch('/api/p1/shelly/reset_mac', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          if (data.success) {
+            macField.value = 'Wordt automatisch opgehaald zodra het apparaat online is';
+            setRowStatus(status, 'MAC-adres gereset. Wordt opnieuw opgehaald zodra de Shelly bereikbaar is.', 'success');
+          } else {
+            setRowStatus(status, 'Fout: ' + (data.error || 'onbekend'), 'error');
+          }
+        })
+        .catch(function() {
+          btn.disabled = false;
+          setRowStatus(status, 'Verbindingsfout tijdens resetten.', 'error');
+        });
+    }
+
+    function applyShellyEmScanResult(d) {
+      document.getElementById('p1_shelly_ip').value = d.ip;
+      document.getElementById('p1src_shelly').checked = true;
+      updateP1Source();
+      renderShellyChannelPicker(d, {{ (config.p1_shelly_channels or []) | tojson }});
+    }
+
+    function selectShellyEmScan(i) {
+      const d = (window._shellyEmScanResults || [])[i];
+      if (d) applyShellyEmScanResult(d);
+    }
+
     async function doScan() {
       const btn = document.getElementById('scanBtn');
       const status = document.getElementById('scanStatus');
@@ -1030,17 +1199,34 @@
         const r = await fetch('/scan_devices', { headers: { 'Accept': 'application/json' } });
         const data = await r.json();
         const p1List = Array.isArray(data.p1_meters) ? data.p1_meters : [];
+        const emList = Array.isArray(data.shelly_em_devices) ? data.shelly_em_devices : [];
+        let html = '';
         if (p1List.length > 0) {
           const input = document.getElementById('p1ip');
           if (!input.value.trim()) input.value = p1List[0].ip || '';
-          let html = '<strong>Gevonden:</strong><ul>';
+          html += '<strong>P1-meter gevonden:</strong><ul>';
           p1List.forEach(d => { html += `<li>${escapeHtml(d.name || 'HomeWizard P1')} — ${escapeHtml(d.ip || '')}</li>`; });
           html += '</ul>';
+        }
+        if (emList.length > 0) {
+          html += '<strong>Shelly Pro EM/3EM gevonden:</strong>';
+          if (emList.length === 1) {
+            applyShellyEmScanResult(emList[0]);
+            html += `<div>${escapeHtml(emList[0].name)} — ${escapeHtml(emList[0].ip)} (automatisch ingevuld)</div>`;
+          } else {
+            window._shellyEmScanResults = emList;
+            html += '<div style="margin-top:0.3rem;margin-bottom:0.2rem;">Meerdere gevonden, kies er één:</div>';
+            emList.forEach((d, i) => {
+              html += `<div style="cursor:pointer;padding:0.4rem 0;text-decoration:underline;" onclick="selectShellyEmScan(${i})">${escapeHtml(d.name)} — ${escapeHtml(d.ip)}</div>`;
+            });
+          }
+        }
+        if (html) {
           results.innerHTML = html;
           results.classList.add('visible');
           status.textContent = 'Scan voltooid.';
         } else {
-          status.textContent = 'Geen P1-meter gevonden.';
+          status.textContent = 'Niets gevonden.';
         }
       } catch (e) {
         status.textContent = 'Scannen mislukt.';
