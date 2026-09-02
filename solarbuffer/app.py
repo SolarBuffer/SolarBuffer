@@ -719,6 +719,13 @@ _bat_discharge_start_kwh = None
 _last_marstek_send = 0.0
 _last_marstek_power = None
 _marstek_control_lock = threading.Lock()
+# Hoelang een gewenste Auto/Manual-wissel (bij alleen-laden/alleen-ontladen)
+# onafgebroken moet aanhouden voor we 'm echt naar de accu sturen. Zonder dit
+# triggert elke korte piek rond de 50W-drempel meteen een nieuw commando, wat
+# de accu's eigen regelalgoritme onnodig vaak onderbreekt/herstart.
+MARSTEK_MODE_CONFIRM = 15  # s
+_marstek_pending_action = None
+_marstek_pending_since = 0.0
 _last_zendure_send = 0.0
 _last_zendure_power = None
 _zendure_control_lock = threading.Lock()
@@ -7475,6 +7482,7 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
     - beide            → Auto (eigen nul-op-de-meter regeling)
     """
     global _last_battery_permissions, _last_battery_mode, _last_marstek_send, _last_marstek_power
+    global _marstek_pending_action, _marstek_pending_since
 
     if not _marstek_control_lock.acquire(blocking=False):
         return False
@@ -7485,6 +7493,7 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
 
         charge_only = (desired_perms == ["charge_allowed"])
         discharge_only = (desired_perms == ["discharge_allowed"])
+        _threshold_based = charge_only or discharge_only
 
         if mode == "to_full":
             action, target_power = "manual", max_power
@@ -7496,6 +7505,7 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
             elif measured_power > 50:
                 action, target_power = "manual", 0
             else:
+                _marstek_pending_action = None
                 return True  # dode zone rond 0 W: behoud de huidige actie
         elif discharge_only:
             if measured_power > 50:
@@ -7503,9 +7513,26 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
             elif measured_power < -50:
                 action, target_power = "manual", 0
             else:
+                _marstek_pending_action = None
                 return True  # dode zone rond 0 W: behoud de huidige actie
         else:
             action, target_power = "auto", None
+
+        # Bevestigingswachttijd: alleen bij alleen-laden/alleen-ontladen, waar
+        # action bepaald wordt door een live meting die kan schommelen. Een
+        # gewenste wissel moet eerst MARSTEK_MODE_CONFIRM seconden onafgebroken
+        # aanhouden voor we 'm echt sturen, anders herstart elke korte piek de
+        # accu's eigen regelalgoritme onnodig. to_full/geen-perms/beide-toegestaan
+        # zijn bewuste, directe commando's en worden niet vertraagd.
+        if _threshold_based and action != _last_battery_mode:
+            if _marstek_pending_action != action:
+                _marstek_pending_action = action
+                _marstek_pending_since = now
+                return True
+            if now - _marstek_pending_since < MARSTEK_MODE_CONFIRM:
+                return True
+        else:
+            _marstek_pending_action = None
 
         # Manual-schema blijft staan tot we het herschrijven (geen cd_time zoals bij
         # Passive), dus alleen een trage keep-alive tegen externe wijzigingen.
