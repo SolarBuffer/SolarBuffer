@@ -8034,7 +8034,7 @@ def battery_poll_loop():
                         "voltage_v": None,
                         "current_a": None,
                         "cycles": None,
-                        "mode": _last_battery_mode or "Manual",
+                        "mode": _last_battery_mode or "manual",
                         "permissions": _current_battery_desired_perms,
                         "max_consumption_w": max_power,
                         "max_production_w": max_power,
