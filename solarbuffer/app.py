@@ -7925,8 +7925,9 @@ def set_battery_control(control_ip, token, mode, permissions):
 def get_battery_meter_power(cfg):
     """Losse vermogensmeter (Shelly/HomeWizard) op het stopcontact van de accu,
     optioneel te koppelen als de accu-API zelf geen bruikbaar vermogen geeft
-    (bv. Marstek Venus E 3.0 zonder bat_power). Geeft alleen de grootte terug —
-    de richting (laden/ontladen) komt uit de accu's eigen status."""
+    (bv. Marstek Venus E 3.0 zonder bat_power). Geeft het getekende vermogen
+    terug in de meter's eigen conventie (positief = het gekoppelde apparaat
+    trekt stroom). De aanroeper zet dit om naar de SolarBuffer-conventie."""
     pm_type = (cfg.get("battery_power_meter") or "").lower()
     pm_ip = (cfg.get("battery_power_ip") or "").strip()
     if not pm_type or not pm_ip:
@@ -7938,7 +7939,7 @@ def get_battery_meter_power(cfg):
             pw, _ = get_homewizard_power_and_energy(pm_ip)
         else:
             return None
-        return abs(float(pw)) if pw is not None else None
+        return float(pw) if pw is not None else None
     except Exception:
         return None
 
@@ -8010,7 +8011,11 @@ def battery_poll_loop():
                                 discharging = bd.get("dischrg_flag") is True
                                 meter_w = get_battery_meter_power(cfg) if (charging or discharging) else None
                                 if meter_w is not None:
-                                    power_list.append(-meter_w if charging else meter_w)
+                                    # Richting komt nu uit het teken van de meter zelf, niet
+                                    # meer uit charg_flag: die staat bij dit accutype soms
+                                    # tegelijk met dischrg_flag op true, waardoor de oude
+                                    # if/else altijd de laad-tak koos, ook tijdens ontladen.
+                                    power_list.append(-meter_w)
                                 elif charging:
                                     power_list.append(-float(max_power))
                                 elif discharging:
