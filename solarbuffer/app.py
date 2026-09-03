@@ -779,6 +779,22 @@ TEMP_SHUTOFF_RETRY_DEFAULT = 10  # standaard wachttijd (minuten)
 TEMP_SHUTOFF_NOTIFY_RESET_W = 100  # boiler verwarmt weer echt → melding mag opnieuw
 TEMP_SHUTOFF_REARM_HEAT_SEC = 15 * 60  # melding pas opnieuw na ≥15 min echte verwarming
 
+# ================= VERMOGENSCURVE-KALIBRATIE =================
+# Eenmalige (of periodieke) meting per apparaat: helderheid → werkelijk vermogen,
+# zodat de regellus bij een afwijking direct een onderbouwde grote stap kan maken
+# in plaats van daar met de PID stap voor stap naartoe te moeten kruipen. Vooral
+# waardevol bij een trage P1-meter, waar elke PID-stap een volle cyclus kost.
+CALIBRATION_STEPS = list(range(30, 101, 5))       # 30, 35, ..., 100 (%)
+CALIBRATION_FIRST_WAIT = 10                        # s: wachttijd na de eerste stap
+CALIBRATION_STEP_WAIT = 10                         # s: wachttijd na elke volgende stap
+CALIBRATION_REMINDER_DAYS = 90                     # ~3 maanden tussen herinneringen
+CALIBRATION_REMINDER_CHECK_INTERVAL = 24 * 3600    # s: hoe vaak we het überhaupt checken
+POWER_CURVE_MIN_JUMP = 5                           # %: kleinere afwijkingen dan dit zijn normale
+                                                    # P1-ruis, geen echte sprong overslaan voorkomt
+                                                    # dat de helderheid elke meting heen en weer schiet
+_calibrating_ips = set()
+_last_calibration_reminder_check = 0.0
+
 # ================= ANTI-LEGIONELLA =================
 LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
 LEGIONELLA_RUN_SECONDS = 3 * 3600     # 3 uur op maximaal vermogen draaien
@@ -1574,6 +1590,7 @@ def parse_devices_from_request(req):
     power_socket_types = req.form.getlist("power_socket_type[]")
     power_socket_ips = req.form.getlist("power_socket_ip[]")
     boiler_volumes = req.form.getlist("boiler_volume[]")
+    power_curve_enableds = req.form.getlist("power_curve_enabled[]")
 
     row_count = max(len(names), len(ips), len(priorities), len(power_meters),
                     len(power_ips), len(power_socket_types), len(power_socket_ips))
@@ -1603,6 +1620,7 @@ def parse_devices_from_request(req):
         ps_type = get_val(power_socket_types, i).strip().lower()
         ps_ip = get_val(power_socket_ips, i).strip()
         bv = max(10, safe_int(get_val(boiler_volumes, i, "100"), 100))
+        curve_enabled = get_val(power_curve_enableds, i, "0") == "1"
         prev = existing_by_name.get(name, {})
         devices.append({
             "name": name, "ip": ip, "priority": prio,
@@ -1614,6 +1632,12 @@ def parse_devices_from_request(req):
             "mac": (prev.get("mac") or "").strip(),
             "power_socket_mac": (prev.get("power_socket_mac") or "").strip(),
             "power_meter_mac": (prev.get("power_meter_mac") or "").strip(),
+            "power_curve_enabled": curve_enabled,
+            # De curve zelf wordt alleen door de initialisatieroutine geschreven,
+            # dit formulier mag 'm nooit wissen bij het gewoon opslaan van andere velden.
+            "power_curve": prev.get("power_curve"),
+            "power_curve_calibrated_at": prev.get("power_curve_calibrated_at"),
+            "power_curve_reminder_sent_at": prev.get("power_curve_reminder_sent_at"),
         })
     return devices
 
@@ -2282,6 +2306,44 @@ def boost_device(ip):
     st["boost_until"] = now + boost_duration
     write_audit_log("boost_started", {"device_ip": ip, "duration_seconds": boost_duration})
     return jsonify(success=True, boost_active=True, boost_until=st["boost_until"])
+
+
+@app.route("/calibrate_device/<path:ip>", methods=["POST"])
+def calibrate_device(ip):
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+    if not device or ip not in device_states:
+        return jsonify(success=False, error="Apparaat niet gevonden"), 404
+    if ip in _calibrating_ips:
+        return jsonify(success=False, error="Initialisatie loopt al voor dit apparaat"), 409
+    pm_type = (device.get("power_meter") or "").lower()
+    if pm_type not in ("shelly", "homewizard"):
+        return jsonify(success=False, error="Koppel eerst een vermogensmeter aan dit apparaat"), 400
+    threading.Thread(target=calibrate_device_curve, args=(ip,), daemon=True).start()
+    write_audit_log("calibration_triggered", {"ip": ip})
+    total_seconds = CALIBRATION_FIRST_WAIT + (len(CALIBRATION_STEPS) - 1) * CALIBRATION_STEP_WAIT
+    return jsonify(success=True, steps=len(CALIBRATION_STEPS), estimated_seconds=total_seconds)
+
+
+@app.route("/calibrate_device/<path:ip>/status")
+def calibrate_device_status(ip):
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+    st = device_states.get(ip, {})
+    return jsonify(
+        success=True,
+        calibrating=ip in _calibrating_ips,
+        step=st.get("calibration_step"),
+        total_steps=len(CALIBRATION_STEPS),
+        power_curve=(device or {}).get("power_curve"),
+        calibrated_at=(device or {}).get("power_curve_calibrated_at"),
+    )
 
 
 @app.route("/sw.js")
@@ -4972,6 +5034,104 @@ def get_shelly_power_and_energy(ip):
     return 0.0, None
 
 
+def estimate_brightness_for_power(curve, target_power):
+    """Interpoleert de helderheid die bij `target_power` watt hoort, op basis van
+    een eerder ingemeten curve ({percentage_str: watt}, oplopend). Vermogens onder/
+    boven het ingemeten bereik worden geklemd op de laagste/hoogste ingemeten stap.
+    None als de curve leeg is."""
+    if not curve:
+        return None
+    try:
+        points = sorted(((float(k), float(v)) for k, v in curve.items()), key=lambda p: p[1])
+    except (TypeError, ValueError):
+        return None
+    if not points:
+        return None
+    if target_power <= points[0][1]:
+        return points[0][0]
+    if target_power >= points[-1][1]:
+        return points[-1][0]
+    for (pct_a, w_a), (pct_b, w_b) in zip(points, points[1:]):
+        if w_a <= target_power <= w_b:
+            if w_b == w_a:
+                return pct_a
+            frac = (target_power - w_a) / (w_b - w_a)
+            return pct_a + frac * (pct_b - pct_a)
+    return points[-1][0]
+
+
+def get_device_power_reading(device):
+    """Leest het actuele vermogen van een apparaat via de gekoppelde vermogensmeter
+    (zelfde pm_type/pm_ip-patroon als elders in de regellus). None als er geen
+    meter gekoppeld is of de meting mislukt."""
+    pm_type = (device.get("power_meter") or "").lower()
+    pm_ip = (device.get("power_ip") or "").strip() or device.get("ip")
+    try:
+        if pm_type == "shelly":
+            pw, _ = get_shelly_power_and_energy(pm_ip)
+        elif pm_type == "homewizard":
+            pw, _ = get_homewizard_power_and_energy(pm_ip)
+        else:
+            return None
+        return float(pw) if pw is not None else None
+    except Exception:
+        return None
+
+
+def calibrate_device_curve(ip):
+    """Doorloopt CALIBRATION_STEPS (standaard 30-100% in stappen van 5%), wacht
+    per stap tot het vermogen zich heeft ingesteld, en legt zo een curve vast van
+    helderheid → werkelijk vermogen. Draait in een aparte thread; het apparaat
+    wordt ondertussen door de gewone regellus met rust gelaten (_calibrating_ips)."""
+    global _calibrating_ips
+    _calibrating_ips.add(ip)
+    try:
+        cfg = load_config()
+        device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+        if not device:
+            return
+        pm_type = (device.get("power_meter") or "").lower()
+        if pm_type not in ("shelly", "homewizard"):
+            write_audit_log("calibration_failed", {"ip": ip, "reason": "geen vermogensmeter gekoppeld"})
+            return
+
+        write_audit_log("calibration_started", {"ip": ip, "steps": len(CALIBRATION_STEPS)})
+        curve = {}
+        for i, pct in enumerate(CALIBRATION_STEPS):
+            set_shelly(pct, True, ip)
+            if ip in device_states:
+                device_states[ip]["brightness"] = pct
+                device_states[ip]["on"] = True
+                device_states[ip]["calibration_step"] = i + 1
+            time.sleep(CALIBRATION_FIRST_WAIT if i == 0 else CALIBRATION_STEP_WAIT)
+            pw = get_device_power_reading(device)
+            if pw is not None:
+                curve[str(pct)] = round(pw, 1)
+
+        if curve:
+            cfg = load_config()  # vers inladen, kan ondertussen elders gewijzigd zijn
+            for d in cfg.get("shelly_devices", []):
+                if d["ip"] == ip:
+                    d["power_curve"] = curve
+                    d["power_curve_calibrated_at"] = time.time()
+                    d.pop("power_curve_reminder_sent_at", None)
+                    break
+            save_config(cfg)
+            write_audit_log("calibration_completed", {"ip": ip, "points": len(curve)})
+        else:
+            write_audit_log("calibration_failed", {"ip": ip, "reason": "geen enkele meting gelukt"})
+    except Exception as e:
+        write_audit_log("calibration_error", {"ip": ip, "error": str(e)})
+    finally:
+        try:
+            reset_device_to_off(ip)
+        except Exception:
+            pass
+        if ip in device_states:
+            device_states[ip].pop("calibration_step", None)
+        _calibrating_ips.discard(ip)
+
+
 def get_shelly_temperature(ip, channel=100):
     try:
         r = requests.get(f"http://{ip}/rpc/Temperature.GetStatus?id={channel}", timeout=2)
@@ -5975,13 +6135,41 @@ def control_loop():
     import_unfreeze_start = None
     import_off_start = None
     prev_schedule_active_ips = set()
-    _bat_tofull_active = False  # to_full mode actief voor accu-eerst bij max lading + boiler aan
+    _bat_tofull_active = False  # to_full mode actief voor accu-eerst: accu bevroren op max lading, blijft zo tot boiler weer uit staat
     _bat_saturated = False       # accu uitgeregeld: neemt overschot niet op → boiler vrijgeven
     _bat_saturated_since = None  # start aanhoudende export terwijl accu zou moeten laden
+    _ff_last_measured_power = {}  # per ip: laatst gebruikte P1-meting voor curve-sprong
 
     while True:
         try:
             cfg = load_config()
+
+            global _last_calibration_reminder_check
+            if time.time() - _last_calibration_reminder_check >= CALIBRATION_REMINDER_CHECK_INTERVAL:
+                _last_calibration_reminder_check = time.time()
+                _cfg_changed_for_reminder = False
+                for _cd in cfg.get("shelly_devices", []):
+                    _cal_at = _cd.get("power_curve_calibrated_at")
+                    if not _cal_at:
+                        continue  # nog nooit gekalibreerd: geen herinnering, dat is een bewuste keuze
+                    # Sinds wanneer is de hüidige curve oud genoeg? Reken vanaf de
+                    # laatste herinnering als die er al is, anders vanaf de
+                    # kalibratiedatum zelf — dit veld overschrijft power_curve_calibrated_at
+                    # zelf dus nooit, dat blijft de échte kalibratiedatum.
+                    _last_reminder = _cd.get("power_curve_reminder_sent_at") or _cal_at
+                    _age_days = (time.time() - _last_reminder) / 86400
+                    if _age_days >= CALIBRATION_REMINDER_DAYS:
+                        send_notification(
+                            f"De regeling van <b>{_cd.get('name', _cd.get('ip'))}</b> is meer dan "
+                            f"{CALIBRATION_REMINDER_DAYS // 30} maanden geleden geïnitialiseerd. Overweeg "
+                            f"opnieuw te initialiseren via Instellingen → Configuratie → SolarBuffers.",
+                            event_key="ntfy_notify_calibration_reminder"
+                        )
+                        _cd["power_curve_reminder_sent_at"] = time.time()
+                        _cfg_changed_for_reminder = True
+                if _cfg_changed_for_reminder:
+                    save_config(cfg)
+
             anti_legionella_enabled = cfg.get("anti_legionella_enabled", False)
             schedules_enabled = cfg.get("schedules_enabled", True)
             vacation_mode = cfg.get("vacation_mode", False)
@@ -6646,7 +6834,7 @@ def control_loop():
             else:
                 export_start = None
 
-            non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled and d["ip"] not in boost_handled and d["ip"] not in schedule_handled]
+            non_legionella = [d for d in devices_sorted if d["ip"] not in legionella_handled and d["ip"] not in boost_handled and d["ip"] not in schedule_handled and d["ip"] not in _calibrating_ips]
 
             # ================= TEMPERATUUR-UITSCHAKELING =================
             # Boiler op temperatuur: PID volledig uitgeregeld terwijl de eigen
@@ -6816,14 +7004,20 @@ def control_loop():
                             else:
                                 _bat_saturated_since = None
                             _bat_at_max = _bat_at_max or _bat_saturated
-                            # to_full state machine
+                            # to_full state machine. Bevriezen op max-vermogen en de boiler
+                            # starten gebeuren in dezelfde stap zodra de accu zijn plafond
+                            # raakt — niet pas nadat de boiler al draait. Zodra de boiler
+                            # namelijk ook overschot opeet, tapert de accu (nog in Auto)
+                            # daar zelf op af, waardoor de rauwe _bat_at_max-check meteen
+                            # weer onder de drempel kan duiken vóór hij ooit "boiler draait
+                            # al" tegelijk met "accu op max" zag — dat gaf een start/stop-
+                            # flap. Eenmaal bevroren blijft dat zo staan tot de boiler weer
+                            # uit staat, ongeacht wat de live accumeting daarna doet.
                             if _bat_tofull_active:
-                                # Uitschakelconditie: boiler uit EN P1 > +50W (stop grid-import)
-                                if not _any_sb_active and measured_power > 50:
+                                if not _any_sb_active:
                                     _bat_tofull_active = False
                             else:
-                                # Inschakelconditie: accu OP MAX en boiler draait.
-                                if _bat_at_max and _any_sb_active:
+                                if _bat_at_max:
                                     _bat_tofull_active = True
 
                             if _bat_tofull_active:
@@ -6831,10 +7025,6 @@ def control_loop():
                                 battery_blocks_start = False
                                 _desired_mode = "to_full"
                                 _desired_perms = []  # read-only in to_full, wordt genegeerd
-                            elif _bat_at_max:
-                                # Max vermogen bereikt maar to_full nog niet actief → boiler mag starten
-                                battery_blocks_start = False
-                                _desired_perms = ["charge_allowed"]
                             else:
                                 # Nog niet op max → accu vrij in zero mode, boiler wacht
                                 battery_blocks_start = True
@@ -7075,6 +7265,59 @@ def control_loop():
                     continue
 
                 if regulating_device and ip == regulating_device["ip"]:
+                    # Snellere regeling (optioneel, per apparaat): bij een verse P1-meting
+                    # direct een onderbouwde sprong maken op basis van de eerder ingemeten
+                    # vermogenscurve (helderheid -> watt), i.p.v. daar met kleine PID-stapjes
+                    # naartoe te kruipen. We zaaien alleen de integraalterm; de eropvolgende
+                    # PID-aanroep telt daar gewoon zijn eigen P/D-correctie bovenop, dus de
+                    # PID blijft normaal fine-tunen. Zolang de meting ongewijzigd is (bv. een
+                    # trage P1-meter die maar eens per ~10s ververst) blijft dit stil en regelt
+                    # de PID zelfstandig verder.
+                    if (d.get("power_curve_enabled") and d.get("power_curve")
+                            and measured_power != _ff_last_measured_power.get(ip)):
+                        _curve = d["power_curve"]
+                        _own_power = st.get("power")
+                        try:
+                            _curve_min_w = min(float(v) for v in _curve.values())
+                        except (TypeError, ValueError):
+                            _curve_min_w = None
+                        # Boiler op temperatuur: trekt bij elk percentage nog maar een paar
+                        # watt, terwijl de curve is ingemeten met een koude boiler die bij
+                        # het laagste percentage al veel meer trok. De curve is dan niet meer
+                        # representatief — sprong overslaan en gewoon de PID laten draaien,
+                        # anders duwt de sprong de helderheid zinloos steeds hoger.
+                        _saturated = (
+                            _own_power is not None and _curve_min_w is not None
+                            and _own_power < _curve_min_w * 0.5
+                        )
+                        if not _saturated:
+                            _ff_target = (_own_power or 0) - measured_power
+                            _ff_b = estimate_brightness_for_power(_curve, _ff_target)
+                            # Alleen zaaien bij een echte afwijking t.o.v. de huidige stand.
+                            # Zonder deze grens telt elke kleine schommeling in het verbruik
+                            # (heel normaal op een snelle P1-meter) ook als "nieuwe meting" en
+                            # zou de integraal bij elke cyclus met volle overtuiging naar een
+                            # net iets andere schatting springen — dat gaf zichtbaar schommelend
+                            # gedrag in plaats van de bedoelde rustige, grote sprong.
+                            if _ff_b is not None and abs(_ff_b - st["brightness"]) >= POWER_CURVE_MIN_JUMP:
+                                _pid = device_pids[ip]
+                                _now = _pid.time_fn()
+                                # Alleen zaaien op een cyclus waarop de PID toch al gaat
+                                # herberekenen (zijn eigen sample_time, standaard 2s). Buiten
+                                # die cyclus retourneert de PID-aanroep gewoon de vorige output
+                                # zonder de integraal te gebruiken — dan zou de sprong stil
+                                # blijven liggen tot een latere, niet-bijbehorende cyclus.
+                                if (_pid._last_time is None or _pid.sample_time is None
+                                        or (_now - _pid._last_time) >= _pid.sample_time):
+                                    # De P-term reageert zelf ook op de huidige afwijking, dus
+                                    # die telt anders dubbel mee bovenop onze sprong (sprong +
+                                    # volle P-reactie erbovenop = overshoot, en dat schommelde
+                                    # heen en weer). Reken 'm van tevoren uit en trek 'm van de
+                                    # sprong af, zodat sprong + P samen precies op de schatting
+                                    # uitkomen in plaats van erover.
+                                    _predicted_p = _pid.Kp * (_pid.setpoint - pid_power)
+                                    _pid._integral = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, _ff_b - _predicted_p))
+                        _ff_last_measured_power[ip] = measured_power
                     b_pid = device_pids[ip](pid_power)
                     b_pid = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, b_pid))
                     # Zolang de accu actief laadt (>10W) bevriest de boiler op huidig vermogen
