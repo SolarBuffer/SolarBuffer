@@ -3048,7 +3048,7 @@
             <span class="st-end">${s.end_time}</span>
           </div>
           <div class="sched-item-info">
-            <div class="sched-item-name">${escapeHtml(s.name || 'Tijdschema')}${s.type === 'block' ? '<span class="sched-live-badge" style="background:hsl(0,65%,48%);">Verboden</span>' : ''}${activeNow ? '<span class="sched-live-badge">Actief</span>' : ''}</div>
+            <div class="sched-item-name">${escapeHtml(s.name || 'Tijdschema')}${s.type === 'block' ? '<span class="sched-live-badge" style="background:hsl(0,65%,48%);color:#fff;">Verboden</span>' : ''}${activeNow ? '<span class="sched-live-badge">Actief</span>' : ''}</div>
             <div class="sched-day-dots">${dayDots}</div>
             <div class="sched-item-meta">${s.type === 'block' ? 'Mag niet automatisch starten' : s.brightness + '% vermogen'} · ${deviceStr}</div>
           </div>
