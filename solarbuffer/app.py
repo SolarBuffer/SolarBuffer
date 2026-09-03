@@ -2140,6 +2140,12 @@ def status_json():
                     "on": power > 5,
                 }
 
+    _dash_blocked_ips = get_blocked_device_ips(cfg.get("schedules", []), cfg.get("shelly_devices", []))
+    _all_devices_schedule_blocked = (
+        bool(cfg.get("shelly_devices"))
+        and all(d["ip"] in _dash_blocked_ips for d in cfg.get("shelly_devices", []))
+    )
+
     return jsonify(
         power=current_power, brightness=current_brightness, enabled=enabled,
         p1_online=_p1_online, p1_mac_relocating=_p1_mac_relocating,
@@ -2147,6 +2153,8 @@ def status_json():
         expert_settings=get_runtime_settings(cfg),
         schedules=cfg.get("schedules", []),
         active_schedule=active_schedule_info,
+        active_block_schedule_ids=list(get_active_block_schedule_ids(cfg.get("schedules", []))),
+        all_devices_schedule_blocked=_all_devices_schedule_blocked,
         anti_legionella_enabled=anti_legionella_enabled,
         anti_legionella_mode=cfg.get("anti_legionella_mode", "automatic"),
         anti_legionella_triggers=cfg.get("anti_legionella_triggers", []),
@@ -6108,6 +6116,31 @@ def get_blocked_device_ips(schedules, devices_sorted):
         else:
             blocked.update(d["ip"] for d in devices_sorted)
     return blocked
+
+
+def get_active_block_schedule_ids(schedules):
+    """IDs van 'block'-schema's (Verboden) die nu binnen hun tijdvenster vallen.
+    Zelfde dag/tijd-matchlogica als get_blocked_device_ips, maar dan schema-ids
+    i.p.v. apparaat-ips — voor de 'Actief'-badge op het dashboard."""
+    now = datetime.now()
+    weekday = now.weekday()
+    current_minutes = now.hour * 60 + now.minute
+    active_ids = set()
+    for sched in schedules:
+        if sched.get("type") != "block":
+            continue
+        if not sched.get("enabled", True):
+            continue
+        if weekday not in sched.get("days", []):
+            continue
+        try:
+            sh, sm = map(int, sched["start_time"].split(":"))
+            eh, em = map(int, sched["end_time"].split(":"))
+        except (KeyError, ValueError):
+            continue
+        if (sh * 60 + sm) <= current_minutes < (eh * 60 + em):
+            active_ids.add(sched.get("id"))
+    return active_ids
 
 
 # ================= CONTROL LOOP =================
