@@ -2864,7 +2864,7 @@
           if (data.gas_enabled) {
             document.getElementById('accessoriesCard').style.display = '';
           }
-          renderSchedules(data.schedules || [], data.active_schedule || null);
+          renderSchedules(data.schedules || [], data.active_schedule || null, data.active_block_schedule_ids || []);
           renderVacationStatus(data);
 
           // ---- Batterij widget ----
@@ -3015,7 +3015,7 @@
     const SCHED_DEVICES = {{ config.shelly_devices | tojson }};
     let editingSchedId = null;
 
-    function renderSchedules(schedules, active) {
+    function renderSchedules(schedules, active, activeBlockIds) {
       const banner = document.getElementById("schedActiveBanner");
       const nameEl = document.getElementById("schedActiveName");
       if (active) {
@@ -3035,7 +3035,7 @@
         return;
       }
       list.innerHTML = schedules.map(s => {
-        const activeNow = active && active.id === s.id;
+        const activeNow = (active && active.id === s.id) || (activeBlockIds || []).includes(s.id);
         const deviceIps = s.device_ips || [];
         const deviceStr = deviceIps.length
           ? deviceIps.map(ip => { const dev = SCHED_DEVICES.find(d => d.ip === ip); return escapeHtml(dev ? dev.name : ip); }).join(", ")
@@ -3335,6 +3335,9 @@
 
       const exportThreshold = Number(data.expert_settings?.EXPORT_THRESHOLD ?? -50);
       const SVG_BATTERY_BLOCK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67,4H14V2H10V4H8.33A1.33,1.33 0 0,0 7,5.33V20.67C7,21.4 7.6,22 8.33,22H15.67A1.33,1.33 0 0,0 17,20.67V5.33C17,4.6 16.4,4 15.67,4M11,18V13H9L13,6V11H15L11,18Z"/></svg>';
+      // Verboden-schema aan: er kan sowieso niks starten, dus niet de generieke
+      // "Wachten op teruglevering" tonen (suggereert ten onrechte dat hij zo start).
+      if (data.all_devices_schedule_blocked && started.length === 0) return { label: "Verboden", badge: "Verboden · Tijdschema", sub: "Alle buffers geblokkeerd door tijdschema", cls: "off", icon: SVG_TIMER };
       if (data.battery_blocks_start && started.length === 0) return { label: "Geblokkeerd", badge: "Geblokkeerd · Accu laadt eerst", sub: "Wacht tot accu op maximaal vermogen laadt", cls: "import", icon: SVG_BATTERY_BLOCK };
       if (power <= exportThreshold && started.length === 0) return { label: "Wachten", badge: "Wachten op teruglevering", sub: "Teruglevering gedetecteerd, wachttimer loopt", cls: "waiting", icon: SVG_TIMER };
 
