@@ -6917,6 +6917,7 @@ def control_loop():
                     st["temp_shutoff_until"] = None
 
             # ================= BATTERIJ PRIORITEIT =================
+            blocked_ips = get_blocked_device_ips(cfg.get("schedules", []), non_legionella)
             battery_blocks_start = False
             _bat_cfg_enabled = cfg.get("battery_enabled", False)
             if _bat_cfg_enabled:
@@ -6940,9 +6941,17 @@ def control_loop():
                     _force_no_discharge = _legionella_active or _schedule_active or _price_active
                     _has_export = measured_power < 0
                     _pid_at_max = current_brightness >= MAX_BRIGHTNESS
+                    # Verboden-tijdschema blokkeert alleen een nieuwe start (zie
+                    # get_blocked_device_ips) — een apparaat dat al draait, telt dus
+                    # nog gewoon mee. Pas als ALLE apparaten geblokkeerd zijn én er
+                    # niets al draait, kan de boiler deze cyclus onmogelijk iets
+                    # doen, en mag de accu net als bij 'boiler kan sowieso niet
+                    # draaien' zijn volledige rechten krijgen.
+                    _any_devices_unblocked = any(d["ip"] not in blocked_ips for d in non_legionella)
                     _sb_can_run = (
                         enabled
                         and bool(non_legionella)
+                        and (_any_sb_active or _any_devices_unblocked)
                         and any(
                             device_states[d["ip"]].get("online") or
                             device_states[d["ip"]].get("power_socket_online")
@@ -7126,8 +7135,6 @@ def control_loop():
             # ================= EINDE BATTERIJ PRIORITEIT =================
             global _battery_blocks_start
             _battery_blocks_start = battery_blocks_start
-
-            blocked_ips = get_blocked_device_ips(cfg.get("schedules", []), non_legionella)
 
             if export_start is not None and (now - export_start) >= EXPORT_DELAY and not battery_blocks_start:
                 next_dev = get_next_startable_device(non_legionella, blocked_ips)
