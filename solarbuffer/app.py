@@ -446,6 +446,10 @@ def load_config():
         cfg["marstek_invert_power"] = True
     if "zendure_max_power" not in cfg:
         cfg["zendure_max_power"] = 800
+    # http = lokale zenSDK-API op het apparaat zelf (SolarFlow 800 en nieuwer),
+    # mqtt = via de lokale broker op deze Hub (apparaten die alleen MQTT spreken).
+    if cfg.get("zendure_transport") not in ("http", "mqtt"):
+        cfg["zendure_transport"] = "http"
     if "battery_power_meter" not in cfg:
         cfg["battery_power_meter"] = ""
     if "battery_power_ip" not in cfg:
@@ -733,6 +737,19 @@ _hw_battery_control_lock = threading.Lock()
 _last_hw_battery_send = 0.0
 HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
 _zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes)
+
+# ================= DIAGNOSE ACCU-MODUSOVERGANGEN =================
+# Puur observerend: legt elke wissel in de gewenste accu-toestand vast, samen met
+# de volledige beslissingscontext van dat moment. Zo is achteraf te zien welke
+# voorwaarde de omschakeling triggerde (boiler weggevallen, SoC-drempel, socket
+# onbereikbaar) en niet alleen dat er omgeschakeld werd. Daarnaast wordt het
+# commando gelogd dat daadwerkelijk naar de accu ging, want gewenst en verzonden
+# lopen uiteen door de dode zone rond 0W en de bevestigingswachttijd.
+BAT_TRANSITION_LOG_MAX = 300
+_bat_transition_log = []
+_bat_transition_lock = threading.Lock()
+_bat_decision_prev = None   # (toestand, context) van de laatst gelogde beslissing
+_bat_send_prev = None       # laatst gelogde daadwerkelijk verzonden commando
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
 _p1_online = False
@@ -1814,6 +1831,8 @@ def settings_p1():
             cfg["zendure_max_power"] = int(request.form.get("zendure_max_power", 800))
         except (ValueError, TypeError):
             cfg["zendure_max_power"] = 800
+        _ztrans = request.form.get("zendure_transport", "http")
+        cfg["zendure_transport"] = _ztrans if _ztrans in ("http", "mqtt") else "http"
         cfg["battery_priority"] = request.form.get("battery_priority", "boiler")
         try:
             cfg["battery_soc_threshold"] = int(request.form.get("battery_soc_threshold", 95))
@@ -1841,6 +1860,59 @@ def api_p1_shelly_probe():
     if not result:
         return jsonify(success=False, error="Geen Shelly EM/3EM gevonden op dit IP-adres")
     return jsonify(success=True, **result)
+
+
+@app.route("/api/zendure/mqtt_state")
+def api_zendure_mqtt_state():
+    """Diagnose: wat SolarBuffer op dit moment via de lokale broker van de
+    Zendure-apparaten weet, inclusief de per-pakket gegevens."""
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    snap = zendure_mqtt_snapshot()
+    return jsonify(
+        connected=_zendure_mqtt_client is not None,
+        broker=f"{ZENDURE_MQTT_HOST}:{ZENDURE_MQTT_PORT}",
+        transport=load_config().get("zendure_transport", "http"),
+        device_count=len(snap),
+        devices=snap,
+    )
+
+
+@app.route("/api/battery/transitions")
+def battery_transitions():
+    """Diagnose: de laatste accu-modusovergangen, nieuwste eerst.
+
+    Twee soorten regels: 'gewenst' is wat de regellus deze cyclus wilde (met de
+    flags die de omschakeling triggerden) en 'verzonden' is wat er daadwerkelijk
+    naar de accu ging. Ook op te vragen als tekst met ?format=text.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    with _bat_transition_lock:
+        entries = list(_bat_transition_log)
+    entries.reverse()
+    if request.args.get("format") == "text":
+        lines = []
+        for e in entries:
+            if e.get("soort") == "gewenst":
+                van = e.get("van")
+                van_s = f"{van['mode']}/{van['perms']}" if van else "(start)"
+                naar = e["naar"]
+                lines.append(
+                    f"{e['timestamp']}  GEWENST  {van_s} -> {naar['mode']}/{naar['perms']}  "
+                    f"trigger={','.join(e.get('trigger') or []) or 'onbekend'}  "
+                    + " ".join(f"{k}={v}" for k, v in e.get("flags", {}).items()) + "  "
+                    + " ".join(f"{k}={v}" for k, v in e.get("meting", {}).items())
+                )
+            else:
+                extra = {k: v for k, v in e.items()
+                         if k not in ("timestamp", "soort", "actie", "vermogen_w", "opmerking")}
+                lines.append(
+                    f"{e['timestamp']}  VERZONDEN  actie={e['actie']} vermogen={e['vermogen_w']} "
+                    f"{e.get('opmerking', '')}  " + " ".join(f"{k}={v}" for k, v in extra.items())
+                )
+        return Response("\n".join(lines) + "\n", mimetype="text/plain; charset=utf-8")
+    return jsonify(count=len(entries), transitions=entries)
 
 
 @app.route("/api/battery/debug")
@@ -7117,6 +7189,34 @@ def control_loop():
                 global _current_battery_desired_perms
                 _current_battery_desired_perms = list(_desired_perms)
 
+                # Diagnose: welke voorwaarde triggerde deze omschakeling? Alleen
+                # zinvol als de accu online is; dan zijn alle flags hieronder
+                # deze cyclus gezet.
+                if battery_state.get("online"):
+                    log_battery_decision(
+                        _desired_mode,
+                        _desired_perms,
+                        {
+                            "prio": _bat_priority,
+                            "soc_onder_drempel": (_bat_soc is not None and _bat_soc < _bat_soc_thr),
+                            "force_tofull": _force_tofull,
+                            "tofull_actief": _bat_tofull_active,
+                            "saturated": _bat_saturated,
+                            "sb_kan_draaien": _sb_can_run,
+                            "sb_actief": _any_sb_active,
+                            "pid_op_max": _pid_at_max,
+                            "geen_ontladen": _force_no_discharge,
+                            "temp_blokkeert_alles": _temp_shutoff_blocking_all,
+                            "blokkeert_start": battery_blocks_start,
+                        },
+                        {
+                            "net_w": round(measured_power, 1) if measured_power is not None else None,
+                            "accu_w": battery_state.get("power_w"),
+                            "soc": _bat_soc,
+                            "helderheid": current_brightness,
+                        },
+                    )
+
                 _bat_type = cfg.get("battery_type", "homewizard")
                 if battery_state.get("online"):
                     if _bat_type == "marstek":
@@ -7725,6 +7825,77 @@ def marstek_discover(port=30000, timeout=2.5):
     return list(found.values())
 
 
+def _bat_log_append(entry):
+    with _bat_transition_lock:
+        _bat_transition_log.append(entry)
+        if len(_bat_transition_log) > BAT_TRANSITION_LOG_MAX:
+            del _bat_transition_log[:-BAT_TRANSITION_LOG_MAX]
+
+
+def log_battery_decision(mode, perms, flags, meting):
+    """Log de gewenste accu-toestand zodra die verandert.
+
+    flags bevat alleen discrete voorwaarden (booleans, SoC-drempel): daarop wordt
+    bepaald welke ingang de omschakeling triggerde. meting bevat de analoge
+    waarden (netvermogen, accuvermogen, SoC, helderheid); die veranderen elke
+    cyclus en zouden de triggerbepaling onbruikbaar maken, dus die gaan alleen
+    mee als momentopname.
+    """
+    global _bat_decision_prev
+    state = (mode, tuple(sorted(perms or [])))
+    prev_state, prev_flags = _bat_decision_prev if _bat_decision_prev else (None, None)
+    if state == prev_state:
+        _bat_decision_prev = (state, flags)   # alleen context verversen
+        return
+    trigger = sorted(k for k in flags if prev_flags.get(k) != flags[k]) if prev_flags else []
+    entry = {
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "soort": "gewenst",
+        "van": {"mode": prev_state[0], "perms": list(prev_state[1])} if prev_state else None,
+        "naar": {"mode": state[0], "perms": list(state[1])},
+        "trigger": trigger,
+        "flags": dict(flags),
+        "meting": dict(meting),
+    }
+    _bat_decision_prev = (state, flags)
+    _bat_log_append(entry)
+    van = f"{prev_state[0]}/{list(prev_state[1])}" if prev_state else "(start)"
+    print(
+        f"[BAT-DIAG] gewenst {van} -> {state[0]}/{list(state[1])} | "
+        f"trigger={','.join(trigger) if trigger else 'onbekend'} | "
+        + " ".join(f"{k}={v}" for k, v in flags.items()) + " | "
+        + " ".join(f"{k}={v}" for k, v in meting.items()),
+        flush=True,
+    )
+
+
+def log_battery_send(action, power, note="", **extra):
+    """Log wat er daadwerkelijk naar de accu ging (of bewust niet ging).
+
+    Gewenst en verzonden lopen uiteen door de dode zone rond 0W en de
+    bevestigingswachttijd, dus dit is een aparte regel naast log_battery_decision.
+    """
+    global _bat_send_prev
+    key = (action, power, note)
+    if key == _bat_send_prev:
+        return
+    _bat_send_prev = key
+    entry = {
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "soort": "verzonden",
+        "actie": action,
+        "vermogen_w": power,
+        "opmerking": note,
+    }
+    entry.update(extra)
+    _bat_log_append(entry)
+    print(
+        f"[BAT-DIAG] verzonden actie={action} vermogen={power} {note} "
+        + " ".join(f"{k}={v}" for k, v in extra.items()),
+        flush=True,
+    )
+
+
 def release_marstek_to_auto(ip, port):
     """Switch the Marstek battery back to its own automatic mode."""
     global _last_battery_permissions, _last_battery_mode, _last_marstek_send, _last_marstek_power
@@ -7737,6 +7908,9 @@ def release_marstek_to_auto(ip, port):
         try:
             result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
             if result.get("result", {}).get("set_result"):
+                log_battery_send("auto", None, "VERZONDEN (release: besturing uit of P1 offline)",
+                                 vanaf_modus=_last_battery_mode,
+                                 vanaf_vermogen=_last_marstek_power)
                 _last_battery_permissions = None
                 _last_battery_mode = "auto"
                 _last_marstek_power = None
@@ -7789,6 +7963,8 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
                 action, target_power = "manual", 0
             else:
                 _marstek_pending_action = None
+                log_battery_send("(behouden)", None, "dode zone rond 0W bij alleen-laden",
+                                 net_w=round(measured_power, 1), huidige_modus=_last_battery_mode)
                 return True  # dode zone rond 0 W: behoud de huidige actie
         elif discharge_only:
             if measured_power > 50:
@@ -7797,6 +7973,8 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
                 action, target_power = "manual", 0
             else:
                 _marstek_pending_action = None
+                log_battery_send("(behouden)", None, "dode zone rond 0W bij alleen-ontladen",
+                                 net_w=round(measured_power, 1), huidige_modus=_last_battery_mode)
                 return True  # dode zone rond 0 W: behoud de huidige actie
         else:
             action, target_power = "auto", None
@@ -7811,6 +7989,8 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
             if _marstek_pending_action != action:
                 _marstek_pending_action = action
                 _marstek_pending_since = now
+                log_battery_send(action, target_power, "bevestigingswachttijd gestart",
+                                 vanaf_modus=_last_battery_mode, net_w=round(measured_power, 1))
                 return True
             if now - _marstek_pending_since < MARSTEK_MODE_CONFIRM:
                 return True
@@ -7823,10 +8003,17 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
 
         if action == "auto":
             if _last_battery_mode == "auto" and not needs_refresh:
+                log_battery_send("auto", None, "al in auto, niets verzonden")
                 return True
             try:
                 result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": {"mode": "Auto", "auto_cfg": {"enable": 1}}})
                 if result.get("result", {}).get("set_result"):
+                    log_battery_send("auto", None, "VERZONDEN",
+                                     vanaf_modus=_last_battery_mode,
+                                     vanaf_vermogen=_last_marstek_power,
+                                     net_w=round(measured_power, 1),
+                                     accu_w=battery_state.get("power_w"),
+                                     perms=desired_perms)
                     _last_battery_permissions = desired_perms
                     _last_battery_mode = "auto"
                     _last_marstek_power = None
@@ -7839,6 +8026,7 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
         power_changed = (_last_marstek_power is None or
                          abs(target_power - _last_marstek_power) > 25)
         if _last_battery_mode == "manual" and not power_changed and not needs_refresh:
+            log_battery_send("manual", target_power, "al op dit vermogen, niets verzonden")
             return True
 
         try:
@@ -7858,6 +8046,12 @@ def set_marstek_control(ip, port, mode, perms, measured_power=0, max_power=2000,
             }
             result = marstek_udp(ip, port, "ES.SetMode", {"id": 0, "config": cfg_obj})
             if result.get("result", {}).get("set_result"):
+                log_battery_send("manual", target_power, "VERZONDEN",
+                                 vanaf_modus=_last_battery_mode,
+                                 vanaf_vermogen=_last_marstek_power,
+                                 net_w=round(measured_power, 1),
+                                 accu_w=battery_state.get("power_w"),
+                                 perms=desired_perms)
                 _last_battery_permissions = desired_perms
                 _last_battery_mode = "manual"
                 _last_marstek_power = target_power
@@ -8028,6 +8222,234 @@ def zendure_write_properties(ip, properties, timeout=3):
     return True
 
 
+# ================= ZENDURE VIA DE LOKALE MQTT-BROKER =================
+# Veldwaarneming bij een solarFlowPro (5 september 2026, klantlocatie): het
+# topicschema is asymmetrisch. Het apparaat PUBLICEERT op
+# /<prodkey>/<deviceId>/... met een leidende slash, maar ABONNEERT zich op
+# iot/<prodkey>/<deviceId>/# zonder die slash. Leesverzoeken en schrijfcommando's
+# moeten dus naar de iot-variant, antwoorden komen terug op de slash-variant.
+# Geverifieerd via log_type all in mosquitto en de SUBSCRIBE-regel in de
+# brokerlog; een read naar de slash-variant blijft aantoonbaar onbeantwoord.
+#
+# Spontaan stuurt het apparaat alleen properties/energy (chargePower,
+# outputPower, mode, chargeMode, LCNState), elke paar seconden. De rest,
+# inclusief electricLevel (de SoC), komt pas na een getAll-verzoek en dan
+# verdeeld over circa twintig losse deelberichten met steeds een handvol velden.
+# Die voegen we hier samen tot één doorlopend beeld per apparaat.
+ZENDURE_MQTT_HOST = "127.0.0.1"
+ZENDURE_MQTT_PORT = 1883
+ZENDURE_MQTT_READ_INTERVAL = 30    # s: hoe vaak we een volledige getAll uitvragen
+ZENDURE_MQTT_STALE_SECONDS = 90    # s: zonder enig bericht beschouwen we de accu als offline
+
+_zendure_mqtt_client = None
+_zendure_mqtt_lock = threading.Lock()
+_zendure_mqtt_devices = {}   # deviceId -> {prodkey, sn, props, packs, last_seen, last_report}
+# Alleen de slash-variant matcht hier, dus onze eigen publicaties naar iot/... 
+# komen niet als apparaatdata terug binnen.
+_ZENDURE_MQTT_TOPIC_RE = re.compile(r"^/([^/]+)/([^/]+)/(.+)$")
+
+
+def _zendure_mqtt_on_message(client, userdata, msg):
+    m = _ZENDURE_MQTT_TOPIC_RE.match(msg.topic or "")
+    if not m:
+        return
+    prodkey, device_id, _subtopic = m.groups()
+    try:
+        payload = json.loads(msg.payload.decode("utf-8", "replace"))
+    except Exception:
+        return
+    if not isinstance(payload, dict):
+        return
+
+    now = time.time()
+    # Het serienummer zit afhankelijk van het berichttype op het hoofdniveau of
+    # onder params (register-bericht).
+    sn = payload.get("deviceSn") or payload.get("sn")
+    if not sn and isinstance(payload.get("params"), dict):
+        sn = payload["params"].get("deviceSn")
+
+    with _zendure_mqtt_lock:
+        dev = _zendure_mqtt_devices.setdefault(device_id, {
+            "prodkey": prodkey, "sn": None, "props": {}, "packs": {},
+            "last_seen": 0.0, "last_report": 0.0,
+        })
+        dev["prodkey"] = prodkey
+        dev["last_seen"] = now
+        if sn and isinstance(sn, str):
+            dev["sn"] = sn
+        props = payload.get("properties")
+        if isinstance(props, dict) and props:
+            dev["props"].update(props)
+            dev["last_report"] = now
+        pack_data = payload.get("packData")
+        if isinstance(pack_data, list):
+            for pk in pack_data:
+                if not isinstance(pk, dict):
+                    continue
+                psn = pk.get("sn")
+                if psn:
+                    dev["packs"].setdefault(psn, {}).update(
+                        {k: v for k, v in pk.items() if k != "sn"})
+
+
+def zendure_mqtt_request_all():
+    """Vraagt de volledige propertyset op bij elk bekend apparaat.
+
+    Nodig omdat de SoC niet uit zichzelf voorbijkomt; zonder dit verzoek blijft
+    electricLevel staan op wat er bij de vorige ronde binnenkwam.
+    """
+    client = _zendure_mqtt_client
+    if client is None:
+        return 0
+    with _zendure_mqtt_lock:
+        targets = [(d.get("prodkey"), did) for did, d in _zendure_mqtt_devices.items() if d.get("prodkey")]
+    sent = 0
+    for prodkey, device_id in targets:
+        try:
+            client.publish(
+                f"iot/{prodkey}/{device_id}/properties/read",
+                json.dumps({"messageId": int(time.time()) % 100000,
+                            "deviceId": device_id,
+                            "properties": ["getAll"]}),
+            )
+            sent += 1
+        except Exception as e:
+            print(f"[ZENDURE-MQTT] getAll mislukt voor {device_id}: {e}")
+    return sent
+
+
+def zendure_mqtt_snapshot():
+    """Samengevoegd beeld per apparaat, alleen apparaten die recent iets stuurden."""
+    now = time.time()
+    out = {}
+    with _zendure_mqtt_lock:
+        for did, d in _zendure_mqtt_devices.items():
+            if (now - d.get("last_seen", 0)) > ZENDURE_MQTT_STALE_SECONDS:
+                continue
+            out[did] = {
+                "prodkey": d.get("prodkey"),
+                "sn": d.get("sn"),
+                "properties": dict(d.get("props") or {}),
+                "packs": {k: dict(v) for k, v in (d.get("packs") or {}).items()},
+                "last_seen": d.get("last_seen"),
+                "last_report": d.get("last_report"),
+            }
+    return out
+
+
+def zendure_mqtt_write_properties(properties, device_id=None):
+    """Schrijft properties naar het apparaat via de iot-topicvariant.
+
+    LET OP: dit schrijfpad is nog niet tegen echte hardware bevestigd. Het topic
+    klopt aantoonbaar (het apparaat abonneert zich op iot/<prodkey>/<id>/#) en de
+    propertynamen komen één op één overeen met die van de HTTP-API, maar of het
+    apparaat dit payloadformaat accepteert moet nog blijken uit een testschrijf.
+    """
+    client = _zendure_mqtt_client
+    if client is None:
+        raise RuntimeError("Zendure MQTT-client is niet verbonden")
+    with _zendure_mqtt_lock:
+        if device_id is None:
+            ids = list(_zendure_mqtt_devices)
+            if len(ids) != 1:
+                raise RuntimeError(f"Geen eenduidig Zendure-apparaat op de broker ({len(ids)} bekend)")
+            device_id = ids[0]
+        dev = _zendure_mqtt_devices.get(device_id) or {}
+        prodkey = dev.get("prodkey")
+        sn = dev.get("sn")
+    if not prodkey:
+        raise RuntimeError(f"Prodkey onbekend voor Zendure-apparaat {device_id}")
+    payload = {"messageId": int(time.time()) % 100000,
+               "deviceId": device_id,
+               "properties": properties}
+    if sn:
+        payload["sn"] = sn
+    client.publish(f"iot/{prodkey}/{device_id}/properties/write", json.dumps(payload))
+    return True
+
+
+def zendure_apply_properties(ip, properties):
+    """Schrijft properties via het ingestelde transport.
+
+    Zo hoeven release_zendure_to_idle en set_zendure_control niet te weten of dit
+    een zenSDK-apparaat op HTTP is of een MQTT-apparaat op de lokale broker.
+    """
+    if load_config().get("zendure_transport", "http") == "mqtt":
+        return zendure_mqtt_write_properties(properties)
+    return zendure_write_properties(ip, properties)
+
+
+def zendure_mqtt_loop():
+    """Luistert op de lokale broker en vraagt periodiek de volledige set op."""
+    global _zendure_mqtt_client
+    if not MQTT_AVAILABLE:
+        print("[ZENDURE-MQTT] paho-mqtt ontbreekt, lokale Zendure-MQTT niet beschikbaar")
+        return
+    client = None
+    last_read = 0.0
+
+    def _stop():
+        nonlocal client
+        global _zendure_mqtt_client
+        if client is not None:
+            try:
+                client.loop_stop()
+                client.disconnect()
+            except Exception:
+                pass
+        client = None
+        _zendure_mqtt_client = None
+
+    while True:
+        try:
+            cfg = load_config()
+            actief = (cfg.get("battery_enabled", False)
+                      and cfg.get("battery_type") == "zendure"
+                      and cfg.get("zendure_transport", "http") == "mqtt")
+            if not actief:
+                if client is not None:
+                    _stop()
+                    with _zendure_mqtt_lock:
+                        _zendure_mqtt_devices.clear()
+                time.sleep(10)
+                continue
+
+            if client is None:
+                try:
+                    client = _mqtt_lib.Client(
+                        _mqtt_lib.CallbackAPIVersion.VERSION1,
+                        client_id="solarbuffer-zendure", clean_session=True)
+                except AttributeError:
+                    client = _mqtt_lib.Client(client_id="solarbuffer-zendure", clean_session=True)
+                client.on_message = _zendure_mqtt_on_message
+
+                def on_connect(c, userdata, flags, rc):
+                    if rc == 0:
+                        # Alle apparaten op de slash-variant; prodkey en deviceId
+                        # leren we uit het topic zelf, die hoeven niet in de config.
+                        c.subscribe("/+/+/#")
+                        print(f"[ZENDURE-MQTT] verbonden met {ZENDURE_MQTT_HOST}:{ZENDURE_MQTT_PORT}")
+                    else:
+                        print(f"[ZENDURE-MQTT] verbindingsfout code {rc}")
+
+                client.on_connect = on_connect
+                client.connect(ZENDURE_MQTT_HOST, ZENDURE_MQTT_PORT, 60)
+                client.loop_start()
+                _zendure_mqtt_client = client
+                last_read = 0.0
+
+            now = time.time()
+            if (now - last_read) >= ZENDURE_MQTT_READ_INTERVAL:
+                last_read = now
+                zendure_mqtt_request_all()
+
+            time.sleep(2)
+        except Exception as e:
+            print(f"[ZENDURE-MQTT] fout: {e}")
+            _stop()
+            time.sleep(10)
+
+
 def release_zendure_to_idle(ip):
     """Zet de Zendure op standby zodra SolarBuffer de regie loslaat.
 
@@ -8043,7 +8465,7 @@ def release_zendure_to_idle(ip):
         if _last_battery_mode == "idle" and (now - _last_zendure_send) < 240:
             return True
         try:
-            zendure_write_properties(ip, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
+            zendure_apply_properties(ip, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
             _last_battery_permissions = None
             _last_battery_mode = "idle"
             _last_zendure_power = None
@@ -8116,7 +8538,11 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800):
             props = {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
 
         try:
-            zendure_write_properties(ip, props)
+            zendure_apply_properties(ip, props)
+            log_battery_send("zendure", target_power, "VERZONDEN",
+                             modus=mode, perms=desired_perms,
+                             net_w=round(measured_power, 1),
+                             props=props)
             _last_battery_permissions = desired_perms
             _last_battery_mode = mode
             _last_zendure_power = target_power
@@ -8193,6 +8619,10 @@ def set_battery_control(control_ip, token, mode, permissions):
                 timeout=3, verify=False,
             )
             if r.status_code == 200:
+                log_battery_send(mode, None, "VERZONDEN (homewizard)",
+                                 vanaf_modus=_last_battery_mode,
+                                 accu_w=battery_state.get("power_w"),
+                                 perms=desired_perms)
                 _last_battery_permissions = desired_perms
                 _last_battery_mode = mode
                 _last_hw_battery_send = now
@@ -8343,16 +8773,35 @@ def battery_poll_loop():
             elif bat_type == "zendure":
                 max_power = int(cfg.get("zendure_max_power") or 800)
                 soc_list, power_list = [], []
+                limit_charge, limit_discharge = 0, 0
                 any_online = False
-                for ip in ips:
-                    try:
-                        props = zendure_get_report(ip)
+                if cfg.get("zendure_transport", "http") == "mqtt":
+                    for _did, _dev in zendure_mqtt_snapshot().items():
+                        props = _dev["properties"]
                         any_online = True
                         soc = props.get("electricLevel")
-                        charge_w = props.get("outputPackPower")    # laden (positief)
-                        discharge_w = props.get("packInputPower")  # ontladen (positief)
+                        if soc is None and _dev["packs"]:
+                            # Nog geen getAll-antwoord binnen: val terug op het
+                            # gemiddelde van de pakketten, die komen wel mee in de
+                            # deelrapporten.
+                            _levels = [p["socLevel"] for p in _dev["packs"].values()
+                                       if p.get("socLevel") is not None]
+                            soc = (sum(_levels) / len(_levels)) if _levels else None
                         if soc is not None:
                             soc_list.append(float(soc))
+                        # chargePower/outputPower komen elke paar seconden binnen via
+                        # properties/energy en zijn dus veel verser dan de pack-velden,
+                        # die alleen na een getAll ververst worden. Vandaar deze
+                        # voorkeursvolgorde, met de pack-velden als terugval.
+                        # LET OP: alleen laden is in het veld waargenomen; of
+                        # outputPower bij ontladen inderdaad het ontlaadvermogen is
+                        # (en niet outputHomePower of invOutputPower) moet nog
+                        # bevestigd worden met een meting tijdens ontladen.
+                        charge_w = props.get("chargePower")
+                        discharge_w = props.get("outputPower")
+                        if charge_w is None and discharge_w is None:
+                            charge_w = props.get("outputPackPower")
+                            discharge_w = props.get("packInputPower")
                         # SolarBuffer-conventie: power_w < 0 = laden, > 0 = ontladen
                         p = 0.0
                         if charge_w is not None:
@@ -8360,8 +8809,33 @@ def battery_poll_loop():
                         if discharge_w is not None:
                             p += float(discharge_w)
                         power_list.append(p)
-                    except Exception:
-                        pass
+                        # Het apparaat kent zijn eigen plafonds; die zijn preciezer
+                        # dan de handmatig ingestelde zendure_max_power en worden in
+                        # de regellus gebruikt voor de 'accu op max'-detectie.
+                        try:
+                            limit_charge += int(props.get("chargeLimit") or 0)
+                            limit_discharge += int(props.get("inverseMaxPower") or 0)
+                        except (TypeError, ValueError):
+                            pass
+                else:
+                    for ip in ips:
+                        try:
+                            props = zendure_get_report(ip)
+                            any_online = True
+                            soc = props.get("electricLevel")
+                            charge_w = props.get("outputPackPower")    # laden (positief)
+                            discharge_w = props.get("packInputPower")  # ontladen (positief)
+                            if soc is not None:
+                                soc_list.append(float(soc))
+                            # SolarBuffer-conventie: power_w < 0 = laden, > 0 = ontladen
+                            p = 0.0
+                            if charge_w is not None:
+                                p -= float(charge_w)
+                            if discharge_w is not None:
+                                p += float(discharge_w)
+                            power_list.append(p)
+                        except Exception:
+                            pass
                 if any_online:
                     battery_state.update({
                         "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
@@ -8371,8 +8845,10 @@ def battery_poll_loop():
                         "cycles": None,
                         "mode": _last_battery_mode or "Passive",
                         "permissions": _current_battery_desired_perms,
-                        "max_consumption_w": max_power,
-                        "max_production_w": max_power,
+                        # Kent het apparaat zijn eigen plafonds (chargeLimit /
+                        # inverseMaxPower), gebruik die; anders de ingestelde waarde.
+                        "max_consumption_w": limit_charge or max_power,
+                        "max_production_w": limit_discharge or max_power,
                         "online": True,
                         "control_online": True,
                     })
@@ -8867,6 +9343,7 @@ if __name__ == "__main__":
     threading.Thread(target=accessory_poll_loop, daemon=True).start()
     threading.Thread(target=inverter_poll_loop, daemon=True).start()
     threading.Thread(target=battery_poll_loop, daemon=True).start()
+    threading.Thread(target=zendure_mqtt_loop, daemon=True).start()
     threading.Thread(target=broadlink_poll_loop, daemon=True).start()
     threading.Thread(target=automation_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
