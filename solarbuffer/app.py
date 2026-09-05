@@ -743,6 +743,13 @@ _marstek_pending_since = 0.0
 _last_zendure_send = 0.0
 _last_zendure_power = None
 _zendure_control_lock = threading.Lock()
+# Regeling van de Zendure. De accu meldt zijn vermogen seconden later terug dan de
+# P1-meter zijn meting geeft. Rekenen met een verse meterwaarde en een verouderde
+# accuwaarde laat de regeling slingeren, dus we rekenen vanaf het laatst opgedragen
+# setpoint en corrigeren per stap maar een deel van de resterende fout.
+ZENDURE_REG_GAIN = 0.6          # aandeel van de meterfout dat per stap wordt bijgestuurd
+ZENDURE_REG_MIN_INTERVAL = 5    # s: niet vaker bijstellen dan de accu kan volgen
+ZENDURE_REG_DEADBAND = 10       # W: kleinere bijstellingen zijn de moeite niet
 _hw_battery_control_lock = threading.Lock()
 _last_hw_battery_send = 0.0
 HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
@@ -8847,9 +8854,17 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
         elif not perms:
             target_power = 0
         else:
-            # Intern: positief = laden (battery_state power_w is andersom: <0 = laden)
-            _bat_now = -(battery_state.get("power_w") or 0)
-            _ideal = int(_bat_now - measured_power)
+            # Intern: positief = laden. Basis is het laatst opgedragen setpoint en
+            # niet de gemeten accuwaarde: die loopt achter op de P1-meting, en die
+            # twee door elkaar gebruiken is precies wat de regeling laat slingeren.
+            # Bij de allereerste ronde is er nog geen setpoint, dan de meting.
+            _bat_now = _last_zendure_power
+            if _bat_now is None:
+                _bat_now = -(battery_state.get("power_w") or 0)
+            # Slechts een deel van de resterende fout per stap: de accu heeft
+            # seconden nodig om een nieuw setpoint te halen, en de volle fout er
+            # elke cyclus bij optellen schiet daar overheen.
+            _ideal = int(_bat_now - ZENDURE_REG_GAIN * measured_power)
             if charge_only:
                 target_power = max(0, min(max_power, _ideal))
             elif discharge_only:
@@ -8858,8 +8873,14 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
                 target_power = max(-max_power, min(max_power, _ideal))
 
         mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
-        power_changed = abs(target_power - (_last_zendure_power or 0)) > 25
+        power_changed = abs(target_power - (_last_zendure_power or 0)) > ZENDURE_REG_DEADBAND
         needs_refresh = (now - _last_zendure_send) > 240
+
+        # Niet sneller bijstellen dan de accu kan volgen. Zonder dit stapelen we
+        # correcties op voor een effect dat nog onderweg is. Een gewijzigde modus
+        # of stand mag er wel meteen doorheen.
+        if not mode_changed and (now - _last_zendure_send) < ZENDURE_REG_MIN_INTERVAL:
+            return True
 
         if not mode_changed and not power_changed and not needs_refresh:
             return True
