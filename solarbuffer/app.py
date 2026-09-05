@@ -1872,6 +1872,147 @@ def api_p1_shelly_probe():
     return jsonify(success=True, **result)
 
 
+def _zendure_dev_snapshot():
+    """Het enige (of eerste) Zendure-apparaat uit de MQTT-momentopname."""
+    snap = zendure_mqtt_snapshot()
+    if not snap:
+        return None, None
+    did = next(iter(snap))
+    return did, snap[did]
+
+
+def _scale(value, factor, digits=2):
+    """Zendure rapporteert in tienden of honderdsten; hier terug naar echte eenheden."""
+    if value is None:
+        return None
+    try:
+        return round(float(value) / factor, digits)
+    except (TypeError, ValueError):
+        return None
+
+
+@app.route("/settings/battery")
+def settings_battery():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    return render_template("settings_battery.html", config=cfg, dark_mode=get_user_dark_mode())
+
+
+@app.route("/api/battery/zendure_status")
+def api_zendure_status():
+    """Limieten en toestand van de Zendure, samengesteld uit de MQTT-momentopname."""
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    did, dev = _zendure_dev_snapshot()
+    if dev is None:
+        return jsonify(success=True, online=False)
+    p = dev["properties"]
+
+    packs = []
+    for sn, pk in dev["packs"].items():
+        packs.append({
+            "sn": sn,
+            "soc": pk.get("socLevel"),
+            "voltage_v": _scale(pk.get("totalVol"), 100),
+            "cell_min_v": _scale(pk.get("minVol"), 100),
+            "cell_max_v": _scale(pk.get("maxVol"), 100),
+            "temp_c": _scale(pk.get("maxTemp"), 100, 1),
+            "current_a": pk.get("batcur"),
+            "power_w": pk.get("power"),
+            "firmware": pk.get("softVersion"),
+        })
+    packs.sort(key=lambda x: x["sn"] or "")
+
+    return jsonify(
+        success=True,
+        online=True,
+        device_id=did,
+        sn=dev.get("sn"),
+        prodkey=dev.get("prodkey"),
+        limits={
+            # socSet en minSoc staan in tienden van procenten
+            "soc_set": _scale(p.get("socSet"), 10, 1),
+            "min_soc": _scale(p.get("minSoc"), 10, 1),
+            "charge_limit": p.get("chargeLimit"),
+            "discharge_limit": p.get("inverseMaxPower"),
+        },
+        status={
+            "soc": p.get("electricLevel"),
+            "charge_w": p.get("chargePower"),
+            "output_w": p.get("outputPower"),
+            "pack_num": p.get("packNum"),
+            "temp_c": _scale(p.get("hyperTmp"), 100, 1),
+            "fault_level": p.get("faultLevel"),
+            "wifi_name": p.get("wifiName") or dev.get("properties", {}).get("wifiName"),
+            "wifi_signal": p.get("strength"),
+            "remain_in_min": p.get("remainInputTime"),
+            "remain_out_min": p.get("remainOutTime"),
+        },
+        firmware={
+            "master": p.get("masterSoftVersion"),
+            "dsp": p.get("dspversion"),
+        },
+        packs=packs,
+    )
+
+
+@app.route("/api/battery/zendure_limits", methods=["POST"])
+def api_zendure_limits():
+    """Schrijft de accu-limieten. Alleen bij een echte wijziging, want een
+    properties/write gaat naar het flashgeheugen van de accu."""
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    cfg = load_config()
+    if cfg.get("battery_type") != "zendure":
+        return jsonify(success=False, error="Alleen beschikbaar voor een gekoppelde Zendure"), 400
+
+    _did, dev = _zendure_dev_snapshot()
+    if dev is None:
+        return jsonify(success=False, error="Accu niet bereikbaar op de lokale broker"), 503
+    huidig = dev["properties"]
+
+    data = request.get_json(silent=True) or {}
+    try:
+        soc_set = float(data.get("soc_set"))
+        min_soc = float(data.get("min_soc"))
+        charge_limit = int(data.get("charge_limit"))
+        discharge_limit = int(data.get("discharge_limit"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Ongeldige waarde"), 400
+
+    if not (5 <= soc_set <= 100):
+        return jsonify(success=False, error="Doel-SoC moet tussen 5 en 100 procent liggen"), 400
+    if not (0 <= min_soc <= 100):
+        return jsonify(success=False, error="Ondergrens moet tussen 0 en 100 procent liggen"), 400
+    if min_soc >= soc_set:
+        return jsonify(success=False, error="De ondergrens moet lager zijn dan de doel-SoC"), 400
+    if not (0 <= charge_limit <= 5000) or not (0 <= discharge_limit <= 5000):
+        return jsonify(success=False, error="Vermogen moet tussen 0 en 5000 W liggen"), 400
+
+    gewenst = {
+        "socSet": int(round(soc_set * 10)),
+        "minSoc": int(round(min_soc * 10)),
+        "chargeLimit": charge_limit,
+        "inverseMaxPower": discharge_limit,
+    }
+    # Alleen wat echt verandert; elke schrijfactie kost een flashcyclus
+    wijzigingen = {k: v for k, v in gewenst.items() if huidig.get(k) != v}
+    if not wijzigingen:
+        return jsonify(success=True, changed={}, message="Niets gewijzigd")
+
+    try:
+        zendure_apply_properties(cfg.get("battery_ips", [""])[0] if cfg.get("battery_ips") else "",
+                                 wijzigingen)
+    except Exception as e:
+        return jsonify(success=False, error=f"Schrijven mislukt: {e}"), 502
+
+    write_audit_log("zendure_limits_set", wijzigingen)
+    return jsonify(success=True, changed=wijzigingen)
+
+
 @app.route("/api/zendure/mqtt_state")
 def api_zendure_mqtt_state():
     """Diagnose: wat SolarBuffer op dit moment via de lokale broker van de
