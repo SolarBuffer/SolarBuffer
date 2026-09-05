@@ -8472,6 +8472,64 @@ def zendure_mqtt_write_properties(properties, device_id=None):
     return True
 
 
+def zendure_mqtt_hems_invoke(power_w, device_id=None):
+    """Stuurt een laad- of ontlaadsetpoint via function/invoke met de hemsEP-functie.
+
+    Dit is het kanaal waar dit apparaat daadwerkelijk naar luistert. Geverifieerd
+    op 5 september 2026 tegen een solarFlowPro: een properties/write met acMode en
+    outputLimit wordt met success:1 bevestigd en netjes teruggerapporteerd, maar de
+    accu doet er niets mee. Dezelfde waarde via hemsEP levert binnen seconden
+    daadwerkelijk vermogen. properties/write is voor instellingen (socSet, minSoc),
+    function/invoke is voor vermogen.
+
+    power_w volgt de interne SolarBuffer-conventie: positief = laden, negatief =
+    ontladen, 0 = stilstand. In het protocol zelf zijn dat twee aparte velden.
+    """
+    client = _zendure_mqtt_client
+    if client is None:
+        raise RuntimeError("Zendure MQTT-client is niet verbonden")
+    with _zendure_mqtt_lock:
+        if device_id is None:
+            ids = list(_zendure_mqtt_devices)
+            if len(ids) != 1:
+                raise RuntimeError(f"Geen eenduidig Zendure-apparaat op de broker ({len(ids)} bekend)")
+            device_id = ids[0]
+        prodkey = (_zendure_mqtt_devices.get(device_id) or {}).get("prodkey")
+    if not prodkey:
+        raise RuntimeError(f"Prodkey onbekend voor Zendure-apparaat {device_id}")
+
+    power_w = int(power_w or 0)
+    args = {"outputPower": 0, "chargePower": 0, "freq": 0, "mode": 9}
+    if power_w > 0:
+        # chargeMode 3 hoort bij laden, zo doet de ioBroker-adapter het ook
+        args["chargePower"] = power_w
+        args["chargeMode"] = 3
+    elif power_w < 0:
+        args["outputPower"] = -power_w
+
+    payload = {
+        "arguments": args,
+        "function": "hemsEP",
+        "messageId": int(time.time()) % 100000,
+        "deviceKey": device_id,
+        "timestamp": int(time.time()),
+    }
+    client.publish(f"iot/{prodkey}/{device_id}/function/invoke", json.dumps(payload))
+    return True
+
+
+def zendure_send_setpoint(ip, target_power, props):
+    """Zet een setpoint neer via het juiste kanaal voor het ingestelde transport.
+
+    Bij MQTT gaat dat via hemsEP; het meesturen van properties zou daar alleen maar
+    instellingen naar het flashgeheugen van de accu schrijven zonder iets te doen.
+    Bij de lokale HTTP-API blijft het de bestaande propertyschrijfactie.
+    """
+    if load_config().get("zendure_transport", "http") == "mqtt":
+        return zendure_mqtt_hems_invoke(target_power)
+    return zendure_write_properties(ip, props)
+
+
 def zendure_manual_override(cfg):
     """Vertaalt de handmatige accustand naar een vast setpoint in watt.
 
@@ -8496,7 +8554,11 @@ def zendure_manual_override(cfg):
 
 
 def zendure_apply_properties(ip, properties):
-    """Schrijft properties via het ingestelde transport.
+    """Schrijft instellingen (socSet, minSoc, en dergelijke) via het ingestelde transport.
+
+    Uitdrukkelijk NIET voor vermogen: een properties/write met acMode en outputLimit
+    wordt door de accu wel bevestigd maar niet uitgevoerd, en schrijft bovendien naar
+    het flashgeheugen. Vermogen gaat via zendure_send_setpoint.
 
     Zo hoeven release_zendure_to_idle en set_zendure_control niet te weten of dit
     een zenSDK-apparaat op HTTP is of een MQTT-apparaat op de lokale broker.
@@ -8592,7 +8654,7 @@ def release_zendure_to_idle(ip):
         if _last_battery_mode == "idle" and (now - _last_zendure_send) < 240:
             return True
         try:
-            zendure_apply_properties(ip, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
+            zendure_send_setpoint(ip, 0, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
             _last_battery_permissions = None
             _last_battery_mode = "idle"
             _last_zendure_power = None
@@ -8669,7 +8731,7 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
             props = {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
 
         try:
-            zendure_apply_properties(ip, props)
+            zendure_send_setpoint(ip, target_power, props)
             log_battery_send("zendure", target_power, "VERZONDEN",
                              modus=mode, perms=desired_perms,
                              net_w=round(measured_power, 1),
