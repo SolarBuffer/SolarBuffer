@@ -460,6 +460,16 @@ def load_config():
         cfg["battery_soc_threshold"] = 95
     if "battery_force_tofull" not in cfg:
         cfg["battery_force_tofull"] = False
+    # Handmatige accubediening (Zendure): auto = SolarBuffer regelt alles,
+    # manual = vast setpoint van de gebruiker, off = accu op standby.
+    if cfg.get("battery_control_mode") not in ("auto", "manual", "off"):
+        cfg["battery_control_mode"] = "auto"
+    if cfg.get("battery_manual_direction") not in ("charge", "discharge"):
+        cfg["battery_manual_direction"] = "charge"
+    try:
+        cfg["battery_manual_power"] = max(0, int(cfg.get("battery_manual_power") or 0))
+    except (TypeError, ValueError):
+        cfg["battery_manual_power"] = 0
 
     return cfg
 
@@ -2039,6 +2049,51 @@ def battery_set_mode():
     return jsonify(success=True, mode=mode, sent=sent)
 
 
+@app.route("/api/battery/control_mode", methods=["POST"])
+def battery_control_mode():
+    """Handmatige accubediening: auto, manual of off.
+
+    - auto   : SolarBuffer regelt de accu zoals altijd, met de prioriteit tussen
+               boiler en accu.
+    - manual : vast setpoint van de gebruiker (richting + vermogen). De accu
+               blokkeert de boiler niet meer en de prioriteitsrechten vervallen.
+    - off    : accu op standby, 0 W. SolarBuffer regelt de boiler gewoon door.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode", "auto")
+    if mode not in ("auto", "manual", "off"):
+        return jsonify(success=False, error="Ongeldige stand"), 400
+
+    cfg = load_config()
+    if cfg.get("battery_type") != "zendure":
+        return jsonify(success=False, error="Alleen beschikbaar voor een gekoppelde Zendure"), 400
+
+    direction = cfg.get("battery_manual_direction", "charge")
+    power = int(cfg.get("battery_manual_power") or 0)
+    if mode == "manual":
+        direction = data.get("direction", direction)
+        if direction not in ("charge", "discharge"):
+            return jsonify(success=False, error="Ongeldige richting"), 400
+        try:
+            power = max(0, int(data.get("power") or 0))
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Ongeldig vermogen"), 400
+        power = min(power, int(cfg.get("zendure_max_power") or 800))
+
+    cfg["battery_control_mode"] = mode
+    cfg["battery_manual_direction"] = direction
+    cfg["battery_manual_power"] = power
+    # Volladen is een automatische stand; die bijt met een vast setpoint.
+    if mode != "auto":
+        cfg["battery_force_tofull"] = False
+    save_config(cfg)
+    write_audit_log("battery_control_mode_set",
+                    {"mode": mode, "direction": direction, "power": power})
+    return jsonify(success=True, mode=mode, direction=direction, power=power)
+
+
 @app.route("/settings/solarbuffers", methods=["GET", "POST"])
 def settings_solarbuffers():
     if not require_login():
@@ -2253,6 +2308,9 @@ def status_json():
         battery=battery_state if cfg.get("battery_enabled") else None,
         battery_blocks_start=_battery_blocks_start if cfg.get("battery_enabled") else False,
         battery_force_tofull=cfg.get("battery_force_tofull", False),
+        battery_control_mode=cfg.get("battery_control_mode", "auto"),
+        battery_manual_direction=cfg.get("battery_manual_direction", "charge"),
+        battery_manual_power=cfg.get("battery_manual_power", 0),
     )
 
 
@@ -6852,11 +6910,21 @@ def control_loop():
                     elif _bat_type == "zendure":
                         _zendure_ips = cfg.get("battery_ips") or []
                         if _zendure_ips:
+                            # Handmatig of uit blijft ook hier gelden: de accu volgt
+                            # zijn eigen stand, niet de hoofdschakelaar van de boiler.
+                            _z_forced = zendure_manual_override(cfg)
+                            if _z_forced is None:
+                                _z_args = (_zendure_ips[0], "zero",
+                                           ["charge_allowed", "discharge_allowed"],
+                                           measured_power, int(cfg.get("zendure_max_power") or 800))
+                                _z_kwargs = {}
+                            else:
+                                _z_args = (_zendure_ips[0], "manual_fixed", [],
+                                           measured_power, int(cfg.get("zendure_max_power") or 800))
+                                _z_kwargs = {"forced_power": _z_forced}
                             threading.Thread(
                                 target=set_zendure_control,
-                                args=(_zendure_ips[0], "zero", ["charge_allowed", "discharge_allowed"],
-                                      measured_power, int(cfg.get("zendure_max_power") or 800)),
-                                daemon=True,
+                                args=_z_args, kwargs=_z_kwargs, daemon=True,
                             ).start()
                     else:
                         _bat_token = cfg.get("battery_control_token", "").strip()
@@ -7031,6 +7099,13 @@ def control_loop():
                 _bat_priority = cfg.get("battery_priority", "boiler")
                 _bat_soc_thr = cfg.get("battery_soc_threshold", 95)
                 _bat_soc = battery_state.get("soc")
+                # Handmatige accubediening, voorlopig alleen Zendure: bij manual en
+                # off slaat de hele prioriteitslogica over. De accu krijgt dan een
+                # vast setpoint van de gebruiker en blokkeert de boiler niet meer,
+                # dus 'accu eerst' en 'boiler eerst' spelen geen rol meer.
+                _bat_ctrl_mode = (cfg.get("battery_control_mode", "auto")
+                                  if cfg.get("battery_type") == "zendure" else "auto")
+                _bat_manual_power = (zendure_manual_override(cfg) or 0) if _bat_ctrl_mode != "auto" else 0
 
                 if not battery_state.get("online"):
                     # Batterij niet bereikbaar → normale besturing, reset cache
@@ -7081,7 +7156,17 @@ def control_loop():
                         _force_tofull = False
                         write_audit_log("battery_force_tofull_auto_off", {"soc": _bat_soc})
 
-                    if _force_tofull:
+                    if _bat_ctrl_mode in ("manual", "off"):
+                        # Vast setpoint (of 0 W bij uit). Geen rechten, geen
+                        # blokkade van de boiler: SolarBuffer regelt de boiler
+                        # gewoon door alsof er geen accu is.
+                        _desired_mode = "manual_fixed"
+                        _desired_perms = []
+                        battery_blocks_start = False
+                        _bat_tofull_active = False
+                        _bat_saturated = False
+                        _bat_saturated_since = None
+                    elif _force_tofull:
                         _desired_mode = "to_full"
                         _desired_perms = []
                         battery_blocks_start = False
@@ -7187,7 +7272,15 @@ def control_loop():
                             )
 
                 global _current_battery_desired_perms
-                _current_battery_desired_perms = list(_desired_perms)
+                if not battery_state.get("online"):
+                    # Accu onbereikbaar: er is deze cyclus geen gewenste stand. De
+                    # tak hierboven zet _desired_perms dan namelijk niet, en die
+                    # onvoorwaardelijk uitlezen gooide de hele regellus eruit met
+                    # een UnboundLocalError zolang de accu na het opstarten nog niet
+                    # gepolld was ("cannot access local variable '_desired_perms'").
+                    _current_battery_desired_perms = None
+                else:
+                    _current_battery_desired_perms = list(_desired_perms)
 
                 # Diagnose: welke voorwaarde triggerde deze omschakeling? Alleen
                 # zinvol als de accu online is; dan zijn alle flags hieronder
@@ -7242,7 +7335,17 @@ def control_loop():
                         _zendure_ips = cfg.get("battery_ips") or []
                         _zendure_max = int(cfg.get("zendure_max_power") or 800)
                         if _zendure_ips:
-                            if not enabled or not _p1_online:
+                            if _bat_ctrl_mode in ("manual", "off"):
+                                # Vast setpoint: hangt niet af van de P1-meting en
+                                # ook niet van de hoofdschakelaar van de boiler.
+                                threading.Thread(
+                                    target=set_zendure_control,
+                                    args=(_zendure_ips[0], "manual_fixed", [],
+                                          measured_power, _zendure_max),
+                                    kwargs={"forced_power": _bat_manual_power},
+                                    daemon=True,
+                                ).start()
+                            elif not enabled or not _p1_online:
                                 threading.Thread(
                                     target=release_zendure_to_idle,
                                     args=(_zendure_ips[0],),
@@ -7253,6 +7356,7 @@ def control_loop():
                                     target=set_zendure_control,
                                     args=(_zendure_ips[0], _desired_mode,
                                           _desired_perms, measured_power, _zendure_max),
+                                    kwargs={"forced_power": _bat_manual_power},
                                     daemon=True,
                                 ).start()
                     elif _bat_token and _bat_control_ip and (
@@ -8368,6 +8472,29 @@ def zendure_mqtt_write_properties(properties, device_id=None):
     return True
 
 
+def zendure_manual_override(cfg):
+    """Vertaalt de handmatige accustand naar een vast setpoint in watt.
+
+    Geeft None terug als de accu op automatisch staat; dan geldt de normale
+    regellogica met de prioriteit tussen boiler en accu. Positief = laden,
+    negatief = ontladen, 0 = standby.
+
+    De accu staat los van de automatische besturing van de boiler: deze stand
+    geldt dus ook als SolarBuffer zelf niets meer regelt, en ook als de P1-meter
+    wegvalt (een vast setpoint heeft die meting niet nodig).
+    """
+    mode = cfg.get("battery_control_mode", "auto")
+    if mode not in ("manual", "off"):
+        return None
+    if mode == "off":
+        return 0
+    try:
+        power = max(0, int(cfg.get("battery_manual_power") or 0))
+    except (TypeError, ValueError):
+        power = 0
+    return -power if cfg.get("battery_manual_direction") == "discharge" else power
+
+
 def zendure_apply_properties(ip, properties):
     """Schrijft properties via het ingestelde transport.
 
@@ -8478,7 +8605,7 @@ def release_zendure_to_idle(ip):
         _zendure_control_lock.release()
 
 
-def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800):
+def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced_power=None):
     """Regel de Zendure op nul-op-de-meter; SolarBuffer is hier zelf de regelaar.
 
     De lokale Zendure API kent geen eigen auto-modus (geen CT-regeling zoals de
@@ -8508,7 +8635,11 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800):
         charge_only = (desired_perms == ["charge_allowed"])
         discharge_only = (desired_perms == ["discharge_allowed"])
 
-        if mode == "to_full":
+        if mode == "manual_fixed":
+            # Handmatige bediening of uit: vast setpoint van de gebruiker, geen
+            # regellus. Positief = laden, negatief = ontladen, 0 = standby.
+            target_power = max(-max_power, min(max_power, int(forced_power or 0)))
+        elif mode == "to_full":
             target_power = max_power
         elif not perms:
             target_power = 0
