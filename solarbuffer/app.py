@@ -749,7 +749,7 @@ _zendure_control_lock = threading.Lock()
 # setpoint en corrigeren per stap maar een deel van de resterende fout.
 ZENDURE_REG_GAIN = 0.6          # aandeel van de meterfout dat per stap wordt bijgestuurd
 ZENDURE_REG_MIN_INTERVAL = 5    # s: niet vaker bijstellen dan de accu kan volgen
-ZENDURE_REG_DEADBAND = 10       # W: kleinere bijstellingen zijn de moeite niet
+ZENDURE_REG_DEADBAND = 5        # W: kleinere bijstellingen zijn de moeite niet
 _hw_battery_control_lock = threading.Lock()
 _last_hw_battery_send = 0.0
 HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
