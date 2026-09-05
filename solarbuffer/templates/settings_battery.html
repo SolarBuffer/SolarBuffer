@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+
+    .page-header { text-align: center; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: white; border: 1.5px solid hsl(224, 20%, 85%);
+      border-radius: 999px; padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem; font-weight: 600; color: hsl(224, 26%, 30%);
+      text-decoration: none; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white; border: 1px solid hsl(224, 20%, 88%);
+      border-radius: 0.75rem; box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem; margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: hsl(224, 18%, 71%); margin-bottom: 0.85rem;
+    }
+
+    .field-group { margin-bottom: 0.85rem; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label {
+      display: block; font-size: 0.82rem; font-weight: 600;
+      color: hsl(224, 18%, 67%); margin-bottom: 0.35rem;
+    }
+    .field-group input {
+      width: 100%; padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(224, 20%, 82%); border-radius: 0.5rem;
+      font-size: 0.95rem; font-family: 'Inter', sans-serif;
+      background: white; color: hsl(224, 26%, 14%); transition: border-color 0.2s;
+    }
+    .field-group input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+    .field-hint { font-size: 0.75rem; color: hsl(224, 18%, 73%); margin-top: 0.25rem; }
+
+    .btn-primary {
+      display: block; width: 100%; background: hsl(32, 95%, 52%); color: white;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1rem;
+      padding: 0.7rem; border: none; border-radius: 0.5rem; cursor: pointer; text-align: center;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 46%); }
+    .btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+    /* Statusraster: label boven, waarde eronder */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.85rem; }
+    .stat-label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: hsl(224, 18%, 71%); margin-bottom: 0.15rem;
+    }
+    .stat-value { font-size: 1.05rem; font-weight: 700; color: hsl(224, 26%, 16%); }
+    .stat-value .unit { font-size: 0.75rem; font-weight: 500; color: hsl(224, 18%, 60%); margin-left: 0.15rem; }
+
+    .soc-bar { height: 8px; border-radius: 999px; background: hsl(224, 20%, 91%); overflow: hidden; margin-top: 0.5rem; }
+    .soc-fill { height: 100%; background: hsl(32, 95%, 52%); border-radius: 999px; transition: width 0.4s; }
+
+    /* Pakketten: horizontaal scrollbaar op smalle schermen, nooit de pagina zelf */
+    .pack-scroll { overflow-x: auto; }
+    table.packs { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 480px; }
+    table.packs th {
+      text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: hsl(224, 18%, 71%); font-weight: 700; padding: 0.35rem 0.5rem 0.45rem 0;
+      border-bottom: 1px solid hsl(224, 20%, 90%);
+    }
+    table.packs td { padding: 0.5rem 0.5rem 0.5rem 0; border-bottom: 1px solid hsl(224, 20%, 94%); }
+    table.packs tr:last-child td { border-bottom: none; }
+    table.packs td.sn { font-family: ui-monospace, monospace; font-size: 0.76rem; color: hsl(224, 18%, 55%); }
+
+    .badge {
+      display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .badge.ok { background: hsl(145, 60%, 94%); color: hsl(145, 60%, 28%); }
+    .badge.warn { background: hsl(37, 90%, 93%); color: hsl(30, 80%, 32%); }
+    .badge.off { background: hsl(224, 20%, 93%); color: hsl(224, 18%, 45%); }
+
+    .msg { font-size: 0.8rem; margin-top: 0.6rem; display: none; }
+    .msg.err { color: hsl(0, 65%, 48%); }
+    .msg.ok { color: hsl(145, 60%, 34%); }
+
+    .notice {
+      font-size: 0.78rem; color: hsl(30, 80%, 28%); background: hsl(37, 90%, 95%);
+      border: 1px solid hsl(37, 80%, 80%); border-radius: 0.5rem;
+      padding: 0.6rem 0.75rem; margin-bottom: 0.85rem;
+    }
+
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 22%); color: hsl(224, 18%, 85%); }
+    html[data-theme="dark"] .card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .field-group label { color: hsl(224, 18%, 74%); }
+    html[data-theme="dark"] .field-group input { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field-group input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .field-hint { color: hsl(224, 18%, 68%); }
+    html[data-theme="dark"] .stat-label { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .stat-value { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .soc-bar { background: hsl(224, 38%, 22%); }
+    html[data-theme="dark"] table.packs th { color: hsl(224, 18%, 70%); border-bottom-color: hsl(224, 38%, 22%); }
+    html[data-theme="dark"] table.packs td { border-bottom-color: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] table.packs td.sn { color: hsl(224, 18%, 62%); }
+    html[data-theme="dark"] .badge.ok { background: hsl(145, 30%, 22%); color: hsl(145, 55%, 70%); }
+    html[data-theme="dark"] .badge.warn { background: hsl(32, 25%, 22%); color: hsl(32, 85%, 70%); }
+    html[data-theme="dark"] .badge.off { background: hsl(224, 38%, 20%); color: hsl(224, 18%, 72%); }
+    html[data-theme="dark"] .notice { background: hsl(37, 12%, 20%); border-color: hsl(37, 30%, 30%); color: hsl(37, 70%, 78%); }
+</style>
+{% endblock %}
+
+{% block tagline %}<p>Accu</p>{% endblock %}
+
+{% block content %}
+    <a class="back-btn" href="/settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Instellingen
+    </a>
+
+    <div class="card">
+      <div class="card-title">Toestand</div>
+      <div id="offlineNotice" class="notice" style="display:none">
+        De accu is nu niet bereikbaar op de lokale broker. De getoonde waarden kunnen verouderd zijn.
+      </div>
+      <div class="stat-grid">
+        <div>
+          <div class="stat-label">Lading</div>
+          <div class="stat-value"><span id="stSoc">—</span><span class="unit">%</span></div>
+          <div class="soc-bar"><div class="soc-fill" id="stSocBar" style="width:0%"></div></div>
+        </div>
+        <div>
+          <div class="stat-label">Vermogen</div>
+          <div class="stat-value"><span id="stPower">—</span><span class="unit">W</span></div>
+          <div class="field-hint" id="stPowerDir">—</div>
+        </div>
+        <div>
+          <div class="stat-label">Temperatuur</div>
+          <div class="stat-value"><span id="stTemp">—</span><span class="unit">°C</span></div>
+        </div>
+        <div>
+          <div class="stat-label">Storingsniveau</div>
+          <div class="stat-value"><span id="stFault">—</span></div>
+        </div>
+        <div>
+          <div class="stat-label">Wifi</div>
+          <div class="stat-value"><span id="stWifi">—</span></div>
+        </div>
+        <div>
+          <div class="stat-label">Pakketten</div>
+          <div class="stat-value"><span id="stPacks">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Limieten</div>
+      <div class="field-group">
+        <label for="socSet">Doel-SoC (%)</label>
+        <input type="number" id="socSet" min="5" max="100" step="0.5">
+        <div class="field-hint">Tot hoever hij oplaadt. Boven deze waarde stopt hij met laden, ook als er nog overschot is.</div>
+      </div>
+      <div class="field-group">
+        <label for="minSoc">Ondergrens (%)</label>
+        <input type="number" id="minSoc" min="0" max="100" step="0.5">
+        <div class="field-hint">Tot hoe diep hij mag ontladen. Moet lager zijn dan de doel-SoC.</div>
+      </div>
+      <div class="field-group">
+        <label for="chargeLimit">Maximaal laadvermogen (W)</label>
+        <input type="number" id="chargeLimit" min="0" max="5000" step="50">
+      </div>
+      <div class="field-group">
+        <label for="dischargeLimit">Maximaal ontlaadvermogen (W)</label>
+        <input type="number" id="dischargeLimit" min="0" max="5000" step="50">
+      </div>
+      <div class="notice" style="margin-top:0.85rem;margin-bottom:0.85rem;">
+        Deze instellingen worden in de accu zelf opgeslagen, niet in SolarBuffer. Ze blijven dus
+        staan als je SolarBuffer opnieuw installeert, en er wordt alleen geschreven wat je echt
+        verandert.
+      </div>
+      <button class="btn-primary" id="saveBtn" onclick="saveLimits()">Opslaan in de accu</button>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Accupakketten</div>
+      <div class="pack-scroll">
+        <table class="packs">
+          <thead>
+            <tr>
+              <th>Serienummer</th><th>Lading</th><th>Spanning</th>
+              <th>Cel min/max</th><th>Temp.</th><th>Firmware</th>
+            </tr>
+          </thead>
+          <tbody id="packBody">
+            <tr><td colspan="6" style="color:hsl(224,18%,65%)">Laden…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Apparaat</div>
+      <div class="stat-grid">
+        <div><div class="stat-label">Serienummer</div><div class="stat-value" id="stSn" style="font-size:0.85rem;font-family:ui-monospace,monospace">—</div></div>
+        <div><div class="stat-label">Firmware master</div><div class="stat-value" id="stFwMaster">—</div></div>
+        <div><div class="stat-label">Firmware DSP</div><div class="stat-value" id="stFwDsp">—</div></div>
+        <div><div class="stat-label">Apparaat-ID</div><div class="stat-value" id="stDevId" style="font-size:0.85rem;font-family:ui-monospace,monospace">—</div></div>
+      </div>
+      <div class="field-hint" style="margin-top:0.85rem">
+        Firmware bijwerken doe je in de Zendure-app, niet hier. SolarBuffer toont de versies alleen.
+      </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Zolang de gebruiker in de limietvelden bezig is, mag de pollcyclus zijn
+    // invoer niet overschrijven.
+    let _limitsDirty = false;
+    ['socSet', 'minSoc', 'chargeLimit', 'dischargeLimit'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', function () { _limitsDirty = true; });
+    });
+
+    function toon(id, waarde, leeg) {
+      document.getElementById(id).textContent = (waarde === null || waarde === undefined) ? (leeg || '—') : waarde;
+    }
+
+    async function laadStatus() {
+      try {
+        const r = await fetch('/api/battery/zendure_status');
+        const d = await r.json();
+        document.getElementById('offlineNotice').style.display = d.online ? 'none' : '';
+        if (!d.online) return;
+
+        const s = d.status || {};
+        toon('stSoc', s.soc);
+        document.getElementById('stSocBar').style.width = (s.soc || 0) + '%';
+
+        // Laden telt als negatief vermogen in de weergave, net als op het dashboard
+        const laad = s.charge_w || 0, uit = s.output_w || 0;
+        const netto = uit > 0 ? uit : laad;
+        toon('stPower', netto);
+        document.getElementById('stPowerDir').textContent =
+          uit > 0 ? 'ontladen' : (laad > 0 ? 'laden' : 'stil');
+
+        toon('stTemp', s.temp_c);
+        const fault = s.fault_level;
+        const fEl = document.getElementById('stFault');
+        fEl.innerHTML = fault === null || fault === undefined
+          ? '—'
+          : '<span class="badge ' + (fault === 0 ? 'ok' : 'warn') + '">' + fault + '</span>';
+        toon('stWifi', s.wifi_signal !== null && s.wifi_signal !== undefined ? s.wifi_signal + '/5' : null);
+        toon('stPacks', s.pack_num);
+
+        if (!_limitsDirty && d.limits) {
+          document.getElementById('socSet').value = d.limits.soc_set ?? '';
+          document.getElementById('minSoc').value = d.limits.min_soc ?? '';
+          document.getElementById('chargeLimit').value = d.limits.charge_limit ?? '';
+          document.getElementById('dischargeLimit').value = d.limits.discharge_limit ?? '';
+        }
+
+        const tb = document.getElementById('packBody');
+        if ((d.packs || []).length === 0) {
+          tb.innerHTML = '<tr><td colspan="6" style="color:hsl(224,18%,65%)">Nog geen pakketgegevens ontvangen</td></tr>';
+        } else {
+          tb.innerHTML = d.packs.map(function (p) {
+            return '<tr>'
+              + '<td class="sn">' + (p.sn || '—') + '</td>'
+              + '<td>' + (p.soc ?? '—') + '%</td>'
+              + '<td>' + (p.voltage_v ?? '—') + ' V</td>'
+              + '<td>' + (p.cell_min_v ?? '—') + ' / ' + (p.cell_max_v ?? '—') + ' V</td>'
+              + '<td>' + (p.temp_c ?? '—') + ' °C</td>'
+              + '<td>' + (p.firmware ?? '—') + '</td>'
+              + '</tr>';
+          }).join('');
+        }
+
+        toon('stSn', d.sn);
+        toon('stDevId', d.device_id);
+        toon('stFwMaster', (d.firmware || {}).master);
+        toon('stFwDsp', (d.firmware || {}).dsp);
+      } catch (e) {
+        // stil: volgende ronde opnieuw
+      }
+    }
+
+    async function saveLimits() {
+      const btn = document.getElementById('saveBtn');
+      const msg = document.getElementById('msg');
+      msg.style.display = 'none';
+      btn.disabled = true;
+      try {
+        const body = {
+          soc_set: parseFloat(document.getElementById('socSet').value),
+          min_soc: parseFloat(document.getElementById('minSoc').value),
+          charge_limit: parseInt(document.getElementById('chargeLimit').value, 10),
+          discharge_limit: parseInt(document.getElementById('dischargeLimit').value, 10)
+        };
+        const r = await fetch('/api/battery/zendure_limits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        msg.style.display = 'block';
+        if (d.success) {
+          const n = Object.keys(d.changed || {}).length;
+          msg.className = 'msg ok';
+          msg.textContent = n === 0 ? 'Niets gewijzigd.' : 'Opgeslagen in de accu (' + n + ' waarde' + (n === 1 ? '' : 'n') + ').';
+          _limitsDirty = false;
+          setTimeout(laadStatus, 1500);
+        } else {
+          msg.className = 'msg err';
+          msg.textContent = d.error || 'Opslaan mislukt';
+        }
+      } catch (e) {
+        msg.style.display = 'block';
+        msg.className = 'msg err';
+        msg.textContent = 'Opslaan mislukt, geen verbinding met de Hub';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    laadStatus();
+    setInterval(laadStatus, 5000);
+  </script>
+{% endblock %}
