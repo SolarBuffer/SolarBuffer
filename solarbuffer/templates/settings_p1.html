@@ -600,6 +600,18 @@
                      value="{{ config.zendure_max_power or 800 }}">
               <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Max. laad- én ontlaadvermogen van je accu (SolarFlow 800: 800 W, 2400 AC: 2400 W)</div>
             </div>
+            <div class="field-group">
+              <label for="zendure_transport">Verbinding</label>
+              <select id="zendure_transport" name="zendure_transport">
+                <option value="http" {% if config.zendure_transport != 'mqtt' %}selected{% endif %}>Lokale API op de accu (HTTP)</option>
+                <option value="mqtt" {% if config.zendure_transport == 'mqtt' %}selected{% endif %}>Lokale MQTT-broker op deze Hub</option>
+              </select>
+              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">
+                Kies MQTT voor apparaten die via Bluetooth aan de lokale broker gekoppeld zijn en geen
+                lokale HTTP-API hebben. SolarBuffer vindt het apparaat dan zelf op de broker, een
+                IP-adres is daarvoor niet nodig.
+              </div>
+            </div>
             <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
               Werkt met SolarFlow 800 (Plus/Pro), 1600 AC+ en 2400 AC (Pro) met de nieuwste firmware.
               Configureer een statisch IP-adres voor je accu. Als SolarBuffer uitstaat wordt de accu op
@@ -611,8 +623,9 @@
               <div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-bottom:0.6rem;">
                 Deze modellen ondersteunen bovenstaande verbinding niet en praten alleen via Zendure's
                 cloud. Koppel hieronder via Bluetooth om ze in plaats daarvan lokaal via deze Hub te
-                laten praten. Uitlezen en aansturen vanuit SolarBuffer is nog in ontwikkeling — dit
-                koppelt vooralsnog alleen het apparaat aan de lokale broker.
+                laten praten. Zet daarna de verbinding hierboven op &quot;Lokale MQTT-broker&quot;, dan
+                leest SolarBuffer het apparaat via de broker uit. Aansturen via die weg is nog niet
+                tegen hardware bevestigd.
               </div>
 
               <div style="background:hsl(37,90%,95%);border:1px solid hsl(37,80%,80%);border-radius:0.5rem;padding:0.6rem 0.75rem;font-size:0.78rem;color:hsl(30,80%,28%);margin-bottom:0.75rem;">
