@@ -228,7 +228,7 @@
     }
 
     /* ===== ANTI-LEGIONELLA MODUS ===== */
-    .legionella-panel {
+    .legionella-panel, .bat-ctrl-panel {
       display: none;
       padding: 0.9rem 1.1rem 1rem;
       border-top: 1px solid hsl(224, 20%, 91%);
@@ -236,26 +236,29 @@
       flex-direction: column;
       gap: 0.75rem;
     }
-    .legionella-mode-tabs { display: flex; gap: 0.5rem; }
-    .legionella-mode-tab {
+    .legionella-mode-tabs, .bat-ctrl-tabs { display: flex; gap: 0.5rem; }
+    .legionella-mode-tab, .bat-ctrl-tab {
       flex: 1; padding: 0.5rem; text-align: center; cursor: pointer;
       border: 1.5px solid hsl(224, 20%, 84%); border-radius: 0.5rem;
       background: white; font-family: 'Space Grotesk', sans-serif;
       font-size: 0.85rem; font-weight: 600; color: hsl(224, 18%, 55%);
       transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
-    .legionella-mode-tab.active { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(25, 85%, 38%); }
-    .legionella-mode-hint { font-size: 0.78rem; color: hsl(224, 18%, 68%); line-height: 1.4; }
+    .legionella-mode-tab.active, .bat-ctrl-tab.active { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(25, 85%, 38%); }
+    .legionella-mode-hint, .bat-ctrl-hint { font-size: 0.78rem; color: hsl(224, 18%, 68%); line-height: 1.4; }
     .legionella-triggers { display: flex; flex-direction: column; gap: 0.5rem; }
     .legionella-trigger-row { display: flex; gap: 0.5rem; align-items: center; }
     .legionella-trigger-row select,
-    .legionella-trigger-row input[type="time"] {
+    .legionella-trigger-row input[type="time"],
+    .bat-ctrl-row input[type="number"] {
       box-sizing: border-box; height: 38px; padding: 0 0.5rem; border-radius: 0.5rem;
       border: 1px solid hsl(224, 18%, 91%); font-size: 0.85rem;
       font-family: 'Inter', sans-serif; line-height: normal;
       background-color: white; color: hsl(224, 38%, 12%);
     }
     .legionella-trigger-row select { flex: 1; }
+    .bat-ctrl-row { display: flex; gap: 0.5rem; align-items: center; }
+    .bat-ctrl-row input[type="number"] { flex: 1; min-width: 0; }
     .legionella-trigger-row input[type="time"] { width: 110px; flex-shrink: 0; }
     .legionella-trigger-remove {
       box-sizing: border-box;
@@ -464,12 +467,17 @@
     html[data-theme="dark"] .vacation-deact-btn  { border-color: hsl(0,40%,42%); color: hsl(0,60%,65%); }
     html[data-theme="dark"] .vacation-deact-btn:hover { background: hsl(0,20%,28%); }
 
-    html[data-theme="dark"] .legionella-panel     { background: hsl(37, 12%, 22%); border-color: hsl(224, 38%, 17%); }
-    html[data-theme="dark"] .legionella-mode-tab  { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 76%); }
-    html[data-theme="dark"] .legionella-mode-tab.active { background: hsl(32, 25%, 22%); border-color: hsl(32, 60%, 48%); color: hsl(32, 85%, 70%); }
-    html[data-theme="dark"] .legionella-mode-hint { color: hsl(224, 18%, 73%); }
+    html[data-theme="dark"] .legionella-panel,
+    html[data-theme="dark"] .bat-ctrl-panel      { background: hsl(37, 12%, 22%); border-color: hsl(224, 38%, 17%); }
+    html[data-theme="dark"] .legionella-mode-tab,
+    html[data-theme="dark"] .bat-ctrl-tab        { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 76%); }
+    html[data-theme="dark"] .legionella-mode-tab.active,
+    html[data-theme="dark"] .bat-ctrl-tab.active { background: hsl(32, 25%, 22%); border-color: hsl(32, 60%, 48%); color: hsl(32, 85%, 70%); }
+    html[data-theme="dark"] .legionella-mode-hint,
+    html[data-theme="dark"] .bat-ctrl-hint       { color: hsl(224, 18%, 73%); }
     html[data-theme="dark"] .legionella-trigger-row select,
-    html[data-theme="dark"] .legionella-trigger-row input[type="time"] {
+    html[data-theme="dark"] .legionella-trigger-row input[type="time"],
+    html[data-theme="dark"] .bat-ctrl-row input[type="number"] {
       background-color: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 20%); color: hsl(224, 18%, 95%);
     }
     html[data-theme="dark"] .legionella-trigger-remove { border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 76%); }
@@ -765,6 +773,47 @@
             <div class="legionella-btn-row">
               <button class="vacation-save-btn" id="legionellaSaveBtn" onclick="saveLegionellaMode()">Opslaan</button>
               <span class="legionella-save-feedback" id="legionellaSaveFeedback">✓ Opgeslagen</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl-row" id="batCtrlRow" style="display:none">
+          <div class="settings-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4M11,20V14.5H9L13,7V12.5H15L11,20Z"/></svg>
+          </div>
+          <div class="ctrl-text">
+            <div class="ctrl-label">Accu</div>
+            <div class="ctrl-sub" id="bat_ctrl_sub">Laden…</div>
+          </div>
+          <div class="ctrl-right">
+            <div class="dot" id="bat_ctrl_dot"></div>
+            <label class="toggle">
+              <input type="checkbox" id="bat_ctrl_toggle" onchange="toggleBatteryControl()"/>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="bat-ctrl-panel" id="batCtrlPanel" style="display:none">
+          <div class="bat-ctrl-tabs">
+            <button type="button" class="bat-ctrl-tab" id="batTabAuto" onclick="setBatteryControlMode('auto')">Automatisch</button>
+            <button type="button" class="bat-ctrl-tab" id="batTabManual" onclick="setBatteryControlMode('manual')">Handmatig</button>
+          </div>
+          <div class="bat-ctrl-hint" id="batCtrlHint"></div>
+
+          <div id="batManualFields" style="display:none; flex-direction:column; gap:0.6rem;">
+            <div class="bat-ctrl-tabs">
+              <button type="button" class="bat-ctrl-tab" id="batDirCharge" onclick="setBatteryDirection('charge')">Laden</button>
+              <button type="button" class="bat-ctrl-tab" id="batDirDischarge" onclick="setBatteryDirection('discharge')">Ontladen</button>
+            </div>
+            <div class="bat-ctrl-row">
+              <input type="number" id="batManualPower" min="0" step="50" placeholder="Vermogen">
+              <span style="font-size:0.8rem;color:hsl(224, 18%, 60%);flex-shrink:0;">W</span>
+            </div>
+            <div id="batCtrlError" style="display:none; font-size:0.78rem; color:hsl(0,65%,48%);"></div>
+            <div class="legionella-btn-row">
+              <button class="vacation-save-btn" id="batCtrlSaveBtn" onclick="saveBatteryControl()">Toepassen</button>
+              <span class="legionella-save-feedback" id="batCtrlFeedback">Ingesteld</span>
             </div>
           </div>
         </div>
@@ -1220,6 +1269,32 @@
           renderLegionellaTriggers();
         }
 
+        // ===== ACCU =====
+        const batRow = document.getElementById('batCtrlRow');
+        const batIsZendure = !!data.battery_enabled && data.battery_type === 'zendure';
+        batRow.style.display = batIsZendure ? '' : 'none';
+        document.getElementById('batCtrlPanel').style.display =
+          (batIsZendure && data.battery_control_mode !== 'off') ? 'flex' : 'none';
+        if (batIsZendure && !_batCtrlDirty) {
+          _batCtrlMode = data.battery_control_mode || 'auto';
+          _batDirection = data.battery_manual_direction || 'charge';
+          document.getElementById('batManualPower').value = data.battery_manual_power || 0;
+          _applyBatteryCtrlUI();
+        }
+        if (batIsZendure) {
+          const batOn = _batCtrlMode !== 'off';
+          document.getElementById('bat_ctrl_toggle').checked = batOn;
+          document.getElementById('bat_ctrl_dot').className = 'dot' + (batOn ? ' active' : '');
+          let batSub = 'Uitgeschakeld — accu op standby';
+          if (_batCtrlMode === 'auto') {
+            batSub = 'Automatisch — SolarBuffer regelt de accu';
+          } else if (_batCtrlMode === 'manual') {
+            const p = data.battery_manual_power || 0;
+            batSub = 'Handmatig — ' + p + ' W ' + (_batDirection === 'discharge' ? 'ontladen' : 'laden');
+          }
+          document.getElementById('bat_ctrl_sub').textContent = batSub;
+        }
+
         const schedsEnabled = !!data.schedules_enabled;
         document.getElementById('schedules_toggle').checked = schedsEnabled;
         document.getElementById('schedules_sub').textContent = schedsEnabled ? 'Actief' : 'Uitgeschakeld';
@@ -1260,6 +1335,96 @@
           }
         }
       }).catch(() => {});
+    }
+
+    // ===== ACCU-BESTURING =====
+    // _batCtrlDirty houdt de pollcyclus tegen zolang de gebruiker in het
+    // handmatige paneel aan het typen is, anders springt zijn invoer terug.
+    let _batCtrlMode = 'auto';
+    let _batDirection = 'charge';
+    let _batCtrlDirty = false;
+
+    function _applyBatteryCtrlUI() {
+      const manual = _batCtrlMode === 'manual';
+      document.getElementById('batTabAuto').classList.toggle('active', _batCtrlMode === 'auto');
+      document.getElementById('batTabManual').classList.toggle('active', manual);
+      document.getElementById('batManualFields').style.display = manual ? 'flex' : 'none';
+      document.getElementById('batDirCharge').classList.toggle('active', _batDirection === 'charge');
+      document.getElementById('batDirDischarge').classList.toggle('active', _batDirection === 'discharge');
+      document.getElementById('batCtrlHint').textContent = manual
+        ? 'De accu volgt een vast setpoint. De prioriteit tussen boiler en accu geldt dan niet, SolarBuffer regelt de boiler gewoon door.'
+        : 'SolarBuffer bepaalt zelf wanneer de accu laadt of ontlaadt, volgens de ingestelde prioriteit. Dit staat los van de automatische besturing hierboven, die geldt alleen voor de boiler.';
+    }
+
+    function _postBatteryCtrl(body) {
+      const err = document.getElementById('batCtrlError');
+      err.style.display = 'none';
+      return fetch('/api/battery/control_mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(r => r.json()).then(res => {
+        if (!res.success) {
+          err.textContent = res.error || 'Instellen mislukt';
+          err.style.display = 'block';
+          return false;
+        }
+        _batCtrlDirty = false;
+        setTimeout(loadBesturing, 300);
+        return true;
+      }).catch(() => {
+        err.textContent = 'Instellen mislukt, geen verbinding met de Hub';
+        err.style.display = 'block';
+        return false;
+      });
+    }
+
+    function toggleBatteryControl() {
+      const on = document.getElementById('bat_ctrl_toggle').checked;
+      if (!on) {
+        _batCtrlMode = 'off';
+        _applyBatteryCtrlUI();
+        _postBatteryCtrl({ mode: 'off' });
+      } else {
+        _batCtrlMode = 'auto';
+        _applyBatteryCtrlUI();
+        _postBatteryCtrl({ mode: 'auto' });
+      }
+    }
+
+    function setBatteryControlMode(mode) {
+      _batCtrlMode = mode;
+      _applyBatteryCtrlUI();
+      if (mode === 'auto') {
+        _postBatteryCtrl({ mode: 'auto' });
+      } else {
+        // Handmatig wordt pas verstuurd bij Toepassen, anders zou de accu
+        // meteen op het oude of lege setpoint gaan staan.
+        _batCtrlDirty = true;
+      }
+    }
+
+    function setBatteryDirection(dir) {
+      _batDirection = dir;
+      _batCtrlDirty = true;
+      _applyBatteryCtrlUI();
+    }
+
+    function saveBatteryControl() {
+      const power = parseInt(document.getElementById('batManualPower').value, 10);
+      const err = document.getElementById('batCtrlError');
+      if (isNaN(power) || power < 0) {
+        err.textContent = 'Vul een vermogen in van 0 W of hoger';
+        err.style.display = 'block';
+        return;
+      }
+      _postBatteryCtrl({ mode: 'manual', direction: _batDirection, power: power }).then(ok => {
+        if (ok) {
+          const fb = document.getElementById('batCtrlFeedback');
+          fb.classList.add('show');
+          setTimeout(() => fb.classList.remove('show'), 2000);
+        }
+      });
     }
 
     function togglePID()            { fetch('/toggle_pid').then(() => setTimeout(loadBesturing, 300)); }

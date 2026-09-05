@@ -3123,7 +3123,7 @@
             if (!existingImg || existingImg.src !== location.origin + batLogoSrc) {
               batIconEl.innerHTML = `<img src="${batLogoSrc}" width="22" height="22" alt="">`;
             }
-            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto', manual: 'Schema', idle: 'Standby' };
+            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto', manual: 'Schema', idle: 'Standby', manual_fixed: 'Handmatig' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
             const isToFull = !!data.battery_force_tofull;
