@@ -750,6 +750,48 @@ _zendure_control_lock = threading.Lock()
 ZENDURE_REG_GAIN = 0.6          # aandeel van de meterfout dat per stap wordt bijgestuurd
 ZENDURE_REG_MIN_INTERVAL = 5    # s: niet vaker bijstellen dan de accu kan volgen
 ZENDURE_REG_DEADBAND = 5        # W: kleinere bijstellingen zijn de moeite niet
+# Terugkoppeling tegen vastlopen: het setpoint mag vooruitlopen op wat de accu
+# werkelijk doet, want opregelen kost seconden. Maar loopt dat verschil te lang op,
+# dan kán de accu de opdracht niet uitvoeren (vol, leeg, of op zijn eigen limiet).
+# Verder rekenen vanaf zo'n onuitvoerbare opdracht laat de regeling vastlopen: hij
+# kruipt dan met kleine stapjes terug terwijl het huis van het net trekt.
+ZENDURE_REG_LEAD = 250          # W: toegestaan verschil tussen opdracht en meting
+ZENDURE_REG_LEAD_GRACE = 20     # s: zolang mag dat verschil aanhouden
+_zendure_lead_since = None
+# De accuregeling stuurt op een gemiddelde van de P1 in plaats van op één losse
+# meting. De meter springt tussen opeenvolgende metingen makkelijk 200 W op en neer,
+# en met gain 0,6 zet dat het setpoint net zo hard heen en weer. Bij een volle accu
+# is de overgang van een beetje laden naar een beetje ontladen bovendien geen kleine
+# stap maar een sprong van nul naar zijn volle afgifte, waardoor die ruis zichtbaar
+# wordt als aan-uitgedrag. De boiler-PID blijft op de ruwe meting sturen, die is
+# daar apart op afgestemd.
+ZENDURE_REG_AVG_SECONDS = 10
+_p1_history = []          # [(tijdstip, vermogen)], gevuld vanuit p1_poll_loop
+_p1_history_lock = threading.Lock()
+
+
+def note_p1_sample(power):
+    """Legt een P1-meting vast voor de middeling van de accuregeling."""
+    now = time.time()
+    try:
+        waarde = float(power)
+    except (TypeError, ValueError):
+        return
+    with _p1_history_lock:
+        _p1_history.append((now, waarde))
+        grens = now - 60
+        while _p1_history and _p1_history[0][0] < grens:
+            _p1_history.pop(0)
+
+
+def p1_average(seconds, fallback=None):
+    """Gemiddeld netvermogen over de laatste seconden, fallback als er niets is."""
+    grens = time.time() - seconds
+    with _p1_history_lock:
+        waarden = [p for t, p in _p1_history if t >= grens]
+    if not waarden:
+        return fallback
+    return sum(waarden) / len(waarden)
 _hw_battery_control_lock = threading.Lock()
 _last_hw_battery_send = 0.0
 HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
@@ -7064,7 +7106,8 @@ def control_loop():
                             if _z_forced is None:
                                 _z_args = (_zendure_ips[0], "zero",
                                            ["charge_allowed", "discharge_allowed"],
-                                           measured_power, int(cfg.get("zendure_max_power") or 800))
+                                           p1_average(ZENDURE_REG_AVG_SECONDS, measured_power),
+                                           int(cfg.get("zendure_max_power") or 800))
                                 _z_kwargs = {}
                             else:
                                 _z_args = (_zendure_ips[0], "manual_fixed", [],
@@ -7503,7 +7546,9 @@ def control_loop():
                                 threading.Thread(
                                     target=set_zendure_control,
                                     args=(_zendure_ips[0], _desired_mode,
-                                          _desired_perms, measured_power, _zendure_max),
+                                          _desired_perms,
+                                          p1_average(ZENDURE_REG_AVG_SECONDS, measured_power),
+                                          _zendure_max),
                                     kwargs={"forced_power": _bat_manual_power},
                                     daemon=True,
                                 ).start()
@@ -8834,6 +8879,7 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
     - SP = 0 (standby):  acMode=1, inputLimit=0,   outputLimit=0
     """
     global _last_battery_permissions, _last_battery_mode, _last_zendure_send, _last_zendure_power
+    global _zendure_lead_since
 
     if not _zendure_control_lock.acquire(blocking=False):
         return False
@@ -8858,9 +8904,25 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
             # niet de gemeten accuwaarde: die loopt achter op de P1-meting, en die
             # twee door elkaar gebruiken is precies wat de regeling laat slingeren.
             # Bij de allereerste ronde is er nog geen setpoint, dan de meting.
-            _bat_now = _last_zendure_power
-            if _bat_now is None:
-                _bat_now = -(battery_state.get("power_w") or 0)
+            _meting = -(battery_state.get("power_w") or 0)
+            _sp = _last_zendure_power
+            if _sp is None:
+                _bat_now = _meting
+            elif abs(_sp - _meting) <= ZENDURE_REG_LEAD:
+                # Accu volgt netjes: reken verder vanaf de opdracht, want de meting
+                # loopt achter en zou de regeling laten slingeren.
+                _zendure_lead_since = None
+                _bat_now = _sp
+            else:
+                if _zendure_lead_since is None:
+                    _zendure_lead_since = now
+                if (now - _zendure_lead_since) >= ZENDURE_REG_LEAD_GRACE:
+                    # Houdt al te lang aan: de accu kan dit niet waarmaken. Anker
+                    # terug op wat hij werkelijk doet, anders blijft de regeling
+                    # rekenen vanaf een opdracht die nooit uitgevoerd wordt.
+                    _bat_now = _meting
+                else:
+                    _bat_now = _sp
             # Slechts een deel van de resterende fout per stap: de accu heeft
             # seconden nodig om een nieuw setpoint te halen, en de volle fout er
             # elke cyclus bij optellen schiet daar overheen.
@@ -8871,6 +8933,18 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
                 target_power = max(-max_power, min(0, _ideal))
             else:
                 target_power = max(-max_power, min(max_power, _ideal))
+
+        # Niet vragen wat de accu niet kan. Zit hij op zijn doel-SoC dan kan hij niet
+        # laden, en een laadopdracht laat hem volledig stilvallen in plaats van iets
+        # minder te leveren. Andersom bij de ondergrens.
+        _soc_nu = battery_state.get("soc")
+        _soc_doel = battery_state.get("soc_set")
+        _soc_min = battery_state.get("min_soc")
+        if _soc_nu is not None:
+            if _soc_doel is not None and _soc_nu >= _soc_doel and target_power > 0:
+                target_power = 0
+            if _soc_min is not None and _soc_nu <= _soc_min and target_power < 0:
+                target_power = 0
 
         mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
         power_changed = abs(target_power - (_last_zendure_power or 0)) > ZENDURE_REG_DEADBAND
@@ -9130,9 +9204,16 @@ def battery_poll_loop():
                 soc_list, power_list = [], []
                 limit_charge, limit_discharge = 0, 0
                 any_online = False
+                _soc_set = None
+                _min_soc = None
                 if cfg.get("zendure_transport", "http") == "mqtt":
                     for _did, _dev in zendure_mqtt_snapshot().items():
                         props = _dev["properties"]
+                        # socSet en minSoc staan in tienden van procenten
+                        if props.get("socSet") is not None:
+                            _soc_set = float(props["socSet"]) / 10.0
+                        if props.get("minSoc") is not None:
+                            _min_soc = float(props["minSoc"]) / 10.0
                         any_online = True
                         soc = props.get("electricLevel")
                         if soc is None and _dev["packs"]:
@@ -9200,6 +9281,12 @@ def battery_poll_loop():
                         "cycles": None,
                         "mode": _last_battery_mode or "Passive",
                         "permissions": _current_battery_desired_perms,
+                        # Eigen grenzen van de accu, in hele procenten. De regeling
+                        # gebruikt deze om niet te vragen wat hij niet kan: een accu
+                        # op zijn doel-SoC kan niet laden en valt bij een laadopdracht
+                        # volledig stil in plaats van iets minder te leveren.
+                        "soc_set": _soc_set,
+                        "min_soc": _min_soc,
                         # Kent het apparaat zijn eigen plafonds (chargeLimit /
                         # inverseMaxPower), gebruik die; anders de ingestelde waarde.
                         "max_consumption_w": limit_charge or max_power,
@@ -9548,6 +9635,7 @@ def p1_poll_loop():
                 shelly_ip = (cfg.get("p1_shelly_ip") or "").strip()
                 if shelly_ip:
                     current_power = get_shelly_em_power(shelly_ip, cfg.get("p1_shelly_channels") or [])
+                    note_p1_sample(current_power)
                     _p1_online = True
                     p1_shelly_offline_since = None
                     if not (cfg.get("p1_shelly_mac") or "").strip() and time.time() - p1_shelly_mac_last_try > 300:
@@ -9558,6 +9646,7 @@ def p1_poll_loop():
                 if p1_ip:
                     hw_data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
                     current_power = float(hw_data.get("active_power_w", 0) or 0)
+                    note_p1_sample(current_power)
                     _p1_online = True
                     p1_offline_since = None
                     if not (cfg.get("p1_mac") or "").strip() and time.time() - p1_mac_last_try > 300:
