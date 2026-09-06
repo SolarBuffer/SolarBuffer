@@ -728,6 +728,17 @@ _last_battery_permissions = None
 _current_battery_desired_perms = None
 _last_battery_mode = None
 _bat_day_date = None
+# Dagtelling voor accu's zonder eigen kWh-teller. De HomeWizard levert een
+# cumulatieve stand in zijn API en daar trekken we een dagbeginstand van af.
+# Marstek en Zendure hebben zoiets niet, dus daar tellen we het gemeten vermogen
+# zelf over de tijd op.
+BAT_INTEGRATE_MAX_GAP = 30      # s: langere meetgaten tellen niet mee
+BAT_INTEGRATE_SAVE_EVERY = 60   # s: hoe vaak de tussenstand naar schijf gaat
+_bat_int_date = None
+_bat_int_charge_wh = 0.0
+_bat_int_discharge_wh = 0.0
+_bat_int_last_ts = None
+_bat_int_last_save = 0.0
 _bat_charge_start_kwh = None
 _bat_discharge_start_kwh = None
 _last_marstek_send = 0.0
@@ -9104,6 +9115,64 @@ def set_battery_control(control_ip, token, mode, permissions):
         _hw_battery_control_lock.release()
 
 
+def integrate_battery_energy(power_w):
+    """Telt vandaag geladen en ontladen energie op uit het gemeten vermogen.
+
+    Voor accu's die zelf geen kWh-teller aanbieden. Conventie van power_w is die
+    van SolarBuffer: negatief is laden, positief is ontladen.
+
+    Meetgaten langer dan BAT_INTEGRATE_MAX_GAP tellen niet mee. Anders zou een
+    herstart of een accu die even niets meldt in één klap uren aan energie
+    bijschrijven op basis van één oude meting.
+
+    Geeft (laden_kwh, ontladen_kwh) van vandaag terug.
+    """
+    global _bat_int_date, _bat_int_charge_wh, _bat_int_discharge_wh
+    global _bat_int_last_ts, _bat_int_last_save
+
+    now = time.time()
+    vandaag = datetime.now().strftime("%Y-%m-%d")
+
+    if _bat_int_date != vandaag:
+        opgeslagen = load_energy_baselines().get("__battery_int__", {})
+        if opgeslagen.get("date") == vandaag:
+            # Herstart binnen dezelfde dag: verder tellen waar we gebleven waren
+            _bat_int_charge_wh = float(opgeslagen.get("charge_wh") or 0.0)
+            _bat_int_discharge_wh = float(opgeslagen.get("discharge_wh") or 0.0)
+        else:
+            _bat_int_charge_wh = 0.0
+            _bat_int_discharge_wh = 0.0
+        _bat_int_date = vandaag
+        _bat_int_last_ts = None
+
+    if power_w is None:
+        # Geen bruikbare meting: het gat overslaan in plaats van gokken
+        _bat_int_last_ts = None
+    else:
+        if _bat_int_last_ts is not None:
+            dt = now - _bat_int_last_ts
+            if 0 < dt <= BAT_INTEGRATE_MAX_GAP:
+                if power_w < 0:
+                    _bat_int_charge_wh += (-power_w) * dt / 3600.0
+                elif power_w > 0:
+                    _bat_int_discharge_wh += power_w * dt / 3600.0
+        _bat_int_last_ts = now
+
+    if (now - _bat_int_last_save) >= BAT_INTEGRATE_SAVE_EVERY:
+        _bat_int_last_save = now
+        try:
+            _energy_baselines["__battery_int__"] = {
+                "date": vandaag,
+                "charge_wh": round(_bat_int_charge_wh, 3),
+                "discharge_wh": round(_bat_int_discharge_wh, 3),
+            }
+            save_energy_baselines()
+        except Exception:
+            pass
+
+    return round(_bat_int_charge_wh / 1000.0, 2), round(_bat_int_discharge_wh / 1000.0, 2)
+
+
 def get_battery_meter_power(cfg):
     """Losse vermogensmeter (Shelly/HomeWizard) op het stopcontact van de accu,
     optioneel te koppelen als de accu-API zelf geen bruikbaar vermogen geeft
@@ -9212,12 +9281,17 @@ def battery_poll_loop():
                         pass
                 if any_online:
                     _marstek_fail_streak = 0
+                    _pw = round(sum(power_list), 1) if power_list else None
+                    # Geen kWh-teller in de Marstek-API: zelf optellen uit het vermogen
+                    _ch_kwh, _dis_kwh = integrate_battery_energy(_pw)
                     battery_state.update({
                         "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
-                        "power_w": round(sum(power_list), 1) if power_list else None,
+                        "power_w": _pw,
                         "voltage_v": None,
                         "current_a": None,
                         "cycles": None,
+                        "charge_today_kwh": _ch_kwh,
+                        "discharge_today_kwh": _dis_kwh,
                         "mode": _last_battery_mode or "manual",
                         "permissions": _current_battery_desired_perms,
                         "max_consumption_w": max_power,
@@ -9318,12 +9392,17 @@ def battery_poll_loop():
                         except Exception:
                             pass
                 if any_online:
+                    _pw = round(sum(power_list), 1) if power_list else None
+                    # Geen kWh-teller in de Zendure-properties: zelf optellen
+                    _ch_kwh, _dis_kwh = integrate_battery_energy(_pw)
                     battery_state.update({
                         "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
-                        "power_w": round(sum(power_list), 1) if power_list else None,
+                        "power_w": _pw,
                         "voltage_v": None,
                         "current_a": None,
                         "cycles": None,
+                        "charge_today_kwh": _ch_kwh,
+                        "discharge_today_kwh": _dis_kwh,
                         "mode": _last_battery_mode or "Passive",
                         "permissions": _current_battery_desired_perms,
                         # Eigen grenzen van de accu, in hele procenten. De regeling
