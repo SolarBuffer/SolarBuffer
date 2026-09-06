@@ -2727,6 +2727,18 @@
 
     @media (max-width: 520px) {
       .hero-power .value { font-size: 3rem; }
+
+      /* Op een telefoon past de kopregel van de accukaart niet meer op één regel
+         sinds de dagtelling er ook voor Marstek en Zendure bij staat. In plaats
+         van de badges willekeurig te laten afbreken krijgt de kWh-regel bewust
+         een eigen regel eronder, en blijven de badges als geheel bij elkaar. */
+      .section-side { flex-wrap: nowrap; }
+      #batKwhDay {
+        order: 3;
+        flex-basis: 100%;
+        max-width: none;
+        text-align: left;
+      }
     }
 
     @media (max-width: 380px) {
