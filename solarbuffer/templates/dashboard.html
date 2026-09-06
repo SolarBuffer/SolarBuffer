@@ -3102,7 +3102,9 @@
             const kwhEl = document.getElementById('batKwhDay');
             const chToday = bat.charge_today_kwh;
             const disToday = bat.discharge_today_kwh;
-            if (!isThirdParty && chToday !== null && chToday !== undefined) {
+            // Ook voor Marstek en Zendure: die hebben geen kWh-teller in hun API,
+            // maar SolarBuffer telt het vermogen daar zelf over de tijd op.
+            if (chToday !== null && chToday !== undefined) {
               kwhEl.innerHTML =
                 `<span style="color:hsl(145,55%,40%)">↑${Number(chToday).toFixed(2)}</span>` +
                 `<span style="color:hsl(224, 18%, 83%);margin:0 0.15rem">/</span>` +
