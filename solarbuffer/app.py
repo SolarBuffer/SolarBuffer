@@ -757,6 +757,7 @@ ZENDURE_REG_DEADBAND = 5        # W: kleinere bijstellingen zijn de moeite niet
 # kruipt dan met kleine stapjes terug terwijl het huis van het net trekt.
 ZENDURE_REG_LEAD = 250          # W: toegestaan verschil tussen opdracht en meting
 ZENDURE_REG_LEAD_GRACE = 20     # s: zolang mag dat verschil aanhouden
+ZENDURE_REG_MEAS_MAX_AGE = 30   # s: oudere accumetingen zijn niet bruikbaar als anker
 _zendure_lead_since = None
 # De accuregeling stuurt op een gemiddelde van de P1 in plaats van op één losse
 # meting. De meter springt tussen opeenvolgende metingen makkelijk 200 W op en neer,
@@ -5330,11 +5331,42 @@ def get_shelly_device_power(ip):
     return pw
 
 
-def get_shelly_power_and_energy(ip):
-    """Returns (apower_w, aenergy_total_wh). Energy is None when unavailable."""
+def _shelly_component_power(comp):
+    """Vermogen en energie uit één Shelly-component, of None als het er niet in zit.
+
+    Schakelaars en plugs noemen hun vermogen 'apower' met de energie onder
+    'aenergy.total'. De losse energiemeters noemen het 'act_power' en hebben hun
+    energie in een aparte component (em1data) als 'total_act_energy'. Dat tweede
+    geval werd hiervoor niet herkend.
+    """
+    if not isinstance(comp, dict):
+        return None
+    for veld in ("apower", "act_power"):
+        if comp.get(veld) is not None:
+            ae = comp.get("aenergy") or {}
+            wh = float(ae["total"]) if "total" in ae else None
+            if wh is None and comp.get("total_act_energy") is not None:
+                wh = float(comp["total_act_energy"])
+            return float(comp[veld]), wh
+    return None
+
+
+def get_shelly_power_and_energy(ip, strict=False):
+    """Returns (apower_w, aenergy_total_wh). Energy is None when unavailable.
+
+    Ondersteunt zowel de schakelaars en plugs als de losse energiemeters. Een
+    EM Mini Gen 4 heeft bijvoorbeeld alleen een em1-component en noemt zijn
+    vermogen act_power; dat viel hier eerder buiten en leverde stilzwijgend 0 W op.
+
+    strict=True geeft (None, None) terug als er niets uit te lezen viel, zodat de
+    aanroeper onderscheid kan maken tussen 'de meter zegt nul' en 'de meter is
+    onbereikbaar'. Zonder strict blijft het 0.0, want daar rekenen de bestaande
+    aanroepers op (die tellen waarden bij elkaar op).
+    """
     endpoints = [
         f"http://{ip}/rpc/Switch.GetStatus?id=0",
         f"http://{ip}/rpc/PM1.GetStatus?id=0",
+        f"http://{ip}/rpc/EM1.GetStatus?id=0",
         f"http://{ip}/rpc/EM.GetStatus?id=0",
         f"http://{ip}/rpc/Shelly.GetStatus",
     ]
@@ -5346,20 +5378,26 @@ def get_shelly_power_and_energy(ip):
             data = r.json()
             if not isinstance(data, dict):
                 continue
-            if "apower" in data:
-                pw = float(data.get("apower", 0) or 0)
-                ae = data.get("aenergy") or {}
-                total_wh = float(ae["total"]) if "total" in ae else None
-                return pw, total_wh
-            for value in data.values():
-                if isinstance(value, dict) and "apower" in value:
-                    pw = float(value.get("apower", 0) or 0)
-                    ae = value.get("aenergy") or {}
-                    total_wh = float(ae["total"]) if "total" in ae else None
-                    return pw, total_wh
+            gevonden = _shelly_component_power(data)
+            if gevonden is None:
+                for value in data.values():
+                    gevonden = _shelly_component_power(value)
+                    if gevonden is not None:
+                        break
+            if gevonden is None:
+                continue
+            pw, wh = gevonden
+            if wh is None:
+                # Bij Shelly.GetStatus staat de energie van een meter in een
+                # aparte component naast de meting zelf.
+                for value in data.values():
+                    if isinstance(value, dict) and value.get("total_act_energy") is not None:
+                        wh = float(value["total_act_energy"])
+                        break
+            return pw, wh
         except Exception:
             pass
-    return 0.0, None
+    return (None, None) if strict else (0.0, None)
 
 
 def estimate_brightness_for_power(curve, target_power):
@@ -8916,7 +8954,9 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
             else:
                 if _zendure_lead_since is None:
                     _zendure_lead_since = now
-                if (now - _zendure_lead_since) >= ZENDURE_REG_LEAD_GRACE:
+                _meting_vers = (battery_state.get("power_age_s") is None
+                                or battery_state["power_age_s"] <= ZENDURE_REG_MEAS_MAX_AGE)
+                if _meting_vers and (now - _zendure_lead_since) >= ZENDURE_REG_LEAD_GRACE:
                     # Houdt al te lang aan: de accu kan dit niet waarmaken. Anker
                     # terug op wat hij werkelijk doet, anders blijft de regeling
                     # rekenen vanaf een opdracht die nooit uitgevoerd wordt.
@@ -9076,7 +9116,9 @@ def get_battery_meter_power(cfg):
         return None
     try:
         if pm_type == "shelly":
-            pw, _ = get_shelly_power_and_energy(pm_ip)
+            # strict: een onleesbare meter moet None geven en geen 0 W, anders
+            # ziet de accuregeling een stilstaande accu terwijl de meting stuk is.
+            pw, _ = get_shelly_power_and_energy(pm_ip, strict=True)
         elif pm_type == "homewizard":
             pw, _ = get_homewizard_power_and_energy(pm_ip)
         else:
@@ -9206,6 +9248,7 @@ def battery_poll_loop():
                 any_online = False
                 _soc_set = None
                 _min_soc = None
+                _power_age = None
                 if cfg.get("zendure_transport", "http") == "mqtt":
                     for _did, _dev in zendure_mqtt_snapshot().items():
                         props = _dev["properties"]
@@ -9214,6 +9257,8 @@ def battery_poll_loop():
                             _soc_set = float(props["socSet"]) / 10.0
                         if props.get("minSoc") is not None:
                             _min_soc = float(props["minSoc"]) / 10.0
+                        if _dev.get("last_report"):
+                            _power_age = time.time() - _dev["last_report"]
                         any_online = True
                         soc = props.get("electricLevel")
                         if soc is None and _dev["packs"]:
@@ -9287,6 +9332,11 @@ def battery_poll_loop():
                         # volledig stil in plaats van iets minder te leveren.
                         "soc_set": _soc_set,
                         "min_soc": _min_soc,
+                        # Hoe oud de vermogensmeting is. De accu meldt onregelmatig,
+                        # gemeten gemiddeld elke 8 s met uitschieters tot 2 minuten.
+                        # De terugkoppeling hieronder mag niet op zo'n oude waarde
+                        # concluderen dat de accu de opdracht niet volgt.
+                        "power_age_s": _power_age,
                         # Kent het apparaat zijn eigen plafonds (chargeLimit /
                         # inverseMaxPower), gebruik die; anders de ingestelde waarde.
                         "max_consumption_w": limit_charge or max_power,
