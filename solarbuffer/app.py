@@ -823,6 +823,11 @@ _bat_decision_prev = None   # (toestand, context) van de laatst gelogde beslissi
 _bat_send_prev = None       # laatst gelogde daadwerkelijk verzonden commando
 _broadlink_online = {}  # bl_id -> bool
 current_power = 0
+# Tellerstanden van de P1 zelf, in kWh. Die lopen door ook als SolarBuffer uit
+# staat, dus daar kunnen we exacte dagverbruiken uit halen door het verschil met
+# de vorige dag te nemen. None betekent: deze meter geeft ze niet.
+_p1_meter_import_kwh = None
+_p1_meter_export_kwh = None
 _p1_online = False
 _p1_mac_relocating = False
 _p1_shelly_mac_relocating = False
@@ -877,6 +882,12 @@ CALIBRATION_FIRST_WAIT = 10                        # s: wachttijd na de eerste s
 CALIBRATION_STEP_WAIT = 10                         # s: wachttijd na elke volgende stap
 CALIBRATION_REMINDER_DAYS = 90                     # ~3 maanden tussen herinneringen
 CALIBRATION_REMINDER_CHECK_INTERVAL = 24 * 3600    # s: hoe vaak we het überhaupt checken
+# Na een grote sprong krijgt de PID de tijd om zelf bij te regelen. Zonder deze
+# rem mag er gezaaid worden zodra de P1 een nieuwe waarde geeft, en die ververst
+# elke seconde; dan zaait hij feitelijk elke regelcyclus opnieuw en komt de PID
+# nooit toe aan zijn eigen werk. Is de sprong na deze tijd nog steeds nodig, dan
+# mag hij opnieuw.
+POWER_CURVE_JUMP_INTERVAL = 10                     # s: minimale tijd tussen twee sprongen
 POWER_CURVE_MIN_JUMP = 5                           # %: kleinere afwijkingen dan dit zijn normale
                                                     # P1-ruis, geen echte sprong overslaan voorkomt
                                                     # dat de helderheid elke meting heen en weer schiet
@@ -1120,12 +1131,61 @@ def detect_homewizard_pm(ip):
     return None
 
 
+SCAN_TCP_TIMEOUT = 0.5    # s: een TCP-handshake op een LAN is normaal enkele ms
+SCAN_TCP_WORKERS = 120    # de voorfilter is puur wachten, dus veel parallel mag
+
+
+def _tcp_open(ip, port=80, timeout=SCAN_TCP_TIMEOUT):
+    """Snelle check of er iets op deze poort luistert."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect((ip, port))
+        return True
+    except Exception:
+        return False
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+
+
+def filter_live_hosts(ips, port=80):
+    """Houdt alleen de adressen over waar iets op deze poort luistert.
+
+    Zonder deze voorfilter gaat vrijwel alle scantijd op aan adressen waar niets
+    zit: een dood adres laat elk HTTP-verzoek de volle timeout uitzitten, en er
+    gaan drie detecties per adres overheen. Op een gewoon thuisnetwerk luistert
+    maar een handvol van de 254 adressen op poort 80.
+
+    Dit kan niets missen: alle detecties hieronder praten over http op poort 80,
+    dus een adres dat die poort niet opent zou sowieso niets opleveren.
+    """
+    levend = []
+    with ThreadPoolExecutor(max_workers=SCAN_TCP_WORKERS) as ex:
+        futures = {ex.submit(_tcp_open, ip, port): ip for ip in ips}
+        for f in as_completed(futures):
+            try:
+                if f.result():
+                    levend.append(futures[f])
+            except Exception:
+                pass
+    return levend
+
+
 def scan_network_for_devices():
     ips = get_subnet_ips()
     known_p1_ip = (load_config().get("p1_ip") or "").strip()
     found_p1 = []
     found_shelly = []
     found_shelly_em = []
+
+    # Eerst grof filteren op wie er überhaupt luistert; dat scheelt op een
+    # gewoon netwerk zo'n 95% van het werk.
+    ips = filter_live_hosts(ips)
+    if known_p1_ip and known_p1_ip not in ips:
+        ips.append(known_p1_ip)
 
     with ThreadPoolExecutor(max_workers=25) as executor:
         future_map = {}
@@ -1200,7 +1260,8 @@ def scan_subnet_for_mac(mac, dev_type):
     een gegeven apparaattype (shelly/homewizard). Voor stekkers en vermogensmeters,
     die niet beperkt zijn tot het specifieke SolarBuffer-model of P1-meter."""
     target = mac.upper()
-    ips = get_subnet_ips()
+    # Ook hier eerst filteren; get_mac_for_type praat over http op poort 80.
+    ips = filter_live_hosts(get_subnet_ips())
     with ThreadPoolExecutor(max_workers=25) as executor:
         futures = {executor.submit(get_mac_for_type, ip, dev_type): ip for ip in ips}
         for future in as_completed(futures):
@@ -4098,7 +4159,10 @@ def scan_accessories():
             used_ips.add(ip.strip())
     used_ips.discard("")
 
-    ips = get_subnet_ips()
+    # Zelfde voorfilter als bij de apparaatscan: alle detecties hieronder praten
+    # over http op poort 80, dus adressen die die poort niet openen kosten alleen
+    # maar drie keer een volle timeout zonder ooit iets op te leveren.
+    ips = filter_live_hosts(get_subnet_ips())
     found_power = []
     found_temp = []
     with ThreadPoolExecutor(max_workers=25) as executor:
@@ -5308,6 +5372,42 @@ def get_shelly_em_power(ip, channels=None, timeout=2):
     return total
 
 
+def get_shelly_em_energy(ip, channels=None, timeout=2):
+    """Tellerstanden van een Shelly-energiemeter in kWh, als (import, export).
+
+    Geeft (None, None) als dit apparaat ze niet aanbiedt. De veldnamen komen uit
+    Shelly's documentatie maar zijn niet tegen elk model geverifieerd, dus alles
+    wat niet klopt valt hier stil terug op None en dan gebruikt de maandpagina de
+    eigen optelling. Beter geen getal dan een verkeerd getal.
+    """
+    try:
+        if not channels:
+            r = requests.get(f"http://{ip}/rpc/EMData.GetStatus?id=0", timeout=timeout)
+            if r.status_code != 200:
+                return None, None
+            d = r.json()
+            imp = d.get("total_act")
+            exp = d.get("total_act_ret")
+            if imp is None or exp is None:
+                return None, None
+            return float(imp) / 1000.0, float(exp) / 1000.0
+        imp_tot = exp_tot = 0.0
+        for ch_id in channels:
+            r = requests.get(f"http://{ip}/rpc/EM1Data.GetStatus?id={ch_id}", timeout=timeout)
+            if r.status_code != 200:
+                return None, None
+            d = r.json()
+            imp = d.get("total_act_energy")
+            exp = d.get("total_act_ret_energy")
+            if imp is None or exp is None:
+                return None, None
+            imp_tot += float(imp)
+            exp_tot += float(exp)
+        return imp_tot / 1000.0, exp_tot / 1000.0
+    except Exception:
+        return None, None
+
+
 def check_http_device_online(ip, path):
     try:
         r = requests.get(f"http://{ip}{path}", timeout=2)
@@ -5329,6 +5429,16 @@ def get_homewizard_power_and_energy(ip):
             return 0.0, None
         data = r.json()
         pw = float(data.get("active_power_w", 0) or 0)
+        # De Energy Socket meldt active_voltage_v, de P1-meter noemt het per fase.
+        # Beide proberen, want als vermogensmeter kan allebei gekoppeld zijn.
+        for _vf in ("active_voltage_v", "active_voltage_l1_v"):
+            _volt = data.get(_vf)
+            if _volt is not None:
+                try:
+                    _meter_voltage[ip] = float(_volt)
+                    break
+                except (TypeError, ValueError):
+                    pass
         raw = data.get("total_power_import_kwh")
         total_kwh = float(raw) if raw is not None else None
         return pw, total_kwh
@@ -5340,6 +5450,14 @@ def get_homewizard_power_and_energy(ip):
 def get_shelly_device_power(ip):
     pw, _ = get_shelly_power_and_energy(ip)
     return pw
+
+
+# Netspanning per meter-IP, opgepikt uit dezelfde uitlezing waar het vermogen
+# vandaan komt. Zo kost het geen extra verzoek. Een boilerelement is resistief, dus
+# het vermogen schaalt met het kwadraat van de spanning: bij 245 V levert dezelfde
+# dimstand 13% meer dan bij 230 V. Zonder correctie zou een curve die op een andere
+# spanning is ingemeten de PID systematisch verkeerd zaaien.
+_meter_voltage = {}
 
 
 def _shelly_component_power(comp):
@@ -5358,7 +5476,7 @@ def _shelly_component_power(comp):
             wh = float(ae["total"]) if "total" in ae else None
             if wh is None and comp.get("total_act_energy") is not None:
                 wh = float(comp["total_act_energy"])
-            return float(comp[veld]), wh
+            return float(comp[veld]), wh, comp.get("voltage")
     return None
 
 
@@ -5397,7 +5515,12 @@ def get_shelly_power_and_energy(ip, strict=False):
                         break
             if gevonden is None:
                 continue
-            pw, wh = gevonden
+            pw, wh, volt = gevonden
+            if volt is not None:
+                try:
+                    _meter_voltage[ip] = float(volt)
+                except (TypeError, ValueError):
+                    pass
             if wh is None:
                 # Bij Shelly.GetStatus staat de energie van een meter in een
                 # aparte component naast de meting zelf.
@@ -5437,6 +5560,21 @@ def estimate_brightness_for_power(curve, target_power):
     return points[-1][0]
 
 
+def get_device_voltage(device):
+    """Laatst geziene netspanning van de vermogensmeter van dit apparaat.
+
+    Komt uit de cache die bij het uitlezen van het vermogen gevuld wordt, dus dit
+    kost geen extra verzoek. None als de meter geen spanning meldt, of als de
+    waarde buiten een plausibel bereik valt; dan slaan we de correctie liever over
+    dan dat we met een onzinwaarde gaan rekenen.
+    """
+    pm_ip = (device.get("power_ip") or "").strip() or device.get("ip")
+    volt = _meter_voltage.get(pm_ip)
+    if volt is None:
+        return None
+    return volt if 180.0 <= volt <= 280.0 else None
+
+
 def get_device_power_reading(device):
     """Leest het actuele vermogen van een apparaat via de gekoppelde vermogensmeter
     (zelfde pm_type/pm_ip-patroon als elders in de regellus). None als er geen
@@ -5445,7 +5583,10 @@ def get_device_power_reading(device):
     pm_ip = (device.get("power_ip") or "").strip() or device.get("ip")
     try:
         if pm_type == "shelly":
-            pw, _ = get_shelly_power_and_energy(pm_ip)
+            # strict: een onleesbare meter geeft None en geen 0 W. Anders zou een
+            # mislukte meting als een echte nul in de curve belanden en zou de
+            # kalibratie 'geslaagd' heten terwijl er niets gemeten is.
+            pw, _ = get_shelly_power_and_energy(pm_ip, strict=True)
         elif pm_type == "homewizard":
             pw, _ = get_homewizard_power_and_energy(pm_ip)
         else:
@@ -5462,6 +5603,8 @@ def calibrate_device_curve(ip):
     wordt ondertussen door de gewone regellus met rust gelaten (_calibrating_ips)."""
     global _calibrating_ips
     _calibrating_ips.add(ip)
+    device = None
+    _socket_was_aan = None   # finally verwijst hiernaar, en er zitten returns boven
     try:
         cfg = load_config()
         device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
@@ -5472,8 +5615,27 @@ def calibrate_device_curve(ip):
             write_audit_log("calibration_failed", {"ip": ip, "reason": "geen vermogensmeter gekoppeld"})
             return
 
+        # De stekker moet aan, anders meten we bij elke stap nul en leggen we een
+        # curve van louter nullen vast. De gewone regellus doet dit via
+        # ensure_power_socket_on, maar die is een toestandsmachine over meerdere
+        # cycli; hier in een eigen thread schakelen we hem direct en wachten we af.
+        if has_power_socket(device):
+            _ps_type = (device.get("power_socket_type") or "").strip()
+            _ps_ip = (device.get("power_socket_ip") or "").strip()
+            _socket_was_aan = get_socket_relay_state(_ps_type, _ps_ip)
+            if _socket_was_aan is not True:
+                if not set_power_socket(_ps_type, _ps_ip, True):
+                    write_audit_log("calibration_failed",
+                                    {"ip": ip, "reason": "stekker kon niet aangezet worden"})
+                    return
+                _delay = int(get_runtime_settings(cfg).get("POWER_SOCKET_DELAY", 5) or 5)
+                time.sleep(max(2, _delay))
+                if ip in device_states:
+                    device_states[ip]["power_socket_on"] = True
+
         write_audit_log("calibration_started", {"ip": ip, "steps": len(CALIBRATION_STEPS)})
         curve = {}
+        volts = []
         for i, pct in enumerate(CALIBRATION_STEPS):
             set_shelly(pct, True, ip)
             if ip in device_states:
@@ -5484,17 +5646,35 @@ def calibrate_device_curve(ip):
             pw = get_device_power_reading(device)
             if pw is not None:
                 curve[str(pct)] = round(pw, 1)
+                # Spanning van dit moment onthouden: het vermogen van een resistief
+                # element schaalt met het kwadraat ervan, dus zonder die referentie
+                # is de curve alleen geldig bij toevallig dezelfde netspanning.
+                _v = get_device_voltage(device)
+                if _v is not None:
+                    volts.append(_v)
+
+        # Een curve die alleen maar nul bevat is geen curve maar een mislukte meting.
+        # Die opslaan zou erger zijn dan niets doen, want de regeling gaat er dan
+        # mee rekenen alsof hij weet hoeveel vermogen bij welk percentage hoort.
+        if curve and max(curve.values()) <= 5:
+            write_audit_log("calibration_failed",
+                            {"ip": ip, "reason": "alle metingen nul, geen vermogen gezien",
+                             "points": len(curve)})
+            curve = {}
 
         if curve:
             cfg = load_config()  # vers inladen, kan ondertussen elders gewijzigd zijn
+            _curve_volt = round(sum(volts) / len(volts), 1) if volts else None
             for d in cfg.get("shelly_devices", []):
                 if d["ip"] == ip:
                     d["power_curve"] = curve
                     d["power_curve_calibrated_at"] = time.time()
+                    d["power_curve_voltage"] = _curve_volt
                     d.pop("power_curve_reminder_sent_at", None)
                     break
             save_config(cfg)
-            write_audit_log("calibration_completed", {"ip": ip, "points": len(curve)})
+            write_audit_log("calibration_completed",
+                            {"ip": ip, "points": len(curve), "voltage": _curve_volt})
         else:
             write_audit_log("calibration_failed", {"ip": ip, "reason": "geen enkele meting gelukt"})
     except Exception as e:
@@ -5502,6 +5682,18 @@ def calibrate_device_curve(ip):
     finally:
         try:
             reset_device_to_off(ip)
+        except Exception:
+            pass
+        # Stond de stekker uit toen we begonnen, dan zetten we hem ook weer uit.
+        try:
+            if _socket_was_aan is False:
+                set_power_socket(
+                    (device.get("power_socket_type") or "").strip(),
+                    (device.get("power_socket_ip") or "").strip(),
+                    False,
+                )
+                if ip in device_states:
+                    device_states[ip]["power_socket_on"] = False
         except Exception:
             pass
         if ip in device_states:
@@ -6541,6 +6733,7 @@ def control_loop():
     _bat_saturated = False       # accu uitgeregeld: neemt overschot niet op → boiler vrijgeven
     _bat_saturated_since = None  # start aanhoudende export terwijl accu zou moeten laden
     _ff_last_measured_power = {}  # per ip: laatst gebruikte P1-meting voor curve-sprong
+    _ff_last_jump = {}            # per ip: wanneer er voor het laatst gezaaid is
 
     while True:
         try:
@@ -7778,6 +7971,25 @@ def control_loop():
                         )
                         if not _saturated:
                             _ff_target = (_own_power or 0) - measured_power
+                            # Spanningscorrectie. Een boilerelement is resistief, dus
+                            # bij dezelfde dimstand schaalt het vermogen met het
+                            # kwadraat van de netspanning: 245 V geeft 13% meer dan
+                            # 230 V. De curve geldt alleen bij de spanning waarop hij
+                            # is ingemeten, dus rekenen we het doel eerst terug naar
+                            # die omstandigheden. Zonder dit zaait de curve
+                            # systematisch te hoog of te laag, blijft hij het met de
+                            # PID oneens en zaait hij elke cyclus opnieuw — precies de
+                            # aanhoudende schommeling die je anders ziet. En de
+                            # netspanning is juist hoog bij veel teruglevering, dus
+                            # precies wanneer dit apparaat draait.
+                            _v_cal = d.get("power_curve_voltage")
+                            _v_now = get_device_voltage(d)
+                            try:
+                                _v_cal = float(_v_cal) if _v_cal else None
+                            except (TypeError, ValueError):
+                                _v_cal = None
+                            if _v_cal and _v_now and 180.0 <= _v_cal <= 280.0:
+                                _ff_target = _ff_target * (_v_cal / _v_now) ** 2
                             _ff_b = estimate_brightness_for_power(_curve, _ff_target)
                             # Alleen zaaien bij een echte afwijking t.o.v. de huidige stand.
                             # Zonder deze grens telt elke kleine schommeling in het verbruik
@@ -7785,7 +7997,9 @@ def control_loop():
                             # zou de integraal bij elke cyclus met volle overtuiging naar een
                             # net iets andere schatting springen — dat gaf zichtbaar schommelend
                             # gedrag in plaats van de bedoelde rustige, grote sprong.
-                            if _ff_b is not None and abs(_ff_b - st["brightness"]) >= POWER_CURVE_MIN_JUMP:
+                            if (_ff_b is not None
+                                    and abs(_ff_b - st["brightness"]) >= POWER_CURVE_MIN_JUMP
+                                    and (now - _ff_last_jump.get(ip, 0)) >= POWER_CURVE_JUMP_INTERVAL):
                                 _pid = device_pids[ip]
                                 _now = _pid.time_fn()
                                 # Alleen zaaien op een cyclus waarop de PID toch al gaat
@@ -7803,6 +8017,11 @@ def control_loop():
                                     # uitkomen in plaats van erover.
                                     _predicted_p = _pid.Kp * (_pid.setpoint - pid_power)
                                     _pid._integral = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, _ff_b - _predicted_p))
+                                    # Pas hier vastleggen, want alleen op dit punt is
+                                    # er werkelijk gezaaid. Een sprong die door de
+                                    # PID-cyclus tegengehouden wordt mag de klok niet
+                                    # starten, anders slaat hij de volgende over.
+                                    _ff_last_jump[ip] = now
                         _ff_last_measured_power[ip] = measured_power
                     b_pid = device_pids[ip](pid_power)
                     b_pid = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, b_pid))
@@ -8953,8 +9172,15 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
             # niet de gemeten accuwaarde: die loopt achter op de P1-meting, en die
             # twee door elkaar gebruiken is precies wat de regeling laat slingeren.
             # Bij de allereerste ronde is er nog geen setpoint, dan de meting.
-            _meting = -(battery_state.get("power_w") or 0)
+            _meting_ruw = battery_state.get("power_w")
             _sp = _last_zendure_power
+            if _sp is None and _meting_ruw is None:
+                # Koude start en nog geen accumeting binnen. We weten dus niet wat
+                # de accu op dit moment doet. Nu een setpoint sturen betekent in de
+                # praktijk 'stop', terwijl hij misschien net het hele huis voedt.
+                # Eén cyclus wachten kost niets en voorkomt die schok.
+                return True
+            _meting = -(_meting_ruw or 0)
             if _sp is None:
                 _bat_now = _meting
             elif abs(_sp - _meting) <= ZENDURE_REG_LEAD:
@@ -9357,13 +9583,23 @@ def battery_poll_loop():
                         if charge_w is None and discharge_w is None:
                             charge_w = props.get("outputPackPower")
                             discharge_w = props.get("packInputPower")
-                        # SolarBuffer-conventie: power_w < 0 = laden, > 0 = ontladen
-                        p = 0.0
-                        if charge_w is not None:
-                            p -= float(charge_w)
-                        if discharge_w is not None:
-                            p += float(discharge_w)
-                        power_list.append(p)
+                        if charge_w is None and discharge_w is None:
+                            # Nog geen vermogensbericht binnen. Dit NIET als 0 W
+                            # tellen: de accu is al online zodra er een willekeurig
+                            # bericht binnen is, maar properties/energy laat soms
+                            # tientallen seconden op zich wachten. Zou je dat als
+                            # nul lezen, dan denkt de regeling dat de accu stilstaat
+                            # en zet ze hem daadwerkelijk stil, ook al levert hij
+                            # op dat moment volop.
+                            pass
+                        else:
+                            # SolarBuffer-conventie: power_w < 0 = laden, > 0 = ontladen
+                            p = 0.0
+                            if charge_w is not None:
+                                p -= float(charge_w)
+                            if discharge_w is not None:
+                                p += float(discharge_w)
+                            power_list.append(p)
                         # Het apparaat kent zijn eigen plafonds; die zijn preciezer
                         # dan de handmatig ingestelde zendure_max_power en worden in
                         # de regellus gebruikt voor de 'accu op max'-detectie.
@@ -9555,6 +9791,31 @@ def init_history_db():
                 )
             """)
             conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table}_ts ON {table}(ts)")
+        # Dagtotalen apart, want de historie middelt oude data weg. Een uur dat
+        # half import en half export was, middelt naar nul en dan verdwijnen ze
+        # allebei. Voor een maandoverzicht is dat onbruikbaar, dus tellen we de
+        # energie doorlopend op en bewaren we één rij per dag per grootheid.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS daily_totals (
+                date   TEXT NOT NULL,
+                metric TEXT NOT NULL,
+                value  REAL NOT NULL,
+                PRIMARY KEY (date, metric)
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_daily_date ON daily_totals(date)")
+        # Meterstanden bij het begin van elke maand. Het verbruik van een maand is
+        # de stand van de maand erna min die van deze maand, en voor de lopende
+        # maand de actuele stand min de snapshot. Dat telt door ook als SolarBuffer
+        # uit staat en komt overeen met wat de leverancier factureert.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS monthly_snapshots (
+                month  TEXT NOT NULL,
+                metric TEXT NOT NULL,
+                value  REAL NOT NULL,
+                PRIMARY KEY (month, metric)
+            )
+        """)
         conn.commit()
 
 
@@ -9590,9 +9851,106 @@ def aggregate_and_purge(conn):
         pass
 
 
+# Doorlopende dagtotalen in Wh. Wordt elke minuut naar daily_totals geschreven,
+# zodat een herstart hooguit een minuut kost.
+DAILY_ACC_MAX_GAP = 30   # s: langere meetgaten tellen niet mee
+_daily_acc = {}
+_daily_acc_date = None
+_daily_acc_last_ts = None
+
+
+def _accumulate_daily(waarden):
+    """Telt vermogens in watt op tot dagtotalen in wattuur.
+
+    waarden is {metric: watt}, met alleen positieve grootheden: import en export
+    zijn aparte metrics, net als laden en ontladen. Zo blijft de splitsing bewaard
+    die je kwijtraakt zodra je gemiddelden gaat opslaan.
+    """
+    global _daily_acc, _daily_acc_date, _daily_acc_last_ts
+    now = time.time()
+    vandaag = datetime.now().strftime("%Y-%m-%d")
+    if _daily_acc_date != vandaag:
+        _daily_acc_date = vandaag
+        _daily_acc = {}
+        _daily_acc_last_ts = None
+
+    dt = None
+    if _daily_acc_last_ts is not None:
+        verstreken = now - _daily_acc_last_ts
+        if 0 < verstreken <= DAILY_ACC_MAX_GAP:
+            dt = verstreken
+    _daily_acc_last_ts = now
+    if dt is None:
+        return
+
+    for metric, watt in waarden.items():
+        if watt is None:
+            continue
+        try:
+            _daily_acc[metric] = _daily_acc.get(metric, 0.0) + float(watt) * dt / 3600.0
+        except (TypeError, ValueError):
+            pass
+
+
+def _load_daily_acc(conn):
+    """Haalt de dagstand van vandaag terug op, zodat een herstart niet op nul begint."""
+    global _daily_acc, _daily_acc_date
+    vandaag = datetime.now().strftime("%Y-%m-%d")
+    try:
+        rijen = conn.execute(
+            "SELECT metric, value FROM daily_totals WHERE date = ?", (vandaag,)
+        ).fetchall()
+        _daily_acc = {m: float(v) * 1000.0 for m, v in rijen if not m.startswith("gas")}
+        _daily_acc_date = vandaag
+    except Exception:
+        pass
+
+
+def _snapshot_month(conn, waarden):
+    """Legt de meterstanden van deze maand eenmalig vast.
+
+    INSERT OR IGNORE, dus de eerste stand die we in een maand zien blijft staan.
+    Latere metingen overschrijven hem niet, want dan zou het beginpunt meeschuiven.
+    """
+    if not _daily_acc_date:
+        return
+    maand = _daily_acc_date[:7]
+    rijen = [(maand, m, float(v)) for m, v in waarden.items() if v is not None]
+    if not rijen:
+        return
+    try:
+        conn.executemany(
+            "INSERT OR IGNORE INTO monthly_snapshots (month, metric, value) VALUES (?, ?, ?)",
+            rijen,
+        )
+        conn.commit()
+    except Exception:
+        pass
+
+
+def _flush_daily(conn, gas_m3=None):
+    """Schrijft de dagstand weg in kWh (en gas in m3)."""
+    if not _daily_acc_date:
+        return
+    rijen = [(_daily_acc_date, m, round(wh / 1000.0, 4)) for m, wh in _daily_acc.items()]
+    if gas_m3 is not None:
+        rijen.append((_daily_acc_date, "gas_m3", round(float(gas_m3), 3)))
+    if not rijen:
+        return
+    try:
+        conn.executemany(
+            "INSERT OR REPLACE INTO daily_totals (date, metric, value) VALUES (?, ?, ?)",
+            rijen,
+        )
+        conn.commit()
+    except Exception:
+        pass
+
+
 def history_worker():
     last_aggregate = 0
     conn = sqlite3.connect(HISTORY_DB, check_same_thread=False)
+    _load_daily_acc(conn)
     try:
         while True:
             try:
@@ -9601,24 +9959,73 @@ def history_worker():
 
                 points = [("net_power", current_power, ts)]
                 cfg = load_config()
+                # Alleen positieve grootheden, want import en export zijn twee
+                # verschillende dingen die je niet mag middelen tot één getal.
+                waarden = {
+                    "grid_import": max(0.0, float(current_power or 0)),
+                    "grid_export": max(0.0, -float(current_power or 0)),
+                }
+                _sb_totaal = 0.0
                 for d in cfg.get("shelly_devices", []):
                     ip = d["ip"]
                     st = device_states.get(ip, {})
                     name = (d.get("name") or ip).strip()
                     if d.get("power_meter"):
                         points.append((f"device:{name}:power", st.get("power", 0), ts))
+                        _sb_totaal += float(st.get("power") or 0)
+                waarden["solarbuffer"] = _sb_totaal
+
+                # Accu alleen als er een accu gekoppeld en bereikbaar is
+                if cfg.get("battery_enabled") and battery_state.get("online"):
+                    _bp = battery_state.get("power_w")
+                    if _bp is not None:
+                        points.append(("battery_power", _bp, ts))
+                        # conventie: negatief is laden, positief is ontladen
+                        waarden["battery_charge"] = max(0.0, -float(_bp))
+                        waarden["battery_discharge"] = max(0.0, float(_bp))
+                _zon_acc = 0.0
+                _heeft_zon_acc = False
                 for acc in cfg.get("accessories", []):
-                    if not acc.get("record_history"):
-                        continue
                     acc_id = acc.get("id", "")
                     acc_name = (acc.get("name") or acc_id).strip()
                     st = accessory_states.get(acc_id, {})
+                    # Een accessoire dat als zonnemeting is aangevinkt is opwekking,
+                    # geen verbruiker. Die telt mee bij zon en niet bij de verbruikers.
+                    _is_zon = acc.get("acc_type") == "power" and acc.get("is_solar")
+                    if _is_zon:
+                        _heeft_zon_acc = True
+                        _zon_acc += max(0.0, float(st.get("power") or 0))
+                    if not acc.get("record_history"):
+                        continue
                     if acc.get("acc_type") == "temperature":
                         temp = st.get("temperature")
                         if temp is not None:
                             points.append((f"acc:{acc_name}:temperature", temp, ts))
                     else:
                         points.append((f"acc:{acc_name}:power", st.get("power", 0), ts))
+                        if not _is_zon:
+                            waarden[f"acc:{acc_name}"] = max(0.0, float(st.get("power") or 0))
+
+                # Zon kan uit twee bronnen komen: een gekoppelde omvormer, of een of
+                # meer accessoires die als zonnemeting zijn aangevinkt. Allebei tellen
+                # mee, want iemand kan een omvormer hebben en daarnaast losse strings.
+                _zon_w = None
+                if cfg.get("inverter_enabled") and inverter_power is not None:
+                    # Alleen de omvormer krijgt een eigen metric, want die wordt
+                    # nergens anders vastgelegd. Een zonne-accessoire staat al als
+                    # acc:<naam>:power in de historie en wordt via solar_metrics al
+                    # als zonnemeting herkend; daar een tweede metric van maken zou
+                    # hem dubbel in de grafieken zetten.
+                    points.append(("solar_power", float(inverter_power), ts))
+                    _zon_w = float(inverter_power)
+                if _heeft_zon_acc:
+                    _zon_w = (_zon_w or 0.0) + _zon_acc
+                if _zon_w is not None:
+                    # De dagtelling telt beide bronnen wel op, want dat is één
+                    # grootheid en geen tweede lijn in een grafiek.
+                    waarden["solar"] = max(0.0, _zon_w)
+
+                _accumulate_daily(waarden)
 
                 conn.executemany(
                     "INSERT OR REPLACE INTO history_5s (ts, metric, value) VALUES (?, ?, ?)",
@@ -9628,12 +10035,144 @@ def history_worker():
 
                 if now - last_aggregate >= 60:
                     aggregate_and_purge(conn)
+                    # Gas is een meterstand die oploopt, geen vermogen. Die telt
+                    # dus niet mee in de optelling maar komt als dagverschil mee.
+                    _gas_vandaag = None
+                    if cfg.get("gas_enabled") and current_gas_m3 is not None and gas_day_start_m3 is not None:
+                        _gas_vandaag = max(0.0, current_gas_m3 - gas_day_start_m3)
+                    _flush_daily(conn, _gas_vandaag)
+                    # Meterstanden van deze maand vastleggen zodra we ze zien
+                    _snapshot_month(conn, {
+                        "meter_import_kwh": _p1_meter_import_kwh,
+                        "meter_export_kwh": _p1_meter_export_kwh,
+                        "meter_gas_m3": current_gas_m3 if cfg.get("gas_enabled") else None,
+                    })
                     last_aggregate = now
             except Exception:
                 pass
             time.sleep(5)
     finally:
         conn.close()
+
+
+@app.route("/maandoverzicht")
+def maandoverzicht():
+    if not require_login():
+        return redirect("/login")
+    return render_template("monthly.html", dark_mode=get_user_dark_mode())
+
+
+def _volgende_maand(maand):
+    """'2026-09' -> '2026-10'"""
+    jaar, mnd = int(maand[:4]), int(maand[5:7])
+    return f"{jaar + 1:04d}-01" if mnd == 12 else f"{jaar:04d}-{mnd + 1:02d}"
+
+
+@app.route("/api/monthly")
+def api_monthly():
+    """Maandtotalen.
+
+    Import, export en gas komen bij voorkeur uit de meterstanden zelf: het verschil
+    tussen de snapshot van deze maand en die van de maand erna, en voor de lopende
+    maand het verschil met de actuele stand. Dat telt door ook als SolarBuffer uit
+    stond en komt overeen met de factuur.
+
+    Zon, SolarBuffer, accu en verbruikers hebben geen meterstand, die komen uit de
+    eigen optelling in daily_totals. Kan een meterwaarde niet berekend worden, dan
+    valt import en export ook op die optelling terug; het antwoord vermeldt per
+    maand welke bron gebruikt is.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+
+    cfg = load_config()
+    # Zonnepanelen zijn opwekking, geen verbruiker. Ze worden bij Zon opgeteld en
+    # horen niet in de verbruikersregel. Hier filteren en niet alleen bij het
+    # wegschrijven, want rijen die er al in staan van voordat de vlag aan ging
+    # blijven anders zichtbaar.
+    zon_namen = {
+        (a.get("name") or a.get("id", "")).strip()
+        for a in cfg.get("accessories", [])
+        if a.get("acc_type") == "power" and a.get("is_solar")
+    }
+
+    try:
+        with sqlite3.connect(HISTORY_DB) as conn:
+            snaps = {}
+            for maand, metric, waarde in conn.execute(
+                    "SELECT month, metric, value FROM monthly_snapshots"):
+                snaps.setdefault(maand, {})[metric] = float(waarde)
+            opgeteld = {}
+            accessoires = {}
+            for datum, metric, waarde in conn.execute(
+                    "SELECT date, metric, value FROM daily_totals"):
+                maand = datum[:7]
+                opgeteld.setdefault(maand, {})
+                opgeteld[maand][metric] = round(opgeteld[maand].get(metric, 0.0) + float(waarde), 3)
+                if metric.startswith("acc:"):
+                    naam = metric[4:]
+                    if naam in zon_namen:
+                        continue
+                    accessoires.setdefault(maand, {})
+                    accessoires[maand][naam] = round(accessoires[maand].get(naam, 0.0) + float(waarde), 3)
+    except Exception as e:
+        return jsonify(success=False, error=f"Historie niet leesbaar: {e}"), 500
+
+    huidige_maand = datetime.now().strftime("%Y-%m")
+    actueel = {
+        "meter_import_kwh": _p1_meter_import_kwh,
+        "meter_export_kwh": _p1_meter_export_kwh,
+        "meter_gas_m3": current_gas_m3,
+    }
+
+    def meterverschil(maand, metric):
+        """Verbruik van deze maand uit de meterstanden, of None."""
+        begin = (snaps.get(maand) or {}).get(metric)
+        if begin is None:
+            return None
+        if maand == huidige_maand:
+            eind = actueel.get(metric)
+        else:
+            eind = (snaps.get(_volgende_maand(maand)) or {}).get(metric)
+        if eind is None:
+            return None
+        verschil = eind - begin
+        # Een negatief verschil betekent dat de meter vervangen of teruggezet is;
+        # dan is het beginpunt onbruikbaar en gebruiken we liever de optelling.
+        return round(verschil, 3) if verschil >= 0 else None
+
+    maanden = []
+    for maand in sorted(set(list(snaps) + list(opgeteld)), reverse=True):
+        opt = opgeteld.get(maand, {})
+        rij = {
+            "month": maand,
+            "solar": opt.get("solar", 0.0),
+            "solarbuffer": opt.get("solarbuffer", 0.0),
+            "battery_charge": opt.get("battery_charge", 0.0),
+            "battery_discharge": opt.get("battery_discharge", 0.0),
+            "accessories": accessoires.get(maand, {}),
+        }
+        for naam, metric, terugval in (
+                ("grid_import", "meter_import_kwh", "grid_import"),
+                ("grid_export", "meter_export_kwh", "grid_export"),
+                ("gas_m3", "meter_gas_m3", "gas_m3")):
+            uit_meter = meterverschil(maand, metric)
+            rij[naam] = uit_meter if uit_meter is not None else opt.get(terugval, 0.0)
+            rij[naam + "_source"] = "meter" if uit_meter is not None else "berekend"
+        maanden.append(rij)
+
+    return jsonify(
+        success=True,
+        months=maanden,
+        available={
+            "solar": bool(cfg.get("inverter_enabled")) or any(
+                a.get("acc_type") == "power" and a.get("is_solar")
+                for a in cfg.get("accessories", [])
+            ),
+            "gas": bool(cfg.get("gas_enabled")),
+            "battery": bool(cfg.get("battery_enabled")),
+        },
+    )
 
 
 @app.route("/api/history")
@@ -9740,6 +10279,7 @@ def history_metrics_api():
 # ================= P1 POLL =================
 def p1_poll_loop():
     global current_power, _p1_online, current_gas_m3, gas_day_start_m3, gas_day_date
+    global _p1_meter_import_kwh, _p1_meter_export_kwh
     saved = load_state()
     gas_info = saved.get("__gas__", {})
     gas_day_start_m3 = gas_info.get("gas_day_start_m3")
@@ -9765,6 +10305,8 @@ def p1_poll_loop():
                 if shelly_ip:
                     current_power = get_shelly_em_power(shelly_ip, cfg.get("p1_shelly_channels") or [])
                     note_p1_sample(current_power)
+                    _p1_meter_import_kwh, _p1_meter_export_kwh = get_shelly_em_energy(
+                        shelly_ip, cfg.get("p1_shelly_channels") or [])
                     _p1_online = True
                     p1_shelly_offline_since = None
                     if not (cfg.get("p1_shelly_mac") or "").strip() and time.time() - p1_shelly_mac_last_try > 300:
@@ -9776,6 +10318,11 @@ def p1_poll_loop():
                     hw_data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
                     current_power = float(hw_data.get("active_power_w", 0) or 0)
                     note_p1_sample(current_power)
+                    # Tellerstanden voor de exacte dag- en maandverbruiken
+                    _imp = hw_data.get("total_power_import_kwh")
+                    _exp = hw_data.get("total_power_export_kwh")
+                    _p1_meter_import_kwh = float(_imp) if _imp is not None else None
+                    _p1_meter_export_kwh = float(_exp) if _exp is not None else None
                     _p1_online = True
                     p1_offline_since = None
                     if not (cfg.get("p1_mac") or "").strip() and time.time() - p1_mac_last_try > 300:
