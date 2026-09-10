@@ -101,13 +101,26 @@
       { key: 'solar',             label: 'Zon',         unit: 'kWh', cls: 'v-solar',     toon: b => b.solar },
       { key: 'grid_import',       label: 'Import',      unit: 'kWh', cls: 'v-import',    toon: () => true },
       { key: 'grid_export',       label: 'Export',      unit: 'kWh', cls: 'v-export',    toon: () => true },
-      { key: 'solarbuffer',       label: 'SolarBuffer', unit: 'kWh', cls: 'v-buffer',    toon: () => true },
+      // Hier komt per SolarBuffer een eigen tegel met de naam uit de app. Bij twee
+      // buffers zegt één opgeteld getal weinig, dan wil je zien welke wat deed.
+      { key: '__buffers__',                                                             toon: () => true },
       { key: 'battery_charge',    label: 'Accu geladen',  unit: 'kWh', cls: 'v-charge',    toon: b => b.battery },
       { key: 'battery_discharge', label: 'Accu ontladen', unit: 'kWh', cls: 'v-discharge', toon: b => b.battery },
       { key: 'gas_m3',            label: 'Gas',         unit: 'm³',  cls: 'v-gas',       toon: b => b.gas },
     ];
 
     const nl = v => (v === null || v === undefined ? '—' : Number(v).toFixed(2).replace('.', ','));
+
+    // Namen komen uit de configuratie en zijn dus vrij in te vullen.
+    const esc = t => String(t).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    const tegel = (label, waarde, cls, unit, notitie) => `
+            <div>
+              <div class="item-label">${esc(label)}</div>
+              <div class="item-value ${cls}">${nl(waarde)}<span class="unit">${unit}</span></div>
+              ${notitie || ''}
+            </div>`;
 
     function maandNaam(m) {
       const [j, mm] = m.split('-');
@@ -138,29 +151,24 @@
       doel.innerHTML = d.months.map(m => {
         const isNu = m.month === huidig;
         const items = velden.map(v => {
+          if (v.key === '__buffers__') {
+            const namen = Object.keys(m.solarbuffers || {}).sort();
+            return namen.map(n => tegel(n, m.solarbuffers[n], 'v-buffer', 'kWh')).join('');
+          }
           // Alleen bij import, export en gas kan de bron verschillen
           const bron = m[v.key + '_source'];
           const notitie = bron === 'berekend'
             ? '<div class="item-note">berekend, geen meterstand</div>' : '';
-          return `
-            <div>
-              <div class="item-label">${v.label}</div>
-              <div class="item-value ${v.cls}">${nl(m[v.key])}<span class="unit">${v.unit}</span></div>
-              ${notitie}
-            </div>`;
+          return tegel(v.label, m[v.key], v.cls, v.unit, notitie);
         }).join('');
 
         const netto = (m.grid_import || 0) - (m.grid_export || 0);
-        const nettoItem = `
-          <div>
-            <div class="item-label">Netto van net</div>
-            <div class="item-value v-neutral">${nl(netto)}<span class="unit">kWh</span></div>
-          </div>`;
+        const nettoItem = tegel('Netto van net', netto, 'v-neutral', 'kWh');
 
         const accNamen = Object.keys(m.accessories || {}).sort();
         const accRij = accNamen.length
           ? `<div class="acc-row">${accNamen.map(n =>
-              `<span>${n}: <b>${nl(m.accessories[n])} kWh</b></span>`).join('')}</div>`
+              `<span>${esc(n)}: <b>${nl(m.accessories[n])} kWh</b></span>`).join('')}</div>`
           : '';
 
         return `
