@@ -10138,15 +10138,17 @@ def history_worker():
                     "grid_import": max(0.0, float(current_power or 0)),
                     "grid_export": max(0.0, -float(current_power or 0)),
                 }
-                _sb_totaal = 0.0
                 for d in cfg.get("shelly_devices", []):
                     ip = d["ip"]
                     st = device_states.get(ip, {})
                     name = (d.get("name") or ip).strip()
                     if d.get("power_meter"):
                         points.append((f"device:{name}:power", st.get("power", 0), ts))
-                        _sb_totaal += float(st.get("power") or 0)
-                waarden["solarbuffer"] = _sb_totaal
+                        # Elke SolarBuffer apart, niet als één opgeteld getal. Wie er
+                        # twee heeft wil in het maandoverzicht kunnen zien welke wat
+                        # verbruikt heeft, en een som valt achteraf niet meer uit
+                        # elkaar te halen. Zelfde opzet als bij de accessoires.
+                        waarden[f"sb:{name}"] = max(0.0, float(st.get("power") or 0))
 
                 # Accu alleen als er een accu gekoppeld en bereikbaar is
                 if cfg.get("battery_enabled") and battery_state.get("online"):
@@ -10277,6 +10279,7 @@ def api_monthly():
                 snaps.setdefault(maand, {})[metric] = float(waarde)
             opgeteld = {}
             accessoires = {}
+            buffers = {}
             for datum, metric, waarde in conn.execute(
                     "SELECT date, metric, value FROM daily_totals"):
                 maand = datum[:7]
@@ -10288,6 +10291,10 @@ def api_monthly():
                         continue
                     accessoires.setdefault(maand, {})
                     accessoires[maand][naam] = round(accessoires[maand].get(naam, 0.0) + float(waarde), 3)
+                elif metric.startswith("sb:"):
+                    naam = metric[3:]
+                    buffers.setdefault(maand, {})
+                    buffers[maand][naam] = round(buffers[maand].get(naam, 0.0) + float(waarde), 3)
     except Exception as e:
         return jsonify(success=False, error=f"Historie niet leesbaar: {e}"), 500
 
@@ -10320,7 +10327,11 @@ def api_monthly():
         rij = {
             "month": maand,
             "solar": opt.get("solar", 0.0),
-            "solarbuffer": opt.get("solarbuffer", 0.0),
+            # Per SolarBuffer, met de naam zoals hij in de app heet. Dagen van voor
+            # deze wijziging kennen alleen een opgeteld totaal; die tonen we onder
+            # de algemene naam in plaats van ze te laten verdwijnen.
+            "solarbuffers": buffers.get(maand) or (
+                {"SolarBuffer": opt["solarbuffer"]} if opt.get("solarbuffer") else {}),
             "battery_charge": opt.get("battery_charge", 0.0),
             "battery_discharge": opt.get("battery_discharge", 0.0),
             "accessories": accessoires.get(maand, {}),
