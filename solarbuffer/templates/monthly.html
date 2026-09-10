@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: white; border: 1.5px solid hsl(224, 20%, 85%);
+      border-radius: 999px; padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem; font-weight: 600; color: hsl(224, 26%, 30%);
+      text-decoration: none; box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      margin-bottom: 0.75rem;
+    }
+
+    .card {
+      background: white; border: 1px solid hsl(224, 20%, 88%);
+      border-radius: 0.75rem; box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.15rem; margin-bottom: 0.85rem;
+    }
+    .card.current { border-color: hsl(32, 85%, 62%); }
+
+    .month-head {
+      display: flex; align-items: baseline; gap: 0.5rem;
+      margin-bottom: 0.9rem; flex-wrap: wrap;
+    }
+    .month-name {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 700;
+      text-transform: capitalize;
+    }
+    .month-tag {
+      font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 0.12rem 0.45rem; border-radius: 999px;
+      background: hsl(32, 100%, 94%); color: hsl(25, 85%, 38%);
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.9rem; }
+    .item-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: hsl(224, 18%, 71%); margin-bottom: 0.15rem;
+    }
+    .item-value { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; font-weight: 700; }
+    .item-value .unit { font-size: 0.72rem; font-weight: 500; color: hsl(224, 18%, 60%); margin-left: 0.15rem; }
+    .item-note { font-size: 0.64rem; color: hsl(224, 18%, 72%); margin-top: 0.1rem; }
+
+    .v-import { color: hsl(14, 85%, 52%); }
+    .v-export { color: hsl(145, 60%, 38%); }
+    .v-solar  { color: hsl(40, 92%, 48%); }
+    .v-buffer { color: hsl(32, 95%, 50%); }
+    .v-gas    { color: hsl(210, 75%, 52%); }
+    .v-charge { color: hsl(145, 60%, 38%); }
+    .v-discharge { color: hsl(32, 95%, 50%); }
+    .v-neutral { color: hsl(224, 26%, 16%); }
+
+    .acc-row {
+      margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid hsl(224, 20%, 92%);
+      display: flex; flex-wrap: wrap; gap: 0.4rem 1rem;
+      font-size: 0.78rem; color: hsl(224, 18%, 45%);
+    }
+    .acc-row b { color: hsl(224, 26%, 20%); font-weight: 600; }
+
+    .empty { font-size: 0.85rem; color: hsl(224, 18%, 62%); line-height: 1.55; }
+
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 22%); color: hsl(224, 18%, 85%); }
+    html[data-theme="dark"] .card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card.current { border-color: hsl(32, 60%, 45%); }
+    html[data-theme="dark"] .month-tag { background: hsl(32, 25%, 22%); color: hsl(32, 85%, 70%); }
+    html[data-theme="dark"] .item-label { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .item-note { color: hsl(224, 18%, 62%); }
+    html[data-theme="dark"] .v-neutral { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .acc-row { border-top-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 68%); }
+    html[data-theme="dark"] .acc-row b { color: hsl(224, 18%, 92%); }
+    html[data-theme="dark"] .empty { color: hsl(224, 18%, 68%); }
+</style>
+{% endblock %}
+
+{% block tagline %}<p>Maandoverzicht</p>{% endblock %}
+
+{% block content %}
+    <a class="back-btn" href="/dashboard">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Dashboard
+    </a>
+
+    <div id="months"><div class="card"><div class="empty">Laden…</div></div></div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const MAANDEN = ['januari','februari','maart','april','mei','juni',
+                     'juli','augustus','september','oktober','november','december'];
+
+    // 'toon' bepaalt of een grootheid überhaupt zin heeft op deze installatie.
+    // Volgorde volgt het verhaal van de energie: eerst wat er opgewekt is, dan wat
+    // er van en naar het net ging, dan waar het heen is gegaan. Zon is opwekking en
+    // hoort dus bovenaan, niet tussen de verbruikers.
+    const VELDEN = [
+      { key: 'solar',             label: 'Zon',         unit: 'kWh', cls: 'v-solar',     toon: b => b.solar },
+      { key: 'grid_import',       label: 'Import',      unit: 'kWh', cls: 'v-import',    toon: () => true },
+      { key: 'grid_export',       label: 'Export',      unit: 'kWh', cls: 'v-export',    toon: () => true },
+      { key: 'solarbuffer',       label: 'SolarBuffer', unit: 'kWh', cls: 'v-buffer',    toon: () => true },
+      { key: 'battery_charge',    label: 'Accu geladen',  unit: 'kWh', cls: 'v-charge',    toon: b => b.battery },
+      { key: 'battery_discharge', label: 'Accu ontladen', unit: 'kWh', cls: 'v-discharge', toon: b => b.battery },
+      { key: 'gas_m3',            label: 'Gas',         unit: 'm³',  cls: 'v-gas',       toon: b => b.gas },
+    ];
+
+    const nl = v => (v === null || v === undefined ? '—' : Number(v).toFixed(2).replace('.', ','));
+
+    function maandNaam(m) {
+      const [j, mm] = m.split('-');
+      return `${MAANDEN[Number(mm) - 1]} ${j}`;
+    }
+
+    async function laden() {
+      const doel = document.getElementById('months');
+      let d;
+      try {
+        d = await (await fetch('/api/monthly')).json();
+      } catch (e) {
+        doel.innerHTML = '<div class="card"><div class="empty">Geen verbinding met de Hub.</div></div>';
+        return;
+      }
+      if (!d.success || !(d.months || []).length) {
+        doel.innerHTML = '<div class="card"><div class="empty">'
+          + 'Nog geen maandgegevens. De tellingen beginnen vanaf nu te lopen, dus deze pagina '
+          + 'vult zich vanzelf. De eerste maand is een gedeeltelijke maand.</div></div>';
+        return;
+      }
+
+      const b = d.available || {};
+      const velden = VELDEN.filter(v => v.toon(b));
+      const nu = new Date();
+      const huidig = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, '0')}`;
+
+      doel.innerHTML = d.months.map(m => {
+        const isNu = m.month === huidig;
+        const items = velden.map(v => {
+          // Alleen bij import, export en gas kan de bron verschillen
+          const bron = m[v.key + '_source'];
+          const notitie = bron === 'berekend'
+            ? '<div class="item-note">berekend, geen meterstand</div>' : '';
+          return `
+            <div>
+              <div class="item-label">${v.label}</div>
+              <div class="item-value ${v.cls}">${nl(m[v.key])}<span class="unit">${v.unit}</span></div>
+              ${notitie}
+            </div>`;
+        }).join('');
+
+        const netto = (m.grid_import || 0) - (m.grid_export || 0);
+        const nettoItem = `
+          <div>
+            <div class="item-label">Netto van net</div>
+            <div class="item-value v-neutral">${nl(netto)}<span class="unit">kWh</span></div>
+          </div>`;
+
+        const accNamen = Object.keys(m.accessories || {}).sort();
+        const accRij = accNamen.length
+          ? `<div class="acc-row">${accNamen.map(n =>
+              `<span>${n}: <b>${nl(m.accessories[n])} kWh</b></span>`).join('')}</div>`
+          : '';
+
+        return `
+          <div class="card ${isNu ? 'current' : ''}">
+            <div class="month-head">
+              <span class="month-name">${maandNaam(m.month)}</span>
+              ${isNu ? '<span class="month-tag">loopt nog</span>' : ''}
+            </div>
+            <div class="grid">${items}${nettoItem}</div>
+            ${accRij}
+          </div>`;
+      }).join('');
+    }
+
+    laden();
+    setInterval(laden, 60000);
+  </script>
+{% endblock %}

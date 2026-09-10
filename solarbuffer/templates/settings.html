@@ -1782,21 +1782,66 @@
     function closeRestartModal() { document.getElementById('restartModal').classList.remove('open'); }
 
     function doRestart() {
+      const modal = document.getElementById('restartModal');
       const btn = document.getElementById('restartBtn');
+      const cancelBtn = modal.querySelector('.btn-cancel');
+      const tekst = modal.querySelector('p');
+
+      function herstel() {
+        btn.disabled = false;
+        btn.textContent = 'Herstarten';
+        if (cancelBtn) cancelBtn.disabled = false;
+      }
+
+      // Wachten tot de service echt weg is en weer terugkomt, in plaats van blind
+      // een vast aantal seconden aftellen. Anders sta je of te lang te wachten, of
+      // je springt naar het dashboard terwijl de Hub nog niet luistert.
+      function wachtOpTerugkeer() {
+        btn.textContent = 'Herstarten…';
+        if (tekst) tekst.textContent =
+          'De service wordt opnieuw opgestart. Deze pagina komt vanzelf terug zodra de Hub weer bereikbaar is.';
+        const start = Date.now();
+        let wegGeweest = false;
+        (function poll() {
+          fetch('/login', { method: 'GET', cache: 'no-store' })
+            .then(r => {
+              const verstreken = Date.now() - start;
+              // Pas terugkeren als hij echt weg is geweest. Zonder die eis zien we
+              // het oude proces, dat pas een seconde later stopt, aan voor 'klaar'.
+              if (r.ok && (wegGeweest || verstreken > 20000)) {
+                window.location.href = '/dashboard';
+              } else {
+                setTimeout(poll, 2000);
+              }
+            })
+            .catch(() => {
+              // Niet bereikbaar is hier het verwachte gedrag, geen fout.
+              wegGeweest = true;
+              if (Date.now() - start > 120000) {
+                if (tekst) tekst.textContent =
+                  'De Hub is na twee minuten nog niet terug. Ververs deze pagina zelf, of controleer de Hub.';
+                herstel();
+              } else {
+                setTimeout(poll, 2000);
+              }
+            });
+        })();
+      }
+
       btn.disabled = true;
       btn.textContent = 'Bezig…';
+      if (cancelBtn) cancelBtn.disabled = true;
+
       fetch('/restart', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
-          if (data.success) {
-            btn.textContent = 'Herstarten…';
-            setTimeout(() => window.location.href = '/dashboard', 35000);
-          } else {
-            btn.disabled = false;
-            btn.textContent = 'Herstarten';
-          }
+          if (data.success) wachtOpTerugkeer();
+          else herstel();
         })
-        .catch(() => { btn.disabled = false; btn.textContent = 'Herstarten'; });
+        // Verbinding verbroken tijdens het verzoek betekent vrijwel zeker dat de
+        // herstart al begonnen is, dus dan gewoon wachten in plaats van de knop
+        // terugzetten alsof er niets gebeurd is.
+        .catch(() => wachtOpTerugkeer());
     }
 
     // ===== SYSTEEM UITZETTEN =====

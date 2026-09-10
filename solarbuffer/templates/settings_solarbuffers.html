@@ -155,6 +155,26 @@
       margin-bottom: 0.75rem;
       line-height: 1.45;
     }
+    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
+    .toggle input { display: none; }
+    .toggle .slider {
+      position: absolute; inset: 0;
+      background: hsl(224, 20%, 88%);
+      border-radius: 12px;
+      transition: background 0.3s;
+    }
+    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+    .toggle .slider::before {
+      content: "";
+      position: absolute;
+      width: 20px; height: 20px;
+      left: 2px; top: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      transition: transform 0.3s;
+    }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
 
     .input-with-unit {
       display: flex;
@@ -337,6 +357,7 @@
     html[data-theme="dark"] .input-with-unit input { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .input-with-unit .unit { background: hsl(224, 38%, 16%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .scan-status { color: hsl(224, 18%, 74%); }
+    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(224, 38%, 22%); }
     html[data-theme="dark"] .scan-results { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .ble-device-btn { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .ble-device-btn:hover { background: hsl(224, 38%, 13%); }
@@ -506,6 +527,28 @@
       if (!enabled) pi.value = "";
       const macGroup = card.querySelector('.meter-mac-group');
       if (macGroup) macGroup.style.display = enabled ? '' : 'none';
+
+      // De snellere regeling leunt volledig op een ingemeten vermogenscurve, en
+      // die kan alleen gemaakt worden met een vermogensmeter. Zonder meter is de
+      // schakelaar dus niet te bedienen, en zetten we hem ook uit zodat er geen
+      // ingeschakelde stand blijft staan die nergens op slaat.
+      const curveBox = card.querySelector('.power-curve-enabled-checkbox');
+      const curveHidden = card.querySelector('.power-curve-enabled-hidden');
+      const curveInit = card.querySelector('.power-curve-init');
+      const curveSection = card.querySelector('.power-curve-section');
+      if (curveBox && curveHidden && curveInit) {
+        curveBox.disabled = !enabled;
+        if (!enabled) {
+          curveBox.checked = false;
+          curveHidden.value = '0';
+          curveInit.style.display = 'none';
+        }
+        if (curveSection) {
+          curveSection.style.opacity = enabled ? '' : '0.55';
+          const lbl = curveSection.querySelector('label.toggle');
+          if (lbl) lbl.style.cursor = enabled ? '' : 'not-allowed';
+        }
+      }
     }
 
     function updateSocketState(card) {
@@ -520,7 +563,7 @@
       if (macGroup) macGroup.style.display = enabled ? '' : 'none';
     }
 
-    function addDevice(name='', ip='', priority='', power_meter='', power_ip='', power_socket_type='', power_socket_ip='', boiler_volume=100, mac='', power_socket_mac='', power_meter_mac='') {
+    function addDevice(name='', ip='', priority='', power_meter='', power_ip='', power_socket_type='', power_socket_ip='', boiler_volume=100, mac='', power_socket_mac='', power_meter_mac='', power_curve_enabled=false, power_curve_calibrated_at=null) {
       const container = document.getElementById('deviceContainer');
       if (container.children.length >= 5) { alert("Maximaal 5 SolarBuffers mogelijk."); return false; }
 
@@ -607,6 +650,27 @@
           </div>
         </div>
 
+        <div class="subsection power-curve-section">
+          <div class="subsection-title">Snellere regeling</div>
+          <div class="subsection-hint">Laat SolarBuffer bij een afwijking direct een grote, onderbouwde stap maken op basis van een eenmalige meting, in plaats van daar met kleine stapjes naartoe te regelen. Vereist een gekoppelde vermogensmeter hierboven.</div>
+          <div class="field-group" style="margin-bottom:0;display:flex;justify-content:space-between;align-items:center;">
+            <label style="margin-bottom:0;cursor:pointer;">Nieuwe regeling gebruiken</label>
+            <label class="toggle">
+              <input type="checkbox" class="power-curve-enabled-checkbox" ${power_curve_enabled ? 'checked' : ''}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <input type="hidden" name="power_curve_enabled[]" class="power-curve-enabled-hidden" value="${power_curve_enabled ? '1' : '0'}">
+          <div class="power-curve-init" style="margin-top:0.75rem;${power_curve_enabled ? '' : 'display:none;'}">
+            <button type="button" class="btn-secondary power-curve-init-btn" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">Initialiseren</button>
+            <div class="power-curve-status" style="${power_curve_calibrated_at ? '' : 'display:none;'}margin-top:0.5rem;padding:0.4rem 0.65rem;border-radius:0.5rem;font-size:0.78rem;border:1px solid transparent;background:hsl(224, 20%, 96%);color:hsl(224, 18%, 45%);">${
+              power_curve_calibrated_at
+                ? 'Laatst geïnitialiseerd op ' + new Date(power_curve_calibrated_at * 1000).toLocaleDateString('nl-NL')
+                : ''
+            }</div>
+          </div>
+        </div>
+
         <div class="subsection">
           <div class="subsection-title">Anti-legionella</div>
           <div class="field-group" style="margin-bottom:0;">
@@ -632,6 +696,11 @@
       card.querySelector('.meter-mac-reset').addEventListener('click', () =>
         resetDeviceMac(card, 'power_meter_mac', '.meter-mac-field', '.meter-mac-status', '.meter-mac-reset',
           'Wordt automatisch opgehaald zodra de meter online is'));
+      card.querySelector('.power-curve-enabled-checkbox').addEventListener('change', function() {
+        card.querySelector('.power-curve-enabled-hidden').value = this.checked ? '1' : '0';
+        card.querySelector('.power-curve-init').style.display = this.checked ? '' : 'none';
+      });
+      card.querySelector('.power-curve-init-btn').addEventListener('click', () => startCalibration(card));
       updatePowerIpState(card);
       updateSocketState(card);
       updatePriorities();
@@ -679,6 +748,54 @@
         .catch(() => {
           btn.disabled = false;
           setMacStatus(status, 'Verbindingsfout tijdens resetten.', 'error');
+        });
+    }
+
+    function startCalibration(card) {
+      const ip = (card.querySelector('input[name="shelly_ip[]"]')?.value || '').trim();
+      const status = card.querySelector('.power-curve-status');
+      const btn = card.querySelector('.power-curve-init-btn');
+      if (!ip) { setMacStatus(status, 'Vul eerst een IP-adres in en sla op.', 'error'); return; }
+      btn.disabled = true;
+      fetch(`/calibrate_device/${ip}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.success) {
+            btn.disabled = false;
+            setMacStatus(status, 'Fout: ' + (data.error || 'onbekend'), 'error');
+            return;
+          }
+          setMacStatus(status, `Bezig, stap 1 van ${data.steps}, duurt ongeveer ${Math.ceil(data.estimated_seconds / 60)} minuut/minuten…`, '');
+          pollCalibrationStatus(ip, status, btn);
+        })
+        .catch(() => {
+          btn.disabled = false;
+          setMacStatus(status, 'Verbindingsfout tijdens starten.', 'error');
+        });
+    }
+
+    function pollCalibrationStatus(ip, status, btn) {
+      fetch(`/calibrate_device/${ip}/status`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.calibrating) {
+            setMacStatus(status, `Bezig, stap ${data.step || '?'} van ${data.total_steps}…`, '');
+            setTimeout(() => pollCalibrationStatus(ip, status, btn), 3000);
+            return;
+          }
+          btn.disabled = false;
+          if (data.power_curve) {
+            const dateStr = data.calibrated_at
+              ? new Date(data.calibrated_at * 1000).toLocaleDateString('nl-NL')
+              : 'zojuist';
+            setMacStatus(status, 'Laatst geïnitialiseerd op ' + dateStr, 'success');
+          } else {
+            setMacStatus(status, 'Initialisatie mislukt, controleer of de vermogensmeter bereikbaar is.', 'error');
+          }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          setMacStatus(status, 'Verbindingsfout tijdens volgen van de voortgang.', 'error');
         });
     }
 
@@ -884,7 +1001,8 @@
           d.power_meter || "", d.power_ip || "",
           d.power_socket_type || "", d.power_socket_ip || "",
           d.boiler_volume || 100, d.mac || "",
-          d.power_socket_mac || "", d.power_meter_mac || ""
+          d.power_socket_mac || "", d.power_meter_mac || "",
+          !!d.power_curve_enabled, d.power_curve_calibrated_at || null
         ));
       } else {
         addDevice();

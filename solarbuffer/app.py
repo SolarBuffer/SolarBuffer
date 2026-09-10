@@ -782,6 +782,59 @@ _p1_history = []          # [(tijdstip, vermogen)], gevuld vanuit p1_poll_loop
 _p1_history_lock = threading.Lock()
 
 
+# Hoe vaak de P1-meter werkelijk een nieuwe waarde geeft. Sommige meters sturen
+# elke seconde een telegram, andere maar eens per 10 s. Dat verschil bepaalt hoe
+# vaak de PID zinvol kan rekenen: vaker dan er informatie binnenkomt betekent
+# meermaals integreren op dezelfde meting, en dat is precies wat een zaagtand
+# oplevert. We meten het interval daarom zelf in plaats van het te laten instellen.
+P1_INTERVAL_MIN = 2.0        # s: sneller dan de regellus heeft geen zin
+P1_INTERVAL_MAX = 15.0       # s: daarboven vertrouwen we het niet meer
+_p1_change_times = []        # tijdstippen waarop de waarde echt veranderde
+_p1_last_value = None
+_p1_interval = float(P1_INTERVAL_MIN)
+
+
+def p1_update_interval():
+    """Geschat interval waarmee de meter nieuwe waarden geeft, in seconden."""
+    return _p1_interval
+
+
+def p1_last_change_time():
+    """Tijdstip van de laatste werkelijk nieuwe meterwaarde, None als die er nog niet is.
+
+    Bij een trage meter is de waarde die we nu lezen tot een heel interval oud. Wie
+    daarmee wil rekenen moet weten uit welk moment hij komt, anders vergelijkt hij
+    het net van tien seconden geleden met een boiler van nu.
+    """
+    return _p1_change_times[-1] if _p1_change_times else None
+
+
+def _note_p1_interval(power, now):
+    """Houdt bij hoe vaak de meterwaarde verandert en schat daaruit het interval.
+
+    Bewust de mediaan en niet het gemiddelde: een enkele hapering in het netwerk
+    of een moment waarop de waarde toevallig gelijk bleef, mag de schatting niet
+    scheeftrekken.
+    """
+    global _p1_last_value, _p1_interval
+    if _p1_last_value is not None and power == _p1_last_value:
+        return
+    _p1_last_value = power
+    _p1_change_times.append(now)
+    if len(_p1_change_times) > 21:
+        del _p1_change_times[:-21]
+    if len(_p1_change_times) >= 2:
+        gaten = sorted(_p1_change_times[i] - _p1_change_times[i - 1]
+                       for i in range(1, len(_p1_change_times)))
+        # Zolang er weinig metingen zijn nemen we het grootste gat in plaats van de
+        # mediaan. Anders duurt het na een herstart een minuut voor we doorhebben dat
+        # de meter traag is, en regelt hij die eerste minuut op volle versterking op
+        # informatie die er niet is. Andersom kost dit niets: bij een snelle meter is
+        # ook het grootste gat klein en loopt hij tegen de ondergrens aan.
+        schatting = gaten[len(gaten) // 2] if len(gaten) >= 5 else gaten[-1]
+        _p1_interval = max(P1_INTERVAL_MIN, min(P1_INTERVAL_MAX, schatting))
+
+
 def note_p1_sample(power):
     """Legt een P1-meting vast voor de middeling van de accuregeling."""
     now = time.time()
@@ -789,6 +842,7 @@ def note_p1_sample(power):
         waarde = float(power)
     except (TypeError, ValueError):
         return
+    _note_p1_interval(waarde, now)
     with _p1_history_lock:
         _p1_history.append((now, waarde))
         grens = now - 60
@@ -804,6 +858,42 @@ def p1_average(seconds, fallback=None):
     if not waarden:
         return fallback
     return sum(waarden) / len(waarden)
+
+
+# Eigen vermogen van elk apparaat, met tijdstip erbij. De voorsturing rekent uit
+# hoeveel dit apparaat mag trekken door zijn eigen verbruik bij het netvermogen op
+# te tellen. Die twee moeten uit hetzelfde moment komen. Bij een trage meter is het
+# netvermogen tot een heel interval oud, terwijl het eigen vermogen live is; dan
+# telt het effect van de vorige stap wel in het ene getal en nog niet in het andere,
+# en dat scheelt precies zoveel als die stap groot was.
+_own_power_history = {}          # ip -> [(tijd, watt), ...]
+_OWN_POWER_HISTORY_SECONDS = 60
+
+
+def note_own_power(ip, power):
+    """Legt het gemeten eigen vermogen van een apparaat vast met tijdstempel."""
+    try:
+        waarde = float(power)
+    except (TypeError, ValueError):
+        return
+    nu = time.time()
+    hist = _own_power_history.setdefault(ip, [])
+    hist.append((nu, waarde))
+    grens = nu - _OWN_POWER_HISTORY_SECONDS
+    while hist and hist[0][0] < grens:
+        hist.pop(0)
+
+
+def own_power_at(ip, tijdstip, fallback=None):
+    """Eigen vermogen zoals het gemeten werd rond een bepaald moment.
+
+    Pakt de meting die het dichtst bij dat moment ligt. Op een snelle meter valt
+    dat samen met de laatste meting en verandert er dus niets aan het gedrag.
+    """
+    hist = _own_power_history.get(ip)
+    if not hist or tijdstip is None:
+        return fallback
+    return min(hist, key=lambda tw: abs(tw[0] - tijdstip))[1]
 _hw_battery_control_lock = threading.Lock()
 _last_hw_battery_send = 0.0
 HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
@@ -888,6 +978,7 @@ CALIBRATION_REMINDER_CHECK_INTERVAL = 24 * 3600    # s: hoe vaak we het überhau
 # nooit toe aan zijn eigen werk. Is de sprong na deze tijd nog steeds nodig, dan
 # mag hij opnieuw.
 POWER_CURVE_JUMP_INTERVAL = 10                     # s: minimale tijd tussen twee sprongen
+CURVE_DEBUG = os.environ.get("CURVE_DEBUG") == "1"   # zet aan om elke curve-sprong te loggen
 POWER_CURVE_MIN_JUMP = 5                           # %: kleinere afwijkingen dan dit zijn normale
                                                     # P1-ruis, geen echte sprong overslaan voorkomt
                                                     # dat de helderheid elke meting heen en weer schiet
@@ -1769,7 +1860,11 @@ def parse_devices_from_request(req):
         ps_type = get_val(power_socket_types, i).strip().lower()
         ps_ip = get_val(power_socket_ips, i).strip()
         bv = max(10, safe_int(get_val(boiler_volumes, i, "100"), 100))
-        curve_enabled = get_val(power_curve_enableds, i, "0") == "1"
+        # Zonder vermogensmeter is er geen curve te maken, dus dan kan deze stand
+        # ook niet aan staan. De interface schermt het al af; dit is het vangnet
+        # voor het geval de meter later verwijderd wordt of iemand het formulier
+        # buiten de interface om verstuurt.
+        curve_enabled = (get_val(power_curve_enableds, i, "0") == "1" and pm != "")
         prev = existing_by_name.get(name, {})
         devices.append({
             "name": name, "ip": ip, "priority": prio,
@@ -6733,6 +6828,7 @@ def control_loop():
     _bat_saturated = False       # accu uitgeregeld: neemt overschot niet op → boiler vrijgeven
     _bat_saturated_since = None  # start aanhoudende export terwijl accu zou moeten laden
     _ff_last_measured_power = {}  # per ip: laatst gebruikte P1-meting voor curve-sprong
+    _p1_prev_seen = None          # vorige meterwaarde, om een verse meting te herkennen
     _ff_last_jump = {}            # per ip: wanneer er voor het laatst gezaaid is
 
     while True:
@@ -6807,9 +6903,33 @@ def control_loop():
             # Regelsnelheid: Ki-actie ±20% instelbaar via expert settings
             _ki_adjust = max(-30, min(20, int(settings.get("PID_KI_ADJUST", 0) or 0)))
             _ki_eff = PID_KI * (1 + _ki_adjust / 100.0)
+            # Laat de PID meelopen met het tempo waarin de meter informatie geeft.
+            # Rekent hij vaker dan dat, dan integreert hij meerdere keren op dezelfde
+            # meting: hij ziet de teruglevering nog staan terwijl zijn vorige correctie
+            # allang in de boiler zit maar nog niet in het telegram. Dat loopt op tot
+            # een forse overschrijding, waarna de voorsturing hem bij de volgende
+            # meting weer terugtrekt. Precies de zaagtand die je bij een meter van
+            # 10 s ziet. Bij een snelle meter komt dit uit op de ondergrens en
+            # verandert er dus niets aan het bestaande gedrag.
+            _sample_eff = round(max(2.0, p1_update_interval()), 1)
+            # Versterking meeschalen met de dode tijd. Tussen twee telegrammen stuurt
+            # de regeling blind: hij ziet het effect van zijn correctie pas een heel
+            # interval later. De instellingen hieronder zijn ingeregeld op een meter
+            # die elke seconde praat. Bij een meter van tien seconden levert diezelfde
+            # versterking een correctie op die groter is dan de fout zelf, en dan
+            # slingert hij per definitie heen en weer in plaats van in te regelen.
+            # Vandaar evenredig terugschalen met hoeveel trager de meter is. De grove
+            # slag wordt toch al door de vermogenscurve gedaan; de PID hoeft alleen
+            # het restje bij te trimmen. Bij een snelle meter is de factor 1 en
+            # verandert er niets aan de bestaande afregeling.
+            _traagheid = max(0.15, min(1.0, P1_INTERVAL_MIN / _sample_eff))
+            _kp_eff = PID_KP * _traagheid
+            _ki_eff = _ki_eff * _traagheid
             for _pid in device_pids.values():
-                if _pid.Ki != _ki_eff:
-                    _pid.tunings = (PID_KP, _ki_eff, PID_KD)
+                if _pid.Kp != _kp_eff or _pid.Ki != _ki_eff:
+                    _pid.tunings = (_kp_eff, _ki_eff, PID_KD)
+                if _pid.sample_time != _sample_eff:
+                    _pid.sample_time = _sample_eff
 
             now = time.time()
 
@@ -7001,6 +7121,7 @@ def control_loop():
                     total_wh = total_kwh * 1000 if total_kwh is not None else None
                 else:
                     state["power"] = 0
+                note_own_power(ip, state["power"])
 
                 # Dagelijkse kWh via cumulatieve teller van het apparaat
                 if state.get("energy_day_date") != energy_today_str:
@@ -7023,6 +7144,11 @@ def control_loop():
                         state["energy_today_kwh"] = max(0.0, delta / 1000)
 
             measured_power = current_power
+            # Een trage meter herhaalt zijn waarde tot het volgende telegram. Alleen
+            # op het moment dat die waarde echt verandert is er nieuwe informatie, en
+            # alleen dan is het zinvol om de regeling te laten rekenen.
+            _p1_fresh = (_p1_prev_seen is None or measured_power != _p1_prev_seen)
+            _p1_prev_seen = measured_power
             pid_power = 20 if PID_NEUTRAL_LOW <= measured_power <= PID_NEUTRAL_HIGH else measured_power
             devices_sorted = get_sorted_devices(devices)
             active_brightness = 0
@@ -7944,6 +8070,23 @@ def control_loop():
                     continue
 
                 if regulating_device and ip == regulating_device["ip"]:
+                    # Reken op het ritme van de meter, niet op een eigen klok. De PID
+                    # slaat cycli over die binnen zijn sample_time vallen, maar die
+                    # klok loopt vrij: hij kan net voor een nieuw telegram aflopen en
+                    # dan rekent hij op een meting die bijna een heel interval oud is.
+                    # Door zijn cyclus bij elke verse meting op scherp te zetten valt
+                    # het rekenmoment altijd op de nieuwste informatie, en precies één
+                    # keer per meting. Bij een snelle meter is elke cyclus vers en
+                    # verandert er dus niets.
+                    _pid_obj = device_pids[ip]
+                    if _p1_fresh and _pid_obj.sample_time:
+                        _pid_obj._last_time = _pid_obj.time_fn() - _pid_obj.sample_time
+                    if CURVE_DEBUG and _p1_fresh:
+                        print("METER %s interval=%.1fs sample_time=%s net=%.0f stand=%d eigen=%s"
+                              % (time.strftime("%H:%M:%S"), p1_update_interval(),
+                                 _pid_obj.sample_time, measured_power,
+                                 st["brightness"], st.get("power")), flush=True)
+
                     # Snellere regeling (optioneel, per apparaat): bij een verse P1-meting
                     # direct een onderbouwde sprong maken op basis van de eerder ingemeten
                     # vermogenscurve (helderheid -> watt), i.p.v. daar met kleine PID-stapjes
@@ -7970,7 +8113,18 @@ def control_loop():
                             and _own_power < _curve_min_w * 0.5
                         )
                         if not _saturated:
-                            _ff_target = (_own_power or 0) - measured_power
+                            # Ruimte voor dit apparaat = zijn eigen verbruik plus wat
+                            # er op dat moment naar het net ging. Beide getallen moeten
+                            # uit hetzelfde moment komen. Bij een trage meter is
+                            # measured_power tot een heel interval oud en zit onze
+                            # vorige stap er nog niet in, terwijl het eigen vermogen die
+                            # al wel laat zien. Reken je dan door, dan telt die stap
+                            # precies één keer verkeerd mee en stapt de regeling met
+                            # volle overtuiging de verkeerde kant op. Daarom het eigen
+                            # vermogen van het moment van de meting, niet dat van nu.
+                            # Op een snelle meter vallen die twee samen.
+                            _own_at_p1 = own_power_at(ip, p1_last_change_time(), _own_power)
+                            _ff_target = (_own_at_p1 or 0) - measured_power
                             # Spanningscorrectie. Een boilerelement is resistief, dus
                             # bij dezelfde dimstand schaalt het vermogen met het
                             # kwadraat van de netspanning: 245 V geeft 13% meer dan
@@ -7997,9 +8151,19 @@ def control_loop():
                             # zou de integraal bij elke cyclus met volle overtuiging naar een
                             # net iets andere schatting springen — dat gaf zichtbaar schommelend
                             # gedrag in plaats van de bedoelde rustige, grote sprong.
+                            # Tussen twee sprongen moet de PID zelf aan het werk kunnen.
+                            # Zaaien overschrijft namelijk de integraal, dus zaaien we bij
+                            # elke rekencyclus, dan komt de PID nooit toe aan corrigeren en
+                            # regelt de curve in feite blind. Bij een trage meter is één
+                            # rekencyclus net zo lang als het vaste interval hieronder, dus
+                            # laten we er minstens een paar metingen tussen zitten. Op een
+                            # snelle meter blijft het vaste interval leidend en verandert er
+                            # niets.
+                            _ff_interval = max(POWER_CURVE_JUMP_INTERVAL,
+                                               3 * p1_update_interval())
                             if (_ff_b is not None
                                     and abs(_ff_b - st["brightness"]) >= POWER_CURVE_MIN_JUMP
-                                    and (now - _ff_last_jump.get(ip, 0)) >= POWER_CURVE_JUMP_INTERVAL):
+                                    and (now - _ff_last_jump.get(ip, 0)) >= _ff_interval):
                                 _pid = device_pids[ip]
                                 _now = _pid.time_fn()
                                 # Alleen zaaien op een cyclus waarop de PID toch al gaat
@@ -8017,6 +8181,15 @@ def control_loop():
                                     # uitkomen in plaats van erover.
                                     _predicted_p = _pid.Kp * (_pid.setpoint - pid_power)
                                     _pid._integral = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, _ff_b - _predicted_p))
+                                    if CURVE_DEBUG:
+                                        _t_p1 = p1_last_change_time()
+                                        print("CURVE %s net=%.0f (%.1fs oud) eigen_nu=%s eigen_bij_meting=%s "
+                                              "doel=%.0fW V=%s->%s stand=%d->%d"
+                                              % (time.strftime("%H:%M:%S"), measured_power,
+                                                 (now - _t_p1) if _t_p1 else -1,
+                                                 _own_power, _own_at_p1, _ff_target,
+                                                 _v_cal, _v_now, st["brightness"], _ff_b),
+                                              flush=True)
                                     # Pas hier vastleggen, want alleen op dit punt is
                                     # er werkelijk gezaaid. Een sprong die door de
                                     # PID-cyclus tegengehouden wordt mag de klok niet
@@ -10304,7 +10477,6 @@ def p1_poll_loop():
                 shelly_ip = (cfg.get("p1_shelly_ip") or "").strip()
                 if shelly_ip:
                     current_power = get_shelly_em_power(shelly_ip, cfg.get("p1_shelly_channels") or [])
-                    note_p1_sample(current_power)
                     _p1_meter_import_kwh, _p1_meter_export_kwh = get_shelly_em_energy(
                         shelly_ip, cfg.get("p1_shelly_channels") or [])
                     _p1_online = True
@@ -10317,7 +10489,6 @@ def p1_poll_loop():
                 if p1_ip:
                     hw_data = requests.get(f"http://{p1_ip}/api/v1/data", timeout=2).json()
                     current_power = float(hw_data.get("active_power_w", 0) or 0)
-                    note_p1_sample(current_power)
                     # Tellerstanden voor de exacte dag- en maandverbruiken
                     _imp = hw_data.get("total_power_import_kwh")
                     _exp = hw_data.get("total_power_export_kwh")
@@ -10328,6 +10499,11 @@ def p1_poll_loop():
                     if not (cfg.get("p1_mac") or "").strip() and time.time() - p1_mac_last_try > 300:
                         p1_mac_last_try = time.time()
                         threading.Thread(target=backfill_p1_mac, args=(p1_ip,), daemon=True).start()
+
+            # Bewust hier en niet in de takken hierboven: zo ziet elke bron dezelfde
+            # waarde, en telt ook de middeling voor de accuregeling met precies
+            # hetzelfde netvermogen als de boilerregeling.
+            note_p1_sample(current_power)
 
             # Gas komt altijd van de HomeWizard P1 meter, los van p1_source — een
             # Shelly EM/3EM heeft geen DSMR/gas-aansluiting. Is p1_ip nog
