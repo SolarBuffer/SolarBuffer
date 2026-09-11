@@ -8074,12 +8074,21 @@ def control_loop():
                     # slaat cycli over die binnen zijn sample_time vallen, maar die
                     # klok loopt vrij: hij kan net voor een nieuw telegram aflopen en
                     # dan rekent hij op een meting die bijna een heel interval oud is.
-                    # Door zijn cyclus bij elke verse meting op scherp te zetten valt
+                    # Door zijn cyclus bij een verse meting op scherp te zetten valt
                     # het rekenmoment altijd op de nieuwste informatie, en precies één
-                    # keer per meting. Bij een snelle meter is elke cyclus vers en
-                    # verandert er dus niets.
+                    # keer per meting.
+                    #
+                    # Uitsluitend bij een meter die trager is dan de regellus. Is de
+                    # meter net zo snel, dan is elke cyclus toch al vers en valt er
+                    # niets te winnen, terwijl het wel iets zou veranderen: de PID
+                    # rekent zijn integraal met de werkelijk verstreken tijd, en die
+                    # zouden we hier vervangen door een vaste stap. Dat is bij een
+                    # lus die er in de praktijk iets langer over doet dan twee
+                    # seconden net even minder integratie per cyclus. Bestaande
+                    # installaties met een snelle meter blijven zo exact hetzelfde
+                    # regelen als voorheen.
                     _pid_obj = device_pids[ip]
-                    if _p1_fresh and _pid_obj.sample_time:
+                    if _sample_eff > P1_INTERVAL_MIN and _p1_fresh and _pid_obj.sample_time:
                         _pid_obj._last_time = _pid_obj.time_fn() - _pid_obj.sample_time
                     if CURVE_DEBUG and _p1_fresh:
                         print("METER %s interval=%.1fs sample_time=%s net=%.0f stand=%d eigen=%s"
@@ -10158,7 +10167,14 @@ def history_worker():
                         # conventie: negatief is laden, positief is ontladen
                         waarden["battery_charge"] = max(0.0, -float(_bp))
                         waarden["battery_discharge"] = max(0.0, float(_bp))
+                # Een stroomtang op de zonnegroep meldt opwek als positief of als
+                # negatief vermogen, puur afhankelijk van welke kant hij om de draad
+                # zit. Beide komen in de praktijk voor, dus tellen we de twee
+                # richtingen apart op en laten we pas bij het uitlezen bepalen welke
+                # de opwek is. Alles onder nul zomaar weggooien kostte de hele
+                # dagopbrengst bij een omgekeerd gemonteerde meter.
                 _zon_acc = 0.0
+                _zon_acc_terug = 0.0
                 _heeft_zon_acc = False
                 for acc in cfg.get("accessories", []):
                     acc_id = acc.get("id", "")
@@ -10169,7 +10185,9 @@ def history_worker():
                     _is_zon = acc.get("acc_type") == "power" and acc.get("is_solar")
                     if _is_zon:
                         _heeft_zon_acc = True
-                        _zon_acc += max(0.0, float(st.get("power") or 0))
+                        _zon_w_acc = float(st.get("power") or 0)
+                        _zon_acc += max(0.0, _zon_w_acc)
+                        _zon_acc_terug += max(0.0, -_zon_w_acc)
                     if not acc.get("record_history"):
                         continue
                     if acc.get("acc_type") == "temperature":
@@ -10199,6 +10217,8 @@ def history_worker():
                     # De dagtelling telt beide bronnen wel op, want dat is één
                     # grootheid en geen tweede lijn in een grafiek.
                     waarden["solar"] = max(0.0, _zon_w)
+                if _heeft_zon_acc:
+                    waarden["solar_terug"] = _zon_acc_terug
 
                 _accumulate_daily(waarden)
 
@@ -10235,6 +10255,18 @@ def maandoverzicht():
     if not require_login():
         return redirect("/login")
     return render_template("monthly.html", dark_mode=get_user_dark_mode())
+
+
+def zon_van_maand(opgeteld):
+    """Opwek van een maand, ongeacht hoe de zonnemeter gemonteerd is.
+
+    De twee richtingen zijn apart geteld. De grootste is de opwek; de andere is
+    het beetje dat de omvormer 's nachts zelf verbruikt en dat is geen opbrengst.
+    Bij een omvormerkoppeling is er nooit een tegenrichting, dan wint 'solar'
+    vanzelf.
+    """
+    return max(float(opgeteld.get("solar", 0.0) or 0.0),
+               float(opgeteld.get("solar_terug", 0.0) or 0.0))
 
 
 def _volgende_maand(maand):
@@ -10326,7 +10358,7 @@ def api_monthly():
         opt = opgeteld.get(maand, {})
         rij = {
             "month": maand,
-            "solar": opt.get("solar", 0.0),
+            "solar": zon_van_maand(opt),
             # Per SolarBuffer, met de naam zoals hij in de app heet. Dagen van voor
             # deze wijziging kennen alleen een opgeteld totaal; die tonen we onder
             # de algemene naam in plaats van ze te laten verdwijnen.
