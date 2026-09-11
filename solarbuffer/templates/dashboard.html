@@ -3162,7 +3162,11 @@
 
           const solarLiveRow = document.getElementById('solarLiveRow');
           if (solarAcc) {
-            document.getElementById('solarLivePower').textContent = Number(solarAcc.power || 0).toFixed(0);
+            // Opwek is een hoeveelheid, geen richting. Of de meting positief of
+            // negatief binnenkomt hangt alleen af van hoe de stroomtang om de
+            // zonnegroep zit, en bij de helft van de installaties is dat andersom.
+            document.getElementById('solarLivePower').textContent =
+              Math.abs(Number(solarAcc.power || 0)).toFixed(0);
             solarLiveRow.style.display = 'flex';
             document.getElementById('dailySolar').textContent = Number(solarAcc.energy_today_kwh || 0).toFixed(2);
           } else {
