@@ -2609,6 +2609,9 @@ def status_json():
             "started": s.get("started", False),
             "pending_start": s.get("pending_start", False),
             "power": s.get("power", 0),
+            # Dezelfde tekst die ook via MQTT gaat, zodat elke koppeling en het
+            # dashboard hetzelfde woord gebruiken voor dezelfde toestand.
+            "status": _device_status_label(s),
             "chip_temp": s.get("chip_temp"),
             "power_meter": d.get("power_meter"),
             "power_ip": d.get("power_ip"),
@@ -2713,6 +2716,26 @@ def status_json():
         battery_control_mode=cfg.get("battery_control_mode", "auto"),
         battery_manual_direction=cfg.get("battery_manual_direction", "charge"),
         battery_manual_power=cfg.get("battery_manual_power", 0),
+        # Samenvattende toestand van de hub in één woord. _system_status_label
+        # rekent met de helderheid onder de sleutel "power", vandaar dat we hier
+        # een lijstje in die vorm meegeven en niet de apparaten van hierboven,
+        # waar "power" het gemeten vermogen in watt is.
+        system_status=_system_status_label(
+            [{
+                "pending_start": d.get("pending_start"),
+                "waiting_for_power_socket": d.get("waiting_for_power_socket"),
+                "freeze": d.get("freeze"),
+                "started": d.get("started"),
+                "priority": d.get("priority", 1),
+                "power": d.get("brightness", 0),
+                "price_triggered": device_states.get(d["ip"], {}).get("price_triggered", False),
+                "temp_shutoff_until": device_states.get(d["ip"], {}).get("temp_shutoff_until"),
+            } for d in devices],
+            cfg,
+        ),
+        update_available=_update_available,
+        version_installed=_git_versie("HEAD"),
+        version_latest=_git_versie("@{u}"),
     )
 
 
@@ -2734,6 +2757,17 @@ def toggle_pid():
         return jsonify(success=False, error="Geen toegang"), 403
     _set_regulation(not enabled)
     return jsonify(success=True)
+
+
+@app.route("/api/update", methods=["POST"])
+def api_run_update():
+    """Werkt de hub-software bij naar de laatste versie."""
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    threading.Thread(target=_voer_app_update_uit, args=("api",), daemon=True).start()
+    return jsonify(success=True, started=True)
 
 
 @app.route("/api/regulation", methods=["POST"])
@@ -3612,6 +3646,64 @@ def api_set_device_power(ip):
     if "on" not in data:
         return jsonify(success=False, error="Veld 'on' ontbreekt"), 400
     return _set_device_power(ip, bool(data["on"]))
+
+
+@app.route("/api/device/<path:ip>/brightness", methods=["POST"])
+def api_set_device_brightness(ip):
+    """Zet een SolarBuffer op een vaste stand.
+
+    Bedoeld voor als de automatische besturing uit staat: dan laat de regellus
+    de apparaten met rust en blijft deze stand gewoon staan. Staat de besturing
+    wel aan, dan rekent de regeling binnen een paar seconden een nieuwe stand
+    uit en is hiervan niets meer over. Het antwoord vermeldt daarom of de
+    besturing aan staat, zodat de aanroeper dat kan tonen.
+
+    Een waarde van 0 of lager betekent uitzetten; daarboven wordt de stand
+    begrensd tot het bereik waarin de dimmer betrouwbaar werkt.
+    """
+    if not require_login():
+        return jsonify(success=False), 401
+
+    data = request.get_json(silent=True) or {}
+    try:
+        gevraagd = int(data["brightness"])
+    except (KeyError, TypeError, ValueError):
+        return jsonify(success=False,
+                       error="Veld 'brightness' ontbreekt of is geen getal"), 400
+
+    if gevraagd <= 0:
+        return _set_device_power(ip, False)
+
+    cfg = load_config()
+    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+    if not device or ip not in device_states:
+        return jsonify(success=False), 404
+
+    stand = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, gevraagd))
+    st = device_states[ip]
+
+    if not ensure_power_socket_on(device):
+        write_audit_log("device_brightness_waiting_for_power_socket", {"device_ip": ip})
+        return jsonify(success=False, waiting_for_power_socket=True)
+
+    # Handmatig sturen annuleert een lopende temperatuur-wachttijd, net als
+    # handmatig aanzetten dat doet.
+    st["temp_shutoff_until"] = None
+    st["temp_shutoff_since"] = None
+    st["temp_shutoff_silent_restart"] = False
+    st["on"] = True
+    st["started"] = True
+    st["manual_override"] = True
+    st["pending_start"] = False
+    st["freeze"] = False
+    st["saturated_since"] = None
+    st["min_since"] = None
+    st["brightness"] = stand
+    set_shelly(stand, True, ip)
+    mark_device_activity(device)
+
+    write_audit_log("device_brightness_set", {"device_ip": ip, "brightness": stand})
+    return jsonify(success=True, brightness=stand, regulation_enabled=enabled)
 
 
 @app.route("/set_brightness/<path:ip>", methods=["POST"])
@@ -6224,6 +6316,52 @@ def startup_sync_devices():
 
 
 # ================= MQTT =================
+def _git_versie(ref):
+    """Korte commit-aanduiding van de code die draait, of die klaarstaat.
+
+    De hub vergelijkt bij het updaten commits en geen versienummers, dus dit is
+    het enige dat werkelijk zegt of er iets nieuws klaarstaat. Lukt het niet,
+    bijvoorbeeld omdat er geen git-map is, dan geven we niets terug in plaats
+    van een verzonnen waarde.
+    """
+    try:
+        uit = subprocess.run(["git", "rev-parse", "--short", ref], cwd=UPDATE_DIR,
+                             capture_output=True, text=True, timeout=5)
+        return uit.stdout.strip() or None
+    except Exception:
+        return None
+
+
+def _voer_app_update_uit(aanleiding):
+    """Haalt de nieuwe code op en herstart de dienst als er iets veranderd is.
+
+    Gedeeld door het MQTT-commando en het API-endpoint, zodat beide precies
+    hetzelfde doen. Draait in een aparte thread: het herstarten hakt de
+    verbinding af waarmee het verzoek binnenkwam, dus de aanroeper krijgt zijn
+    antwoord voordat dat gebeurt.
+    """
+    global _update_available
+    try:
+        ensure_git_remote_uses_deploy_key()
+        pull = subprocess.run(
+            ["git", "pull"], cwd=UPDATE_DIR,
+            capture_output=True, text=True, timeout=60, env=_git_update_env()
+        )
+        output = (pull.stdout + pull.stderr).strip()
+        has_changes = pull.returncode == 0 and "already up to date" not in output.lower()
+        write_audit_log(f"update_run_via_{aanleiding}",
+                        {"returncode": pull.returncode, "has_changes": has_changes})
+        if has_changes:
+            _update_available = False
+            cfg = load_config()
+            sync_configured_devices_off(cfg.get("shelly_devices", []))
+            time.sleep(1.5)
+            if os.name != "nt":
+                subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
+    except Exception as e:
+        print(f"Update fout ({aanleiding}): {e}")
+
+
 def _check_update_available():
     global _update_available
     try:
@@ -6478,27 +6616,7 @@ def _handle_mqtt_command(prefix, topic, payload):
         return
 
     if topic == f"{prefix}/run_update":
-        def _do_update():
-            global _update_available
-            try:
-                ensure_git_remote_uses_deploy_key()
-                pull = subprocess.run(
-                    ["git", "pull"], cwd=UPDATE_DIR,
-                    capture_output=True, text=True, timeout=60, env=_git_update_env()
-                )
-                output = (pull.stdout + pull.stderr).strip()
-                has_changes = pull.returncode == 0 and "already up to date" not in output.lower()
-                write_audit_log("update_run_via_mqtt", {"returncode": pull.returncode, "has_changes": has_changes})
-                if has_changes:
-                    _update_available = False
-                    cfg = load_config()
-                    sync_configured_devices_off(cfg.get("shelly_devices", []))
-                    time.sleep(1.5)
-                    if os.name != "nt":
-                        subprocess.run(["sudo", "systemctl", "restart", "solarbuffer"])
-            except Exception as e:
-                print(f"MQTT update fout: {e}")
-        threading.Thread(target=_do_update, daemon=True).start()
+        threading.Thread(target=_voer_app_update_uit, args=("mqtt",), daemon=True).start()
         return
 
     device_set_on_prefix = f"{prefix}/device/"
