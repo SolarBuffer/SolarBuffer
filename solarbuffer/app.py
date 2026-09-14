@@ -59,6 +59,7 @@ CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 AUDIT_LOG_FILE = os.path.join(BASE_DIR, "audit.log")
 STATE_FILE = os.path.join(BASE_DIR, "state.json")
 ENERGY_BASELINES_FILE = os.path.join(BASE_DIR, "energy_baselines.json")
+API_TOKENS_FILE = os.path.join(BASE_DIR, "api_tokens.json")
 _last_state_save = 0
 _energy_baselines_lock = threading.Lock()
 
@@ -931,6 +932,46 @@ _mqtt_connected = False
 _update_available = False
 _api_tokens = {}           # token -> {"username": str, "expires": float}
 _api_tokens_lock = threading.Lock()
+
+
+def _save_api_tokens():
+    """Legt de uitgegeven tokens op schijf vast.
+
+    Zonder dit was elk token ongeldig zodra de hub herstartte, en moest elke
+    koppeling (Home Assistant bijvoorbeeld) opnieuw inloggen met gebruikersnaam
+    en wachtwoord. Een token geeft dezelfde toegang als een wachtwoord, dus het
+    bestand is alleen voor de eigenaar leesbaar. De aanroeper houdt het slot al
+    vast, anders zouden we hier op onszelf wachten.
+    """
+    tmp = f"{API_TOKENS_FILE}.{os.getpid()}.tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(_api_tokens, f)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, API_TOKENS_FILE)
+    except Exception as e:
+        print(f"API-tokens opslaan mislukt: {e}")
+
+
+def _load_api_tokens():
+    """Haalt de tokens terug na een herstart en gooit verlopen exemplaren weg."""
+    global _api_tokens
+    if not os.path.exists(API_TOKENS_FILE):
+        return
+    try:
+        with open(API_TOKENS_FILE, encoding="utf-8") as f:
+            opgeslagen = json.load(f)
+    except Exception as e:
+        print(f"API-tokens laden mislukt: {e}")
+        return
+    nu = time.time()
+    with _api_tokens_lock:
+        _api_tokens = {
+            t: v for t, v in opgeslagen.items()
+            if isinstance(v, dict) and float(v.get("expires") or 0) > nu
+        }
+        if len(_api_tokens) != len(opgeslagen):
+            _save_api_tokens()
 _tailscale_auth_url = None
 
 # ================= HW UPDATE STATE =================
@@ -1030,6 +1071,7 @@ def _get_bearer_username():
             return None
         if time.time() > entry["expires"]:
             del _api_tokens[token]
+            _save_api_tokens()
             return None
         return entry["username"]
 
@@ -1738,6 +1780,7 @@ def api_token_create():
     expires = time.time() + 30 * 86400  # 30 dagen
     with _api_tokens_lock:
         _api_tokens[token] = {"username": matched["username"], "expires": expires}
+        _save_api_tokens()
     write_audit_log("api_login_success", {"username": matched["username"], "ip": get_client_ip()})
     return _cors_headers(jsonify({"token": token, "username": matched["username"], "expires_in": 30 * 86400}))
 
@@ -1750,6 +1793,7 @@ def api_token_revoke():
     token = auth[7:].strip()
     with _api_tokens_lock:
         _api_tokens.pop(token, None)
+        _save_api_tokens()
     return jsonify({"ok": True})
 
 
@@ -2672,49 +2716,99 @@ def status_json():
     )
 
 
-@app.route("/toggle_pid")
-def toggle_pid():
+def _set_regulation(aan):
     global enabled
-    if not require_login():
-        return jsonify(success=False), 401
-    if not is_current_user_admin():
-        return jsonify(success=False, error="Geen toegang"), 403
-    enabled = not enabled
+    enabled = bool(aan)
     cfg = load_config()
     cfg["pid_enabled"] = enabled
     save_config(cfg)
     write_audit_log("pid_toggled", {"enabled": enabled})
-    return jsonify(success=True)
+    return enabled
 
 
-@app.route("/toggle_schedules")
-def toggle_schedules():
-    global schedules_enabled
+@app.route("/toggle_pid")
+def toggle_pid():
     if not require_login():
         return jsonify(success=False), 401
     if not is_current_user_admin():
         return jsonify(success=False, error="Geen toegang"), 403
-    schedules_enabled = not schedules_enabled
+    _set_regulation(not enabled)
+    return jsonify(success=True)
+
+
+@app.route("/api/regulation", methods=["POST"])
+def api_set_regulation():
+    """Zet de regeling op een gevraagde stand in plaats van hem om te schakelen."""
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    data = request.get_json(silent=True) or {}
+    if "enabled" not in data:
+        return jsonify(success=False, error="Veld 'enabled' ontbreekt"), 400
+    return jsonify(success=True, enabled=_set_regulation(data["enabled"]))
+
+
+def _set_schedules(aan):
+    global schedules_enabled
+    schedules_enabled = bool(aan)
     cfg = load_config()
     cfg["schedules_enabled"] = schedules_enabled
     save_config(cfg)
     write_audit_log("schedules_toggled", {"enabled": schedules_enabled})
-    return jsonify(success=True, enabled=schedules_enabled)
+    return schedules_enabled
 
 
-@app.route("/toggle_anti_legionella")
-def toggle_anti_legionella():
-    global anti_legionella_enabled
+@app.route("/toggle_schedules")
+def toggle_schedules():
     if not require_login():
         return jsonify(success=False), 401
     if not is_current_user_admin():
         return jsonify(success=False, error="Geen toegang"), 403
-    anti_legionella_enabled = not anti_legionella_enabled
+    return jsonify(success=True, enabled=_set_schedules(not schedules_enabled))
+
+
+@app.route("/api/schedules", methods=["POST"])
+def api_set_schedules():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    data = request.get_json(silent=True) or {}
+    if "enabled" not in data:
+        return jsonify(success=False, error="Veld 'enabled' ontbreekt"), 400
+    return jsonify(success=True, enabled=_set_schedules(data["enabled"]))
+
+
+def _set_anti_legionella(aan):
+    global anti_legionella_enabled
+    anti_legionella_enabled = bool(aan)
     cfg = load_config()
     cfg["anti_legionella_enabled"] = anti_legionella_enabled
     save_config(cfg)
     write_audit_log("anti_legionella_toggled", {"enabled": anti_legionella_enabled})
-    return jsonify(success=True, enabled=anti_legionella_enabled)
+    return anti_legionella_enabled
+
+
+@app.route("/toggle_anti_legionella")
+def toggle_anti_legionella():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    return jsonify(success=True, enabled=_set_anti_legionella(not anti_legionella_enabled))
+
+
+@app.route("/api/anti_legionella", methods=["POST"])
+def api_set_anti_legionella():
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    data = request.get_json(silent=True) or {}
+    if "enabled" not in data:
+        return jsonify(success=False, error="Veld 'enabled' ontbreekt"), 400
+    return jsonify(success=True, enabled=_set_anti_legionella(data["enabled"]))
 
 
 @app.route("/settings/anti_legionella_mode", methods=["POST"])
@@ -3444,17 +3538,20 @@ def set_theme():
     return jsonify(success=True, dark_mode=dark_mode)
 
 
-@app.route("/toggle_shelly/<path:ip>")
-def toggle_shelly(ip):
-    if not require_login():
-        return jsonify(success=False), 401
+def _set_device_power(ip, new_on):
+    """Zet één SolarBuffer handmatig aan of uit.
+
+    Gedeeld door de omschakelaar van de webinterface en door het set-endpoint
+    voor koppelingen zoals Home Assistant. Een koppeling weet wat hij wil ("uit")
+    en niet wat de huidige stand is, dus met alleen een omschakelaar zou hij
+    eerst moeten uitlezen en dan gokken dat er niemand anders tussendoor klikt.
+    """
     cfg = load_config()
     device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
     if not device or ip not in device_states:
         return jsonify(success=False), 404
 
     st = device_states[ip]
-    new_on = not st["on"]
 
     if new_on:
         # Handmatig inschakelen annuleert de temp-wachttijd
@@ -3495,6 +3592,26 @@ def toggle_shelly(ip):
         "brightness": st["brightness"]
     })
     return jsonify(success=True, on=new_on)
+
+
+@app.route("/toggle_shelly/<path:ip>")
+def toggle_shelly(ip):
+    if not require_login():
+        return jsonify(success=False), 401
+    if ip not in device_states:
+        return jsonify(success=False), 404
+    return _set_device_power(ip, not device_states[ip]["on"])
+
+
+@app.route("/api/device/<path:ip>/power", methods=["POST"])
+def api_set_device_power(ip):
+    """Zet een apparaat op een gevraagde stand, ongeacht waar hij nu staat."""
+    if not require_login():
+        return jsonify(success=False), 401
+    data = request.get_json(silent=True) or {}
+    if "on" not in data:
+        return jsonify(success=False, error="Veld 'on' ontbreekt"), 400
+    return _set_device_power(ip, bool(data["on"]))
 
 
 @app.route("/set_brightness/<path:ip>", methods=["POST"])
@@ -10674,6 +10791,7 @@ def accessory_poll_loop():
 # ================= START =================
 if __name__ == "__main__":
     init_history_db()
+    _load_api_tokens()
     startup_sync_devices()
     threading.Thread(target=p1_poll_loop, daemon=True).start()
     threading.Thread(target=control_loop, daemon=True).start()

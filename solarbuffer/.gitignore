@@ -1,2 +1,21 @@
-*config.json, *audit.log, *state.json, __pycache__/, *.pyc, history.db, history.db-wal, history.db-shm, energy-baselines.json
+# Git leest elke regel als één patroon. Stond dit op één regel met komma's,
+# dan zoekt git naar een bestand met die komma's in de naam en wordt er dus
+# niets genegeerd.
 
+# Instellingen en gegevens van de installatie zelf
+config.json
+state.json
+energy_baselines.json
+audit.log
+
+# API-tokens geven dezelfde toegang als een wachtwoord
+api_tokens.json
+
+# Meethistorie
+history.db
+history.db-wal
+history.db-shm
+
+__pycache__/
+*.pyc
+.DS_Store
