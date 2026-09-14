@@ -3648,64 +3648,6 @@ def api_set_device_power(ip):
     return _set_device_power(ip, bool(data["on"]))
 
 
-@app.route("/api/device/<path:ip>/brightness", methods=["POST"])
-def api_set_device_brightness(ip):
-    """Zet een SolarBuffer op een vaste stand.
-
-    Bedoeld voor als de automatische besturing uit staat: dan laat de regellus
-    de apparaten met rust en blijft deze stand gewoon staan. Staat de besturing
-    wel aan, dan rekent de regeling binnen een paar seconden een nieuwe stand
-    uit en is hiervan niets meer over. Het antwoord vermeldt daarom of de
-    besturing aan staat, zodat de aanroeper dat kan tonen.
-
-    Een waarde van 0 of lager betekent uitzetten; daarboven wordt de stand
-    begrensd tot het bereik waarin de dimmer betrouwbaar werkt.
-    """
-    if not require_login():
-        return jsonify(success=False), 401
-
-    data = request.get_json(silent=True) or {}
-    try:
-        gevraagd = int(data["brightness"])
-    except (KeyError, TypeError, ValueError):
-        return jsonify(success=False,
-                       error="Veld 'brightness' ontbreekt of is geen getal"), 400
-
-    if gevraagd <= 0:
-        return _set_device_power(ip, False)
-
-    cfg = load_config()
-    device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
-    if not device or ip not in device_states:
-        return jsonify(success=False), 404
-
-    stand = max(MIN_BRIGHTNESS, min(MAX_BRIGHTNESS, gevraagd))
-    st = device_states[ip]
-
-    if not ensure_power_socket_on(device):
-        write_audit_log("device_brightness_waiting_for_power_socket", {"device_ip": ip})
-        return jsonify(success=False, waiting_for_power_socket=True)
-
-    # Handmatig sturen annuleert een lopende temperatuur-wachttijd, net als
-    # handmatig aanzetten dat doet.
-    st["temp_shutoff_until"] = None
-    st["temp_shutoff_since"] = None
-    st["temp_shutoff_silent_restart"] = False
-    st["on"] = True
-    st["started"] = True
-    st["manual_override"] = True
-    st["pending_start"] = False
-    st["freeze"] = False
-    st["saturated_since"] = None
-    st["min_since"] = None
-    st["brightness"] = stand
-    set_shelly(stand, True, ip)
-    mark_device_activity(device)
-
-    write_audit_log("device_brightness_set", {"device_ip": ip, "brightness": stand})
-    return jsonify(success=True, brightness=stand, regulation_enabled=enabled)
-
-
 @app.route("/set_brightness/<path:ip>", methods=["POST"])
 def set_brightness_manual(ip):
     if not require_login():
