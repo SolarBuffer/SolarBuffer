@@ -2736,6 +2736,10 @@ def status_json():
         update_available=_update_available,
         version_installed=_git_versie("HEAD"),
         version_latest=_git_versie("@{u}"),
+        # Vaste aanduiding van deze hub. Koppelingen herkennen hem daaraan in
+        # plaats van aan het IP-adres, zodat een nieuwe DHCP-lease niet leidt
+        # tot een tweede, onbekende hub met alles er dubbel in.
+        hub_id=hub_id(),
     )
 
 
@@ -3842,6 +3846,95 @@ def ensure_bluetooth_unblocked():
                         capture_output=True, text=True, timeout=10)
     except Exception:
         pass
+
+
+MDNS_SERVICE_FILE = "/etc/avahi/services/solarbuffer.service"
+MDNS_SERVICE_TYPE = "_solarbuffer._tcp"
+MDNS_PORT = 5001
+
+
+def hub_id():
+    """Aanduiding van deze hub die niet meeverandert met het IP-adres.
+
+    Koppelingen als Home Assistant en Homey herkennen een apparaat aan wat het
+    over zichzelf zegt. Doen ze dat op het IP, dan komt de hub na een nieuwe
+    DHCP-lease als een tweede, onbekend apparaat binnen en staat alles dubbel.
+    machine-id wordt bij de installatie van het systeem aangemaakt en blijft
+    daarna gelijk; het MAC-adres is de terugval als dat bestand ontbreekt.
+    """
+    try:
+        with open("/etc/machine-id", encoding="utf-8") as f:
+            waarde = f.read().strip()
+        if waarde:
+            return waarde
+    except Exception:
+        pass
+    try:
+        return f"{uuid.getnode():012x}"
+    except Exception:
+        return ""
+
+
+def _mdns_service_xml():
+    return (
+        "<?xml version=\"1.0\" standalone='no'?>\n"
+        "<!DOCTYPE service-group SYSTEM \"avahi-service.dtd\">\n"
+        "<service-group>\n"
+        "  <name replace-wildcards=\"yes\">SolarBuffer op %h</name>\n"
+        "  <service>\n"
+        f"    <type>{MDNS_SERVICE_TYPE}</type>\n"
+        f"    <port>{MDNS_PORT}</port>\n"
+        f"    <txt-record>id={hub_id()}</txt-record>\n"
+        "  </service>\n"
+        "</service-group>\n"
+    )
+
+
+def ensure_mdns_service():
+    """Laat de hub zichzelf aankondigen op het netwerk.
+
+    Zonder dit is de hub alleen op naam te bereiken doordat avahi de hostnaam
+    publiceert, maar valt er niets te ontdekken: er is geen dienst waar een
+    koppeling naar kan zoeken. Home Assistant moet daardoor met de hand
+    ingesteld worden, en Homey-apps die om een IP-adres vragen worden door
+    Athom niet toegelaten.
+
+    Draait bij elke opstart in een achtergrondthread en schrijft alleen als de
+    inhoud werkelijk afwijkt, zodat avahi niet bij iedere herstart opnieuw
+    geladen hoeft te worden. Faalt stil, net als de andere opstartcontroles:
+    lukt het niet, dan blijft de hub gewoon werken zoals hiervoor.
+    """
+    gewenst = _mdns_service_xml()
+    try:
+        with open(MDNS_SERVICE_FILE, encoding="utf-8") as f:
+            if f.read() == gewenst:
+                return
+    except Exception:
+        pass
+
+    tmp = f"/tmp/solarbuffer-mdns.{os.getpid()}.service"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(gewenst)
+        subprocess.run(["sudo", "mkdir", "-p", os.path.dirname(MDNS_SERVICE_FILE)],
+                        capture_output=True, text=True, timeout=10)
+        klaar = subprocess.run(["sudo", "cp", tmp, MDNS_SERVICE_FILE],
+                                capture_output=True, text=True, timeout=10)
+        if klaar.returncode == 0:
+            # Avahi ziet wijzigingen in deze map meestal zelf, maar een reload
+            # maakt het zeker en kost niets.
+            subprocess.run(["sudo", "systemctl", "reload-or-restart", "avahi-daemon"],
+                            capture_output=True, text=True, timeout=15)
+            print(f"mDNS: dienst {MDNS_SERVICE_TYPE} aangekondigd op poort {MDNS_PORT}")
+        else:
+            print(f"mDNS: kon {MDNS_SERVICE_FILE} niet schrijven: {klaar.stderr.strip()}")
+    except Exception as e:
+        print(f"mDNS: aankondiging mislukt: {e}")
+    finally:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
 
 
 def ensure_shelly_ble_available():
@@ -10867,6 +10960,7 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_bluetooth_unblocked, daemon=True).start()
     threading.Thread(target=ensure_git_remote_uses_deploy_key, daemon=True).start()
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
+    threading.Thread(target=ensure_mdns_service, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
         def filter(self, record):
