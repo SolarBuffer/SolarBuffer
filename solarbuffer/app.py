@@ -3759,6 +3759,43 @@ def ensure_git_remote_uses_deploy_key():
         pass
 
 
+def ensure_no_nightly_autoupdate():
+    """Haalt de nachtelijke `git pull`-cronregel weg die vroeger werd uitgerold.
+
+    Die regel deed elke nacht om 03:00 een `git pull` en herstartte de service.
+    Viel op dat moment de stroom weg, dan liet ext4 op de SD-kaart de bestanden
+    die net geschreven werden op nul achter: app.py en templates raakten leeg en
+    de Hub kwam niet meer op. Updaten hoort een bewuste handeling te zijn, via de
+    knop in de interface, niet iets wat 's nachts ongezien gebeurt.
+
+    Draait bij elke opstart, is idempotent en schrijft een crontab alleen terug
+    als er werkelijk een regel verdwijnt. De regel stond zowel bij de gebruiker
+    als bij root, dus we ruimen beide op. Faalt geruisloos: een Hub zonder deze
+    regel, of zonder crontab, mag hier niets van merken.
+    """
+    def schoon(lezen, schrijven):
+        try:
+            huidig = subprocess.run(lezen, capture_output=True, text=True, timeout=10)
+            if huidig.returncode != 0:
+                return  # geen crontab voor deze gebruiker
+            regels = huidig.stdout.splitlines()
+            # Alleen de update-regel eruit, herkenbaar aan de git pull naar onze
+            # eigen map. Zo blijft elke andere cronregel ongemoeid.
+            behouden = [r for r in regels
+                        if not ("git pull" in r.lower() and "solarbuffer" in r.lower())]
+            if len(behouden) == len(regels):
+                return  # niets te doen, de crontab niet onnodig herschrijven
+            nieuw = ("\n".join(behouden) + "\n") if behouden else ""
+            subprocess.run(schrijven, input=nieuw, text=True,
+                           capture_output=True, timeout=10)
+            print("Nachtelijke auto-update uit de crontab gehaald")
+        except Exception:
+            pass
+
+    schoon(["crontab", "-l"], ["crontab", "-"])
+    schoon(["sudo", "-n", "crontab", "-l"], ["sudo", "-n", "crontab", "-"])
+
+
 @app.route("/check_updates_available")
 def check_updates_available():
     if not require_login():
@@ -10959,6 +10996,7 @@ if __name__ == "__main__":
     threading.Thread(target=history_worker, daemon=True).start()
     threading.Thread(target=ensure_bluetooth_unblocked, daemon=True).start()
     threading.Thread(target=ensure_git_remote_uses_deploy_key, daemon=True).start()
+    threading.Thread(target=ensure_no_nightly_autoupdate, daemon=True).start()
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     threading.Thread(target=ensure_mdns_service, daemon=True).start()
     import logging
