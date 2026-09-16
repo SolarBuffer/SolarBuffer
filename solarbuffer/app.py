@@ -9315,10 +9315,17 @@ _ZENDURE_MQTT_TOPIC_RE = re.compile(r"^/([^/]+)/([^/]+)/(.+)$")
 # leiden we af uit het topic, dus er valt niets in te stellen.
 _ZENDURE_MQTT_HA_TOPIC_RE = re.compile(r"^Zendure/([^/]+)/([^/]+)/([^/]+)$")
 
-# Eigenschappen die in het HA-schema in hele procenten komen maar in het oude
-# schema in tienden. We rekenen ze hier om, zodat alles wat verderop met deze
-# waarden rekent geen weet hoeft te hebben van het verschil.
-_ZENDURE_HA_TIENDEN = ("socSet", "minSoc")
+# Het HA-schema levert een aantal waarden al geschaald aan, terwijl de rest van
+# SolarBuffer rekent met de ruwe getallen uit het oude schema. We rekenen ze bij
+# binnenkomst terug, zodat alles verderop, van de regeling tot het scherm, geen
+# weet hoeft te hebben van het verschil.
+#
+# Geverifieerd tegen dezelfde accu over HTTP: hyperTmp komt daar binnen als 3091
+# en via MQTT als 309.1, oftewel 30,9 graden. De celspanningen en de
+# paktemperatuur staan in het HA-schema in volt en graden; het oude schema geeft
+# die in honderdsten.
+_ZENDURE_HA_TIENDEN = ("socSet", "minSoc", "hyperTmp")
+_ZENDURE_HA_HONDERDSTEN = ("minVol", "maxVol", "maxTemp")
 
 
 def _zendure_ha_waarde(tekst):
@@ -9354,8 +9361,10 @@ def _zendure_mqtt_ha_bericht(topic, ruwe_payload):
     is_pakket = eigenschap.startswith(serienummer + "_")
     if is_pakket:
         eigenschap = eigenschap[len(serienummer) + 1:]
+        if eigenschap in _ZENDURE_HA_HONDERDSTEN and isinstance(waarde, (int, float)):
+            waarde = int(round(waarde * 100))
     elif eigenschap in _ZENDURE_HA_TIENDEN and isinstance(waarde, (int, float)):
-        waarde = int(waarde * 10)
+        waarde = int(round(waarde * 10))
 
     now = time.time()
     with _zendure_mqtt_lock:
