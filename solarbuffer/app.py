@@ -2280,12 +2280,16 @@ def api_zendure_mqtt_state():
     Zendure-apparaten weet, inclusief de per-pakket gegevens."""
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
-    snap = zendure_mqtt_snapshot()
+    # Met de pakketten erbij: dit scherm is juist bedoeld om alles te tonen wat
+    # er binnenkomt, en bij het nieuwe schema publiceert elk pakket zijn eigen
+    # celspanningen, stroom en temperatuur.
+    snap = zendure_mqtt_snapshot(include_packs=True)
     return jsonify(
         connected=_zendure_mqtt_client is not None,
         broker=f"{ZENDURE_MQTT_HOST}:{ZENDURE_MQTT_PORT}",
         transport=load_config().get("zendure_transport", "http"),
-        device_count=len(snap),
+        device_count=sum(1 for d in snap.values() if not d.get("is_pack")),
+        pack_count=sum(1 for d in snap.values() if d.get("is_pack")),
         devices=snap,
     )
 
@@ -9302,9 +9306,85 @@ _zendure_mqtt_devices = {}   # deviceId -> {prodkey, sn, props, packs, last_seen
 # komen niet als apparaatdata terug binnen.
 _ZENDURE_MQTT_TOPIC_RE = re.compile(r"^/([^/]+)/([^/]+)/(.+)$")
 
+# Nieuwere modellen (gemeten op een solarFlow800Plus met firmware 2.0.59)
+# publiceren niet in het oude Zendure-formaat maar in dat van Home Assistant:
+# Zendure/<soort>/<serienummer>/<eigenschap>, zonder leidende slash, met per
+# bericht één kale waarde in plaats van een JSON-object. Losse accupakketten
+# komen langs als Zendure/sensor/<pakserienummer>/<pakserienummer>_<eigenschap>.
+# Beide schema's draaien naast elkaar: welk van de twee een apparaat spreekt
+# leiden we af uit het topic, dus er valt niets in te stellen.
+_ZENDURE_MQTT_HA_TOPIC_RE = re.compile(r"^Zendure/([^/]+)/([^/]+)/([^/]+)$")
+
+# Eigenschappen die in het HA-schema in hele procenten komen maar in het oude
+# schema in tienden. We rekenen ze hier om, zodat alles wat verderop met deze
+# waarden rekent geen weet hoeft te hebben van het verschil.
+_ZENDURE_HA_TIENDEN = ("socSet", "minSoc")
+
+
+def _zendure_ha_waarde(tekst):
+    """Zet een kale MQTT-waarde om naar een getal waar dat kan.
+
+    Het HA-schema stuurt geen JSON maar losse waarden: "373", "3.21", maar ook
+    "discharging" en "Output mode". Getallen willen we als getal, de rest laten
+    we staan zoals hij is.
+    """
+    t = (tekst or "").strip()
+    if not t:
+        return None
+    try:
+        getal = float(t)
+    except ValueError:
+        return t
+    return int(getal) if getal.is_integer() else getal
+
+
+def _zendure_mqtt_ha_bericht(topic, ruwe_payload):
+    """Verwerkt één bericht uit het Home Assistant-schema."""
+    m = _ZENDURE_MQTT_HA_TOPIC_RE.match(topic)
+    if not m:
+        return False
+    _soort, serienummer, eigenschap = m.groups()
+    waarde = _zendure_ha_waarde(ruwe_payload)
+    if waarde is None:
+        return True
+
+    # Een accupakket publiceert onder zijn eigen serienummer en zet dat nummer
+    # nog eens voor de eigenschap. Zo herkennen we het, en zo houden we die
+    # metingen buiten de vermogensoptelling van de accu zelf.
+    is_pakket = eigenschap.startswith(serienummer + "_")
+    if is_pakket:
+        eigenschap = eigenschap[len(serienummer) + 1:]
+    elif eigenschap in _ZENDURE_HA_TIENDEN and isinstance(waarde, (int, float)):
+        waarde = int(waarde * 10)
+
+    now = time.time()
+    with _zendure_mqtt_lock:
+        dev = _zendure_mqtt_devices.setdefault(serienummer, {
+            "prodkey": None, "sn": serienummer, "props": {}, "packs": {},
+            "last_seen": 0.0, "last_report": 0.0,
+            "schema": "ha", "is_pack": is_pakket,
+        })
+        dev["schema"] = "ha"
+        dev["sn"] = serienummer
+        dev["is_pack"] = is_pakket
+        dev["last_seen"] = now
+        dev["props"][eigenschap] = waarde
+        dev["last_report"] = now
+    return True
+
 
 def _zendure_mqtt_on_message(client, userdata, msg):
-    m = _ZENDURE_MQTT_TOPIC_RE.match(msg.topic or "")
+    topic = msg.topic or ""
+    # Eerst het nieuwe schema: dat stuurt kale waarden en zou als JSON toch
+    # afketsen. Levert dat niets op, dan is het het oude schema of iets anders.
+    if topic.startswith("Zendure/"):
+        try:
+            _zendure_mqtt_ha_bericht(topic, msg.payload.decode("utf-8", "replace"))
+        except Exception as e:
+            print(f"[ZENDURE-MQTT] kon {topic} niet verwerken: {e}")
+        return
+
+    m = _ZENDURE_MQTT_TOPIC_RE.match(topic)
     if not m:
         return
     prodkey, device_id, _subtopic = m.groups()
@@ -9356,7 +9436,11 @@ def zendure_mqtt_request_all():
     if client is None:
         return 0
     with _zendure_mqtt_lock:
-        targets = [(d.get("prodkey"), did) for did, d in _zendure_mqtt_devices.items() if d.get("prodkey")]
+        # Alleen het oude schema kent een leesverzoek. In het HA-schema komt
+        # alles, inclusief de SoC, uit zichzelf voorbij; een getAll zou daar
+        # naar een topic gaan waar niemand luistert.
+        targets = [(d.get("prodkey"), did) for did, d in _zendure_mqtt_devices.items()
+                   if d.get("prodkey") and d.get("schema", "legacy") != "ha"]
     sent = 0
     for prodkey, device_id in targets:
         try:
@@ -9372,17 +9456,27 @@ def zendure_mqtt_request_all():
     return sent
 
 
-def zendure_mqtt_snapshot():
-    """Samengevoegd beeld per apparaat, alleen apparaten die recent iets stuurden."""
+def zendure_mqtt_snapshot(include_packs=False):
+    """Samengevoegd beeld per apparaat, alleen apparaten die recent iets stuurden.
+
+    Losse accupakketten blijven er standaard buiten. Ze publiceren in het
+    HA-schema onder hun eigen serienummer en zouden anders meetellen als een
+    tweede accu, met een dubbele vermogensoptelling tot gevolg. Voor het
+    instellingenscherm zijn ze wel op te vragen met include_packs.
+    """
     now = time.time()
     out = {}
     with _zendure_mqtt_lock:
         for did, d in _zendure_mqtt_devices.items():
             if (now - d.get("last_seen", 0)) > ZENDURE_MQTT_STALE_SECONDS:
                 continue
+            if d.get("is_pack") and not include_packs:
+                continue
             out[did] = {
                 "prodkey": d.get("prodkey"),
                 "sn": d.get("sn"),
+                "schema": d.get("schema", "legacy"),
+                "is_pack": bool(d.get("is_pack")),
                 "properties": dict(d.get("props") or {}),
                 "packs": {k: dict(v) for k, v in (d.get("packs") or {}).items()},
                 "last_seen": d.get("last_seen"),
@@ -9468,6 +9562,52 @@ def zendure_mqtt_hems_invoke(power_w, device_id=None):
     return True
 
 
+def _zendure_mqtt_ha_device():
+    """Serienummer van het apparaat dat het HA-schema spreekt, of None.
+
+    Pakketten tellen niet mee: die publiceren wel, maar je kunt ze niet sturen.
+    """
+    with _zendure_mqtt_lock:
+        kandidaten = [sn for sn, d in _zendure_mqtt_devices.items()
+                      if d.get("schema") == "ha" and not d.get("is_pack")]
+    return kandidaten[0] if len(kandidaten) == 1 else None
+
+
+def zendure_mqtt_ha_set_power(power_w, serienummer=None):
+    """Stuurt een setpoint in het Home Assistant-schema.
+
+    Dit model kent geen hemsEP. Het biedt zijn instellingen aan als losse
+    set-topics, precies zoals Home Assistant ze zou bedienen: een keuze tussen
+    laden en ontladen, en daarnaast de bijbehorende limiet. Geverifieerd op een
+    solarFlow800Plus met firmware 2.0.59 op 16 september 2026.
+
+    power_w volgt de interne conventie: positief = laden, negatief = ontladen.
+    """
+    client = _zendure_mqtt_client
+    if client is None:
+        raise RuntimeError("Zendure MQTT-client is niet verbonden")
+    sn = serienummer or _zendure_mqtt_ha_device()
+    if not sn:
+        raise RuntimeError("Geen eenduidig Zendure-apparaat met het nieuwe schema")
+
+    power_w = int(power_w or 0)
+    basis = f"Zendure/number/{sn}"
+    if power_w > 0:
+        client.publish(f"Zendure/select/{sn}/acMode/set", "Input mode")
+        client.publish(f"{basis}/inputLimit/set", str(power_w))
+        client.publish(f"{basis}/outputLimit/set", "0")
+    elif power_w < 0:
+        client.publish(f"Zendure/select/{sn}/acMode/set", "Output mode")
+        client.publish(f"{basis}/outputLimit/set", str(-power_w))
+        client.publish(f"{basis}/inputLimit/set", "0")
+    else:
+        # Stilstand: allebei de limieten op nul. De modus laten we staan, want
+        # omschakelen zonder reden geeft alleen maar extra schrijfacties.
+        client.publish(f"{basis}/outputLimit/set", "0")
+        client.publish(f"{basis}/inputLimit/set", "0")
+    return True
+
+
 def zendure_send_setpoint(ip, target_power, props):
     """Zet een setpoint neer via het juiste kanaal voor het ingestelde transport.
 
@@ -9476,6 +9616,11 @@ def zendure_send_setpoint(ip, target_power, props):
     Bij de lokale HTTP-API blijft het de bestaande propertyschrijfactie.
     """
     if load_config().get("zendure_transport", "http") == "mqtt":
+        # Welk kanaal het wordt hangt af van het apparaat, niet van een
+        # instelling: nieuwere modellen kennen hemsEP niet en oudere kennen
+        # de losse set-topics niet.
+        if _zendure_mqtt_ha_device():
+            return zendure_mqtt_ha_set_power(target_power)
         return zendure_mqtt_hems_invoke(target_power)
     return zendure_write_properties(ip, props)
 
@@ -9503,6 +9648,44 @@ def zendure_manual_override(cfg):
     return -power if cfg.get("battery_manual_direction") == "discharge" else power
 
 
+def zendure_mqtt_ha_write_properties(properties, serienummer):
+    """Schrijft instellingen in het Home Assistant-schema.
+
+    Elk veld heeft daar zijn eigen set-topic. socSet en minSoc gaan intern in
+    tienden van procenten rond, precies zoals het oude schema ze aanlevert, maar
+    dit apparaat wil hele procenten; die rekenen we hier terug.
+    """
+    client = _zendure_mqtt_client
+    if client is None:
+        raise RuntimeError("Zendure MQTT-client is niet verbonden")
+    # Per eigenschap het soort dat in het topic hoort. Wat hier niet in staat
+    # kennen we niet en sturen we dus ook niet.
+    soorten = {
+        "socSet": "number", "minSoc": "number", "inverseMaxPower": "number",
+        "inputLimit": "number", "outputLimit": "number",
+        "acMode": "select", "gridReverse": "select",
+        "smartMode": "switch", "lampSwitch": "switch",
+    }
+    verzonden = 0
+    for naam, waarde in (properties or {}).items():
+        soort = soorten.get(naam)
+        if not soort or waarde is None:
+            continue
+        if naam in _ZENDURE_HA_TIENDEN:
+            try:
+                waarde = int(round(float(waarde) / 10.0))
+            except (TypeError, ValueError):
+                continue
+        elif naam == "acMode":
+            # 1 = laden, 2 = ontladen in het oude schema
+            waarde = "Input mode" if str(waarde) == "1" else "Output mode"
+        elif naam in ("smartMode", "lampSwitch"):
+            waarde = "ON" if str(waarde) in ("1", "True", "ON", "on") else "OFF"
+        client.publish(f"Zendure/{soort}/{serienummer}/{naam}/set", str(waarde))
+        verzonden += 1
+    return verzonden > 0
+
+
 def zendure_apply_properties(ip, properties):
     """Schrijft instellingen (socSet, minSoc, en dergelijke) via het ingestelde transport.
 
@@ -9514,6 +9697,9 @@ def zendure_apply_properties(ip, properties):
     een zenSDK-apparaat op HTTP is of een MQTT-apparaat op de lokale broker.
     """
     if load_config().get("zendure_transport", "http") == "mqtt":
+        sn = _zendure_mqtt_ha_device()
+        if sn:
+            return zendure_mqtt_ha_write_properties(properties, sn)
         return zendure_mqtt_write_properties(properties)
     return zendure_write_properties(ip, properties)
 
@@ -9567,6 +9753,10 @@ def zendure_mqtt_loop():
                         # Alle apparaten op de slash-variant; prodkey en deviceId
                         # leren we uit het topic zelf, die hoeven niet in de config.
                         c.subscribe("/+/+/#")
+                        # En het schema van de nieuwere modellen. Twee losse
+                        # abonnementen, want een enkel filter dat allebei dekt
+                        # bestaat niet: de een begint met een schuine streep.
+                        c.subscribe("Zendure/+/+/+")
                         print(f"[ZENDURE-MQTT] verbonden met {ZENDURE_MQTT_HOST}:{ZENDURE_MQTT_PORT}")
                     else:
                         print(f"[ZENDURE-MQTT] verbindingsfout code {rc}")
