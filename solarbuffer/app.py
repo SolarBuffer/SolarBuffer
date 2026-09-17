@@ -761,6 +761,12 @@ _zendure_control_lock = threading.Lock()
 # setpoint en corrigeren per stap maar een deel van de resterende fout.
 ZENDURE_REG_GAIN = 0.6          # aandeel van de meterfout dat per stap wordt bijgestuurd
 ZENDURE_REG_MIN_INTERVAL = 5    # s: niet vaker bijstellen dan de accu kan volgen
+# Een opdracht herhalen is iets anders dan hem wijzigen. Wijzigen mag niet vaker
+# dan de accu kan volgen, anders stapelen we correcties op voor een effect dat nog
+# onderweg is. Dezelfde waarde nog eens sturen verstoort niets en mag dus sneller;
+# dat is nodig omdat een accu zijn opdracht kan laten vallen (gemeten op een
+# solarFlow800Plus: terug naar een eigen waarde na 3 tot 8 seconden).
+ZENDURE_REG_REPEAT_INTERVAL = 2  # s: zo vaak mag dezelfde waarde opnieuw
 ZENDURE_REG_DEADBAND = 5        # W: kleinere bijstellingen zijn de moeite niet
 # Terugkoppeling tegen vastlopen: het setpoint mag vooruitlopen op wat de accu
 # werkelijk doet, want opregelen kost seconden. Maar loopt dat verschil te lang op,
@@ -9912,16 +9918,42 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
                 target_power = 0
 
         mode_changed = (desired_perms != _last_battery_permissions or mode != _last_battery_mode)
-        power_changed = abs(target_power - (_last_zendure_power or 0)) > ZENDURE_REG_DEADBAND
+
+        # Is dit een andere opdracht dan we laatst gaven? Dat bepaalt hoe lang we
+        # moeten wachten: wijzigen is rustig aan, herhalen mag sneller.
+        nieuwe_opdracht = abs(target_power - (_last_zendure_power or 0)) > ZENDURE_REG_DEADBAND
+
+        # Moet er iets gestuurd worden? Dat toetsen we aan wat de accu WERKELIJK
+        # doet, niet aan wat wij laatst stuurden. Een accu kan zijn opdracht stil
+        # laten vallen en terugvallen op een eigen waarde; vergeleken met onze
+        # eigen opdracht zien we dat nooit en blijft hij daar staan tot de trage
+        # opfrisronde langskomt. Gemeten op een solarFlow800Plus: opdracht 749 W,
+        # binnen acht seconden terug op 200 W, en de regeling die dat niet zag.
+        # Deze aanpak vangt elk apparaat dat zich zo gedraagt, zonder dat we van
+        # dat gedrag hoeven te weten.
+        _bat_meting = battery_state.get("power_w")
+        _meting_bruikbaar = (_bat_meting is not None
+                             and (battery_state.get("power_age_s") is None
+                                  or battery_state["power_age_s"] <= ZENDURE_REG_MEAS_MAX_AGE))
+        if _meting_bruikbaar:
+            # power_w volgt de andere conventie: negatief is laden.
+            power_changed = abs(target_power - (-_bat_meting)) > ZENDURE_REG_DEADBAND
+        else:
+            # Geen bruikbare meting: dan is onze eigen opdracht het enige anker.
+            power_changed = nieuwe_opdracht
         needs_refresh = (now - _last_zendure_send) > 240
 
-        # Niet sneller bijstellen dan de accu kan volgen. Zonder dit stapelen we
-        # correcties op voor een effect dat nog onderweg is. Een gewijzigde modus
-        # of stand mag er wel meteen doorheen.
-        if not mode_changed and (now - _last_zendure_send) < ZENDURE_REG_MIN_INTERVAL:
+        # Niet sneller bijstellen dan de accu kan volgen. Een gewijzigde modus of
+        # een nieuwe stand mag er meteen doorheen; een herhaling van dezelfde
+        # waarde mag vaker, want die kan niets verstoren.
+        _wachttijd = ZENDURE_REG_MIN_INTERVAL if nieuwe_opdracht else ZENDURE_REG_REPEAT_INTERVAL
+        if not mode_changed and (now - _last_zendure_send) < _wachttijd:
             return True
 
         if not mode_changed and not power_changed and not needs_refresh:
+            # De accu doet al wat we willen. Toch vastleggen wat we wilden, want
+            # de volgende ronde rekent vanaf dit setpoint en dat moet kloppen.
+            _last_zendure_power = target_power
             return True
 
         if target_power > 0:
