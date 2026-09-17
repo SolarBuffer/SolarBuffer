@@ -2201,7 +2201,11 @@ def api_zendure_status():
             # socSet en minSoc staan in tienden van procenten
             "soc_set": _scale(p.get("socSet"), 10, 1),
             "min_soc": _scale(p.get("minSoc"), 10, 1),
-            "charge_limit": p.get("chargeLimit"),
+            # Niet elk model kent chargeLimit. De solarFlow800Plus geeft zijn
+            # laadplafond als chargeMaxLimit (HTTP) of als bovengrens van
+            # inputLimit in zijn aanmeldingsbericht (MQTT); zonder deze terugval
+            # bleef het veld op het scherm leeg.
+            "charge_limit": p.get("chargeLimit") or p.get("chargeMaxLimit"),
             "discharge_limit": p.get("inverseMaxPower"),
         },
         status={
@@ -9351,6 +9355,42 @@ def _zendure_ha_waarde(tekst):
     return int(getal) if getal.is_integer() else getal
 
 
+# Aanmeldingsberichten: homeassistant/<soort>/<serienummer>_<eigenschap>/config
+_ZENDURE_HA_CONFIG_RE = re.compile(r"^homeassistant/[^/]+/([^/]+)/config$")
+
+# Welke bovengrens uit een aanmeldingsbericht we onthouden, en onder welke naam
+# de rest van SolarBuffer die kent. Het apparaat meldt zijn plafonds alleen daar,
+# niet als losse meetwaarde.
+_ZENDURE_HA_GRENZEN = {"inputLimit": "chargeMaxLimit"}
+
+
+def _zendure_mqtt_ha_config(topic, ruwe_payload):
+    """Haalt uit een aanmeldingsbericht de plafonds die we nodig hebben."""
+    m = _ZENDURE_HA_CONFIG_RE.match(topic)
+    if not m:
+        return False
+    try:
+        beschrijving = json.loads(ruwe_payload)
+    except Exception:
+        return True
+    if not isinstance(beschrijving, dict):
+        return True
+    stat = beschrijving.get("stat_t") or ""
+    delen = stat.split("/")
+    if len(delen) < 4:
+        return True
+    serienummer, eigenschap = delen[2], delen[-1]
+    doel = _ZENDURE_HA_GRENZEN.get(eigenschap)
+    bovengrens = beschrijving.get("max")
+    if not doel or bovengrens is None:
+        return True
+    with _zendure_mqtt_lock:
+        dev = _zendure_mqtt_devices.get(serienummer)
+        if dev is not None:
+            dev["props"][doel] = int(bovengrens)
+    return True
+
+
 def _zendure_mqtt_ha_bericht(topic, ruwe_payload):
     """Verwerkt één bericht uit het Home Assistant-schema."""
     m = _ZENDURE_MQTT_HA_TOPIC_RE.match(topic)
@@ -9395,6 +9435,12 @@ def _zendure_mqtt_on_message(client, userdata, msg):
     if topic.startswith("Zendure/"):
         try:
             _zendure_mqtt_ha_bericht(topic, msg.payload.decode("utf-8", "replace"))
+        except Exception as e:
+            print(f"[ZENDURE-MQTT] kon {topic} niet verwerken: {e}")
+        return
+    if topic.startswith("homeassistant/"):
+        try:
+            _zendure_mqtt_ha_config(topic, msg.payload.decode("utf-8", "replace"))
         except Exception as e:
             print(f"[ZENDURE-MQTT] kon {topic} niet verwerken: {e}")
         return
@@ -9497,6 +9543,24 @@ def zendure_mqtt_snapshot(include_packs=False):
                 "last_seen": d.get("last_seen"),
                 "last_report": d.get("last_report"),
             }
+
+    # In het HA-schema publiceert elk accupakket onder zijn eigen serienummer, los
+    # van de accu waar het in zit. Welke bij welke hoort staat nergens in de
+    # berichten. Is er precies één accu, dan is het onbetwistbaar en hangen we ze
+    # daaronder, zodat het instellingenscherm ze net zo toont als bij het oude
+    # schema. Zijn er meer accu's, dan laten we ze los staan in plaats van te gokken.
+    # De pakketten komen hier uit de bron en niet uit out, want out heeft ze er bij
+    # de standaardinstelling juist uitgefilterd.
+    hoofd = [k for k, v in out.items() if v.get("schema") == "ha" and not v.get("is_pack")]
+    if len(hoofd) == 1:
+        with _zendure_mqtt_lock:
+            pakketten = {
+                sn: dict(d.get("props") or {})
+                for sn, d in _zendure_mqtt_devices.items()
+                if d.get("is_pack") and (now - d.get("last_seen", 0)) <= ZENDURE_MQTT_STALE_SECONDS
+            }
+        if pakketten:
+            out[hoofd[0]]["packs"] = pakketten
     return out
 
 
@@ -9772,6 +9836,8 @@ def zendure_mqtt_loop():
                         # abonnementen, want een enkel filter dat allebei dekt
                         # bestaat niet: de een begint met een schuine streep.
                         c.subscribe("Zendure/+/+/+")
+                        # De aanmeldingsberichten, want daar staan de plafonds in.
+                        c.subscribe("homeassistant/+/+/config")
                         print(f"[ZENDURE-MQTT] verbonden met {ZENDURE_MQTT_HOST}:{ZENDURE_MQTT_PORT}")
                     else:
                         print(f"[ZENDURE-MQTT] verbindingsfout code {rc}")
@@ -10264,6 +10330,10 @@ def battery_poll_loop():
             elif bat_type == "zendure":
                 max_power = int(cfg.get("zendure_max_power") or 800)
                 soc_list, power_list = [], []
+                # Per accu bewaren wat hij doet en hoe vol hij is. De regeling stuurt
+                # op het totaal, maar om dat totaal te verdelen moet je per accu weten
+                # hoeveel ruimte er nog is: een volle accu kan niet laden.
+                units = []
                 limit_charge, limit_discharge = 0, 0
                 any_online = False
                 _soc_set = None
@@ -10320,6 +10390,8 @@ def battery_poll_loop():
                             if discharge_w is not None:
                                 p += float(discharge_w)
                             power_list.append(p)
+                            units.append({"id": _did, "soc": float(soc) if soc is not None else None,
+                                          "power_w": p})
                         # Het apparaat kent zijn eigen plafonds; die zijn preciezer
                         # dan de handmatig ingestelde zendure_max_power en worden in
                         # de regellus gebruikt voor de 'accu op max'-detectie.
@@ -10345,6 +10417,8 @@ def battery_poll_loop():
                             if discharge_w is not None:
                                 p += float(discharge_w)
                             power_list.append(p)
+                            units.append({"id": ip, "soc": float(soc) if soc is not None else None,
+                                          "power_w": p})
                         except Exception:
                             pass
                 if any_online:
@@ -10367,6 +10441,7 @@ def battery_poll_loop():
                         # volledig stil in plaats van iets minder te leveren.
                         "soc_set": _soc_set,
                         "min_soc": _min_soc,
+                        "units": units,
                         # Hoe oud de vermogensmeting is. De accu meldt onregelmatig,
                         # gemeten gemiddeld elke 8 s met uitschieters tot 2 minuten.
                         # De terugkoppeling hieronder mag niet op zo'n oude waarde
