@@ -2777,11 +2777,6 @@
             <span style="flex:1;color:var(--hm-dim)">Stroomprijs</span>
             <span id="priceValue" style="font-weight:600">—</span>&thinsp;<span style="color:var(--hm-dim)">ct/kWh</span>
           </div>
-          <div id="solarEdgeRow" style="display:none; margin-top:0.35rem; font-size:0.78rem; color:var(--hm-dim); align-items:center; gap:0.35rem;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
-            <span id="solarEdgeLabel">Omvormer:</span> <span id="solarEdgeValue">—</span> W
-          </div>
-
           <div id="selfSufficiencyRow" class="hero-divider" style="display:none; margin-top:0.45rem; padding-top:0.4rem; gap:0.5rem; flex-direction:column;">
             <div style="display:flex; align-items:center; gap:0.35rem; font-size:0.78rem;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:hsl(40,90%,42%)"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"/></svg>
@@ -3147,28 +3142,26 @@
           }
           // ---- Einde batterij widget ----
 
-          const seRow = document.getElementById('solarEdgeRow');
-          if (data.inverter_enabled && data.inverter_online && data.inverter_power !== null) {
-            const labels = {solaredge:'SolarEdge',fronius:'Fronius',sma:'SMA',abb:'ABB',kostal:'Kostal',huawei:'Huawei',growatt:'Growatt',sungrow:'Sungrow',goodwe:'GoodWe'};
-            document.getElementById('solarEdgeLabel').textContent = (labels[data.inverter_type] || 'Omvormer') + ':';
-            document.getElementById('solarEdgeValue').textContent = Number(data.inverter_power).toFixed(0);
-            seRow.style.display = 'flex';
-          } else {
-            seRow.style.display = 'none';
-          }
-
           const solarAcc = (data.accessories || []).find(a => a.is_solar && a.acc_type !== 'temperature');
-          solarKwhToday = solarAcc ? (solarAcc.energy_today_kwh || 0) : null;
+          // Zon uit twee bronnen: een verbruiker met de zonnemeting-vlag, en panelen
+          // die rechtstreeks op de accu zitten. Die laatste komt nergens anders
+          // voorbij, dus zonder dit bleef die opbrengst onzichtbaar.
+          const batSolar = Math.max(0, Number(data.battery_solar_w || 0));
+          // Dagtotaal uit de eigen dagtelling van de Hub: daar zijn alle bronnen al
+          // opgeteld. De dagteller van het accessoire kent de accu niet.
+          const solarDag = (data.solar_today_kwh !== null && data.solar_today_kwh !== undefined)
+            ? Number(data.solar_today_kwh) : (solarAcc ? Number(solarAcc.energy_today_kwh || 0) : null);
+          solarKwhToday = solarDag;
 
           const solarLiveRow = document.getElementById('solarLiveRow');
-          if (solarAcc) {
+          if (solarAcc || batSolar > 0) {
             // Opwek is een hoeveelheid, geen richting. Of de meting positief of
             // negatief binnenkomt hangt alleen af van hoe de stroomtang om de
             // zonnegroep zit, en bij de helft van de installaties is dat andersom.
-            document.getElementById('solarLivePower').textContent =
-              Math.abs(Number(solarAcc.power || 0)).toFixed(0);
+            const accW = solarAcc ? Math.abs(Number(solarAcc.power || 0)) : 0;
+            document.getElementById('solarLivePower').textContent = (accW + batSolar).toFixed(0);
             solarLiveRow.style.display = 'flex';
-            document.getElementById('dailySolar').textContent = Number(solarAcc.energy_today_kwh || 0).toFixed(2);
+            document.getElementById('dailySolar').textContent = Number(solarDag || 0).toFixed(2);
           } else {
             solarLiveRow.style.display = 'none';
           }

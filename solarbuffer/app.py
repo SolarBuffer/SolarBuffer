@@ -199,19 +199,6 @@ def load_config():
     if "temp_shutoff_retry_min" not in cfg:
         cfg["temp_shutoff_retry_min"] = 10
 
-    # Migreer oude solaredge_* keys naar generieke inverter_* keys
-    if "solaredge_enabled" in cfg and "inverter_enabled" not in cfg:
-        cfg["inverter_enabled"] = cfg.pop("solaredge_enabled")
-        cfg["inverter_ip"] = cfg.pop("solaredge_ip", "")
-        cfg["inverter_type"] = "solaredge"
-
-    if "inverter_enabled" not in cfg:
-        cfg["inverter_enabled"] = False
-    if "inverter_ip" not in cfg:
-        cfg["inverter_ip"] = ""
-    if "inverter_type" not in cfg:
-        cfg["inverter_type"] = "solaredge"
-
     if "mqtt_enabled" not in cfg:
         cfg["mqtt_enabled"] = False
     if "mqtt_broker" not in cfg:
@@ -709,8 +696,6 @@ schedules_enabled = True
 vacation_mode = False
 device_states = {}
 accessory_states = {}
-inverter_power = None
-inverter_online = False
 battery_state = {
     "soc": None, "power_w": None, "voltage_v": None, "current_a": None,
     "frequency_hz": None, "energy_import_kwh": None, "energy_export_kwh": None,
@@ -2732,10 +2717,12 @@ def status_json():
         schedules_enabled=schedules_enabled,
         accessories=accessories,
         gas_enabled=cfg.get("gas_enabled", False), gas_today_m3=gas_today,
-        inverter_enabled=cfg.get("inverter_enabled", False),
-        inverter_type=cfg.get("inverter_type", "solaredge"),
-        inverter_power=inverter_power,
-        inverter_online=inverter_online,
+        # Zon die rechtstreeks op de accu binnenkomt, en de dagopbrengst waarin
+        # alle bronnen al zijn opgeteld. Het dashboard toonde tot nu toe alleen
+        # de dagteller van het zonne-accessoire, en die kent die andere bronnen niet.
+        battery_solar_w=battery_state.get("solar_w"),
+        solar_today_kwh=(round(_daily_acc.get("solar", 0.0) / 1000.0, 2)
+                         if _daily_acc.get("solar") else None),
         broadlink_ir_states=broadlink_ir_states,
         broadlink_devices=cfg.get("broadlink_devices", []),
         vacation_mode=cfg.get("vacation_mode", False),
@@ -8760,97 +8747,6 @@ def ntfy_test():
         return jsonify({"error": str(e)}), 500
 
 
-# ================= INVERTER MODBUS =================
-_INVERTER_TYPES = {
-    "solaredge": {"label": "SolarEdge",     "port": 1502, "unit": 1,   "proto": "sunspec"},
-    "fronius":   {"label": "Fronius",        "port": 502,  "unit": 1,   "proto": "sunspec"},
-    "sma":       {"label": "SMA",            "port": 502,  "unit": 3,   "proto": "sunspec"},
-    "abb":       {"label": "ABB / FIMER",    "port": 502,  "unit": 1,   "proto": "sunspec"},
-    "kostal":    {"label": "Kostal",         "port": 1502, "unit": 71,  "proto": "sunspec"},
-    "huawei":    {"label": "Huawei SUN2000", "port": 6607, "unit": 1,   "proto": "huawei"},
-    "growatt":   {"label": "Growatt",        "port": 502,  "unit": 1,   "proto": "growatt"},
-    "sungrow":   {"label": "Sungrow",        "port": 502,  "unit": 1,   "proto": "sungrow"},
-    "goodwe":    {"label": "GoodWe",         "port": 502,  "unit": 247, "proto": "goodwe"},
-}
-
-
-def _modbus_read(ip, port, unit, func, address, count, timeout=3):
-    import struct as _s
-    req = _s.pack('>HHHBBHH', 1, 0, 6, unit, func, address, count)
-    with socket.create_connection((ip, port), timeout=timeout) as sock:
-        sock.sendall(req)
-        return sock.recv(256)
-
-
-def _read_inverter_ac_power(ip, inverter_type, timeout=3):
-    import struct as _s
-    _SUNSPEC_NI = -32768  # SunSpec "not implemented" sentinel (0x8000 as INT16)
-    meta = _INVERTER_TYPES.get(inverter_type)
-    if not meta:
-        return None
-    port, unit, proto = meta["port"], meta["unit"], meta["proto"]
-    try:
-        if proto == "sunspec":
-            # Register 40083 (addr 82): INT16 power + register 40084 (addr 83): INT16 scale factor
-            r = _modbus_read(ip, port, unit, 3, 82, 2, timeout)
-            if len(r) < 13 or r[7] != 3:
-                return None
-            val = _s.unpack('>h', r[9:11])[0]
-            sf  = _s.unpack('>h', r[11:13])[0]
-            # 0x8000 means "not implemented" in SunSpec; sf buiten -10..10 is corrupte data
-            if val == _SUNSPEC_NI or sf == _SUNSPEC_NI or not (-10 <= sf <= 10):
-                return None
-            return round(val * (10 ** sf), 1)
-        elif proto == "huawei":
-            # Register 32080, INT32 (2 regs), unit W
-            r = _modbus_read(ip, port, unit, 3, 32080, 2, timeout)
-            if len(r) < 13 or r[7] != 3:
-                return None
-            return float(_s.unpack('>i', r[9:13])[0])
-        elif proto == "growatt":
-            # Register 3 (Pac), UINT16, unit 0.1 W
-            r = _modbus_read(ip, port, unit, 3, 3, 1, timeout)
-            if len(r) < 11 or r[7] != 3:
-                return None
-            return round(_s.unpack('>H', r[9:11])[0] * 0.1, 1)
-        elif proto == "sungrow":
-            # Register 13003, INT16, unit W
-            r = _modbus_read(ip, port, unit, 3, 13003, 1, timeout)
-            if len(r) < 11 or r[7] != 3:
-                return None
-            return float(_s.unpack('>h', r[9:11])[0])
-        elif proto == "goodwe":
-            # Register 35121, INT16, unit W (input registers, func 4)
-            r = _modbus_read(ip, port, unit, 4, 35121, 1, timeout)
-            if len(r) < 11 or r[7] != 4:
-                return None
-            return float(_s.unpack('>h', r[9:11])[0])
-    except Exception:
-        return None
-    return None
-
-
-def inverter_poll_loop():
-    global inverter_power, inverter_online
-    while True:
-        try:
-            cfg = load_config()
-            if cfg.get("inverter_enabled") and cfg.get("inverter_ip"):
-                val = _read_inverter_ac_power(cfg["inverter_ip"], cfg.get("inverter_type", "solaredge"))
-                import math as _math
-                if val is not None and _math.isfinite(val):
-                    inverter_power = val
-                    inverter_online = True
-                else:
-                    inverter_online = False
-            else:
-                inverter_power = None
-                inverter_online = False
-        except Exception:
-            inverter_online = False
-        time.sleep(5)
-
-
 # ================= BATTERIJ (HomeWizard HWE-BAT v2) =================
 try:
     import urllib3 as _urllib3
@@ -10538,6 +10434,11 @@ def battery_poll_loop():
                 # op het totaal, maar om dat totaal te verdelen moet je per accu weten
                 # hoeveel ruimte er nog is: een volle accu kan niet laden.
                 units = []
+                # Sommige Zendure-modellen hebben eigen zonnepanelen. Die opbrengst
+                # loopt niet langs de omvormer en niet langs een zonne-accessoire,
+                # dus zonder dit telt hij nergens mee en rapporteert het maandoverzicht
+                # te laag.
+                solar_list = []
                 limit_charge, limit_discharge = 0, 0
                 any_online = False
                 _soc_set = None
@@ -10596,6 +10497,12 @@ def battery_poll_loop():
                             power_list.append(p)
                             units.append({"id": _did, "soc": float(soc) if soc is not None else None,
                                           "power_w": p})
+                        _zon = props.get("solarInputPower")
+                        if _zon is not None:
+                            try:
+                                solar_list.append(max(0.0, float(_zon)))
+                            except (TypeError, ValueError):
+                                pass
                         # Het apparaat kent zijn eigen plafonds; die zijn preciezer
                         # dan de handmatig ingestelde zendure_max_power en worden in
                         # de regellus gebruikt voor de 'accu op max'-detectie.
@@ -10623,6 +10530,12 @@ def battery_poll_loop():
                             power_list.append(p)
                             units.append({"id": ip, "soc": float(soc) if soc is not None else None,
                                           "power_w": p})
+                            _zon = props.get("solarInputPower")
+                            if _zon is not None:
+                                try:
+                                    solar_list.append(max(0.0, float(_zon)))
+                                except (TypeError, ValueError):
+                                    pass
                         except Exception:
                             pass
                 if any_online:
@@ -10646,6 +10559,9 @@ def battery_poll_loop():
                         "soc_set": _soc_set,
                         "min_soc": _min_soc,
                         "units": units,
+                        # Eigen zonne-opbrengst van de accu's, opgeteld. None als
+                        # geen enkele accu panelen meldt; dan is er niets om te tonen.
+                        "solar_w": round(sum(solar_list), 1) if solar_list else None,
                         # Hoe oud de vermogensmeting is. De accu meldt onregelmatig,
                         # gemeten gemiddeld elke 8 s met uitschieters tot 2 minuten.
                         # De terugkoppeling hieronder mag niet op zo'n oude waarde
@@ -11016,20 +10932,19 @@ def history_worker():
                         if not _is_zon:
                             waarden[f"acc:{acc_name}"] = max(0.0, float(st.get("power") or 0))
 
-                # Zon kan uit twee bronnen komen: een gekoppelde omvormer, of een of
-                # meer accessoires die als zonnemeting zijn aangevinkt. Allebei tellen
-                # mee, want iemand kan een omvormer hebben en daarnaast losse strings.
+                # Zon komt uit twee bronnen: accessoires die als zonnemeting zijn
+                # aangevinkt, en panelen die rechtstreeks op de accu zitten. Allebei
+                # tellen mee, want iemand kan losse strings hebben naast zijn accu.
                 _zon_w = None
-                if cfg.get("inverter_enabled") and inverter_power is not None:
-                    # Alleen de omvormer krijgt een eigen metric, want die wordt
-                    # nergens anders vastgelegd. Een zonne-accessoire staat al als
-                    # acc:<naam>:power in de historie en wordt via solar_metrics al
-                    # als zonnemeting herkend; daar een tweede metric van maken zou
-                    # hem dubbel in de grafieken zetten.
-                    points.append(("solar_power", float(inverter_power), ts))
-                    _zon_w = float(inverter_power)
                 if _heeft_zon_acc:
                     _zon_w = (_zon_w or 0.0) + _zon_acc
+                # Panelen die rechtstreeks op de accu zitten. Die opbrengst komt
+                # nergens anders voorbij: niet bij de omvormer en niet bij een
+                # accessoire. Zonder deze regel telde hij niet mee in de dagtelling
+                # en rapporteerde het maandoverzicht te laag.
+                _zon_bat = battery_state.get("solar_w")
+                if _zon_bat:
+                    _zon_w = (_zon_w or 0.0) + float(_zon_bat)
                 if _zon_w is not None:
                     # De dagtelling telt beide bronnen wel op, want dat is één
                     # grootheid en geen tweede lijn in een grafiek.
@@ -11198,7 +11113,7 @@ def api_monthly():
         success=True,
         months=maanden,
         available={
-            "solar": bool(cfg.get("inverter_enabled")) or any(
+            "solar": bool(battery_state.get("solar_w")) or any(
                 a.get("acc_type") == "power" and a.get("is_solar")
                 for a in cfg.get("accessories", [])
             ),
@@ -11498,7 +11413,6 @@ if __name__ == "__main__":
     threading.Thread(target=_price_fetch_loop, daemon=True).start()
     threading.Thread(target=mqtt_loop, daemon=True).start()
     threading.Thread(target=accessory_poll_loop, daemon=True).start()
-    threading.Thread(target=inverter_poll_loop, daemon=True).start()
     threading.Thread(target=battery_poll_loop, daemon=True).start()
     threading.Thread(target=zendure_mqtt_loop, daemon=True).start()
     threading.Thread(target=broadlink_poll_loop, daemon=True).start()
