@@ -593,13 +593,6 @@
           <!-- Zendure-specifieke velden -->
           <div id="zendureFields" style="display:none;">
             <div class="field-group">
-              <label for="zendure_max_power">Max. vermogen (W)</label>
-              <input type="number" id="zendure_max_power" name="zendure_max_power"
-                     min="100" max="10000" step="100"
-                     value="{{ config.zendure_max_power or 800 }}">
-              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Alleen gebruikt als je accu zijn eigen grenzen niet meldt. Doet hij dat wel, dan gelden die, en stel je ze in op de accupagina.</div>
-            </div>
-            <div class="field-group">
               <label for="zendure_transport">Verbinding</label>
               <select id="zendure_transport" name="zendure_transport">
                 <option value="http" {% if config.zendure_transport != 'mqtt' %}selected{% endif %}>Lokale API op de accu (HTTP)</option>

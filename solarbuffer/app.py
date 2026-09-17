@@ -432,6 +432,10 @@ def load_config():
         # Marstek Open API: negatief = laden, positief = ontladen (omgekeerd
         # t.o.v. de oude aanname). Uit te zetten als een model toch + = laden hanteert.
         cfg["marstek_invert_power"] = True
+    # Terugval voor een accu die zijn eigen grenzen niet meldt. Niet meer in te
+    # stellen: de accu weet zelf wat hij aankan, en dat verschilt per model en per
+    # richting. Eén getal voor een hele vloot klopt sowieso niet zodra er
+    # verschillende modellen naast elkaar hangen.
     if "zendure_max_power" not in cfg:
         cfg["zendure_max_power"] = 800
     # http = lokale zenSDK-API op het apparaat zelf (SolarFlow 800 en nieuwer),
@@ -2089,10 +2093,6 @@ def settings_p1():
             cfg["marstek_invert_power"] = "marstek_invert_power" in request.form
         cfg["battery_power_meter"] = request.form.get("battery_power_meter", "").strip().lower()
         cfg["battery_power_ip"] = request.form.get("battery_power_ip", "").strip()
-        try:
-            cfg["zendure_max_power"] = int(request.form.get("zendure_max_power", 800))
-        except (ValueError, TypeError):
-            cfg["zendure_max_power"] = 800
         _ztrans = request.form.get("zendure_transport", "http")
         cfg["zendure_transport"] = _ztrans if _ztrans in ("http", "mqtt") else "http"
         cfg["battery_priority"] = request.form.get("battery_priority", "boiler")
@@ -2532,7 +2532,13 @@ def battery_control_mode():
             power = max(0, int(data.get("power") or 0))
         except (TypeError, ValueError):
             return jsonify(success=False, error="Ongeldig vermogen"), 400
-        power = min(power, int(cfg.get("zendure_max_power") or 800))
+        # Begrenzen op wat de accu in díe richting aankan. Laden en ontladen
+        # verschillen per model: een SolarFlow 800 Plus laadt met 1000 W en
+        # ontlaadt met 800. Eén gedeeld getal knipte een handmatige laadopdracht
+        # stilletjes af op de ontlaadgrens.
+        _veld = "max_consumption_w" if direction == "charge" else "max_production_w"
+        _plafond = int(battery_state.get(_veld) or 0) or int(cfg.get("zendure_max_power") or 800)
+        power = min(power, _plafond)
 
     cfg["battery_control_mode"] = mode
     cfg["battery_manual_direction"] = direction
@@ -9659,6 +9665,17 @@ def zendure_mqtt_ha_set_power(power_w, serienummer=None):
     return True
 
 
+def _int_of_none(waarde):
+    """Naar een geheel getal, of None als het er niet is of niet deugt."""
+    if waarde is None:
+        return None
+    try:
+        getal = int(float(waarde))
+    except (TypeError, ValueError):
+        return None
+    return getal if getal > 0 else None
+
+
 def zendure_props(power_w):
     """Zendure-properties voor één setpoint. Positief = laden, negatief = ontladen."""
     if power_w > 0:
@@ -9666,6 +9683,12 @@ def zendure_props(power_w):
     if power_w < 0:
         return {"smartMode": 1, "acMode": 2, "outputLimit": -power_w, "inputLimit": 0}
     return {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
+
+
+def _zendure_plafond(unit, laden, terugval):
+    """Wat deze ene accu in deze richting aankan."""
+    eigen = unit.get("max_charge_w") if laden else unit.get("max_discharge_w")
+    return int(eigen) if eigen else int(terugval)
 
 
 def zendure_verdeel(totaal, units, max_per_accu):
@@ -9693,6 +9716,9 @@ def zendure_verdeel(totaal, units, max_per_accu):
         return [(u["id"], 0) for u in units]
 
     laden = totaal > 0
+    # Elk model heeft zijn eigen plafond, en in deze richting. max_per_accu is
+    # hier alleen nog de terugval voor een accu die zijn grenzen niet meldt.
+    plafonds = {u["id"]: _zendure_plafond(u, laden, max_per_accu) for u in units}
 
     def ruimte(u):
         """Hoeveel ruimte heeft deze accu nog, in procenten."""
@@ -9719,8 +9745,9 @@ def zendure_verdeel(totaal, units, max_per_accu):
         vast = []
         for i in open_units:
             deel = int(round(rest * gewichten[i] / som))
-            if abs(deel) > max_per_accu:
-                deel = max_per_accu if deel > 0 else -max_per_accu
+            _plafond = plafonds[i]
+            if abs(deel) > _plafond:
+                deel = _plafond if deel > 0 else -_plafond
                 vast.append(i)
             uit[i] = deel
         if not vast:
@@ -9735,7 +9762,8 @@ def zendure_verdeel(totaal, units, max_per_accu):
     if verschil and open_units:
         grootste = max(open_units, key=lambda i: gewichten[i])
         nieuw = uit.get(grootste, 0) + verschil
-        uit[grootste] = max(-max_per_accu, min(max_per_accu, nieuw))
+        _p = plafonds[grootste]
+        uit[grootste] = max(-_p, min(_p, nieuw))
 
     return [(u["id"], int(uit.get(u["id"], 0))) for u in units]
 
@@ -9769,16 +9797,11 @@ def zendure_send_setpoint(ips, target_power, props=None):
     via_mqtt = cfg.get("zendure_transport", "http") == "mqtt"
 
     units = battery_state.get("units") or []
-    # Het plafond per accu hangt af van de richting: laden en ontladen kunnen
-    # verschillen. De accu meldt zijn eigen grenzen als vlootttotaal, dus delen we
-    # die door het aantal accu's. Meldt hij niets, dan geldt de ingestelde waarde.
-    _terugval = int(cfg.get("zendure_max_power") or 800)
-    _vloot = int(battery_state.get("max_consumption_w" if (target_power or 0) > 0
-                                   else "max_production_w") or 0)
-    if _vloot and units:
-        max_per_accu = max(1, _vloot // len(units))
-    else:
-        max_per_accu = _terugval
+    # Alleen nog de terugval: de verdeling kent per accu zijn eigen plafond en
+    # gebruikt dit getal slechts voor een accu die zijn grenzen niet meldt. Het
+    # vlootttotaal door het aantal accu's delen was fout zodra de modellen
+    # verschillen: een SolarFlow 800 naast een 2400 AC zou dan 1600 krijgen.
+    max_per_accu = int(cfg.get("zendure_max_power") or 800)
     if not units:
         # Nog geen meting per accu binnen. Dan is er niets te verdelen en gaat
         # alles naar het enige adres dat we kennen; bij MQTT laten we het
@@ -10538,8 +10561,18 @@ def battery_poll_loop():
                             if discharge_w is not None:
                                 p += float(discharge_w)
                             power_list.append(p)
-                            units.append({"id": _did, "soc": float(soc) if soc is not None else None,
-                                          "power_w": p})
+                            units.append({
+                                "id": _did,
+                                "soc": float(soc) if soc is not None else None,
+                                "power_w": p,
+                                # Per accu, want een vloot kan uit verschillende
+                                # modellen bestaan: een SolarFlow 800 naast een
+                                # 2400 AC. Eén gedeeld plafond zou de kleinste
+                                # het dubbele vragen van wat hij kan.
+                                "max_charge_w": _int_of_none(props.get("chargeLimit")
+                                                             or props.get("chargeMaxLimit")),
+                                "max_discharge_w": _int_of_none(props.get("inverseMaxPower")),
+                            })
                         _zon = props.get("solarInputPower")
                         if _zon is not None:
                             try:
@@ -10574,8 +10607,14 @@ def battery_poll_loop():
                             if discharge_w is not None:
                                 p += float(discharge_w)
                             power_list.append(p)
-                            units.append({"id": ip, "soc": float(soc) if soc is not None else None,
-                                          "power_w": p})
+                            units.append({
+                                "id": ip,
+                                "soc": float(soc) if soc is not None else None,
+                                "power_w": p,
+                                "max_charge_w": _int_of_none(props.get("chargeLimit")
+                                                             or props.get("chargeMaxLimit")),
+                                "max_discharge_w": _int_of_none(props.get("inverseMaxPower")),
+                            })
                             _zon = props.get("solarInputPower")
                             if _zon is not None:
                                 try:
