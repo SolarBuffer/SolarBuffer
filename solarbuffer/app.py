@@ -2207,6 +2207,12 @@ def api_zendure_status():
             # bleef het veld op het scherm leeg.
             "charge_limit": p.get("chargeLimit") or p.get("chargeMaxLimit"),
             "discharge_limit": p.get("inverseMaxPower"),
+            # 1 = teruglevering toegestaan, 2 = verboden
+            "grid_reverse": p.get("gridReverse"),
+            # Alleen zinvol als er panelen op de accu zitten; anders is er niets
+            # om terug te leveren en is de instelling zonder gevolg.
+            "has_solar": any(p.get(k) for k in
+                             ("solarInputPower", "solarPower1", "solarPower2")),
         },
         status={
             "soc": p.get("electricLevel"),
@@ -2260,6 +2266,17 @@ def api_zendure_limits():
     except (TypeError, ValueError):
         return jsonify(success=False, error="Ongeldige waarde"), 400
 
+    # Teruglevering van zonoverschot. Mag ontbreken: oudere schermen sturen dit
+    # veld niet mee en dan laten we de stand van de accu staan.
+    grid_reverse = data.get("grid_reverse")
+    if grid_reverse is not None:
+        try:
+            grid_reverse = int(grid_reverse)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Ongeldige waarde voor teruglevering"), 400
+        if grid_reverse not in (1, 2):
+            return jsonify(success=False, error="Teruglevering moet 1 (toestaan) of 2 (verbieden) zijn"), 400
+
     if not (5 <= soc_set <= 100):
         return jsonify(success=False, error="Doel-SoC moet tussen 5 en 100 procent liggen"), 400
     if not (0 <= min_soc <= 100):
@@ -2275,6 +2292,8 @@ def api_zendure_limits():
         "chargeLimit": charge_limit,
         "inverseMaxPower": discharge_limit,
     }
+    if grid_reverse is not None:
+        gewenst["gridReverse"] = grid_reverse
     # Alleen wat echt verandert; elke schrijfactie kost een flashcyclus
     wijzigingen = {k: v for k, v in gewenst.items() if huidig.get(k) != v}
     if not wijzigingen:
@@ -9369,6 +9388,17 @@ _ZENDURE_HA_CONFIG_RE = re.compile(r"^homeassistant/[^/]+/([^/]+)/config$")
 # niet als losse meetwaarde.
 _ZENDURE_HA_GRENZEN = {"inputLimit": "chargeMaxLimit"}
 
+# Keuzevelden komen in het HA-schema als tekst binnen en in het oude schema als
+# getal. We rekenen ze om naar het getal, zodat de rest van SolarBuffer maar één
+# vorm hoeft te kennen. De betekenis komt uit de Zendure-integratie zelf:
+# gridReverse 0 = uitgeschakeld, 1 = teruglevering toegestaan, 2 = verboden.
+_ZENDURE_HA_KEUZES = {
+    "gridReverse": {"allow backflow": 1, "disallow backflow": 2},
+    "acMode": {"input mode": 1, "output mode": 2},
+    "smartMode": {"on": 1, "off": 0},
+    "lampSwitch": {"on": 1, "off": 0},
+}
+
 
 def _zendure_mqtt_ha_config(topic, ruwe_payload):
     """Haalt uit een aanmeldingsbericht de plafonds die we nodig hebben."""
@@ -9427,6 +9457,10 @@ def _zendure_mqtt_ha_bericht(topic, ruwe_payload):
             waarde = int(round(waarde * 100))
     elif eigenschap in _ZENDURE_HA_TIENDEN and isinstance(waarde, (int, float)):
         waarde = int(round(waarde * 10))
+    elif eigenschap in _ZENDURE_HA_KEUZES and isinstance(waarde, str):
+        omgezet = _ZENDURE_HA_KEUZES[eigenschap].get(waarde.strip().lower())
+        if omgezet is not None:
+            waarde = omgezet
 
     now = time.time()
     with _zendure_mqtt_lock:
@@ -9896,6 +9930,8 @@ def zendure_mqtt_ha_write_properties(properties, serienummer):
         elif naam == "acMode":
             # 1 = laden, 2 = ontladen in het oude schema
             waarde = "Input mode" if str(waarde) == "1" else "Output mode"
+        elif naam == "gridReverse":
+            waarde = "Allow backflow" if str(waarde) == "1" else "Disallow backflow"
         elif naam in ("smartMode", "lampSwitch"):
             waarde = "ON" if str(waarde) in ("1", "True", "ON", "on") else "OFF"
         client.publish(f"Zendure/{soort}/{serienummer}/{naam}/set", str(waarde))
