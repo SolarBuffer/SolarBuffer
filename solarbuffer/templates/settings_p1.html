@@ -597,7 +597,7 @@
               <input type="number" id="zendure_max_power" name="zendure_max_power"
                      min="100" max="10000" step="100"
                      value="{{ config.zendure_max_power or 800 }}">
-              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Terugval voor accu&#39;s die hun eigen grenzen niet melden. Doet je accu dat wel, dan gebruikt SolarBuffer die, en kunnen laden en ontladen verschillen (een SolarFlow 800 Plus laadt met 1000 W en ontlaadt met 800). Stel die grenzen in op de accupagina.</div>
+              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Alleen gebruikt als je accu zijn eigen grenzen niet meldt. Doet hij dat wel, dan gelden die, en stel je ze in op de accupagina.</div>
             </div>
             <div class="field-group">
               <label for="zendure_transport">Verbinding</label>
@@ -605,31 +605,23 @@
                 <option value="http" {% if config.zendure_transport != 'mqtt' %}selected{% endif %}>Lokale API op de accu (HTTP)</option>
                 <option value="mqtt" {% if config.zendure_transport == 'mqtt' %}selected{% endif %}>Lokale MQTT-broker op deze Hub</option>
               </select>
-              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">
-                Kies MQTT voor apparaten die via Bluetooth aan de lokale broker gekoppeld zijn en geen
-                lokale HTTP-API hebben. SolarBuffer vindt het apparaat dan zelf op de broker, een
-                IP-adres is daarvoor niet nodig.
-              </div>
+              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">MQTT is voor accu&#39;s zonder eigen HTTP-API; een IP-adres is dan niet nodig.</div>
             </div>
             <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
-              Werkt met SolarFlow 800 (Plus/Pro), 1600 AC+ en 2400 AC (Pro) met de nieuwste firmware.
-              Configureer een statisch IP-adres voor je accu. Als SolarBuffer uitstaat wordt de accu op
-              standby gezet; na een herstart van de accu gelden de eigen instellingen weer.
+              Werkt met SolarFlow 800 (Plus/Pro), 1600 AC+ en 2400 AC (Pro). Geef je accu een vast IP-adres.
             </div>
 
             <div style="border-top:1px solid hsl(224, 18%, 90%);margin:0.9rem 0 0.75rem;padding-top:0.75rem;">
               <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.35rem;">Hyper 2000 / Hub / ACE (legacy, via Bluetooth)</div>
               <div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-bottom:0.6rem;">
-                Deze modellen ondersteunen bovenstaande verbinding niet en praten alleen via Zendure's
-                cloud. Koppel hieronder via Bluetooth om ze in plaats daarvan lokaal via deze Hub te
-                laten praten. Zet daarna de verbinding hierboven op &quot;Lokale MQTT-broker&quot;, dan
-                leest SolarBuffer het apparaat via de broker uit. Aansturen via die weg is nog niet
-                tegen hardware bevestigd.
+                Deze modellen praten alleen via Zendure&#39;s cloud. Koppel ze hieronder via Bluetooth
+                en zet de verbinding hierboven op MQTT. Aansturen via die weg is nog niet op hardware
+                beproefd.
               </div>
 
               <div style="background:hsl(37,90%,95%);border:1px solid hsl(37,80%,80%);border-radius:0.5rem;padding:0.6rem 0.75rem;font-size:0.78rem;color:hsl(30,80%,28%);margin-bottom:0.75rem;">
-                Let op: na het koppelen verdwijnt het apparaat uit de officiële Zendure-app (die haalt
-                zijn gegevens via Zendure's cloud op, waar het apparaat dan niet meer mee praat).
+                Let op: na het koppelen verdwijnt het apparaat uit de Zendure-app, want die werkt via
+                de cloud.
               </div>
 
               <button type="button" class="btn-primary" id="zendureBleScanBtn" onclick="scanZendureBle()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">

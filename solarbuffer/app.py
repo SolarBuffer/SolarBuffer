@@ -2125,12 +2125,38 @@ def api_p1_shelly_probe():
 
 
 def _zendure_dev_snapshot():
-    """Het enige (of eerste) Zendure-apparaat uit de MQTT-momentopname."""
+    """Het enige (of eerste) Zendure-apparaat, ongeacht hoe het gekoppeld is.
+
+    Eerst de MQTT-momentopname. Staat de accu op de lokale HTTP-API, dan is er
+    geen momentopname en vragen we hem rechtstreeks. Zonder die terugval bleef de
+    hele accupagina leeg voor iedereen zonder broker: de status meldde offline en
+    het opslaan van limieten gaf 'niet bereikbaar op de lokale broker', terwijl de
+    accu gewoon antwoordde en de schrijfactie prima over HTTP kan.
+    """
     snap = zendure_mqtt_snapshot()
-    if not snap:
+    if snap:
+        did = next(iter(snap))
+        return did, snap[did]
+
+    cfg = load_config()
+    if cfg.get("zendure_transport", "http") == "mqtt":
         return None, None
-    did = next(iter(snap))
-    return did, snap[did]
+    for ip in cfg.get("battery_ips") or []:
+        try:
+            props = zendure_get_report(ip)
+        except Exception:
+            continue
+        if not props:
+            continue
+        now = time.time()
+        return ip, {
+            "prodkey": None, "sn": _zendure_sn.get(ip), "schema": "http",
+            "is_pack": False, "properties": props,
+            # De HTTP-rapportage bevat geen gegevens per accupakket; die komen
+            # alleen over MQTT voorbij.
+            "packs": {}, "last_seen": now, "last_report": now,
+        }
+    return None, None
 
 
 def _scale(value, factor, digits=2):
@@ -2239,7 +2265,7 @@ def api_zendure_limits():
 
     _did, dev = _zendure_dev_snapshot()
     if dev is None:
-        return jsonify(success=False, error="Accu niet bereikbaar op de lokale broker"), 503
+        return jsonify(success=False, error="Accu niet bereikbaar"), 503
     huidig = dev["properties"]
 
     data = request.get_json(silent=True) or {}
