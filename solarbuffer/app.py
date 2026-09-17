@@ -2210,8 +2210,14 @@ def api_zendure_status():
         },
         status={
             "soc": p.get("electricLevel"),
-            "charge_w": p.get("chargePower"),
-            "output_w": p.get("outputPower"),
+            # chargePower en outputPower bestaan alleen in het oude schema. Het
+            # nieuwe schema levert hetzelfde als outputPackPower (laden) en
+            # packInputPower (ontladen); zonder deze terugval stond het vermogen
+            # op nul terwijl de accu volop aan het ontladen was.
+            "charge_w": p.get("chargePower") if p.get("chargePower") is not None
+                        else p.get("outputPackPower"),
+            "output_w": p.get("outputPower") if p.get("outputPower") is not None
+                        else p.get("packInputPower"),
             "pack_num": p.get("packNum"),
             "temp_c": _scale(p.get("hyperTmp"), 100, 1),
             "fault_level": p.get("faultLevel"),
@@ -2275,7 +2281,7 @@ def api_zendure_limits():
         return jsonify(success=True, changed={}, message="Niets gewijzigd")
 
     try:
-        zendure_apply_properties(cfg.get("battery_ips", [""])[0] if cfg.get("battery_ips") else "",
+        zendure_apply_properties(cfg.get("battery_ips") or [],
                                  wijzigingen)
     except Exception as e:
         return jsonify(success=False, error=f"Schrijven mislukt: {e}"), 502
@@ -7793,13 +7799,13 @@ def control_loop():
                             # zijn eigen stand, niet de hoofdschakelaar van de boiler.
                             _z_forced = zendure_manual_override(cfg)
                             if _z_forced is None:
-                                _z_args = (_zendure_ips[0], "zero",
+                                _z_args = (_zendure_ips, "zero",
                                            ["charge_allowed", "discharge_allowed"],
                                            p1_average(ZENDURE_REG_AVG_SECONDS, measured_power),
                                            int(cfg.get("zendure_max_power") or 800))
                                 _z_kwargs = {}
                             else:
-                                _z_args = (_zendure_ips[0], "manual_fixed", [],
+                                _z_args = (_zendure_ips, "manual_fixed", [],
                                            measured_power, int(cfg.get("zendure_max_power") or 800))
                                 _z_kwargs = {"forced_power": _z_forced}
                             threading.Thread(
@@ -8220,7 +8226,7 @@ def control_loop():
                                 # ook niet van de hoofdschakelaar van de boiler.
                                 threading.Thread(
                                     target=set_zendure_control,
-                                    args=(_zendure_ips[0], "manual_fixed", [],
+                                    args=(_zendure_ips, "manual_fixed", [],
                                           measured_power, _zendure_max),
                                     kwargs={"forced_power": _bat_manual_power},
                                     daemon=True,
@@ -8228,13 +8234,13 @@ def control_loop():
                             elif not enabled or not _p1_online:
                                 threading.Thread(
                                     target=release_zendure_to_idle,
-                                    args=(_zendure_ips[0],),
+                                    args=(_zendure_ips,),
                                     daemon=True,
                                 ).start()
                             else:
                                 threading.Thread(
                                     target=set_zendure_control,
-                                    args=(_zendure_ips[0], _desired_mode,
+                                    args=(_zendure_ips, _desired_mode,
                                           _desired_perms,
                                           p1_average(ZENDURE_REG_AVG_SECONDS, measured_power),
                                           _zendure_max),
@@ -9384,10 +9390,20 @@ def _zendure_mqtt_ha_config(topic, ruwe_payload):
     bovengrens = beschrijving.get("max")
     if not doel or bovengrens is None:
         return True
+    now = time.time()
     with _zendure_mqtt_lock:
-        dev = _zendure_mqtt_devices.get(serienummer)
-        if dev is not None:
-            dev["props"][doel] = int(bovengrens)
+        # De aanmeldingsberichten staan opgeslagen op de broker en komen dus
+        # meteen bij het abonneren binnen, vaak nog vóór de eerste meetwaarde.
+        # Het apparaat hier nog niet kennen en de grens dan weggooien betekende
+        # dat het laadplafond leeg bleef tot de accu zich opnieuw aanmeldde.
+        dev = _zendure_mqtt_devices.setdefault(serienummer, {
+            "prodkey": None, "sn": serienummer, "props": {}, "packs": {},
+            "last_seen": 0.0, "last_report": 0.0,
+            "schema": "ha", "is_pack": False,
+        })
+        dev["props"][doel] = int(bovengrens)
+        # Bewust geen last_seen bijwerken: een aanmeldingsbericht zegt niets over
+        # of de accu nú praat, en zou hem anders online laten lijken.
     return True
 
 
@@ -9687,21 +9703,143 @@ def zendure_mqtt_ha_set_power(power_w, serienummer=None):
     return True
 
 
-def zendure_send_setpoint(ip, target_power, props):
-    """Zet een setpoint neer via het juiste kanaal voor het ingestelde transport.
+def zendure_props(power_w):
+    """Zendure-properties voor één setpoint. Positief = laden, negatief = ontladen."""
+    if power_w > 0:
+        return {"smartMode": 1, "acMode": 1, "inputLimit": power_w, "outputLimit": 0}
+    if power_w < 0:
+        return {"smartMode": 1, "acMode": 2, "outputLimit": -power_w, "inputLimit": 0}
+    return {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
 
-    Bij MQTT gaat dat via hemsEP; het meesturen van properties zou daar alleen maar
-    instellingen naar het flashgeheugen van de accu schrijven zonder iets te doen.
-    Bij de lokale HTTP-API blijft het de bestaande propertyschrijfactie.
+
+def zendure_verdeel(totaal, units, max_per_accu):
+    """Verdeelt één totaal setpoint over de aangesloten accu's.
+
+    De regeling rekent met de accu's als één geheel: één setpoint, één anker,
+    één vooruitloop-detectie. Dat is met opzet, want per accu een eigen regelaar
+    zou betekenen dat ze elkaars effect op de P1-meter als hun eigen fout zien.
+    Hier wordt dat totaal pas op het laatste moment verdeeld.
+
+    Verdeeld wordt naar de ruimte die een accu nog heeft, niet gelijk over allen.
+    Bij laden weegt een lege accu zwaarder, bij ontladen een volle. Zo trekken ze
+    elkaar gelijk in plaats van dat de een vol raakt terwijl de ander leeg staat.
+    Een accu die niets meer kan (vol bij laden, leeg bij ontladen) krijgt nul, en
+    zijn deel gaat naar de rest.
+
+    Geeft een lijst met (identificatie, vermogen) terug; de identificatie is een
+    IP-adres bij HTTP en een apparaat-id bij MQTT, precies zoals de pollus die
+    heeft vastgelegd.
     """
-    if load_config().get("zendure_transport", "http") == "mqtt":
-        # Welk kanaal het wordt hangt af van het apparaat, niet van een
-        # instelling: nieuwere modellen kennen hemsEP niet en oudere kennen
-        # de losse set-topics niet.
-        if _zendure_mqtt_ha_device():
-            return zendure_mqtt_ha_set_power(target_power)
-        return zendure_mqtt_hems_invoke(target_power)
-    return zendure_write_properties(ip, props)
+    if not units:
+        return []
+    totaal = int(totaal or 0)
+    if totaal == 0:
+        return [(u["id"], 0) for u in units]
+
+    laden = totaal > 0
+
+    def ruimte(u):
+        """Hoeveel ruimte heeft deze accu nog, in procenten."""
+        soc = u.get("soc")
+        if soc is None:
+            return 50.0            # onbekend: middenmoot, dan valt hij niet af
+        return max(0.0, 100.0 - soc) if laden else max(0.0, float(soc))
+
+    gewichten = {u["id"]: ruimte(u) for u in units}
+    if sum(gewichten.values()) <= 0:
+        # Allemaal vol (of allemaal leeg): niemand kan nog wat. Gelijk verdelen
+        # zou nergens op landen, dus dan sturen we ze allemaal naar nul.
+        return [(u["id"], 0) for u in units]
+
+    # Naar gewicht verdelen, maar niemand boven zijn eigen plafond. Wat door dat
+    # plafond overblijft gaan we in een tweede ronde over de rest verdelen.
+    uit = {}
+    open_units = [u["id"] for u in units]
+    rest = totaal
+    for _ronde in range(len(units)):
+        som = sum(gewichten[i] for i in open_units)
+        if som <= 0 or not open_units:
+            break
+        vast = []
+        for i in open_units:
+            deel = int(round(rest * gewichten[i] / som))
+            if abs(deel) > max_per_accu:
+                deel = max_per_accu if deel > 0 else -max_per_accu
+                vast.append(i)
+            uit[i] = deel
+        if not vast:
+            break
+        # De vastgelopen accu's staan op hun plafond; verdeel de rest opnieuw.
+        rest = totaal - sum(uit[i] for i in vast)
+        open_units = [i for i in open_units if i not in vast]
+
+    # Afrondingsverschil bij de accu met de meeste ruimte leggen, zodat de som
+    # exact het gevraagde totaal is.
+    verschil = totaal - sum(uit.get(u["id"], 0) for u in units)
+    if verschil and open_units:
+        grootste = max(open_units, key=lambda i: gewichten[i])
+        nieuw = uit.get(grootste, 0) + verschil
+        uit[grootste] = max(-max_per_accu, min(max_per_accu, nieuw))
+
+    return [(u["id"], int(uit.get(u["id"], 0))) for u in units]
+
+
+def zendure_mqtt_set_power(power_w, device_id):
+    """Stuurt een setpoint naar één apparaat op de broker, via het juiste kanaal.
+
+    Welk kanaal dat is hangt af van het apparaat en niet van een instelling:
+    nieuwere modellen kennen hemsEP niet en oudere kennen de losse set-topics niet.
+    """
+    with _zendure_mqtt_lock:
+        schema = (_zendure_mqtt_devices.get(device_id) or {}).get("schema", "legacy")
+    if schema == "ha":
+        return zendure_mqtt_ha_set_power(power_w, device_id)
+    return zendure_mqtt_hems_invoke(power_w, device_id)
+
+
+def zendure_send_setpoint(ips, target_power, props=None):
+    """Zet een totaal setpoint neer, verdeeld over alle aangesloten accu's.
+
+    Bij MQTT gaat dat per apparaat via hemsEP of de set-topics; het meesturen van
+    properties zou daar alleen maar instellingen naar het flashgeheugen schrijven
+    zonder iets te doen. Bij de lokale HTTP-API is het de propertyschrijfactie.
+
+    Geeft de werkelijke verdeling terug, zodat de aanroeper die kan loggen.
+    """
+    if isinstance(ips, str):
+        ips = [ips]
+    ips = [i for i in (ips or []) if i]
+    cfg = load_config()
+    via_mqtt = cfg.get("zendure_transport", "http") == "mqtt"
+    max_per_accu = int(cfg.get("zendure_max_power") or 800)
+
+    units = battery_state.get("units") or []
+    if not units:
+        # Nog geen meting per accu binnen. Dan is er niets te verdelen en gaat
+        # alles naar het enige adres dat we kennen; bij MQTT laten we het
+        # apparaat door de bestaande logica kiezen.
+        if via_mqtt:
+            doelen = [(_zendure_mqtt_ha_device() or None, int(target_power))]
+        else:
+            doelen = [(ips[0] if ips else None, int(target_power))]
+    else:
+        doelen = zendure_verdeel(target_power, units, max_per_accu)
+
+    verstuurd = []
+    laatste_fout = None
+    for ident, power in doelen:
+        try:
+            if via_mqtt:
+                zendure_mqtt_set_power(power, ident)
+            else:
+                zendure_write_properties(ident, zendure_props(power))
+            verstuurd.append((ident, power))
+        except Exception as e:
+            laatste_fout = e
+            print(f"Zendure setpoint mislukt voor {ident}: {e}")
+    if not verstuurd and laatste_fout is not None:
+        raise laatste_fout
+    return verstuurd
 
 
 def zendure_manual_override(cfg):
@@ -9765,8 +9903,11 @@ def zendure_mqtt_ha_write_properties(properties, serienummer):
     return verzonden > 0
 
 
-def zendure_apply_properties(ip, properties):
+def zendure_apply_properties(ips, properties):
     """Schrijft instellingen (socSet, minSoc, en dergelijke) via het ingestelde transport.
+
+    Naar alle aangesloten accu's, want een doel-SoC of ondergrens die op de ene
+    accu anders staat dan op de andere levert een vloot op die uit elkaar loopt.
 
     Uitdrukkelijk NIET voor vermogen: een properties/write met acMode en outputLimit
     wordt door de accu wel bevestigd maar niet uitgevoerd, en schrijft bovendien naar
@@ -9775,12 +9916,37 @@ def zendure_apply_properties(ip, properties):
     Zo hoeven release_zendure_to_idle en set_zendure_control niet te weten of dit
     een zenSDK-apparaat op HTTP is of een MQTT-apparaat op de lokale broker.
     """
+    if isinstance(ips, str):
+        ips = [ips]
+    ips = [i for i in (ips or []) if i]
+    gelukt, laatste_fout = 0, None
+
     if load_config().get("zendure_transport", "http") == "mqtt":
-        sn = _zendure_mqtt_ha_device()
-        if sn:
-            return zendure_mqtt_ha_write_properties(properties, sn)
-        return zendure_mqtt_write_properties(properties)
-    return zendure_write_properties(ip, properties)
+        with _zendure_mqtt_lock:
+            doelen = [(sn, d.get("schema", "legacy"))
+                      for sn, d in _zendure_mqtt_devices.items() if not d.get("is_pack")]
+        for sn, schema in doelen:
+            try:
+                if schema == "ha":
+                    zendure_mqtt_ha_write_properties(properties, sn)
+                else:
+                    zendure_mqtt_write_properties(properties, sn)
+                gelukt += 1
+            except Exception as e:
+                laatste_fout = e
+                print(f"Zendure instelling mislukt voor {sn}: {e}")
+    else:
+        for ip in ips:
+            try:
+                zendure_write_properties(ip, properties)
+                gelukt += 1
+            except Exception as e:
+                laatste_fout = e
+                print(f"Zendure instelling mislukt voor {ip}: {e}")
+
+    if not gelukt and laatste_fout is not None:
+        raise laatste_fout
+    return gelukt > 0
 
 
 def zendure_mqtt_loop():
@@ -9860,7 +10026,7 @@ def zendure_mqtt_loop():
             time.sleep(10)
 
 
-def release_zendure_to_idle(ip):
+def release_zendure_to_idle(ips):
     """Zet de Zendure op standby zodra SolarBuffer de regie loslaat.
 
     De lokale API kent geen expliciete 'auto'-modus; smartMode=1 schrijft de
@@ -9875,7 +10041,7 @@ def release_zendure_to_idle(ip):
         if _last_battery_mode == "idle" and (now - _last_zendure_send) < 240:
             return True
         try:
-            zendure_send_setpoint(ip, 0, {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0})
+            zendure_send_setpoint(ips, 0)
             _last_battery_permissions = None
             _last_battery_mode = "idle"
             _last_zendure_power = None
@@ -9888,7 +10054,7 @@ def release_zendure_to_idle(ip):
         _zendure_control_lock.release()
 
 
-def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced_power=None):
+def set_zendure_control(ips, mode, perms, measured_power=0, max_power=800, forced_power=None):
     """Regel de Zendure op nul-op-de-meter; SolarBuffer is hier zelf de regelaar.
 
     De lokale Zendure API kent geen eigen auto-modus (geen CT-regeling zoals de
@@ -9914,7 +10080,15 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
     try:
         now = time.time()
         desired_perms = sorted(perms)
-        max_power = int(max_power or 800)
+        if isinstance(ips, str):
+            ips = [ips]
+        ips = [i for i in (ips or []) if i]
+        # Het plafond geldt per accu; met twee accu's kan de vloot het dubbele.
+        # We rekenen met wat de pollus werkelijk heeft gezien, niet met wat er in
+        # de instellingen staat, zodat een accu die wegvalt het plafond meteen
+        # verlaagt in plaats van dat de regeling blijft vragen wat er niet is.
+        _aantal = len(battery_state.get("units") or []) or len(ips) or 1
+        max_power = int(max_power or 800) * _aantal
 
         charge_only = (desired_perms == ["charge_allowed"])
         discharge_only = (desired_perms == ["discharge_allowed"])
@@ -10022,26 +10196,20 @@ def set_zendure_control(ip, mode, perms, measured_power=0, max_power=800, forced
             _last_zendure_power = target_power
             return True
 
-        if target_power > 0:
-            props = {"smartMode": 1, "acMode": 1, "inputLimit": target_power, "outputLimit": 0}
-        elif target_power < 0:
-            props = {"smartMode": 1, "acMode": 2, "outputLimit": -target_power, "inputLimit": 0}
-        else:
-            props = {"smartMode": 1, "acMode": 1, "inputLimit": 0, "outputLimit": 0}
-
         try:
-            zendure_send_setpoint(ip, target_power, props)
+            verdeling = zendure_send_setpoint(ips, target_power)
             log_battery_send("zendure", target_power, "VERZONDEN",
                              modus=mode, perms=desired_perms,
                              net_w=round(measured_power, 1),
-                             props=props)
+                             props=zendure_props(target_power),
+                             verdeling=verdeling if len(verdeling) > 1 else None)
             _last_battery_permissions = desired_perms
             _last_battery_mode = mode
             _last_zendure_power = target_power
             _last_zendure_send = now
             return True
         except Exception as e:
-            print(f"Zendure control error ({ip}): {e}")
+            print(f"Zendure control error ({ips}): {e}")
         return False
     finally:
         _zendure_control_lock.release()
