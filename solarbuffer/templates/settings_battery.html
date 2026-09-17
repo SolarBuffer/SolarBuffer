@@ -38,13 +38,25 @@
       display: block; font-size: 0.82rem; font-weight: 600;
       color: hsl(224, 18%, 67%); margin-bottom: 0.35rem;
     }
-    .field-group input {
+    .field-group input, .field-group select {
       width: 100%; padding: 0.65rem 0.85rem;
       border: 1.5px solid hsl(224, 20%, 82%); border-radius: 0.5rem;
       font-size: 0.95rem; font-family: 'Inter', sans-serif;
-      background: white; color: hsl(224, 26%, 14%); transition: border-color 0.2s;
+      background-color: white; color: hsl(224, 26%, 14%); transition: border-color 0.2s;
     }
-    .field-group input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+    /* Een eigen pijltje in plaats van dat van het besturingssysteem: dat laatste
+       past niet bij de rest van het formulier en is in donkere modus vrijwel
+       onleesbaar. Kleur bewust neutraal, zodat hij in beide thema's werkt. */
+    .field-group select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%238a93a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.85rem center;
+      background-size: 0.7rem;
+      padding-right: 2.4rem;
+      cursor: pointer;
+    }
+    .field-group input:focus, .field-group select:focus { outline: none; border-color: hsl(32, 85%, 55%); }
     .field-hint { font-size: 0.75rem; color: hsl(224, 18%, 73%); margin-top: 0.25rem; }
 
     .btn-primary {
@@ -102,8 +114,11 @@
     html[data-theme="dark"] .card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
     html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
     html[data-theme="dark"] .field-group label { color: hsl(224, 18%, 74%); }
-    html[data-theme="dark"] .field-group input { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
-    html[data-theme="dark"] .field-group input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .field-group input, html[data-theme="dark"] .field-group select { background-color: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field-group input:focus, html[data-theme="dark"] .field-group select:focus { border-color: hsl(32, 75%, 52%); }
+    /* De keuzelijst zelf wordt door het besturingssysteem getekend; zonder deze
+       regel staat er in donkere modus zwarte tekst op een zwart vlak. */
+    html[data-theme="dark"] .field-group select option { background-color: hsl(224, 38%, 13%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .field-hint { color: hsl(224, 18%, 68%); }
     html[data-theme="dark"] .stat-label { color: hsl(224, 18%, 70%); }
     html[data-theme="dark"] .stat-value { color: hsl(224, 18%, 95%); }
