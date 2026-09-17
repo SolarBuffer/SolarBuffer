@@ -9741,9 +9741,18 @@ def zendure_send_setpoint(ips, target_power, props=None):
     ips = [i for i in (ips or []) if i]
     cfg = load_config()
     via_mqtt = cfg.get("zendure_transport", "http") == "mqtt"
-    max_per_accu = int(cfg.get("zendure_max_power") or 800)
 
     units = battery_state.get("units") or []
+    # Het plafond per accu hangt af van de richting: laden en ontladen kunnen
+    # verschillen. De accu meldt zijn eigen grenzen als vlootttotaal, dus delen we
+    # die door het aantal accu's. Meldt hij niets, dan geldt de ingestelde waarde.
+    _terugval = int(cfg.get("zendure_max_power") or 800)
+    _vloot = int(battery_state.get("max_consumption_w" if (target_power or 0) > 0
+                                   else "max_production_w") or 0)
+    if _vloot and units:
+        max_per_accu = max(1, _vloot // len(units))
+    else:
+        max_per_accu = _terugval
     if not units:
         # Nog geen meting per accu binnen. Dan is er niets te verdelen en gaat
         # alles naar het enige adres dat we kennen; bij MQTT laten we het
@@ -10022,15 +10031,23 @@ def set_zendure_control(ips, mode, perms, measured_power=0, max_power=800, force
         _aantal = len(battery_state.get("units") or []) or len(ips) or 1
         max_power = int(max_power or 800) * _aantal
 
+        # Laden en ontladen kunnen verschillende plafonds hebben. Een SolarFlow 800
+        # Plus laadt met 1000 W maar ontlaadt met 800. Eén getal voor beide
+        # richtingen knijpt het laden dan onnodig af. De accu meldt zijn eigen
+        # grenzen; de handmatig ingestelde waarde is alleen de terugval voor een
+        # accu die dat niet doet.
+        _laad_max = int(battery_state.get("max_consumption_w") or 0) or max_power
+        _ontlaad_max = int(battery_state.get("max_production_w") or 0) or max_power
+
         charge_only = (desired_perms == ["charge_allowed"])
         discharge_only = (desired_perms == ["discharge_allowed"])
 
         if mode == "manual_fixed":
             # Handmatige bediening of uit: vast setpoint van de gebruiker, geen
             # regellus. Positief = laden, negatief = ontladen, 0 = standby.
-            target_power = max(-max_power, min(max_power, int(forced_power or 0)))
+            target_power = max(-_ontlaad_max, min(_laad_max, int(forced_power or 0)))
         elif mode == "to_full":
-            target_power = max_power
+            target_power = _laad_max
         elif not perms:
             target_power = 0
         else:
@@ -10071,11 +10088,11 @@ def set_zendure_control(ips, mode, perms, measured_power=0, max_power=800, force
             # elke cyclus bij optellen schiet daar overheen.
             _ideal = int(_bat_now - ZENDURE_REG_GAIN * measured_power)
             if charge_only:
-                target_power = max(0, min(max_power, _ideal))
+                target_power = max(0, min(_laad_max, _ideal))
             elif discharge_only:
-                target_power = max(-max_power, min(0, _ideal))
+                target_power = max(-_ontlaad_max, min(0, _ideal))
             else:
-                target_power = max(-max_power, min(max_power, _ideal))
+                target_power = max(-_ontlaad_max, min(_laad_max, _ideal))
 
         # Niet vragen wat de accu niet kan. Zit hij op zijn doel-SoC dan kan hij niet
         # laden, en een laadopdracht laat hem volledig stilvallen in plaats van iets
@@ -10507,7 +10524,10 @@ def battery_poll_loop():
                         # dan de handmatig ingestelde zendure_max_power en worden in
                         # de regellus gebruikt voor de 'accu op max'-detectie.
                         try:
-                            limit_charge += int(props.get("chargeLimit") or 0)
+                            # Niet elk model kent chargeLimit; de nieuwere melden hun
+                            # laadplafond als chargeMaxLimit uit het aanmeldingsbericht.
+                            limit_charge += int(props.get("chargeLimit")
+                                                or props.get("chargeMaxLimit") or 0)
                             limit_discharge += int(props.get("inverseMaxPower") or 0)
                         except (TypeError, ValueError):
                             pass
@@ -10536,6 +10556,17 @@ def battery_poll_loop():
                                     solar_list.append(max(0.0, float(_zon)))
                                 except (TypeError, ValueError):
                                     pass
+                            # De accu kent zijn eigen plafonds en ze verschillen per
+                            # richting: een solarFlow800Plus laadt met 1000 W en
+                            # ontlaadt met 800. Deze werden alleen over MQTT gelezen,
+                            # waardoor een accu op HTTP in beide richtingen op de
+                            # handmatig ingestelde waarde bleef hangen.
+                            try:
+                                limit_charge += int(props.get("chargeLimit")
+                                                    or props.get("chargeMaxLimit") or 0)
+                                limit_discharge += int(props.get("inverseMaxPower") or 0)
+                            except (TypeError, ValueError):
+                                pass
                         except Exception:
                             pass
                 if any_online:
