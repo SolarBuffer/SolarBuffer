@@ -755,6 +755,7 @@ ZENDURE_REG_MIN_INTERVAL = 5    # s: niet vaker bijstellen dan de accu kan volge
 # onderweg is. Dezelfde waarde nog eens sturen verstoort niets en mag dus sneller;
 # dat is nodig omdat een accu zijn opdracht kan laten vallen (gemeten op een
 # solarFlow800Plus: terug naar een eigen waarde na 3 tot 8 seconden).
+BAT_TOFULL_EXIT_DELAY = 10      # s: zo lang moet het overschot weg zijn voor to_full stopt
 ZENDURE_REG_REPEAT_INTERVAL = 2  # s: zo vaak mag dezelfde waarde opnieuw
 ZENDURE_REG_DEADBAND = 5        # W: kleinere bijstellingen zijn de moeite niet
 # Terugkoppeling tegen vastlopen: het setpoint mag vooruitlopen op wat de accu
@@ -7297,7 +7298,8 @@ def control_loop():
     import_unfreeze_start = None
     import_off_start = None
     prev_schedule_active_ips = set()
-    _bat_tofull_active = False  # to_full mode actief voor accu-eerst: accu bevroren op max lading, blijft zo tot boiler weer uit staat
+    _bat_tofull_active = False  # to_full mode actief voor accu-eerst: accu bevroren op max lading
+    _bat_tofull_leeg_sinds = None  # sinds wanneer er geen overschot meer is terwijl to_full loopt
     _bat_saturated = False       # accu uitgeregeld: neemt overschot niet op → boiler vrijgeven
     _bat_saturated_since = None  # start aanhoudende export terwijl accu zou moeten laden
     _ff_last_measured_power = {}  # per ip: laatst gebruikte P1-meting voor curve-sprong
@@ -8242,14 +8244,39 @@ def control_loop():
                             # daar zelf op af, waardoor de rauwe _bat_at_max-check meteen
                             # weer onder de drempel kan duiken vóór hij ooit "boiler draait
                             # al" tegelijk met "accu op max" zag — dat gaf een start/stop-
-                            # flap. Eenmaal bevroren blijft dat zo staan tot de boiler weer
-                            # uit staat, ongeacht wat de live accumeting daarna doet.
+                            # flap. Eenmaal bevroren blijft dat zo staan, ongeacht wat de
+                            # live accumeting daarna doet.
+                            #
+                            # Einde niet aan "boiler draait niet" hangen: dat is juist de
+                            # toestand op het moment van bevriezen, want de boiler heeft dan
+                            # nog seconden teruglevering nodig voor hij start. Ingang en
+                            # uitgang waren dan tegelijk waar en wisselden elkaar elke cyclus
+                            # af, waarbij de accu om en om werd losgelaten en weer bevroren.
+                            # De boiler kwam daar nooit doorheen, want elke losgelaten cyclus
+                            # at de accu het overschot op en zette zijn starttimer terug op
+                            # nul. Stoppen gebeurt nu op de toestand die er echt toe doet:
+                            # de boiler draait niet én er is geen overschot meer. Even
+                            # aanhouden, want de meting schiet kort door zolang de accu op
+                            # zijn plafond hangt.
                             if _bat_tofull_active:
-                                if not _any_sb_active:
-                                    _bat_tofull_active = False
+                                if not _any_sb_active and measured_power > 50:
+                                    if _bat_tofull_leeg_sinds is None:
+                                        _bat_tofull_leeg_sinds = now
+                                    elif (now - _bat_tofull_leeg_sinds) >= BAT_TOFULL_EXIT_DELAY:
+                                        _bat_tofull_active = False
+                                        _bat_tofull_leeg_sinds = None
+                                else:
+                                    _bat_tofull_leeg_sinds = None
                             else:
-                                if _bat_at_max:
+                                # Ingang gebruikt dezelfde grens als de uitgang, anders
+                                # kan de accu op zijn plafond hangen terwijl we inkopen
+                                # en blijven aan- en uitgaan elkaar afwisselen. In zero
+                                # staat de accu het overschot op te nemen, dus is de
+                                # meter daar hooguit net aan het terugleveren; inkoop
+                                # betekent dat er niets te verdelen valt.
+                                if _bat_at_max and measured_power <= 50:
                                     _bat_tofull_active = True
+                                    _bat_tofull_leeg_sinds = None
 
                             if _bat_tofull_active:
                                 # to_full: accu laadt vast op max, boiler is de enige regelaar
