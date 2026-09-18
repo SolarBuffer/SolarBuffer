@@ -3798,7 +3798,15 @@ GIT_SSH_REMOTE = "git@github.com:SolarBuffer/SolarBuffer.git"
 # Let op: hij staat hiermee in een repo die (nog) openbaar is en is dus niet
 # geheim. Trek hem in zodra de vloot is overgezet en rol daarna via de dan
 # privé repo een verse sleutel uit.
-GIT_DEPLOY_KEY_MATERIAAL = """"""
+GIT_DEPLOY_KEY_MATERIAAL = """
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACC7V8KDJtnDz9M/nALj2j+f5iNJHnuhLkqlgQ2Hptqr2AAAAKCnRxjIp0cY
+yAAAAAtzc2gtZWQyNTUxOQAAACC7V8KDJtnDz9M/nALj2j+f5iNJHnuhLkqlgQ2Hptqr2A
+AAAEAsw6JZcoAVb5QpxJ8ft5pT0hEZ6Mb7dVJWn+h5wgm7AbtXwoMm2cPP0z+cAuPaP5/m
+I0kee6EuSqWBDYem2qvYAAAAF3NvbGFyYnVmZmVyLWh1Yi1yb2xsb3V0AQIDBAUG
+-----END OPENSSH PRIVATE KEY-----
+"""
 # --------------------------------------------------------------------------
 
 
