@@ -2729,6 +2729,12 @@ def status_json():
                     "on": power > 5,
                 }
 
+    # Dagopbrengst van de zon, uit beide richtingen. Een stroomtang op de
+    # zonnegroep kan andersom om de draad zitten; dan staat de hele opbrengst in
+    # de tegenteller en blijft 'solar' bijna nul. Dezelfde keuze als het
+    # maandoverzicht al maakte.
+    _zon_vandaag_wh = zon_uit_tellers(_daily_acc)
+
     _dash_blocked_ips = get_blocked_device_ips(cfg.get("schedules", []), cfg.get("shelly_devices", []))
     _all_devices_schedule_blocked = (
         bool(cfg.get("shelly_devices"))
@@ -2754,8 +2760,8 @@ def status_json():
         # alle bronnen al zijn opgeteld. Het dashboard toonde tot nu toe alleen
         # de dagteller van het zonne-accessoire, en die kent die andere bronnen niet.
         battery_solar_w=battery_state.get("solar_w"),
-        solar_today_kwh=(round(_daily_acc.get("solar", 0.0) / 1000.0, 2)
-                         if _daily_acc.get("solar") else None),
+        solar_today_kwh=(round(_zon_vandaag_wh / 1000.0, 2)
+                         if _zon_vandaag_wh else None),
         broadlink_ir_states=broadlink_ir_states,
         broadlink_devices=cfg.get("broadlink_devices", []),
         vacation_mode=cfg.get("vacation_mode", False),
@@ -11228,13 +11234,17 @@ def maandoverzicht():
     return render_template("monthly.html", dark_mode=get_user_dark_mode())
 
 
-def zon_van_maand(opgeteld):
-    """Opwek van een maand, ongeacht hoe de zonnemeter gemonteerd is.
+def zon_uit_tellers(opgeteld):
+    """Opwek uit een stel dagtellers, ongeacht hoe de zonnemeter gemonteerd is.
 
     De twee richtingen zijn apart geteld. De grootste is de opwek; de andere is
     het beetje dat de omvormer 's nachts zelf verbruikt en dat is geen opbrengst.
     Bij een omvormerkoppeling is er nooit een tegenrichting, dan wint 'solar'
     vanzelf.
+
+    Geldt voor een dag net zo goed als voor een maand, vandaar de naam. Het
+    maandoverzicht gebruikte dit al; de dagwaarde op het dashboard keek alleen
+    naar 'solar' en stond daardoor op nul bij een omgekeerd gemonteerde meter.
     """
     return max(float(opgeteld.get("solar", 0.0) or 0.0),
                float(opgeteld.get("solar_terug", 0.0) or 0.0))
@@ -11329,7 +11339,7 @@ def api_monthly():
         opt = opgeteld.get(maand, {})
         rij = {
             "month": maand,
-            "solar": zon_van_maand(opt),
+            "solar": zon_uit_tellers(opt),
             # Per SolarBuffer, met de naam zoals hij in de app heet. Dagen van voor
             # deze wijziging kennen alleen een opgeteld totaal; die tonen we onder
             # de algemene naam in plaats van ze te laten verdwijnen.
