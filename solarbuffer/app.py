@@ -3775,32 +3775,140 @@ def set_brightness_manual(ip):
 
 
 UPDATE_DIR = "/home/solarbuffer/SolarBuffer"
-GIT_DEPLOY_KEY_PATH = "/home/solarbuffer/.ssh/solarbuffer_deploy_key"
+GIT_SSH_DIR = "/home/solarbuffer/.ssh"
+GIT_DEPLOY_KEY_PATH = os.path.join(GIT_SSH_DIR, "solarbuffer_deploy")
+# Eerdere versies zochten onder deze naam. Hubs die met de hand zijn ingericht
+# kunnen de sleutel onder beide namen hebben staan, dus we kijken naar allebei.
+GIT_DEPLOY_KEY_ALT = os.path.join(GIT_SSH_DIR, "solarbuffer_deploy_key")
 GIT_SSH_REMOTE = "git@github.com:SolarBuffer/SolarBuffer.git"
+
+# --- Sleutel voor het bijwerken -------------------------------------------
+# Hier hoort de alleen-lees deploy key van de repo. Een Hub zonder sleutel kan
+# alleen bij een openbare repo; gaat die op privé, dan valt het bijwerken stil op
+# elke Hub waar niemand meer bij kan. Daarom reist de sleutel mee met de update
+# zelf: wie nu bijwerkt, kan straks blijven bijwerken.
+#
+# Laat leeg om niets uit te rollen. Staat er wel iets, dan wordt hij bij het
+# opstarten neergezet, maar nooit over een sleutel heen die er al staat.
+#
+# Wat deze sleutel kan: deze ene repo klonen en ophalen. Wat hij niet kan:
+# pushen, iets wijzigen, of bij het account of een andere repo komen.
+#
+# Let op: hij staat hiermee in een repo die (nog) openbaar is en is dus niet
+# geheim. Trek hem in zodra de vloot is overgezet en rol daarna via de dan
+# privé repo een verse sleutel uit.
+GIT_DEPLOY_KEY_MATERIAAL = """"""
+# --------------------------------------------------------------------------
+
+
+def git_deploy_key_path():
+    """Het pad van de deploy key op deze Hub, of None als er geen staat."""
+    for pad in (GIT_DEPLOY_KEY_PATH, GIT_DEPLOY_KEY_ALT):
+        try:
+            if os.path.isfile(pad) and os.path.getsize(pad) > 0:
+                return pad
+        except OSError:
+            continue
+    return None
+
+
+def ensure_git_deploy_key():
+    """Zet de meegeleverde sleutel neer als er op deze Hub nog geen staat.
+
+    Een Hub die met de hand is ingericht heeft mogelijk een eigen sleutel; die
+    wordt nooit overschreven. Is GIT_DEPLOY_KEY_MATERIAAL leeg, dan gebeurt er
+    niets en blijft alles werken zoals het werkte.
+    """
+    inhoud = (GIT_DEPLOY_KEY_MATERIAAL or "").strip()
+    if not inhoud or "PRIVATE KEY" not in inhoud:
+        return False
+    if git_deploy_key_path():
+        return False
+    try:
+        os.makedirs(GIT_SSH_DIR, mode=0o700, exist_ok=True)
+        # Eerst schrijven met de juiste rechten, dan pas op zijn plek zetten:
+        # ssh weigert een sleutel die ook maar even voor anderen leesbaar is.
+        tmp = GIT_DEPLOY_KEY_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(inhoud + "\n")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, GIT_DEPLOY_KEY_PATH)
+        print(f"[GIT] sleutel voor bijwerken geplaatst op {GIT_DEPLOY_KEY_PATH}")
+        return True
+    except Exception as e:
+        print(f"[GIT] kon de sleutel niet plaatsen: {e}")
+        return False
+
+
+def ensure_git_ssh_config():
+    """Zorgt dat ssh voor github.com onze sleutel pakt, precies één keer.
+
+    Een eerdere ronde voegde dit blok toe zonder te kijken of het er al stond,
+    waardoor het op bestaande Hubs drie keer in het bestand terechtkwam. Dat werkt
+    wel, maar het groeit bij elke ronde verder aan. Alles wat over github.com gaat
+    wordt daarom eerst verwijderd, en daarna komt er één schoon blok terug.
+    """
+    sleutel = git_deploy_key_path()
+    if not sleutel:
+        return False
+    pad = os.path.join(GIT_SSH_DIR, "config")
+    blok = f"Host github.com\n  IdentityFile {sleutel}\n  IdentitiesOnly yes\n"
+    try:
+        os.makedirs(GIT_SSH_DIR, mode=0o700, exist_ok=True)
+        bestaand = ""
+        if os.path.isfile(pad):
+            with open(pad, encoding="utf-8") as f:
+                bestaand = f.read()
+        overig, sla_over = [], False
+        for regel in bestaand.splitlines():
+            if regel.strip().lower().startswith("host "):
+                sla_over = regel.strip().lower() == "host github.com"
+            if not sla_over:
+                overig.append(regel)
+        rest = "\n".join(overig).strip()
+        nieuw = (rest + "\n\n" if rest else "") + blok
+        if nieuw == bestaand:
+            return False
+        tmp = pad + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(nieuw)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, pad)
+        return True
+    except Exception as e:
+        print(f"[GIT] kon de ssh-instelling niet schrijven: {e}")
+        return False
 
 
 def _git_update_env():
-    """Zodra de deploy key op deze Hub staat (handmatig via SSH neergezet, nooit
-    via deze repo zelf, want die is publiek totdat de hele vloot is overgezet),
-    gebruikt git die voor verkeer naar GitHub. Zonder de key: gewoon de normale
-    omgeving, dus de bestaande (publieke) remote blijft werken zoals altijd."""
-    if not os.path.isfile(GIT_DEPLOY_KEY_PATH):
+    """Zodra er een deploy key op deze Hub staat, gebruikt git die voor verkeer
+    naar GitHub. Zonder sleutel: gewoon de normale omgeving, dus de bestaande
+    (publieke) remote blijft werken zoals altijd."""
+    sleutel = git_deploy_key_path()
+    if not sleutel:
         return None
     env = os.environ.copy()
     env["GIT_SSH_COMMAND"] = (
-        f"ssh -i {GIT_DEPLOY_KEY_PATH} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+        f"ssh -i {sleutel} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
     )
     return env
 
 
 def ensure_git_remote_uses_deploy_key():
-    """Zet de git-remote van UPDATE_DIR om naar SSH zodra de deploy key aanwezig
-    is. Idempotent en veilig om bij elke opstart en elke update-check te draaien;
-    doet niets zolang de key nog niet handmatig is uitgerold naar deze Hub."""
-    if not os.path.isfile(GIT_DEPLOY_KEY_PATH):
+    """Zet de git-remote om naar SSH zodra er een deploy key is.
+
+    Rolt zo nodig eerst de meegeleverde sleutel uit en zet de ssh-instelling
+    goed. Idempotent en veilig om bij elke opstart en elke update-check te
+    draaien; doet niets zolang er geen sleutel is, en dan blijft de publieke weg
+    gewoon werken zoals altijd.
+    """
+    ensure_git_deploy_key()
+    sleutel = git_deploy_key_path()
+    if not sleutel:
         return
+    ensure_git_ssh_config()
     try:
-        os.chmod(GIT_DEPLOY_KEY_PATH, 0o600)
+        os.chmod(sleutel, 0o600)
     except Exception:
         pass
     try:
