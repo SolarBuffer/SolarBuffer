@@ -2716,15 +2716,22 @@
       left: -72px;
       right: -72px;
       opacity: 0;
+      /* Een lichte en een donkere band samen. Alleen oplichten werkt niet over
+         de hele kleurschaal: wit op geel of lichtgroen zie je nauwelijks, waar
+         het op rood of donkergroen juist opvalt. Door er een schaduw voor te
+         zetten ontstaat er op elke kleur verschil. */
       background-image: repeating-linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0px,
-        rgba(255, 255, 255, 0.26) 36px,
-        rgba(255, 255, 255, 0) 72px);
+        rgba(0, 0, 0, 0) 0px,
+        rgba(0, 0, 0, 0.14) 14px,
+        rgba(255, 255, 255, 0.10) 26px,
+        rgba(255, 255, 255, 0.45) 38px,
+        rgba(255, 255, 255, 0.10) 50px,
+        rgba(0, 0, 0, 0) 72px);
       transition: opacity 0.5s;
       will-change: transform;
     }
     .bat-soc-fill.laadt::after,
-    .bat-soc-fill.ontlaadt::after { opacity: 1; animation: soc-veeg 2.6s linear infinite; }
+    .bat-soc-fill.ontlaadt::after { opacity: 1; animation: soc-veeg 2.2s linear infinite; }
     .bat-soc-fill.ontlaadt::after { animation-direction: reverse; }
     @keyframes soc-veeg {
       from { transform: translateX(0); }
@@ -2732,12 +2739,14 @@
     }
     /* Een zachte gloed rond de balk, zodat ook bij een volle of bijna lege accu
        zichtbaar blijft dat er iets gebeurt; de veeg heeft dan weinig ruimte. */
-    .bat-soc-track.bezig { box-shadow: 0 0 0 1px hsla(145, 55%, 45%, 0.18); }
-    .bat-soc-track.bezig.uit { box-shadow: 0 0 0 1px hsla(32, 90%, 48%, 0.18); }
+    .bat-soc-track.bezig { box-shadow: 0 0 0 1px hsla(145, 55%, 45%, 0.30); }
+    .bat-soc-track.bezig.uit { box-shadow: 0 0 0 1px hsla(32, 90%, 48%, 0.30); }
     @media (prefers-reduced-motion: reduce) {
       .bat-soc-fill { transition: none; }
+      /* Zonder beweging heeft een strepenpatroon geen betekenis meer, dus
+         dan alleen de gloed om de balk laten staan. */
       .bat-soc-fill.laadt::after,
-      .bat-soc-fill.ontlaadt::after { animation: none; opacity: 0.2; }
+      .bat-soc-fill.ontlaadt::after { animation: none; opacity: 0; }
     }
     .bat-stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin-top: 0.9rem; }
     .bat-stat { padding: 0 0.75rem; border-left: 1px solid hsl(224, 20%, 92%); min-width: 0; }
