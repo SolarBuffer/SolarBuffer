@@ -2704,34 +2704,44 @@
     /* Een lichtveeg die over de balk loopt zolang er stroom in of uit gaat.
        Bij laden loopt hij naar rechts, bij ontladen naar links, zodat je aan de
        richting ziet wat er gebeurt zonder het getal te lezen. */
+    /* Het patroon herhaalt elke 72 pixels en de animatie verschuift precies die
+       72 pixels, dus de ronde sluit naadloos aan en je ziet niet waar hij
+       opnieuw begint. Alles in pixels en niet in procenten: procenten in
+       background-position slaan op de ruimte naast de tegel in plaats van op de
+       tegel zelf, en ze verspringen zodra de balk van breedte verandert.
+       Geschoven wordt met transform en niet met background-position, want dat
+       laatste laat de browser elk beeldje opnieuw tekenen en dat loopt
+       zichtbaar onregelmatig. */
     .bat-soc-fill::after {
       content: "";
       position: absolute;
-      inset: 0;
+      top: 0;
+      bottom: 0;
+      left: -72px;
+      right: -72px;
       opacity: 0;
-      background-image: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 20%,
-        rgba(255, 255, 255, 0.55) 50%,
-        rgba(255, 255, 255, 0) 80%);
-      background-size: 55% 100%;
-      background-repeat: repeat-x;
-      transition: opacity 0.4s;
+      background-image: repeating-linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0px,
+        rgba(255, 255, 255, 0.26) 36px,
+        rgba(255, 255, 255, 0) 72px);
+      transition: opacity 0.5s;
+      will-change: transform;
     }
     .bat-soc-fill.laadt::after,
-    .bat-soc-fill.ontlaadt::after { opacity: 1; animation: soc-veeg 1.9s linear infinite; }
+    .bat-soc-fill.ontlaadt::after { opacity: 1; animation: soc-veeg 2.6s linear infinite; }
     .bat-soc-fill.ontlaadt::after { animation-direction: reverse; }
     @keyframes soc-veeg {
-      from { background-position: -55% 0; }
-      to   { background-position: 155% 0; }
+      from { transform: translateX(0); }
+      to   { transform: translateX(72px); }
     }
     /* Een zachte gloed rond de balk, zodat ook bij een volle of bijna lege accu
        zichtbaar blijft dat er iets gebeurt; de veeg heeft dan weinig ruimte. */
-    .bat-soc-track.bezig { box-shadow: 0 0 0 1px hsla(145, 55%, 45%, 0.25); }
-    .bat-soc-track.bezig.uit { box-shadow: 0 0 0 1px hsla(32, 90%, 48%, 0.25); }
+    .bat-soc-track.bezig { box-shadow: 0 0 0 1px hsla(145, 55%, 45%, 0.18); }
+    .bat-soc-track.bezig.uit { box-shadow: 0 0 0 1px hsla(32, 90%, 48%, 0.18); }
     @media (prefers-reduced-motion: reduce) {
       .bat-soc-fill { transition: none; }
       .bat-soc-fill.laadt::after,
-      .bat-soc-fill.ontlaadt::after { animation: none; opacity: 0.35; }
+      .bat-soc-fill.ontlaadt::after { animation: none; opacity: 0.2; }
     }
     .bat-stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin-top: 0.9rem; }
     .bat-stat { padding: 0 0.75rem; border-left: 1px solid hsl(224, 20%, 92%); min-width: 0; }
@@ -3144,15 +3154,23 @@
               const pct = Math.max(0, Math.min(100, Number(soc)));
               document.getElementById('batSocText').textContent = pct.toFixed(0) + '%';
               const bar = document.getElementById('batSocBar');
-              bar.style.width = pct.toFixed(1) + '%';
+              // Alleen schrijven als de stand echt is veranderd. Het dashboard
+              // ververst elke seconde, en elke schrijfactie laat de browser de
+              // opmaak van dit element opnieuw uitrekenen. Op precies dit
+              // element loopt de animatie, en die ging daardoor schokken.
+              const nieuweBreedte = pct.toFixed(1) + '%';
+              if (bar.style.width !== nieuweBreedte) bar.style.width = nieuweBreedte;
               // De kleurschaal hoort bij de hele balk en niet bij het gevulde
               // stuk. De achtergrond wordt daarom 100/stand keer zo breed
               // gemaakt, zodat elk punt op de balk zijn eigen kleur houdt
               // terwijl de vulling groeit. Anders zou 20% net zo groen worden
               // als 100%, en dat was precies het probleem met de drie vaste
               // kleuren die hier stonden.
-              bar.style.setProperty('--soc-schaal',
-                (pct >= 0.5 ? Math.min(20000, 10000 / pct) : 20000).toFixed(0) + '%');
+              const nieuweSchaal =
+                (pct >= 0.5 ? Math.min(20000, 10000 / pct) : 20000).toFixed(0) + '%';
+              if (bar.style.getPropertyValue('--soc-schaal') !== nieuweSchaal) {
+                bar.style.setProperty('--soc-schaal', nieuweSchaal);
+              }
             }
 
             const pw = bat.power_w;
