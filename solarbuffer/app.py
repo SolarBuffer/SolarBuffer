@@ -3548,6 +3548,140 @@ def shutdown():
     return jsonify(success=True)
 
 
+def _sudo_sh(script):
+    """Draait een stukje shell als root en geeft terug wat het meldde.
+
+    De app draait als gebruiker solarbuffer, dus alles onder /etc en /var/lib
+    heeft sudo nodig. In een shell en niet als losse opdracht, omdat sterretjes
+    anders niet uitgeklapt worden.
+    """
+    try:
+        uit = subprocess.run(["sudo", "sh", "-c", script],
+                             capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"[RESET] kon niet uitvoeren: {e}")
+        return ""
+    if uit.stderr.strip():
+        print(f"[RESET] {uit.stderr.strip()}")
+    return ", ".join(uit.stdout.split()) or "niets"
+
+
+def _reset_gegevens():
+    """Wist wat deze installatie over zichzelf en zijn huis heeft verzameld.
+
+    De configuratie wordt leeggemaakt en niet verwijderd, want de app verwacht
+    dat het bestand bestaat. De rest gaat weg: de meetgeschiedenis, het logboek,
+    de API-sleutels en de ijkpunten van de energietellers. Dat zijn gegevens van
+    de klant, en die horen niet mee te reizen naar de volgende eigenaar of naar
+    een kopie van de kaart.
+    """
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f)
+    weg = []
+    for pad in (STATE_FILE, HISTORY_DB, HISTORY_DB + "-shm", HISTORY_DB + "-wal",
+                AUDIT_LOG_FILE, API_TOKENS_FILE, ENERGY_BASELINES_FILE):
+        try:
+            if os.path.exists(pad):
+                os.remove(pad)
+                # Kijken naar de uitkomst en niet naar de afloop van de
+                # opdracht: verwijderen van iets dat er niet is slaagt ook.
+                if not os.path.exists(pad):
+                    weg.append(os.path.basename(pad))
+        except OSError as e:
+            print(f"[RESET] {pad} bleef staan: {e}")
+    return ", ".join(weg) or "niets"
+
+
+def _reset_identiteit():
+    """Wist waaraan deze Hub te herkennen is, zodat een kopie geen tweeling wordt.
+
+    machine-id is de hub_id() waarmee Homey een Hub uit elkaar houdt. Staat op
+    twee Hubs hetzelfde, dan ziet Homey er maar een. Dat gebeurt vanzelf zodra
+    je een kaart kopieert, en daar is dit vooral voor bedoeld.
+
+    Leeggemaakt en niet verwijderd: systemd maakt een leeg machine-id bij de
+    eerstvolgende start opnieuw aan, en doet dat niet als het bestand ontbreekt.
+    De ssh-hostsleutels komen terug via regenerate_ssh_host_keys.
+    """
+    return _sudo_sh(
+        "truncate -s 0 /etc/machine-id 2>/dev/null && echo machine-id; "
+        "rm -f /var/lib/dbus/machine-id 2>/dev/null && echo dbus-machine-id; "
+        "ls /etc/ssh/ssh_host_* >/dev/null 2>&1 && "
+        "rm -f /etc/ssh/ssh_host_* && echo ssh-hostsleutels; "
+        "true"
+    )
+
+
+def _reset_tailscale():
+    """Koppelt los van het tailnet en laat niets van die koppeling achter.
+
+    Eerst uitloggen, want dan verdwijnt de Hub ook uit het overzicht van degene
+    die hem gekoppeld had in plaats van er als dode node te blijven hangen.
+    Uitloggen alleen is niet genoeg: de machinesleutel blijft dan staan, net als
+    het profiel en de mappen die Taildrop per gebruiker aanmaakt. Die laatste
+    dragen de namen van de accounts uit dat tailnet, en die horen niet bij de
+    volgende eigenaar terecht te komen.
+
+    De dienst gaat eerst uit, anders schrijft hij zijn toestand meteen terug.
+    """
+    return _sudo_sh(
+        "command -v tailscale >/dev/null 2>&1 || exit 0; "
+        "tailscale logout >/dev/null 2>&1; "
+        "systemctl stop tailscaled >/dev/null 2>&1; "
+        "for p in /var/lib/tailscale/tailscaled.state "
+        "/var/lib/tailscale/derpmap.cached.json "
+        "/var/lib/tailscale/profile-data /var/lib/tailscale/files; do "
+        "  [ -e \"$p\" ] && rm -rf \"$p\" && [ ! -e \"$p\" ] && "
+        "    echo \"$(basename $p)\"; done; true"
+    )
+
+
+def _reset_wifi():
+    """Haalt het netwerk van de klant weg en zet het koppelpunt weer aan.
+
+    Hierna is de Hub alleen nog via PI-SETUP te bereiken, precies zoals een Hub
+    die nog nooit gekoppeld is geweest. Het koppelpunt werd bij het koppelen
+    uitgezet, dus dat moet er weer bij. De verbinding waarover dit verzoek
+    binnenkwam valt hiermee weg; dit hoort dus bij het laatste wat er gebeurt.
+    """
+    return _sudo_sh(
+        "nmcli connection modify PI-SETUP connection.autoconnect yes "
+        ">/dev/null 2>&1; "
+        "nmcli connection modify PI-SETUP connection.autoconnect-priority 100 "
+        ">/dev/null 2>&1; "
+        "nmcli -t -f NAME connection show | grep -qx customer-wifi || exit 0; "
+        "nmcli connection delete customer-wifi >/dev/null 2>&1; "
+        "nmcli -t -f NAME connection show | grep -qx customer-wifi || "
+        "  echo customer-wifi"
+    )
+
+
+def _voer_fabrieksreset_uit(shelly_devices):
+    """Alles wissen en de Hub uitzetten.
+
+    Draait los van het verzoek, want het eindigt met het weghalen van het
+    netwerk waarover je verbonden bent en met uitschakelen.
+
+    Uitschakelen en niet herstarten, met opzet: machine-id, de ssh-hostsleutels
+    en de tailscale-sleutel worden bij de eerstvolgende start opnieuw
+    aangemaakt. Bij een herstart staan ze er dus meteen weer, en dan kopieer je
+    ze alsnog mee naar elke Hub die je met die kaart maakt.
+    """
+    try:
+        sync_configured_devices_off(shelly_devices)
+        time.sleep(1.5)
+        print(f"[RESET] gegevens: {_reset_gegevens()}")
+        if os.name == "nt":
+            return
+        print(f"[RESET] identiteit: {_reset_identiteit()}")
+        print(f"[RESET] tailscale: {_reset_tailscale()}")
+        print(f"[RESET] netwerk: {_reset_wifi()}")
+        subprocess.run(["sync"], capture_output=True)
+        subprocess.run(["sudo", "shutdown", "-h", "now"])
+    except Exception as e:
+        print(f"[RESET] mislukt: {e}")
+
+
 @app.route("/factory_reset", methods=["POST"])
 def factory_reset():
     if not require_login():
@@ -3555,16 +3689,13 @@ def factory_reset():
     if not is_current_user_admin():
         return jsonify(success=False, error="Geen toegang"), 403
     cfg = load_config()
-    threading.Thread(target=sync_configured_devices_off, args=(cfg.get("shelly_devices", []),), daemon=True).start()
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f)
-    if os.path.exists(STATE_FILE):
-        os.remove(STATE_FILE)
     device_states.clear()
     device_pids.clear()
     write_audit_log("factory_reset", {"user": safe_session_username()})
     session.clear()
-    return jsonify(success=True)
+    threading.Thread(target=_voer_fabrieksreset_uit,
+                     args=(cfg.get("shelly_devices", []),), daemon=True).start()
+    return jsonify(success=True, shutdown=True)
 
 
 @app.route("/config/backup")

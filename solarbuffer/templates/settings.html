@@ -1169,7 +1169,7 @@
         <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
       </div>
       <h2>Factory reset Hub</h2>
-      <p>Alle instellingen, apparaten, tijdschema's en accounts worden gewist. Je wordt teruggestuurd naar de eerste installatie.<br><br><strong>Dit kan niet ongedaan worden gemaakt.</strong></p>
+      <p>Alle instellingen, apparaten, tijdschema's, accounts en meetgegevens worden gewist, en ook het wifi-netwerk waarmee deze Hub verbonden is.<br><br>De Hub schakelt daarna zichzelf uit. Zet hem weer aan en hij meldt zich als een nieuwe Hub: verbind met <strong>PI-SETUP</strong> om hem opnieuw te koppelen.<br><br><strong>Dit kan niet ongedaan worden gemaakt.</strong></p>
       <div class="modal-btns">
         <button class="btn-cancel" onclick="closeResetModal()">Annuleren</button>
         <button class="btn-reset" id="resetBtn" onclick="doReset()">Resetten</button>
@@ -1898,8 +1898,15 @@
       fetch('/factory_reset', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
-          if (data.success) window.location.href = '/first_boot/welcome';
-          else { btn.disabled = false; btn.textContent = 'Resetten'; }
+          if (!data.success) { btn.disabled = false; btn.textContent = 'Resetten'; return; }
+          // Niet doorsturen naar de installatie: de Hub gooit zijn netwerk weg
+          // en schakelt uit, dus die pagina komt nooit. Vertellen wat er nu
+          // gebeurt is het enige zinnige dat dit scherm nog kan doen.
+          document.querySelector('#resetModal h2').textContent = 'Hub wordt gewist';
+          document.querySelector('#resetModal p').innerHTML =
+            'De Hub wist zijn gegevens en schakelt zichzelf uit. Dat duurt ongeveer een halve minuut.' +
+            '<br><br>Zet hem daarna weer aan en verbind met <strong>PI-SETUP</strong> om hem opnieuw te koppelen.';
+          document.querySelector('#resetModal .modal-btns').style.display = 'none';
         })
         .catch(() => { btn.disabled = false; btn.textContent = 'Resetten'; });
     }
