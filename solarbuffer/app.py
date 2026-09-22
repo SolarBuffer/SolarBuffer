@@ -2418,6 +2418,89 @@ def _hw_pair_with_ip(ip):
     return r
 
 
+def _probe_een_accu(soort, ip, token, marstek_port):
+    """Kijkt of er op dit adres werkelijk een accu antwoordt.
+
+    Geeft terug wat er te zien is, en bij een fout waarom het misging. Dat
+    laatste scheelt raden: een verkeerd IP geeft een ander verhaal dan een
+    token dat niet meer geldig is, en dat verschil zie je anders nergens.
+    """
+    ip = (ip or "").strip()
+    if not ip:
+        return {"ip": ip, "online": False, "fout": "Geen adres ingevuld"}
+    try:
+        if soort == "marstek":
+            # Twee oproepen, want ES.GetStatus bestaat niet op alle firmware
+            # (bevestigd op Venus E 3.0). Antwoordt een van de twee, dan staat
+            # de accu er en is hij dus bereikbaar. Alleen op ES.GetStatus
+            # afgaan zou zo'n accu ten onrechte offline noemen.
+            # Bat.GetStatus bevestigt alleen dat de accu er staat; welke velden
+            # die precies teruggeeft weten we niet zeker, dus daar tonen we geen
+            # laadstand bij in plaats van een gegokt veld.
+            for methode in ("ES.GetStatus", "Bat.GetStatus"):
+                try:
+                    res = (marstek_udp(ip, marstek_port, methode,
+                                       timeout=2, retries=1).get("result") or {})
+                except Exception:
+                    continue
+                return {"ip": ip, "online": True,
+                        "soc": res.get("bat_soc"), "vermogen": res.get("bat_power")}
+            return {"ip": ip, "online": False, "fout": "Geen antwoord op dit adres"}
+        if soort == "zendure":
+            props = zendure_get_report(ip, timeout=3) or {}
+            laden = float(props.get("outputPackPower") or 0)
+            ontladen = float(props.get("packInputPower") or 0)
+            return {"ip": ip, "online": True,
+                    "soc": props.get("electricLevel"),
+                    "vermogen": round(ontladen - laden, 1)}
+        if not (token or "").strip():
+            return {"ip": ip, "online": False,
+                    "fout": "Nog geen token, druk op Koppelen"}
+        m = get_battery_measurement(ip, token) or {}
+        return {"ip": ip, "online": True,
+                "soc": m.get("state_of_charge_pct"),
+                "vermogen": m.get("power_w")}
+    except requests.HTTPError as e:
+        code = getattr(e.response, "status_code", None)
+        return {"ip": ip, "online": False,
+                "fout": "Token wordt niet geaccepteerd" if code in (401, 403)
+                        else f"Accu antwoordt met foutcode {code}"}
+    except Exception:
+        return {"ip": ip, "online": False, "fout": "Geen antwoord op dit adres"}
+
+
+@app.route("/api/battery/probe", methods=["POST"])
+def battery_probe():
+    """Test de accu's zoals ze nu in het formulier staan, dus voor het opslaan.
+
+    Bewust op wat er getypt is en niet op wat er is opgeslagen: je wilt weten
+    of het klopt voordat je het vastlegt, niet daarna.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(force=True) or {}
+    soort = data.get("type") or "homewizard"
+    try:
+        poort = int(data.get("marstek_port") or 30000)
+    except (TypeError, ValueError):
+        poort = 30000
+    units = [u for u in (data.get("units") or []) if (u.get("ip") or "").strip()][:4]
+
+    resultaten = [None] * len(units)
+    draden = []
+    for i, u in enumerate(units):
+        def werk(i=i, u=u):
+            resultaten[i] = _probe_een_accu(soort, u.get("ip"), u.get("token"), poort)
+        t = threading.Thread(target=werk, daemon=True)
+        t.start()
+        draden.append(t)
+    # Samen aflopen in plaats van na elkaar: vier accu's die elk in een timeout
+    # lopen zou anders een halve minuut duren.
+    for t in draden:
+        t.join(timeout=12)
+    return jsonify(units=[r for r in resultaten if r is not None])
+
+
 @app.route("/api/battery/pair", methods=["POST"])
 def battery_pair():
     if not require_login():

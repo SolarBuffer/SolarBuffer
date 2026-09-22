@@ -329,7 +329,7 @@
       Instellingen
     </a>
 
-    <form method="POST" action="/settings/p1">
+    <form method="POST" action="/settings/p1" id="p1Form">
       <div class="card">
         <div class="card-title">Netmeting</div>
 
@@ -499,6 +499,12 @@
             <button type="button" id="addIpBtn" onclick="addIpRow()" style="margin-top:0.25rem;background:none;border:1.5px dashed hsl(224, 20%, 78%);border-radius:0.5rem;color:hsl(224, 18%, 70%);font-size:0.85rem;padding:0.45rem 0.75rem;cursor:pointer;width:100%;">
               + Accu toevoegen
             </button>
+            <button type="button" id="probeBtn" onclick="probeBatteries()" style="margin-top:0.5rem;background:none;border:1px solid hsl(224, 20%, 85%);border-radius:0.5rem;color:hsl(224, 18%, 45%);font-size:0.85rem;padding:0.45rem 0.75rem;cursor:pointer;width:100%;">
+              Verbinding testen
+            </button>
+            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">
+              Test wat je hierboven hebt ingevuld, nog voordat je opslaat.
+            </div>
           </div>
 
           <!-- HomeWizard-specifieke velden -->
@@ -797,6 +803,116 @@
       statusEl.style.background = type === 'success' ? 'hsl(145,55%,94%)' : type === 'error' ? 'hsl(0,70%,95%)' : 'hsl(37,90%,95%)';
       statusEl.style.borderColor = type === 'success' ? 'hsl(145,50%,76%)' : type === 'error' ? 'hsl(0,60%,82%)' : 'hsl(37,80%,78%)';
       statusEl.style.color = type === 'success' ? 'hsl(145,60%,26%)' : type === 'error' ? 'hsl(0,65%,42%)' : 'hsl(30,80%,28%)';
+    }
+
+    // Zonder het token van de P1-meter kan SolarBuffer de accu's wel uitlezen
+    // maar niet aansturen. Dat is een halve installatie die er in de interface
+    // uitziet alsof alles klopt, en waarbij je pas veel later merkt dat er niets
+    // geregeld wordt. Daarom laten we hem niet opslaan. Alleen bij HomeWizard:
+    // Marstek en Zendure kennen dit token niet.
+    (function() {
+      var form = document.getElementById('p1Form');
+      if (!form) return;
+      form.addEventListener('submit', function(e) {
+        var aan = document.getElementById('batteryEnabled');
+        if (!aan || !aan.checked) return;
+        var isHw = !document.getElementById('bt_marstek').checked
+                && !document.getElementById('bt_zendure').checked;
+        if (!isHw) return;
+        var heeftAccu = Array.prototype.some.call(
+          document.querySelectorAll('#batteryIpsList input[name="battery_ip[]"]'),
+          function(el) { return el.value.trim(); });
+        if (!heeftAccu) return;
+        var token = document.getElementById('battery_control_token');
+        if (token && token.value.trim()) return;
+
+        e.preventDefault();
+        var melding = document.getElementById('pairP1Status');
+        var tekst = document.getElementById('pairP1StatusText');
+        if (melding && tekst) {
+          tekst.textContent = 'Vul eerst het token van de P1-meter in. Zonder dat '
+            + 'token kan SolarBuffer je accu niet aansturen. Druk op Koppelen en '
+            + 'daarna op de knop van de P1-meter.';
+          melding.style.display = 'block';
+          melding.style.background = 'hsl(0,70%,95%)';
+          melding.style.borderColor = 'hsl(0,60%,82%)';
+          melding.style.color = 'hsl(0,65%,42%)';
+        }
+        if (token) {
+          token.focus();
+          token.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    })();
+
+    // Test elke ingevulde accu en zet het antwoord onder de bijbehorende rij.
+    // Bewust op wat er nu in de velden staat en niet op wat er is opgeslagen:
+    // je wilt weten of het klopt voordat je het vastlegt.
+    function probeBatteries() {
+      var btn = document.getElementById('probeBtn');
+      var rows = Array.prototype.slice.call(
+        document.querySelectorAll('#batteryIpsList .battery-ip-row'));
+      var units = rows.map(function(row) {
+        var ipEl = row.querySelector('input[name="battery_ip[]"]');
+        var tokEl = row.querySelector('input[name="battery_token[]"]');
+        return { ip: ipEl ? ipEl.value.trim() : '', token: tokEl ? tokEl.value.trim() : '' };
+      });
+      if (!units.some(function(u) { return u.ip; })) {
+        alert('Vul eerst minstens een IP-adres in.');
+        return;
+      }
+
+      var isMarstek = document.getElementById('bt_marstek').checked;
+      var isZendure = document.getElementById('bt_zendure').checked;
+      var poortEl = document.getElementById('marstek_port');
+
+      btn.disabled = true;
+      btn.textContent = 'Testen…';
+      rows.forEach(function(row, i) {
+        if (!units[i].ip) return;
+        setRowStatus(row.querySelector('.row-pair-status'), 'Bezig met testen…', 'wait');
+      });
+
+      fetch('/api/battery/probe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: isMarstek ? 'marstek' : isZendure ? 'zendure' : 'homewizard',
+          marstek_port: poortEl ? poortEl.value : 30000,
+          units: units
+        })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var perIp = {};
+          (data.units || []).forEach(function(u) { perIp[u.ip] = u; });
+          rows.forEach(function(row, i) {
+            var statusEl = row.querySelector('.row-pair-status');
+            if (!units[i].ip) { setRowStatus(statusEl, '', 'wait'); return; }
+            var u = perIp[units[i].ip];
+            if (!u) { setRowStatus(statusEl, 'Geen antwoord ontvangen.', 'error'); return; }
+            if (!u.online) {
+              setRowStatus(statusEl, 'Offline. ' + escapeHtml(u.fout || ''), 'error');
+              return;
+            }
+            var extra = [];
+            if (u.soc !== null && u.soc !== undefined) extra.push(Number(u.soc).toFixed(0) + '%');
+            if (u.vermogen !== null && u.vermogen !== undefined) extra.push(Number(u.vermogen).toFixed(0) + ' W');
+            setRowStatus(statusEl,
+              'Online' + (extra.length ? ' — ' + escapeHtml(extra.join(', ')) : ''), 'success');
+          });
+        })
+        .catch(function() {
+          rows.forEach(function(row, i) {
+            if (!units[i].ip) return;
+            setRowStatus(row.querySelector('.row-pair-status'),
+                         'Testen mislukt, probeer het opnieuw.', 'error');
+          });
+        })
+        .finally(function() {
+          btn.disabled = false;
+          btn.textContent = 'Verbinding testen';
+        });
     }
 
     function useMarstekIp(ip) {
