@@ -450,6 +450,12 @@ def load_config():
         cfg["battery_priority"] = "boiler"
     if "battery_soc_threshold" not in cfg:
         cfg["battery_soc_threshold"] = 95
+    # Vanaf welk boilervermogen de accu mee mag laden. Stond vast op 100%, wat
+    # een gat gaf zodra iemand de bevriesdrempel verlaagde: de boiler bevroor
+    # dan op bijvoorbeeld 30% terwijl de accu pas bij 100% laadrecht kreeg, en
+    # in die tussenruimte nam niemand het overschot op.
+    if "boiler_release_pct" not in cfg:
+        cfg["boiler_release_pct"] = 100
     if "battery_force_tofull" not in cfg:
         cfg["battery_force_tofull"] = False
     # Handmatige accubediening (Zendure): auto = SolarBuffer regelt alles,
@@ -2101,6 +2107,11 @@ def settings_p1():
             cfg["battery_soc_threshold"] = int(request.form.get("battery_soc_threshold", 95))
         except (ValueError, TypeError):
             cfg["battery_soc_threshold"] = 95
+        try:
+            cfg["boiler_release_pct"] = max(10, min(100, int(
+                request.form.get("boiler_release_pct", 100))))
+        except (ValueError, TypeError):
+            cfg["boiler_release_pct"] = 100
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
@@ -2857,6 +2868,7 @@ def status_json():
         battery_type=cfg.get("battery_type", "homewizard"),
         battery_priority=cfg.get("battery_priority", "boiler"),
         battery_soc_threshold=cfg.get("battery_soc_threshold", 95),
+        boiler_release_pct=cfg.get("boiler_release_pct", 100),
         battery_count=len(cfg.get("battery_ips") or []) if cfg.get("battery_enabled") else 0,
         battery=battery_state if cfg.get("battery_enabled") else None,
         battery_blocks_start=_battery_blocks_start if cfg.get("battery_enabled") else False,
@@ -8382,7 +8394,12 @@ def control_loop():
                     _price_active = any(device_states[d["ip"]].get("price_triggered") for d in devices_sorted)
                     _force_no_discharge = _legionella_active or _schedule_active or _price_active
                     _has_export = measured_power < 0
-                    _pid_at_max = current_brightness >= MAX_BRIGHTNESS
+                    # Boiler vol genoeg om de accu erbij te laten. Instelbaar,
+                    # want hij hoort samen te lopen met de bevriesdrempel: wie
+                    # die op 30% zet wil niet dat de accu tot 100% moet wachten.
+                    _sb_release = max(10, min(100, int(
+                        cfg.get("boiler_release_pct", 100) or 100)))
+                    _pid_at_max = current_brightness >= _sb_release
                     # Verboden-tijdschema blokkeert alleen een nieuwe start (zie
                     # get_blocked_device_ips) — een apparaat dat al draait, telt dus
                     # nog gewoon mee. Pas als ALLE apparaten geblokkeerd zijn én er

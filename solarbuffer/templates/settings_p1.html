@@ -681,6 +681,22 @@
             <input type="number" id="battery_soc_threshold" name="battery_soc_threshold"
                    min="50" max="100" step="1"
                    value="{{ config.battery_soc_threshold or 95 }}">
+            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">
+              Bij batterij-prioriteit: tot deze laadstand krijgt de accu het overschot,
+              daarna neemt de boiler het over.
+            </div>
+          </div>
+          <div class="field-group" id="releasePctGroup">
+            <label for="boiler_release_pct">Vermogensdrempel voor accu bijladen (%)</label>
+            <input type="number" id="boiler_release_pct" name="boiler_release_pct"
+                   min="10" max="100" step="1"
+                   value="{{ config.boiler_release_pct or 100 }}">
+            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">
+              Zodra de draaiende SolarBuffer op dit vermogen staat mag de accu het
+              resterende overschot opnemen. Houd dit gelijk aan de bevriesdrempel bij
+              Expert-instellingen: staat die lager en deze op 100, dan bevriest de boiler
+              terwijl de accu nog moet wachten en gaat het overschot naar het net.
+            </div>
           </div>
         </div>
       </div>
@@ -713,6 +729,17 @@
         isZendure ? 'IP-adres(sen) Zendure  ' : 'IP-adres(sen) HWE-BAT  ';
     }
 
+    // Elke prioriteit heeft zijn eigen drempel en de andere zegt dan niets.
+    // Bij batterij eerst bepaalt de laadstand wanneer de boiler het overneemt,
+    // bij SolarBuffer eerst bepaalt het boilervermogen wanneer de accu mee mag
+    // laden. Allebei tegelijk tonen nodigt uit tot instellen van iets dat in
+    // die stand niet gebruikt wordt.
+    function updatePrioFields() {
+      var accuEerst = document.getElementById('prio_battery').checked;
+      document.getElementById('socThresholdGroup').style.display = accuEerst ? 'block' : 'none';
+      document.getElementById('releasePctGroup').style.display = accuEerst ? 'none' : 'block';
+    }
+
     (function() {
       const cb = document.getElementById('batteryEnabled');
       const fields = document.getElementById('batteryFields');
@@ -720,6 +747,11 @@
       cb.addEventListener('change', update);
       update();
       updateBatteryType();
+      ['prio_battery', 'prio_boiler'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', updatePrioFields);
+      });
+      updatePrioFields();
     })();
 
     function updateP1Source() {
