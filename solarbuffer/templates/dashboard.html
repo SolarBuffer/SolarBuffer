@@ -4510,6 +4510,10 @@
         .then(r => r.json())
         .then(data => {
           if (data.error) return;
+          // Alleen tonen als er ook met tarieven gewerkt wordt. Wie niet op een
+          // goedkoop uur start heeft niets aan deze kaart, en hij stond er nu
+          // ongevraagd bij.
+          if (!data.dynamic_enabled) return;
           // Geen enkele prijs binnen, ook niet voor vandaag: dan is er niets te
           // tonen en blijft de kaart weg in plaats van leeg te staan.
           if (!(data.today || []).length && !(data.tomorrow || []).length) return;

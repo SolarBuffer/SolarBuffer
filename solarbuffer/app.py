@@ -2267,6 +2267,25 @@ def _scale(value, factor, digits=2):
         return None
 
 
+def _scale_signed16(value, factor, digits=2):
+    """Zelfde als _scale, maar voor een veld dat negatieve waarden omrolt.
+
+    De pakketstroom komt als geheel getal zonder teken binnen. Laadt de accu,
+    dan staat er gewoon 92 voor 9,2 A; ontlaadt hij, dan rolt -100 om naar
+    65436 en stond er 6543,6 A op de accupagina. Gemeten op een solarFlow800Plus
+    bij een klant, op het moment dat de accu omschakelde naar ontladen.
+    """
+    if value is None:
+        return None
+    try:
+        rauw = int(value)
+    except (TypeError, ValueError):
+        return None
+    if rauw > 32767:
+        rauw -= 65536
+    return round(rauw / factor, digits)
+
+
 @app.route("/settings/battery")
 def settings_battery():
     if not require_login():
@@ -2294,7 +2313,7 @@ def api_zendure_status():
             "cell_min_v": _scale(pk.get("minVol"), 100),
             "cell_max_v": _scale(pk.get("maxVol"), 100),
             "temp_c": _scale(pk.get("maxTemp"), 100, 1),
-            "current_a": pk.get("batcur"),
+            "current_a": _scale_signed16(pk.get("batcur"), 10, 1),
             "power_w": pk.get("power"),
             "firmware": pk.get("softVersion"),
         })
