@@ -179,6 +179,30 @@
       color: hsl(224, 26%, 14%);
     }
     .input-with-unit input:focus { outline: none; }
+    /* Een keuzeveld op deze pagina hoort er net zo uit te zien als de invoervelden
+       ernaast. Zonder opmaak pakt hij de stijl van het besturingssysteem en valt
+       hij uit de toon. Het pijltje is een eigen tekening in plaats van die van de
+       browser: die past niet bij de rest en is in donkere modus vrijwel
+       onleesbaar. Kleur bewust neutraal, zodat hij in beide thema's werkt. */
+    .field select {
+      width: 100%;
+      padding: 0.6rem 2.4rem 0.6rem 0.75rem;
+      border: 1.5px solid hsl(224, 20%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background-color: white;
+      color: hsl(224, 26%, 14%);
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%238a93a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.85rem center;
+      background-size: 0.7rem;
+      cursor: pointer;
+    }
+    .field select:focus { outline: none; border-color: hsl(32, 85%, 55%); }
     .input-with-unit .unit {
       padding: 0 0.65rem;
       border-left: 1px solid hsl(224, 20%, 88%);
@@ -281,6 +305,12 @@
     html[data-theme="dark"] .input-with-unit { border-color: hsl(224, 38%, 19%); }
     html[data-theme="dark"] .input-with-unit:focus-within { border-color: hsl(32, 75%, 52%); }
     html[data-theme="dark"] .input-with-unit input { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field select { background-color: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field select:focus { border-color: hsl(32, 75%, 52%); }
+    /* De uitklaplijst zelf wordt door de browser getekend en erft de kleuren niet
+       van de select, dus die moeten er apart bij. Zonder dit is het zwarte tekst
+       op een zwarte achtergrond. */
+    html[data-theme="dark"] .field select option { background-color: hsl(224, 38%, 13%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .input-with-unit .unit { background: hsl(224, 38%, 16%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 91%); }
     html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 17%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
