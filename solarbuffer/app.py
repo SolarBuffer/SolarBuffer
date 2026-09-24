@@ -8541,7 +8541,26 @@ def control_loop():
                     # die op 30% zet wil niet dat de accu tot 100% moet wachten.
                     _sb_release = max(10, min(100, int(
                         cfg.get("boiler_release_pct", 100) or 100)))
-                    _pid_at_max = current_brightness >= _sb_release
+                    # De accu mag bijladen zodra geen enkele SolarBuffer nog meer
+                    # kan opnemen. Er werd eerder naar current_brightness gekeken,
+                    # maar die komt van het regelende apparaat, en een bevroren
+                    # apparaat is dat niet meer: dat springt met een continue uit
+                    # de lus voordat die waarde gezet wordt. Stond alles bevroren
+                    # of verboden, dan was current_brightness dus 0 en bleef de
+                    # accu geblokkeerd, precies op het moment dat hij het zou
+                    # moeten overnemen. Gemeten bij een klant met twee boilers,
+                    # de tweede een hele dag verboden met een tijdschema: de
+                    # eerste ging naar honderd procent, bevroor, en de accu bleef
+                    # staan terwijl het overschot naar het net ging.
+                    _sb_kan_meer = False
+                    for _d in non_legionella:
+                        _dst = device_states[_d["ip"]]
+                        if not _dst.get("started") or _dst.get("freeze"):
+                            continue    # staat uit of neemt niets meer op
+                        if _dst.get("brightness", 0) < _sb_release:
+                            _sb_kan_meer = True
+                            break
+                    _pid_at_max = not _sb_kan_meer
                     # Verboden-tijdschema blokkeert alleen een nieuwe start (zie
                     # get_blocked_device_ips) — een apparaat dat al draait, telt dus
                     # nog gewoon mee. Pas als ALLE apparaten geblokkeerd zijn én er
