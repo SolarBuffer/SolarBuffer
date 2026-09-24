@@ -499,8 +499,73 @@
           </label>
         </div>
         <p style="font-size:0.8rem; color:hsl(224, 18%, 71%); margin-top:0.5rem; line-height:1.4;">
-          Start apparaten automatisch wanneer het huidige EPEX-uurtarief onder de drempelwaarde ligt, ook zonder teruglevering.
+          Start apparaten automatisch wanneer het huidige uurtarief onder de drempelwaarde ligt, ook zonder teruglevering.
         </p>
+
+        <div class="feature-row" style="margin-top:1rem;">
+          <div class="feature-text">
+            <div class="feature-label">Rekenen met je eigen tarief</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" name="price_all_in_enabled" id="priceAllIn"
+                   {% if config.price_all_in_enabled %}checked{% endif %}
+                   onchange="updatePriceAllIn()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p style="font-size:0.8rem; color:hsl(224, 18%, 71%); margin-top:0.5rem; line-height:1.4;">
+          Staat dit uit, dan rekent SolarBuffer met de kale beursprijs. Dat is het getal
+          dat je nu op het dashboard ziet, en het is een stuk lager dan wat je werkelijk
+          betaalt. Zet je het aan, dan komen de opslag van je leverancier en de
+          energiebelasting erbij en klopt het met wat je in de app van je leverancier ziet.
+          Je prijsdrempel hierboven hoort dan mee te veranderen.
+        </p>
+
+        <div id="priceAllInFields" class="expert-grid" style="margin-top:1rem;">
+          <div class="field" style="grid-column:1/-1;">
+            <span class="field-label">Leverancier</span>
+            <span class="field-help">Vult de opslag hieronder in</span>
+            <select name="price_supplier" id="priceSupplier" onchange="vulOpslag()">
+              <option value="">Zelf invullen</option>
+              {% for naam, opslag in leveranciers %}
+              <option value="{{ naam }}" data-opslag="{{ opslag }}"
+                      {% if config.price_supplier == naam %}selected{% endif %}>{{ naam }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <span class="field-label">Opslag leverancier</span>
+            <span class="field-help">Exclusief btw</span>
+            <div class="input-with-unit">
+              <input type="number" name="price_markup_ct" id="priceMarkup" step="0.01" min="0" max="25"
+                     value="{{ config.price_markup_ct | default(0.0) }}">
+              <span class="unit">ct/kWh</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Energiebelasting</span>
+            <span class="field-help">Inclusief btw</span>
+            <div class="input-with-unit">
+              <input type="number" name="price_energy_tax_ct" step="0.001" min="0" max="50"
+                     value="{{ config.price_energy_tax_ct | default(11.085) }}">
+              <span class="unit">ct/kWh</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Btw</span>
+            <span class="field-help">Over markt en opslag</span>
+            <div class="input-with-unit">
+              <input type="number" name="price_vat_pct" step="1" min="0" max="50"
+                     value="{{ config.price_vat_pct | default(21) }}">
+              <span class="unit">%</span>
+            </div>
+          </div>
+          <p style="grid-column:1/-1;font-size:0.78rem;color:hsl(224, 18%, 71%);line-height:1.4;margin:0;">
+            De opslagen per leverancier zijn een startwaarde uit september 2026. Leveranciers
+            passen die aan, dus controleer hem tegen je eigen contract en overschrijf hem waar
+            nodig. Kies "Zelf invullen" om de lijst helemaal te negeren.
+          </p>
+        </div>
         <div class="expert-grid" style="margin-top:1rem;">
           <div class="field">
             <span class="field-label">Prijsdrempel</span>
@@ -532,6 +597,26 @@
 
 {% block scripts %}
   <script>
+    // De velden voor de prijsopbouw zijn alleen zinvol als je er ook mee rekent.
+    function updatePriceAllIn() {
+      var aan = document.getElementById('priceAllIn').checked;
+      document.getElementById('priceAllInFields').style.display = aan ? '' : 'none';
+    }
+
+    // Een leverancier kiezen vult de opslag in, maar overschrijft niets wat je
+    // zelf hebt aangepast zolang je op "Zelf invullen" staat. De klant kent zijn
+    // eigen contract beter dan onze lijst van september 2026.
+    function vulOpslag() {
+      var sel = document.getElementById('priceSupplier');
+      var opt = sel.options[sel.selectedIndex];
+      var opslag = opt ? opt.getAttribute('data-opslag') : null;
+      if (opslag !== null && opslag !== '') {
+        document.getElementById('priceMarkup').value = opslag;
+      }
+    }
+
+    updatePriceAllIn();
+
     function updateExpertVisibility() {
       document.getElementById('expertCard').style.display =
         document.getElementById('expertMode').checked ? 'block' : 'none';

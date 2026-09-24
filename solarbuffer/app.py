@@ -82,6 +82,73 @@ DEFAULT_EXPERT_SETTINGS = {
 
 # ===== DYNAMIC PRICING =====
 _price_cache = {}          # {datetime(hour, utc): price_eur_kwh}
+# ================= PRIJSOPBOUW =================
+# De beurs levert de kale marktprijs. Wat een klant betaalt is die prijs plus de
+# opslag van zijn leverancier, plus energiebelasting, en over de eerste twee btw.
+# Zonder die opbouw staat er op het dashboard 15 ct terwijl de klant in zijn
+# eigen app 33 ct ziet, en dan is een prijsdrempel niet in te stellen.
+#
+# De opslagen hieronder zijn eenmalig verzameld in september 2026 en dienen als
+# startwaarde bij het kiezen van een leverancier. Ze zijn daarna met de hand te
+# overschrijven, want een leverancier past zijn tarief aan zonder ons te vragen
+# en de klant kent zijn eigen contract. Er wordt niets live opgehaald: dat zou
+# elke Hub afhankelijk maken van een website van iemand anders.
+LEVERANCIER_OPSLAG_CT = {
+    "ANWB Energie": 1.49,
+    "Budget Energie": 1.39,
+    "Coolblue Energie": 2.0,
+    "Delta Energie": 1.04,
+    "Eneco": 2.0,
+    "Energie VanOns": 1.98,
+    "Energiedirect": 1.69,
+    "Energiek": 1.49,
+    "EnergyZero": 2.8,
+    "Engie": 1.57,
+    "Essent": 2.09,
+    "Frank Energie": 1.5,
+    "Greenchoice": 1.85,
+    "GroeneStroomLokaal": 3.39,
+    "NextEnergy": 1.81,
+    "OM Nieuwe Energie": 2.07,
+    "Oxxio": 1.87,
+    "Powerpeers": 0.85,
+    "Tibber": 2.05,
+    "Vandebron": 1.81,
+    "Vattenfall": 2.11,
+    "Vrijopnaam": 1.45,
+    "Zonneplan": 1.66,
+    "easyEnergy": 1.8
+}
+
+# Energiebelasting inclusief btw, in ct/kWh. Verandert per jaar, dus instelbaar.
+ENERGIEBELASTING_CT_DEFAULT = 11.085
+BTW_PCT_DEFAULT = 21.0
+
+
+def prijs_all_in_ct(markt_ct_incl_btw, cfg):
+    """Rekent de beursprijs om naar wat de klant werkelijk betaalt.
+
+    De marktprijs die wij ophalen bevat al btw (inclBtw=true bij EnergyZero).
+    De opslag van de leverancier is exclusief btw, dus daar komt btw bij. De
+    energiebelasting is een bedrag inclusief btw en gaat er los bovenop.
+
+    Nagerekend tegen stroomperuur.nl voor 24 september 2026: markt 18,84 incl,
+    opslag EnergyZero 2,80 excl, belasting 11,085 -> 33,31 ct. Die site kwam op
+    33,30 ct uit.
+    """
+    if markt_ct_incl_btw is None:
+        return None
+    if not cfg.get("price_all_in_enabled"):
+        return round(markt_ct_incl_btw, 2)
+    try:
+        opslag = float(cfg.get("price_markup_ct") or 0.0)
+        belasting = float(cfg.get("price_energy_tax_ct", ENERGIEBELASTING_CT_DEFAULT))
+        btw = float(cfg.get("price_vat_pct", BTW_PCT_DEFAULT))
+    except (TypeError, ValueError):
+        return round(markt_ct_incl_btw, 2)
+    return round(markt_ct_incl_btw + opslag * (1 + btw / 100.0) + belasting, 2)
+
+
 _price_cache_lock = threading.Lock()
 _current_price_ct = None   # float ct/kWh, updated every hour
 
@@ -456,6 +523,19 @@ def load_config():
     # in die tussenruimte nam niemand het overschot op.
     if "boiler_release_pct" not in cfg:
         cfg["boiler_release_pct"] = 100
+    # All-in prijs staat standaard uit, zodat een bestaande Hub met een
+    # ingestelde drempel zich niet ineens anders gedraagt: die drempel is daar
+    # op de kale beursprijs gezet.
+    if "price_all_in_enabled" not in cfg:
+        cfg["price_all_in_enabled"] = False
+    if "price_supplier" not in cfg:
+        cfg["price_supplier"] = ""
+    if "price_markup_ct" not in cfg:
+        cfg["price_markup_ct"] = 0.0
+    if "price_energy_tax_ct" not in cfg:
+        cfg["price_energy_tax_ct"] = ENERGIEBELASTING_CT_DEFAULT
+    if "price_vat_pct" not in cfg:
+        cfg["price_vat_pct"] = BTW_PCT_DEFAULT
     if "battery_force_tofull" not in cfg:
         cfg["battery_force_tofull"] = False
     # Handmatige accubediening (Zendure): auto = SolarBuffer regelt alles,
@@ -2683,6 +2763,18 @@ def settings_expert():
         cfg["temp_shutoff_retry_min"] = max(TEMP_SHUTOFF_RETRY_MIN, min(TEMP_SHUTOFF_RETRY_MAX,
             safe_int(request.form.get("temp_shutoff_retry_min", ""), TEMP_SHUTOFF_RETRY_DEFAULT)))
         cfg["dynamic_pricing_enabled"] = request.form.get("dynamic_pricing_enabled") == "on"
+        cfg["price_all_in_enabled"] = request.form.get("price_all_in_enabled") == "on"
+        _lev = (request.form.get("price_supplier") or "").strip()
+        cfg["price_supplier"] = _lev if _lev in LEVERANCIER_OPSLAG_CT else ""
+        for _veld, _standaard, _grens in (
+                ("price_markup_ct", 0.0, 25.0),
+                ("price_energy_tax_ct", ENERGIEBELASTING_CT_DEFAULT, 50.0),
+                ("price_vat_pct", BTW_PCT_DEFAULT, 50.0)):
+            try:
+                _w = float((request.form.get(_veld) or "").replace(",", "."))
+                cfg[_veld] = max(0.0, min(_grens, _w))
+            except (TypeError, ValueError):
+                cfg[_veld] = _standaard
         try:
             cfg["price_threshold_ct"] = float(request.form.get("price_threshold_ct", "5").replace(",", "."))
         except ValueError:
@@ -2696,7 +2788,9 @@ def settings_expert():
         if changes:
             write_audit_log("config_updated", changes)
         return redirect("/settings")
-    return render_template("settings_expert.html", config=cfg, dark_mode=get_user_dark_mode())
+    return render_template("settings_expert.html", config=cfg,
+                           leveranciers=sorted(LEVERANCIER_OPSLAG_CT.items()),
+                           dark_mode=get_user_dark_mode())
 
 
 @app.route("/settings/mqtt", methods=["GET", "POST"])
@@ -2861,7 +2955,7 @@ def status_json():
         vacation_mode=cfg.get("vacation_mode", False),
         vacation_until=cfg.get("vacation_until"),
         vacation_legionella=cfg.get("vacation_legionella", False),
-        current_price_ct=_current_price_ct,
+        current_price_ct=prijs_all_in_ct(_current_price_ct, cfg),
         dynamic_pricing_enabled=cfg.get("dynamic_pricing_enabled", False),
         price_threshold_ct=float(cfg.get("price_threshold_ct", 5.0)),
         battery_enabled=cfg.get("battery_enabled", False),
@@ -8269,7 +8363,7 @@ def control_loop():
                         offline_since_map.pop(ip, None)
                         if not _consume_silent_restart(ip):
                             if st.get("price_triggered"):
-                                price_ct_now = get_current_price_ct()
+                                price_ct_now = prijs_all_in_ct(get_current_price_ct(), cfg)
                                 price_label = f" ({price_ct_now:.1f} ct/kWh)" if price_ct_now is not None else ""
                                 send_notification(f"💶 <b>{d.get('name', ip)}</b> gestart op goedkoop stroomtarief{price_label}.", event_key="ntfy_notify_start")
                             else:
@@ -8723,7 +8817,9 @@ def control_loop():
                         export_start = None
 
             # === DYNAMISCH TARIEF ===
-            price_ct = get_current_price_ct()
+            # Zelfde getal als op het dashboard, anders vergelijk je een
+            # ingevulde drempel met een prijs die de klant nergens terugziet.
+            price_ct = prijs_all_in_ct(get_current_price_ct(), cfg)
             price_cheap = (
                 DYNAMIC_PRICING
                 and price_ct is not None
