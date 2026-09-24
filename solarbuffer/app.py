@@ -156,9 +156,15 @@ _current_price_ct = None   # float ct/kWh, updated every hour
 def _update_price_cache():
     global _current_price_ct
     from datetime import datetime, timezone, timedelta
-    now_utc = datetime.now(timezone.utc)
-    from_dt = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
-    till_dt = from_dt + timedelta(days=2) - timedelta(seconds=1)
+    # Het venster begint op lokale middernacht en niet op middernacht UTC. Dat
+    # laatste stond er, en daardoor ontbraken de eerste uren van elke dag: in de
+    # zomer 00:00 en 01:00, in de winter 00:00. Precies de uren waarin de prijs
+    # vaak het laagst is.
+    lokale_middernacht = (datetime.now().astimezone()
+                          .replace(hour=0, minute=0, second=0, microsecond=0))
+    from_dt = lokale_middernacht.astimezone(timezone.utc)
+    till_dt = (lokale_middernacht + timedelta(days=2)
+               - timedelta(seconds=1)).astimezone(timezone.utc)
     try:
         r = requests.get(
             "https://api.energyzero.nl/v1/energyprices",
@@ -3559,6 +3565,48 @@ def network_connect():
     write_audit_log("wifi_changed", {"user": safe_session_username(), "ssid": ssid})
     threading.Thread(target=_wifi_connect_and_reboot, args=(ssid, password), daemon=True).start()
     return jsonify(success=True)
+
+
+@app.route("/price_forecast")
+def price_forecast():
+    """Uurprijzen van vandaag en morgen, in dezelfde vorm als de zonneverwachting.
+
+    De prijzen staan al in de cache die elk uur wordt bijgewerkt; hier worden ze
+    alleen omgezet naar lokale uren en per dag gebundeld. Morgen is er pas rond
+    een uur 's middags, want dan geeft de beurs de prijzen voor de volgende dag
+    vrij. Tot die tijd blijft die lijst gewoon leeg.
+
+    Bucketing gebeurt door elke UTC-sleutel naar lokale tijd om te rekenen, en
+    niet door lokale uren te construeren. Dat laatste gaat mis op de dagen dat de
+    klok verzet wordt, want dan bestaat een uur niet of twee keer.
+    """
+    if not require_login():
+        return jsonify(error="unauthorized"), 401
+    cfg = load_config()
+    from datetime import datetime as _dt, timedelta as _td
+    with _price_cache_lock:
+        cache = dict(_price_cache)
+
+    vandaag = _dt.now().date()
+    morgen = vandaag + _td(days=1)
+    dagen = {"today": {}, "tomorrow": {}}
+    for utc_key, prijs_eur in cache.items():
+        lok = utc_key.astimezone()
+        if lok.date() == vandaag:
+            dagen["today"][lok.hour] = prijs_eur
+        elif lok.date() == morgen:
+            dagen["tomorrow"][lok.hour] = prijs_eur
+
+    uit = {}
+    for naam, uren in dagen.items():
+        uit[naam] = [
+            {"hour": u, "price_ct": prijs_all_in_ct(round(uren[u] * 100, 2), cfg)}
+            for u in sorted(uren)
+        ]
+    uit["threshold_ct"] = float(cfg.get("price_threshold_ct", 5.0))
+    uit["all_in"] = bool(cfg.get("price_all_in_enabled"))
+    uit["dynamic_enabled"] = bool(cfg.get("dynamic_pricing_enabled", False))
+    return jsonify(uit)
 
 
 _forecast_cache = {"data": None, "ts": 0, "error": None, "error_ts": 0}

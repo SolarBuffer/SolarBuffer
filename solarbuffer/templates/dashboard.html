@@ -1868,6 +1868,70 @@
     }
     .forecast-tooltip.visible { display: block; }
 
+    /* ===== STROOMPRIJS ===== */
+    /* Eigen klassen en niet die van de zonneverwachting hergebruikt: die zijn
+       oranje gekleurd, terwijl de kleur hier de prijs moet vertellen. De opbouw
+       is wel dezelfde, zodat de twee kaarten naast elkaar niet uit de toon
+       vallen. Vier-en-twintig staven, dus smaller en zonder tussenruimte. */
+    .price-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 96px;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+    .price-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      height: 100%;
+      justify-content: flex-end;
+      cursor: pointer;
+      min-width: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .price-bar {
+      width: 100%;
+      border-radius: 2px 2px 0 0;
+      min-height: 2px;
+      transition: filter 0.15s, height 0.3s ease;
+    }
+    .price-col.selected .price-bar { filter: brightness(0.72); }
+    /* Het huidige uur krijgt een streep eronder in plaats van een andere kleur,
+       want de kleur is hier al bezet door de prijs. */
+    .price-col.now .price-bar { box-shadow: 0 2px 0 0 hsl(224, 26%, 30%); }
+    .price-hour {
+      font-size: 0.55rem;
+      color: hsl(224, 18%, 74%);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .price-col.now .price-hour { color: hsl(224, 26%, 30%); font-weight: 700; }
+    .price-col.selected .price-hour { font-weight: 700; }
+    .price-meta {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      color: hsl(224, 18%, 67%);
+    }
+    .price-empty {
+      text-align: center;
+      color: hsl(224, 18%, 67%);
+      font-size: 0.85rem;
+      padding: 1.6rem 0.5rem;
+      line-height: 1.5;
+    }
+    html[data-theme="dark"] .price-hour { color: hsl(224, 18%, 62%); }
+    html[data-theme="dark"] .price-col.now .price-bar { box-shadow: 0 2px 0 0 hsl(224, 18%, 82%); }
+    html[data-theme="dark"] .price-col.now .price-hour { color: hsl(224, 18%, 86%); }
+    html[data-theme="dark"] .price-meta,
+    html[data-theme="dark"] .price-empty { color: hsl(224, 18%, 70%); }
+
     .forecast-meta {
       display: flex;
       justify-content: space-between;
@@ -2976,6 +3040,18 @@
       </div>
       <div class="section-body pad">
         <div id="forecastContent"><div class="forecast-loading">Laden…</div></div>
+      </div>
+    </section>
+
+    <section class="dash-section" id="priceCard" style="display:none;">
+      <div class="section-head">
+        <span class="ctrl-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+        </span>
+        <h2>Stroomprijs per uur</h2>
+      </div>
+      <div class="section-body pad">
+        <div id="priceContent"><div class="price-empty">Laden…</div></div>
       </div>
     </section>
 
@@ -4293,6 +4369,138 @@
     }
 
     loadForecast();
+
+    // ===== STROOMPRIJS PER UUR =====
+    let _priceData = null;
+    let _priceDay = 'today';
+
+    // Kleur per prijs: het goedkoopste uur van de dag groen, het duurste rood,
+    // en daartussen vloeiend. De schaal loopt over de dag zelf en niet over een
+    // vast bedrag, want wat duur is verschilt per seizoen en per contract.
+    // Een negatieve prijs is geen dure uitschijter maar het omgekeerde en krijgt
+    // daarom blauw, buiten de schaal om.
+    function prijsKleur(ct, laagste, hoogste) {
+      if (ct < 0) return 'hsl(205, 72%, 52%)';
+      const spreiding = hoogste - laagste;
+      const f = spreiding > 0.01 ? Math.max(0, Math.min(1, (ct - laagste) / spreiding)) : 0;
+      const h = 145 - f * 143;          // 145 groen -> 2 rood
+      const s = 58 + f * 14;
+      const l = 43 + f * 9;
+      return `hsl(${h.toFixed(0)}, ${s.toFixed(0)}%, ${l.toFixed(0)}%)`;
+    }
+
+    function renderPrices(data, day) {
+      const uren = data[day] || [];
+      const tabs = `
+        <div class="forecast-seg">
+          <button class="forecast-tab${day === 'today' ? ' active' : ''}" onclick="switchPriceDay('today')">Vandaag</button>
+          <button class="forecast-tab${day === 'tomorrow' ? ' active' : ''}" onclick="switchPriceDay('tomorrow')">Morgen</button>
+        </div>`;
+
+      if (!uren.length) {
+        // Morgen wordt door de beurs rond het middaguur vrijgegeven. Dat is geen
+        // storing, dus zeg wat er aan de hand is in plaats van een foutmelding.
+        const uitleg = day === 'tomorrow'
+          ? 'De prijzen van morgen worden rond 13:00 bekendgemaakt.<br>Kom daarna terug.'
+          : 'Nog geen prijzen ontvangen.';
+        return tabs + `<div class="price-empty">${uitleg}</div>`;
+      }
+
+      const waarden = uren.map(u => u.price_ct);
+      const laagste = Math.min(...waarden);
+      const hoogste = Math.max(...waarden);
+      const gemiddeld = waarden.reduce((s, v) => s + v, 0) / waarden.length;
+      const goedkoopste = uren.reduce((b, u) => u.price_ct < b.price_ct ? u : b, uren[0]);
+      const duurste = uren.reduce((b, u) => u.price_ct > b.price_ct ? u : b, uren[0]);
+      const nuUur = new Date().getHours();
+      // Hoogte vanaf nul, zodat de staafhoogte ook echt het bedrag weergeeft.
+      const noemer = Math.max(hoogste, 0.01);
+
+      let staven = '';
+      for (const u of uren) {
+        const pct = u.price_ct <= 0 ? 3 : Math.max(3, Math.round((u.price_ct / noemer) * 100));
+        const isNu = day === 'today' && u.hour === nuUur;
+        const label = u.hour % 3 === 0 ? String(u.hour).padStart(2, '0') : '';
+        staven += `<div class="price-col${isNu ? ' now' : ''}" data-hour="${u.hour}" data-ct="${u.price_ct}" onclick="selectPriceBar(this)">
+          <div class="price-bar" style="height:${pct}%;background:${prijsKleur(u.price_ct, laagste, hoogste)}"></div>
+          <div class="price-hour">${label}</div>
+        </div>`;
+      }
+
+      const nl = v => v.toFixed(1).replace('.', ',');
+      let onder = '';
+      if (data.dynamic_enabled) {
+        const aantal = waarden.filter(v => v <= data.threshold_ct).length;
+        onder = `<span>${aantal} uur onder je drempel van ${nl(data.threshold_ct)} ct</span>`;
+      }
+
+      return tabs + `
+        <div class="price-bars" id="priceBars">
+          <div class="forecast-tooltip" id="priceTooltip"></div>
+          ${staven}
+        </div>
+        <div class="price-meta">
+          <span>Laagst <strong>${String(goedkoopste.hour).padStart(2, '0')}:00</strong> · ${nl(goedkoopste.price_ct)} ct</span>
+          <span>Hoogst <strong>${String(duurste.hour).padStart(2, '0')}:00</strong> · ${nl(duurste.price_ct)} ct</span>
+          <span>Gemiddeld <strong>${nl(gemiddeld)} ct</strong></span>
+        </div>
+        ${onder ? `<div class="price-meta" style="margin-top:0.3rem">${onder}</div>` : ''}
+        <div class="price-meta" style="margin-top:0.3rem">
+          <span>${data.all_in ? 'Inclusief opslag, energiebelasting en btw' : 'Kale beursprijs, zonder opslag en energiebelasting'}</span>
+        </div>`;
+    }
+
+    function selectPriceBar(col) {
+      const bars = document.getElementById('priceBars');
+      const tooltip = document.getElementById('priceTooltip');
+      if (!bars || !tooltip) return;
+      const alGekozen = col.classList.contains('selected');
+      bars.querySelectorAll('.price-col').forEach(c => c.classList.remove('selected'));
+      tooltip.classList.remove('visible');
+      if (alGekozen) return;
+      col.classList.add('selected');
+      const uur = String(col.dataset.hour).padStart(2, '0');
+      const ct = Number(col.dataset.ct).toFixed(1).replace('.', ',');
+      tooltip.textContent = `${uur}:00 — ${ct} ct/kWh`;
+      tooltip.classList.add('visible');
+      const c = col.getBoundingClientRect(), b = bars.getBoundingClientRect();
+      tooltip.style.left = (c.left - b.left + c.width / 2) + 'px';
+    }
+
+    document.addEventListener('click', function(e) {
+      const bars = document.getElementById('priceBars');
+      if (!bars || bars.contains(e.target)) return;
+      bars.querySelectorAll('.price-col').forEach(c => c.classList.remove('selected'));
+      const tooltip = document.getElementById('priceTooltip');
+      if (tooltip) tooltip.classList.remove('visible');
+    });
+
+    function switchPriceDay(day) {
+      _priceDay = day;
+      if (_priceData) {
+        document.getElementById('priceContent').innerHTML = renderPrices(_priceData, day);
+      }
+    }
+
+    function loadPrices() {
+      fetch('/price_forecast')
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) return;
+          // Geen enkele prijs binnen, ook niet voor vandaag: dan is er niets te
+          // tonen en blijft de kaart weg in plaats van leeg te staan.
+          if (!(data.today || []).length && !(data.tomorrow || []).length) return;
+          _priceData = data;
+          document.getElementById('priceCard').style.display = '';
+          document.getElementById('priceContent').innerHTML = renderPrices(data, _priceDay);
+        })
+        .catch(() => {});
+    }
+
+    loadPrices();
+    // De beurs geeft morgen rond het middaguur vrij, en het huidige uur schuift
+    // op. Een keer per kwartier verversen is daarvoor genoeg.
+    setInterval(loadPrices, 15 * 60 * 1000);
   </script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
