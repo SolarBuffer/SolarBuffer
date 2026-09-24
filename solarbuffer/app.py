@@ -8558,8 +8558,18 @@ def control_loop():
                     # Boiler vol genoeg om de accu erbij te laten. Instelbaar,
                     # want hij hoort samen te lopen met de bevriesdrempel: wie
                     # die op 30% zet wil niet dat de accu tot 100% moet wachten.
-                    _sb_release = max(10, min(100, int(
+                    # De instelling staat in dezelfde procenten als het
+                    # dashboard toont, dus 0 tot 100. De dimmer werkt intern van
+                    # MIN_BRIGHTNESS tot MAX_BRIGHTNESS, hier 30 tot 100. Zonder
+                    # omrekenen vergeleek 50 met rauw 50, en dat staat op het
+                    # dashboard als 29 procent: de accu kwam dan veel te vroeg
+                    # vrij. Nu wordt de ingevulde waarde eerst naar diezelfde
+                    # band gebracht, zodat 50 ook echt de 50 is die je ziet.
+                    _sb_release_pct = max(10, min(100, int(
                         cfg.get("boiler_release_pct", 100) or 100)))
+                    _sb_release = (MIN_BRIGHTNESS
+                                   + _sb_release_pct / 100.0
+                                   * (MAX_BRIGHTNESS - MIN_BRIGHTNESS))
                     # De accu mag bijladen zodra geen enkele SolarBuffer nog meer
                     # kan opnemen. Er werd eerder naar current_brightness gekeken,
                     # maar die komt van het regelende apparaat, en een bevroren
