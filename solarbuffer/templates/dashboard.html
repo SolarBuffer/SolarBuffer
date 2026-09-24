@@ -1901,8 +1901,14 @@
     }
     .price-col.selected .price-bar { filter: brightness(0.72); }
     .price-hour {
-      font-size: 0.55rem;
-      color: hsl(224, 18%, 74%);
+      /* Exact dezelfde maat en kleur als bij de zonneverwachting, want die
+         oogde duidelijker. De min-height is daar ook de reden dat de staven op
+         een lijn staan: een leeg label heeft geen hoogte, en zonder ondergrens
+         duwt elke kolom mét een uur zijn staaf omhoog. */
+      min-height: 0.72rem;
+      font-size: 0.62rem;
+      color: hsl(224, 14%, 55%);
+      margin-top: 2px;
       line-height: 1;
       white-space: nowrap;
       /* Het label is een blok zo breed als zijn kolom, en dat is bij
@@ -1910,6 +1916,7 @@
          de tekst links en staat hij net naast zijn eigen staaf. */
       text-align: center;
       width: 100%;
+      flex-shrink: 0;
     }
     /* Het huidige uur oranje, dezelfde kleuren als de zonneverwachting gebruikt,
        zodat de twee kaarten zich hetzelfde gedragen. */
@@ -1934,7 +1941,7 @@
        zodat hij op de juiste staaf blijft wijzen. Zonder variabele valt hij
        terug op het midden, precies zoals bij de zonneverwachting. */
     .price-tooltip::after { left: var(--pijl, 50%); }
-    html[data-theme="dark"] .price-hour { color: hsl(224, 18%, 62%); }
+    html[data-theme="dark"] .price-hour { color: hsl(224, 18%, 66%); }
     html[data-theme="dark"] .price-col.now .price-hour { color: hsl(32, 90%, 65%); }
     html[data-theme="dark"] .price-meta,
     html[data-theme="dark"] .price-empty { color: hsl(224, 18%, 70%); }
