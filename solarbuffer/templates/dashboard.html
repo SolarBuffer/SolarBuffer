@@ -1900,9 +1900,6 @@
       transition: filter 0.15s, height 0.3s ease;
     }
     .price-col.selected .price-bar { filter: brightness(0.72); }
-    /* Het huidige uur krijgt een streep eronder in plaats van een andere kleur,
-       want de kleur is hier al bezet door de prijs. */
-    .price-col.now .price-bar { box-shadow: 0 2px 0 0 hsl(224, 26%, 30%); }
     .price-hour {
       font-size: 0.55rem;
       color: hsl(224, 18%, 74%);
@@ -1914,7 +1911,9 @@
       text-align: center;
       width: 100%;
     }
-    .price-col.now .price-hour { color: hsl(224, 26%, 30%); font-weight: 700; }
+    /* Het huidige uur oranje, dezelfde kleuren als de zonneverwachting gebruikt,
+       zodat de twee kaarten zich hetzelfde gedragen. */
+    .price-col.now .price-hour { color: hsl(28, 90%, 42%); font-weight: 700; }
     .price-col.selected .price-hour { font-weight: 700; }
     .price-meta {
       display: flex;
@@ -1936,8 +1935,7 @@
        terug op het midden, precies zoals bij de zonneverwachting. */
     .price-tooltip::after { left: var(--pijl, 50%); }
     html[data-theme="dark"] .price-hour { color: hsl(224, 18%, 62%); }
-    html[data-theme="dark"] .price-col.now .price-bar { box-shadow: 0 2px 0 0 hsl(224, 18%, 82%); }
-    html[data-theme="dark"] .price-col.now .price-hour { color: hsl(224, 18%, 86%); }
+    html[data-theme="dark"] .price-col.now .price-hour { color: hsl(32, 90%, 65%); }
     html[data-theme="dark"] .price-meta,
     html[data-theme="dark"] .price-empty { color: hsl(224, 18%, 70%); }
 
@@ -4429,7 +4427,9 @@
       for (const u of uren) {
         const pct = u.price_ct <= 0 ? 3 : Math.max(3, Math.round((u.price_ct / noemer) * 100));
         const isNu = day === 'today' && u.hour === nuUur;
-        const label = u.hour % 3 === 0 ? String(u.hour).padStart(2, '0') : '';
+        // Elk derde uur een label, plus altijd het uur waarin we nu zitten,
+        // anders valt juist de markering weg die je zoekt.
+        const label = (u.hour % 3 === 0 || isNu) ? String(u.hour).padStart(2, '0') : '';
         staven += `<div class="price-col${isNu ? ' now' : ''}" data-hour="${u.hour}" data-ct="${u.price_ct}" onclick="selectPriceBar(this)">
           <div class="price-bar" style="height:${pct}%;background:${prijsKleur(u.price_ct, laagste, hoogste)}"></div>
           <div class="price-hour">${label}</div>
