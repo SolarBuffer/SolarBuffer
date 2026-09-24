@@ -1908,6 +1908,11 @@
       color: hsl(224, 18%, 74%);
       line-height: 1;
       white-space: nowrap;
+      /* Het label is een blok zo breed als zijn kolom, en dat is bij
+         vierentwintig staven maar een pixel of twaalf. Zonder centreren begint
+         de tekst links en staat hij net naast zijn eigen staaf. */
+      text-align: center;
+      width: 100%;
     }
     .price-col.now .price-hour { color: hsl(224, 26%, 30%); font-weight: 700; }
     .price-col.selected .price-hour { font-weight: 700; }
@@ -1926,6 +1931,10 @@
       padding: 1.6rem 0.5rem;
       line-height: 1.5;
     }
+    /* Wordt het ballonnetje tegen de rand geduwd, dan schuift alleen de pijl mee
+       zodat hij op de juiste staaf blijft wijzen. Zonder variabele valt hij
+       terug op het midden, precies zoals bij de zonneverwachting. */
+    .price-tooltip::after { left: var(--pijl, 50%); }
     html[data-theme="dark"] .price-hour { color: hsl(224, 18%, 62%); }
     html[data-theme="dark"] .price-col.now .price-bar { box-shadow: 0 2px 0 0 hsl(224, 18%, 82%); }
     html[data-theme="dark"] .price-col.now .price-hour { color: hsl(224, 18%, 86%); }
@@ -4436,7 +4445,7 @@
 
       return tabs + `
         <div class="price-bars" id="priceBars">
-          <div class="forecast-tooltip" id="priceTooltip"></div>
+          <div class="forecast-tooltip price-tooltip" id="priceTooltip"></div>
           ${staven}
         </div>
         <div class="price-meta">
@@ -4464,7 +4473,17 @@
       tooltip.textContent = `${uur}:00 — ${ct} ct/kWh`;
       tooltip.classList.add('visible');
       const c = col.getBoundingClientRect(), b = bars.getBoundingClientRect();
-      tooltip.style.left = (c.left - b.left + c.width / 2) + 'px';
+      // Het tekstballonnetje staat gecentreerd op de staaf, dus aan de randen
+      // viel de helft buiten de kaart. Eerst meten hoe breed hij geworden is,
+      // dan binnen de grenzen houden. De pijl eronder blijft wel op de staaf
+      // wijzen, anders wijst hij straks een uur verderop aan.
+      tooltip.style.left = '0px';
+      const halve = tooltip.offsetWidth / 2;
+      const midden = c.left - b.left + c.width / 2;
+      const begrensd = Math.max(halve, Math.min(b.width - halve, midden));
+      tooltip.style.left = begrensd + 'px';
+      const pijl = midden - begrensd;
+      tooltip.style.setProperty('--pijl', `calc(50% + ${pijl.toFixed(1)}px)`);
     }
 
     document.addEventListener('click', function(e) {
