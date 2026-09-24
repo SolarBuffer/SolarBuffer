@@ -367,7 +367,21 @@
 
       <div class="update-card">
         <div class="update-left">
-          <span class="version-badge new">v0.7.4</span>
+          <span class="version-badge new">v0.7.5</span>
+          <span class="update-date-small">24 sep</span>
+        </div>
+        <div class="update-divider"></div>
+        <div class="update-right">
+          <span class="update-tag tag-feature">Nieuw</span>
+          <div class="update-title">Stroomprijs per uur op het dashboard, en een rustigere accuregeling</div>
+          <div class="update-body">Naast de zonne-verwachting staat nu een tweede grafiek met de stroomprijs per uur, voor vandaag en voor morgen zodra de beurs die rond 13:00 vrijgeeft. De kleur loopt van groen voor het goedkoopste uur naar rood voor het duurste, en is een uur negatief dan kleurt hij blauw. Je kunt SolarBuffer daarbij laten rekenen met je eigen tarief: kies je leverancier en de opslag wordt ingevuld, waarna energiebelasting en btw erbij komen. Dan staat er hetzelfde bedrag als in de app van je leverancier, in plaats van de kale beursprijs die daar ruim de helft onder ligt. Bij het bouwen hiervan bleek de prijsophaling zelf een gat te hebben: het venster liep vanaf middernacht in wereldtijd in plaats van jouw tijd, waardoor de eerste uren van elke nacht ontbraken. Juist de uren waarin stroom vaak het goedkoopst is, dus met een dynamisch contract kon SolarBuffer die nooit als goedkoop uur zien. Aan de accukant is een hardnekkige onrust weg. Met accu-prioriteit wisselde de Hub elke twee seconden tussen volladen en geblokkeerd, urenlang, waarbij de boiler er nooit doorheen kwam en er bij te weinig zon stroom werd ingekocht om de accu te vullen. Verder is de laadstandbalk opnieuw gedaan: de kleur loopt nu door van rood naar groen in plaats van op vaste drempels om te klappen, en er loopt een veeg over de balk zolang er stroom in of uit gaat, naar rechts bij laden en naar links bij ontladen. In de instellingen kun je nu per accu testen of de verbinding werkelijk werkt voordat je opslaat, en opslaan zonder het token van de P1-meter wordt tegengehouden, want zonder dat token kan SolarBuffer je accu wel uitlezen maar niet aansturen. Nieuw is ook een instelbare vermogensdrempel: vanaf welk boilervermogen de accu mag bijladen. Die stond vast op honderd procent, wat een gat gaf zodra je de bevriesdrempel verlaagde. Tot slot zet een fabrieksreset de Hub nu echt terug naar nieuw, inclusief het wifi-netwerk, de meetgegevens en de kenmerken waaraan een Hub herkend wordt, en is een fout verholpen waarbij zelfverbruik en zelfvoorziening op nul bleven staan als je zonnemeter omgekeerd gemonteerd is.</div>
+          <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.5" target="_blank" rel="noopener">&rarr; Release notes</a>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-left">
+          <span class="version-badge mid">v0.7.4</span>
           <span class="update-date-small">17 sep</span>
         </div>
         <div class="update-divider"></div>

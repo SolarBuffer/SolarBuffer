@@ -3157,7 +3157,7 @@
 
 {% block footer %}
 <div class="footer">Live data · Verversing elke seconde</div>
-<div class="footer">Version 0.7.4</div>
+<div class="footer">Version 0.7.5</div>
 {% endblock %}
 
 {% block scripts %}
@@ -4460,10 +4460,7 @@
           <span>Hoogst <strong>${String(duurste.hour).padStart(2, '0')}:00</strong> · ${nl(duurste.price_ct)} ct</span>
           <span>Gemiddeld <strong>${nl(gemiddeld)} ct</strong></span>
         </div>
-        ${onder ? `<div class="price-meta" style="margin-top:0.3rem">${onder}</div>` : ''}
-        <div class="price-meta" style="margin-top:0.3rem">
-          <span>${data.all_in ? 'Inclusief opslag, energiebelasting en btw' : 'Kale beursprijs, zonder opslag en energiebelasting'}</span>
-        </div>`;
+        ${onder ? `<div class="price-meta" style="margin-top:0.3rem">${onder}</div>` : ''}`;
     }
 
     function selectPriceBar(col) {
