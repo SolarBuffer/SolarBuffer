@@ -1,0 +1,25 @@
+/* Lettertypen lokaal, zodat de Hub geen internet nodig heeft om er goed uit te
+   zien. Ze kwamen van fonts.gstatic.com, en dat adres wordt door menig
+   blokkeerlijst tegengehouden: op het netwerk hier loste het op naar het
+   nuladres, waardoor de interface altijd al op systeemfonts terugviel zonder
+   dat iemand dat doorhad.
+
+   Het zijn variabele lettertypen, dus alle gewichten zitten in een bestand.
+   Beide onder de SIL Open Font License, dus meeleveren mag.
+   Inter: github.com/rsms/inter · Space Grotesk: github.com/floriankarsten/space-grotesk */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/static/fonts/Inter-variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/static/fonts/SpaceGrotesk-variable.woff2') format('woff2');
+}
