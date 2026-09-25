@@ -985,6 +985,17 @@ def own_power_at(ip, tijdstip, fallback=None):
     return min(hist, key=lambda tw: abs(tw[0] - tijdstip))[1]
 _hw_battery_control_lock = threading.Lock()
 _last_hw_battery_send = 0.0
+# De standen die SolarBuffer zelf naar een HomeWizard-accu schrijft. Leest hij
+# iets anders terug, dan heeft de klant de accu met de hand op een eigen stand
+# gezet, bijvoorbeeld slim laden. Dan blijven we er helemaal van af: geen stand
+# schrijven en geen rechten geven of afnemen. Zet hij hem terug op Zero, dan
+# nemen we het weer over.
+#
+# Bewust omgekeerd geredeneerd. Welke naam HomeWizard aan slim laden geeft weten
+# we niet met zekerheid, en die lijst kan groeien. Wat wij zelf sturen weten we
+# wel, en alles daarbuiten is per definitie iemand anders.
+HW_EIGEN_STANDEN = ("zero", "to_full")
+
 HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
 _zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes)
 
@@ -7700,6 +7711,7 @@ def control_loop():
     import_off_start = None
     prev_schedule_active_ips = set()
     _bat_tofull_active = False  # to_full mode actief voor accu-eerst: accu bevroren op max lading
+    _vorige_eigen_stand = None   # laatst gemelde eigen stand van de klant, om niet te blijven herhalen
     _bat_tofull_leeg_sinds = None  # sinds wanneer er geen overschot meer is terwijl to_full loopt
     _bat_saturated = False       # accu uitgeregeld: neemt overschot niet op → boiler vrijgeven
     _bat_saturated_since = None  # start aanhoudende export terwijl accu zou moeten laden
@@ -8542,9 +8554,29 @@ def control_loop():
                                   if cfg.get("battery_type") == "zendure" else "auto")
                 _bat_manual_power = (zendure_manual_override(cfg) or 0) if _bat_ctrl_mode != "auto" else 0
 
+                # Heeft de klant zijn HomeWizard-accu zelf op een stand gezet die
+                # wij niet sturen, bijvoorbeeld slim laden, dan laten we hem met
+                # rust. Anders overschrijven we om de paar seconden een keuze die
+                # hij bewust heeft gemaakt, zonder dat hij ziet waarom.
+                #
+                # Alleen als we werkelijk een stand hebben teruggelezen. Bij het
+                # opstarten staat die nog op niets, en dan zouden we onszelf
+                # buitenspel zetten voordat we iets weten.
+                _bat_gelezen_stand = (battery_state.get("mode") or "").strip().lower()
+                _bat_eigen_regie = (
+                    cfg.get("battery_type", "homewizard") not in ("marstek", "zendure")
+                    and bool(_bat_gelezen_stand)
+                    and _bat_gelezen_stand not in HW_EIGEN_STANDEN
+                )
+                if _bat_eigen_regie and _bat_gelezen_stand != _vorige_eigen_stand:
+                    print(f"[BAT] accu staat op '{_bat_gelezen_stand}', door de klant "
+                          f"ingesteld. SolarBuffer laat hem met rust tot hij weer op "
+                          f"zero staat.", flush=True)
+                _vorige_eigen_stand = _bat_gelezen_stand if _bat_eigen_regie else None
+
                 if not battery_state.get("online"):
                     # Batterij niet bereikbaar → normale besturing, reset cache
-                    global _last_battery_permissions
+                    global _last_battery_permissions, _last_battery_mode
                     _last_battery_permissions = None
                     # battery_blocks_start blijft False, geen permissies sturen
 
@@ -8795,6 +8827,9 @@ def control_loop():
                             "geen_ontladen": _force_no_discharge,
                             "temp_blokkeert_alles": _temp_shutoff_blocking_all,
                             "blokkeert_start": battery_blocks_start,
+                            # Staat dit op true, dan wordt de gewenste stand
+                            # hierboven wel uitgerekend maar niet verstuurd.
+                            "eigen_regie": _bat_eigen_regie,
                         },
                         {
                             "net_w": round(measured_power, 1) if measured_power is not None else None,
@@ -8803,6 +8838,16 @@ def control_loop():
                             "helderheid": current_brightness,
                         },
                     )
+
+                if _bat_eigen_regie:
+                    # De accu doet zijn eigen ding. Dan hoort de boiler daar niet
+                    # op te wachten: hij regelt gewoon op wat de meter laat zien.
+                    battery_blocks_start = False
+                    # Cache leeg, anders denkt de volgende ronde dat wat wij ooit
+                    # stuurden er nog in staat, en blijft het sturen uit zodra de
+                    # klant terug is op zero.
+                    _last_battery_permissions = None
+                    _last_battery_mode = None
 
                 _bat_type = cfg.get("battery_type", "homewizard")
                 if battery_state.get("online"):
@@ -8855,7 +8900,7 @@ def control_loop():
                                     kwargs={"forced_power": _bat_manual_power},
                                     daemon=True,
                                 ).start()
-                    elif _bat_token and _bat_control_ip and (
+                    elif _bat_token and _bat_control_ip and not _bat_eigen_regie and (
                         sorted(_desired_perms) != (_last_battery_permissions or []) or
                         _desired_mode != _last_battery_mode or
                         (now - _last_hw_battery_send) > HW_BATTERY_REFRESH_SECONDS
