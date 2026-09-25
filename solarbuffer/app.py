@@ -801,6 +801,10 @@ battery_state = {
     "charge_today_kwh": None, "discharge_today_kwh": None,
 }
 _battery_blocks_start = False
+# Accu staat op een stand die de klant zelf heeft gekozen; SolarBuffer
+# stuurt hem dan niet aan. Voor het dashboard, zodat daar te zien is
+# waarom er niets gebeurt.
+_battery_eigen_regie = False
 _last_battery_permissions = None
 # _last_battery_permissions volgt alleen wat het laatst daadwerkelijk naar de
 # accu is gestuurd (bv. blijft hangen op een oude waarde als de accu al in
@@ -3002,6 +3006,7 @@ def status_json():
         battery_count=len(cfg.get("battery_ips") or []) if cfg.get("battery_enabled") else 0,
         battery=battery_state if cfg.get("battery_enabled") else None,
         battery_blocks_start=_battery_blocks_start if cfg.get("battery_enabled") else False,
+        battery_eigen_regie=_battery_eigen_regie if cfg.get("battery_enabled") else False,
         battery_force_tofull=cfg.get("battery_force_tofull", False),
         battery_control_mode=cfg.get("battery_control_mode", "auto"),
         battery_manual_direction=cfg.get("battery_manual_direction", "charge"),
@@ -8911,8 +8916,9 @@ def control_loop():
                             daemon=True,
                         ).start()
             # ================= EINDE BATTERIJ PRIORITEIT =================
-            global _battery_blocks_start
+            global _battery_blocks_start, _battery_eigen_regie
             _battery_blocks_start = battery_blocks_start
+            _battery_eigen_regie = bool(_bat_cfg_enabled and _bat_eigen_regie)
 
             if export_start is not None and (now - export_start) >= EXPORT_DELAY and not battery_blocks_start:
                 next_dev = get_next_startable_device(non_legionella, blocked_ips)

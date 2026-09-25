@@ -1868,6 +1868,25 @@
     }
     .forecast-tooltip.visible { display: block; }
 
+    .bat-eigen-regie {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.45rem;
+      margin-top: 0.9rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      background: hsl(215, 75%, 96%);
+      border: 1px solid hsl(215, 60%, 88%);
+      color: hsl(215, 45%, 32%);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+    html[data-theme="dark"] .bat-eigen-regie {
+      background: hsl(215, 40%, 18%);
+      border-color: hsl(215, 35%, 26%);
+      color: hsl(215, 45%, 80%);
+    }
+
     /* ===== STROOMPRIJS ===== */
     /* Eigen klassen en niet die van de zonneverwachting hergebruikt: die zijn
        oranje gekleurd, terwijl de kleur hier de prijs moet vertellen. De opbouw
@@ -3007,6 +3026,10 @@
             </label>
           </div>
         </div>
+        <div id="batEigenRegie" style="display:none" class="bat-eigen-regie">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>
+          <span>Je accu staat op een eigen stand. SolarBuffer stuurt hem niet aan zolang dat zo is. Zet hem op Zero om het over te laten nemen.</span>
+        </div>
       </div>
     </section>
 
@@ -3337,9 +3360,16 @@
             if (!existingImg || existingImg.src !== location.origin + batLogoSrc) {
               batIconEl.innerHTML = `<img src="${batLogoSrc}" width="22" height="22" alt="">`;
             }
-            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto', manual: 'Schema', idle: 'Standby', manual_fixed: 'Handmatig' };
+            // predictive is hoe HomeWizard zijn slim laden noemt. Zonder deze
+            // regel stond dat rauwe woord op het dashboard.
+            const modeLabels = { zero: 'Zero', to_full: 'Volladen', standby: 'Standby', auto: 'Auto', manual: 'Schema', idle: 'Standby', manual_fixed: 'Handmatig', predictive: 'Slim laden' };
             const md = bat.mode;
             document.getElementById('batCyclesVal').textContent = md ? (modeLabels[md] || md) : '—';
+            // Staat de accu op een stand die de klant zelf koos, dan stuurt
+            // SolarBuffer hem niet aan. Dat hoort hier te staan, anders zoek je
+            // je wezenloos naar waarom er niets gebeurt.
+            const eigenRegie = !!data.battery_eigen_regie;
+            document.getElementById('batEigenRegie').style.display = eigenRegie ? '' : 'none';
             const isToFull = !!data.battery_force_tofull;
             if (!_tofullPending) document.getElementById('batForceTofullToggle').checked = isToFull;
           } else {
