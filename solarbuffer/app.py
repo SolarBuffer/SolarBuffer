@@ -8662,7 +8662,22 @@ def control_loop():
                         _force_tofull = False
                         write_audit_log("battery_force_tofull_auto_off", {"soc": _bat_soc})
 
-                    if _bat_ctrl_mode in ("manual", "off"):
+                    if _bat_eigen_regie:
+                        # De klant stuurt zijn accu zelf, bijvoorbeeld op slim
+                        # laden. Dan bepalen we hier niets: niet blokkeren, geen
+                        # rechten, en zeker geen draaiende boiler uitzetten voor
+                        # een accu waar wij niet over gaan. De prioriteit doet er
+                        # dan ook niet toe, want die gaat over het verdelen tussen
+                        # twee dingen die wij allebei aansturen.
+                        _desired_mode = _bat_gelezen_stand or "onbekend"
+                        _desired_perms = []
+                        battery_blocks_start = False
+                        # Schoon achterlaten, zodat het overnemen straks vanaf nul
+                        # begint in plaats van vanuit een half afgemaakte toestand.
+                        _bat_tofull_active = False
+                        _bat_saturated = False
+                        _bat_saturated_since = None
+                    elif _bat_ctrl_mode in ("manual", "off"):
                         # Vast setpoint (of 0 W bij uit). Geen rechten, geen
                         # blokkade van de boiler: SolarBuffer regelt de boiler
                         # gewoon door alsof er geen accu is.
@@ -9199,9 +9214,16 @@ def control_loop():
                     # en laat de accu als eerste afregelen. Pas als de accu <10W laadt
                     # hervat de PID de normale regeling.
                     # Geldt voor boiler-eerst én battery-eerst wanneer SoC-drempel bereikt is.
+                    #
+                    # Niet als de accu op een eigen stand van de klant staat. Dit
+                    # wachten heeft alleen zin als wij de accu aansturen en hem dus
+                    # zelf kunnen laten afregelen. Doet hij zijn eigen ding, dan
+                    # komt dat moment nooit en zou de boiler blijven stilstaan
+                    # zolang die accu laadt, ongeacht welke prioriteit er staat.
                     _bat_holds_boiler = (
                         cfg.get("battery_enabled") and
                         battery_state.get("online") and
+                        not _battery_eigen_regie and
                         (battery_state.get("power_w") or 0) < -10 and
                         (
                             cfg.get("battery_priority") == "boiler" or
