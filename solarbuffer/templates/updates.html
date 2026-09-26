@@ -362,7 +362,7 @@
           <div class="check-card-sub" id="swCheckSub">Controleer of er een nieuwe versie beschikbaar is</div>
           <div class="action-result" id="swResult"></div>
         </div>
-        <button class="btn-action" id="swUpdateBtn" onclick="runSoftwareUpdate()">Update</button>
+        <button class="btn-action" id="swUpdateBtn" onclick="runSoftwareUpdate()">Controleer</button>
       </div>
 
       <div class="update-card">
@@ -947,15 +947,25 @@
     }
 
     /* ---- Software ---- */
+    // Zolang er niets gevonden is heet de knop Controleren, want dat is wat hij
+    // doet. Pas als er werkelijk een nieuwe versie klaarstaat gaat er Update op.
+    var _swUpdateBeschikbaar = false;
+
+    function swKnopTekst() {
+      return _swUpdateBeschikbaar ? "Update" : "Controleer";
+    }
+
     (function checkSoftwareAvailable() {
       fetch("/check_updates_available")
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.available) {
+            _swUpdateBeschikbaar = true;
             document.getElementById("swCheckCard").classList.add("update-available");
             document.getElementById("swCheckTitle").textContent = "Nieuwe update beschikbaar!";
             document.getElementById("swCheckSub").textContent = "Druk op Update om de nieuwste versie te installeren.";
             document.getElementById("dotSoftware").style.display = "block";
+            document.getElementById("swUpdateBtn").textContent = swKnopTekst();
           }
         })
         .catch(function() {});
@@ -983,17 +993,19 @@
           } else if (data.success) {
             res.className = "action-result success";
             res.textContent = "Geen updates beschikbaar, alles is up-to-date.";
-            btn.disabled = false; btn.textContent = "Update";
+            // Niets gevonden, dus de knop blijft een controleknop.
+            _swUpdateBeschikbaar = false;
+            btn.disabled = false; btn.textContent = swKnopTekst();
           } else {
             res.className = "action-result error";
             res.textContent = data.error || "Onbekende fout";
-            btn.disabled = false; btn.textContent = "Update";
+            btn.disabled = false; btn.textContent = swKnopTekst();
           }
         })
         .catch(function() {
           res.className = "action-result error";
           res.textContent = "Verbindingsfout";
-          btn.disabled = false; btn.textContent = "Update";
+          btn.disabled = false; btn.textContent = swKnopTekst();
         });
     }
 

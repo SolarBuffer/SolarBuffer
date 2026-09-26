@@ -529,6 +529,11 @@ def load_config():
     # in die tussenruimte nam niemand het overschot op.
     if "boiler_release_pct" not in cfg:
         cfg["boiler_release_pct"] = 100
+    # Ontladen blokkeren tijdens een legionellaronde, een tijdschema of een
+    # goedkoop uur. Standaard uit, dus de accu mag in die vensters gewoon
+    # ontladen. Laden blijft altijd toegestaan, met of zonder deze schakelaar.
+    if "battery_block_discharge_when_forced" not in cfg:
+        cfg["battery_block_discharge_when_forced"] = False
     # All-in prijs staat standaard uit, zodat een bestaande Hub met een
     # ingestelde drempel zich niet ineens anders gedraagt: die drempel is daar
     # op de kale beursprijs gezet.
@@ -2803,6 +2808,8 @@ def settings_expert():
         cfg["temp_shutoff_retry_min"] = max(TEMP_SHUTOFF_RETRY_MIN, min(TEMP_SHUTOFF_RETRY_MAX,
             safe_int(request.form.get("temp_shutoff_retry_min", ""), TEMP_SHUTOFF_RETRY_DEFAULT)))
         cfg["dynamic_pricing_enabled"] = request.form.get("dynamic_pricing_enabled") == "on"
+        cfg["battery_block_discharge_when_forced"] = (
+            request.form.get("battery_block_discharge_when_forced") == "on")
         cfg["price_all_in_enabled"] = request.form.get("price_all_in_enabled") == "on"
         _lev = (request.form.get("price_supplier") or "").strip()
         cfg["price_supplier"] = _lev if _lev in LEVERANCIER_OPSLAG_CT else ""
@@ -4977,6 +4984,18 @@ def _valid_time(t):
     return bool(re.match(r"^\d{2}:\d{2}$", str(t)))
 
 
+def _accu_laad_veld(data):
+    """Leest het laadvermogen uit een binnenkomend tijdschema.
+
+    Buiten bereik of onzin wordt nul, dus geen accusturing. Een typefout mag
+    nooit tot gevolg hebben dat er uren lang op een raar vermogen geladen wordt.
+    """
+    try:
+        return max(0, min(SCHEMA_ACCU_MAX_W, int(data.get("battery_charge_w") or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
 @app.route("/schedules", methods=["GET"])
 def get_schedules():
     if not require_login():
@@ -4996,7 +5015,7 @@ def create_schedule():
         days = data.get("days", [])
         start_time = str(data.get("start_time", ""))
         end_time = str(data.get("end_time", ""))
-        sched_type = data.get("type") if data.get("type") in ("start", "block") else "start"
+        sched_type = data.get("type") if data.get("type") in ("start", "block", "battery") else "start"
         brightness = data.get("brightness", 50)
         name = str(data.get("name", ""))[:50]
         if not isinstance(days, list) or not days:
@@ -5025,6 +5044,7 @@ def create_schedule():
             "end_time": end_time,
             "brightness": brightness,
             "device_ips": device_ips,
+            "battery_charge_w": _accu_laad_veld(data),
             "enabled": True,
         }
         cfg["schedules"].append(new_sched)
@@ -5050,7 +5070,7 @@ def update_schedule(sched_id):
         if idx is None:
             return jsonify(success=False, error="Niet gevonden"), 404
         sched = schedules[idx]
-        if "type" in data and data["type"] in ("start", "block"):
+        if "type" in data and data["type"] in ("start", "block", "battery"):
             sched["type"] = data["type"]
         if "days" in data:
             sched["days"] = sorted({int(d) for d in data["days"] if isinstance(d, (int, float)) and 0 <= int(d) <= 6})
@@ -5058,7 +5078,7 @@ def update_schedule(sched_id):
             sched["start_time"] = str(data["start_time"])
         if "end_time" in data and _valid_time(data["end_time"]):
             sched["end_time"] = str(data["end_time"])
-        if sched.get("type", "start") == "block":
+        if sched.get("type", "start") in ("block", "battery"):
             sched["brightness"] = None
         elif "brightness" in data:
             try:
@@ -5069,6 +5089,8 @@ def update_schedule(sched_id):
                 pass
         if "name" in data:
             sched["name"] = str(data["name"])[:50]
+        if "battery_charge_w" in data:
+            sched["battery_charge_w"] = _accu_laad_veld(data)
         if "enabled" in data:
             sched["enabled"] = bool(data["enabled"])
         if "device_ips" in data:
@@ -7613,6 +7635,54 @@ def hold_frozen_output(ip):
 
 
 # ================= TIJDSCHEMA =================
+SCHEMA_ACCU_MAX_W = 5000   # bovengrens voor het laadvermogen in een tijdschema
+
+
+def schema_accu_laden_w(sched):
+    """Het laadvermogen dat dit tijdschema aan de accu oplegt, of 0.
+
+    Geldt voor een gewoon startschema, dat ook de boiler aanstuurt, en voor een
+    accuschema, dat alleen over de accu gaat. Een verbodsvenster nooit.
+    """
+    if not sched or sched.get("type", "start") not in ("start", "battery"):
+        return 0
+    try:
+        return max(0, min(SCHEMA_ACCU_MAX_W, int(sched.get("battery_charge_w") or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def actief_accu_laadvermogen(schedules):
+    """Het laadvermogen dat op dit moment door een tijdschema wordt opgelegd.
+
+    Apart van get_active_schedule, want die kijkt alleen naar startschema's: die
+    horen bij de boiler. Een accuschema stuurt de boiler juist niet aan en mag
+    dus ook niet als 'schema actief' gelden, anders zou het de boiler blokkeren
+    terwijl het daar niets over te zeggen heeft.
+
+    Lopen er meerdere tegelijk, dan wint de hoogste. Dat is de voorspelbare
+    keuze: je krijgt wat de meest uitgesproken opdracht vraagt.
+    """
+    now = datetime.now()
+    weekday = now.weekday()
+    minuten = now.hour * 60 + now.minute
+    hoogste = 0
+    for sched in schedules or []:
+        if not sched.get("enabled", True):
+            continue
+        if weekday not in sched.get("days", []):
+            continue
+        try:
+            sh, sm = map(int, sched["start_time"].split(":"))
+            eh, em = map(int, sched["end_time"].split(":"))
+        except (KeyError, ValueError):
+            continue
+        if not ((sh * 60 + sm) <= minuten < (eh * 60 + em)):
+            continue
+        hoogste = max(hoogste, schema_accu_laden_w(sched))
+    return hoogste
+
+
 def get_active_schedule(schedules):
     now = datetime.now()
     weekday = now.weekday()  # 0=maandag … 6=zondag
@@ -8590,7 +8660,19 @@ def control_loop():
                     _legionella_active = bool(legionella_handled)
                     _schedule_active = active_sched is not None
                     _price_active = any(device_states[d["ip"]].get("price_triggered") for d in devices_sorted)
-                    _force_no_discharge = _legionella_active or _schedule_active or _price_active
+                    # Tijdens een legionellaronde, een tijdschema of een start op
+                    # een goedkoop tarief verwarmt de boiler met opzet van het net.
+                    # De accu mag dat dan niet voeden, want dan betaal je die
+                    # stroom alsnog, via een omweg, en loopt je accu leeg op een
+                    # moment dat je hem juist vol wilde houden. Laden mag in die
+                    # vensters gewoon door: als er zon over is hoort die er in.
+                    #
+                    # Het is een keuze, want wie zijn accu daar wel voor wil
+                    # gebruiken moet dat kunnen zeggen.
+                    _force_no_discharge = (
+                        cfg.get("battery_block_discharge_when_forced", False)
+                        and (_legionella_active or _schedule_active or _price_active)
+                    )
                     _has_export = measured_power < 0
                     # Boiler vol genoeg om de accu erbij te laten. Instelbaar,
                     # want hij hoort samen te lopen met de bevriesdrempel: wie
@@ -8662,7 +8744,27 @@ def control_loop():
                         _force_tofull = False
                         write_audit_log("battery_force_tofull_auto_off", {"soc": _bat_soc})
 
-                    if _bat_eigen_regie:
+                    # Legt het lopende tijdschema een laadvermogen op, dan gaat
+                    # dat voor. Iemand die een schema maakt om tijdens gratis uren
+                    # te laden bedoelt precies dat, en dat is een uitgesproken
+                    # opdracht met een begin en een eind. Buiten het venster geldt
+                    # gewoon weer de normale volgorde.
+                    _sched_accu_w = actief_accu_laadvermogen(cfg.get("schedules", [])) if schedules_enabled else 0
+                    if _sched_accu_w > 0:
+                        # Alleen bij Zendure kunnen we een exact vermogen opleggen.
+                        # Marstek en HomeWizard kennen geen setpoint over deze weg,
+                        # daar is volladen het dichtste wat er in de buurt komt: die
+                        # laden dan op hun eigen maximum in plaats van op het
+                        # ingevulde getal.
+                        _desired_mode = ("manual_fixed"
+                                         if cfg.get("battery_type") == "zendure"
+                                         else "to_full")
+                        _desired_perms = []
+                        battery_blocks_start = False
+                        _bat_tofull_active = False
+                        _bat_saturated = False
+                        _bat_saturated_since = None
+                    elif _bat_eigen_regie:
                         # De klant stuurt zijn accu zelf, bijvoorbeeld op slim
                         # laden. Dan bepalen we hier niets: niet blokkeren, geen
                         # rechten, en zeker geen draaiende boiler uitzetten voor
@@ -8777,7 +8879,15 @@ def control_loop():
                                     _bst = device_states[_bd["ip"]]
                                     if _bst.get("started") and not _bst.get("freeze") and not _bst.get("legionella_active"):
                                         reset_device_to_off(_bd["ip"])
-                                _desired_perms = ["charge_allowed", "discharge_allowed"]
+                                # Draait er een tijdschema, een legionellaronde of
+                                # een goedkoop-tarief-start, dan verwarmt de boiler
+                                # met opzet van het net. De accu mag dat niet gaan
+                                # voeden: dan betaal je die stroom alsnog, alleen
+                                # via een omweg. Deze regel stond wel in de andere
+                                # takken maar hier niet, waardoor het bij accu-eerst
+                                # onder de SoC-drempel toch gebeurde.
+                                _desired_perms = (["charge_allowed"] if _force_no_discharge
+                                                  else ["charge_allowed", "discharge_allowed"])
                         else:
                             # SoC-drempel bereikt: accu standby, boiler is primaire regelaar.
                             _bat_tofull_active = False
@@ -8845,6 +8955,7 @@ def control_loop():
                             "sb_actief": _any_sb_active,
                             "pid_op_max": _pid_at_max,
                             "geen_ontladen": _force_no_discharge,
+                            "schema_laadt": _sched_accu_w,
                             "temp_blokkeert_alles": _temp_shutoff_blocking_all,
                             "blokkeert_start": battery_blocks_start,
                             # Staat dit op true, dan wordt de gewenste stand
@@ -8917,7 +9028,8 @@ def control_loop():
                                           _desired_perms,
                                           p1_average(ZENDURE_REG_AVG_SECONDS, measured_power),
                                           _zendure_max),
-                                    kwargs={"forced_power": _bat_manual_power},
+                                    kwargs={"forced_power": (_sched_accu_w or
+                                                             _bat_manual_power)},
                                     daemon=True,
                                 ).start()
                     elif _bat_token and _bat_control_ip and not _bat_eigen_regie and (

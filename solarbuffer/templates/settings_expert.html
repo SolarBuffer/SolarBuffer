@@ -517,6 +517,28 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Batterij</div>
+        <div class="feature-row">
+          <div class="feature-text">
+            <div class="feature-label">Accu niet laten ontladen tijdens verplicht verwarmen</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" name="battery_block_discharge_when_forced"
+                   {% if config.battery_block_discharge_when_forced %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p style="font-size:0.8rem; color:hsl(224, 18%, 71%); margin-top:0.5rem; line-height:1.4;">
+          Geldt tijdens een anti-legionellaronde, een tijdschema en een start op een
+          goedkoop tarief. In die vensters verwarmt de boiler met opzet van het net.
+          Staat dit aan, dan voedt je accu die boiler niet: je betaalt die stroom
+          anders alsnog, via een omweg, en je accu loopt leeg op een moment dat je hem
+          juist vol wilde houden. Laden blijft altijd toegestaan, dus is er zon over
+          dan gaat die gewoon de accu in. Buiten deze vensters verandert er niets.
+        </p>
+      </div>
+
+      <div class="card">
         <div class="card-title">Dynamische tarieven</div>
         <div class="feature-row">
           <div class="feature-text">
