@@ -613,25 +613,63 @@ def save_state(force=False):
 
 
 _energy_baselines: dict = {}
+_energy_baselines_geladen = False
 
 
-def load_energy_baselines():
-    global _energy_baselines
-    try:
-        with open(ENERGY_BASELINES_FILE, encoding="utf-8") as f:
-            _energy_baselines = json.load(f)
-    except Exception:
-        _energy_baselines = {}
-    return _energy_baselines
+def load_energy_baselines(opnieuw=False):
+    """Geeft de dagankers terug, eenmalig van schijf en daarna uit het geheugen.
+
+    Eerder las elke aanroep het bestand opnieuw in en hing de globale naam aan
+    een vers woordenboek. Meerdere lussen schrijven hierin: de regellus zet het
+    dagbegin per boiler, de accu-integrator zijn eigen teller, de accessoirelus
+    die van de stekkers. Rond middernacht doen ze dat allemaal vlak na elkaar,
+    en dan ging het mis. Las de accu-integrator het bestand net nadat de regellus
+    het nieuwe dagbegin van de boiler in het geheugen had gezet, dan gooide dat
+    inlezen die verse waarde weg, en de eerstvolgende opslag schreef de oude
+    stand van gisteren terug naar schijf.
+
+    Zichtbaar werd dat pas bij de volgende herstart. Tot dat moment klopte de
+    teller op het dashboard gewoon, want die leeft in de apparaatstatus en niet
+    in dit bestand. Na een herstart las de software de achtergebleven datum van
+    gisteren, concludeerde dat er een nieuwe dag begonnen was, en zette het
+    dagbegin op de huidige meterstand. Daarmee stond het verbruik van vandaag op
+    0.0 terwijl de boiler al uren had gedraaid.
+
+    Het geheugen is nu de bron, niet het bestand. Het bestand is er alleen om een
+    herstart te overleven.
+    """
+    global _energy_baselines, _energy_baselines_geladen
+    with _energy_baselines_lock:
+        if _energy_baselines_geladen and not opnieuw:
+            return _energy_baselines
+        try:
+            with open(ENERGY_BASELINES_FILE, encoding="utf-8") as f:
+                _energy_baselines = json.load(f)
+        except Exception:
+            _energy_baselines = {}
+        _energy_baselines_geladen = True
+        return _energy_baselines
 
 
 def save_energy_baselines():
+    # Eerst naar een tijdelijk bestand en dan omwisselen. Schrijven met "w" kapt
+    # het bestand af voor er nieuwe inhoud in staat, en wie in dat moment leest
+    # krijgt json die niet klopt. Bij een stroomstoring midden in het schrijven
+    # bleef er dan een leeg bestand achter en waren alle dagtellers weg.
     with _energy_baselines_lock:
+        tijdelijk = ENERGY_BASELINES_FILE + ".tmp"
         try:
-            with open(ENERGY_BASELINES_FILE, "w", encoding="utf-8") as f:
+            with open(tijdelijk, "w", encoding="utf-8") as f:
                 json.dump(_energy_baselines, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tijdelijk, ENERGY_BASELINES_FILE)
         except Exception as e:
             print(f"Energy baselines save fout: {e}")
+            try:
+                os.remove(tijdelijk)
+            except OSError:
+                pass
 
 
 def get_runtime_settings(cfg):
@@ -12219,7 +12257,11 @@ def accessory_poll_loop():
                         continue
                     acc_today_str = datetime.now().strftime("%Y-%m-%d")
                     if acc_id not in accessory_states:
-                        acc_bl = _energy_baselines.get(acc_id, {})
+                        # Via de laadfunctie, niet rechtstreeks uit de globale
+                        # naam. Op een hub zonder boilers wordt die namelijk nooit
+                        # gevuld, en dan zou deze lus de dagankers van de stekkers
+                        # bij elke herstart overschrijven met een lege stand.
+                        acc_bl = load_energy_baselines().get(acc_id, {})
                         accessory_states[acc_id] = {
                             "power": 0.0, "online": False,
                             "energy_today_kwh": 0.0,
