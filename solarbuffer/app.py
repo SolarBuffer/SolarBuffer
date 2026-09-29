@@ -994,16 +994,25 @@ def own_power_at(ip, tijdstip, fallback=None):
     return min(hist, key=lambda tw: abs(tw[0] - tijdstip))[1]
 _hw_battery_control_lock = threading.Lock()
 _last_hw_battery_send = 0.0
-# De standen die SolarBuffer zelf naar een HomeWizard-accu schrijft. Leest hij
-# iets anders terug, dan heeft de klant de accu met de hand op een eigen stand
-# gezet, bijvoorbeeld slim laden. Dan blijven we er helemaal van af: geen stand
-# schrijven en geen rechten geven of afnemen. Zet hij hem terug op Zero, dan
-# nemen we het weer over.
+# De standen die niet bewijzen dat de klant zelf aan de accu heeft gezeten.
+# Leest SolarBuffer iets anders terug, dan staat de accu op een stand die wij
+# niet kunnen veroorzaken, bijvoorbeeld slim laden. Dan blijven we er helemaal
+# van af: geen stand schrijven en geen rechten geven of afnemen. Zet hij hem
+# terug op Zero, dan nemen we het weer over.
 #
 # Bewust omgekeerd geredeneerd. Welke naam HomeWizard aan slim laden geeft weten
-# we niet met zekerheid, en die lijst kan groeien. Wat wij zelf sturen weten we
-# wel, en alles daarbuiten is per definitie iemand anders.
-HW_EIGEN_STANDEN = ("zero", "to_full")
+# we niet met zekerheid, en die lijst kan groeien. Wat wij zelf kunnen
+# veroorzaken weten we wel, en alles daarbuiten is per definitie iemand anders.
+#
+# 'standby' hoort er daarom bij, ook al schrijven we die stand nooit. Een
+# HomeWizard-accu zonder rechten meldt zich terug als standby, en lege rechten
+# zijn precies wat SolarBuffer stuurt als hij de accu blokkeert. Stond standby
+# niet in deze lijst, dan las SolarBuffer zijn eigen blokkade terug als een
+# keuze van de klant: hij trok zich terug, leegde zijn cache, en de accu bleef
+# met lege rechten staan omdat er nooit meer iets naartoe ging. De klant zag
+# dan tegelijk 'Geblokkeerd' en de melding dat hij de accu maar op Zero moest
+# zetten, terwijl hij daar zelf nooit iets aan had veranderd.
+HW_EIGEN_STANDEN = ("zero", "to_full", "standby")
 
 HW_BATTERY_REFRESH_SECONDS = 300  # keep-alive: rechten periodiek herbevestigen, ook als cache al 'klopt'
 _zendure_sn = {}  # ip -> serienummer (uit /properties/report, nodig voor writes)
