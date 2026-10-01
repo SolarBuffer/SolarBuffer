@@ -10449,6 +10449,34 @@ def _zendure_mqtt_ha_device():
     return kandidaten[0] if len(kandidaten) == 1 else None
 
 
+# Wat we het laatst naar de set-topics van elke accu hebben geschreven, zodat we
+# een ongewijzigde waarde niet elke ronde opnieuw sturen.
+_zendure_ha_gestuurd = {}       # sn -> {acMode, inputLimit, outputLimit, ts, sinds}
+_ZENDURE_HA_HERHAAL = 30        # s: een ongewijzigd setpoint zo af en toe bevestigen
+_ZENDURE_HA_MODE_PAUZE = 0.6    # s: rust tussen een richtingswissel en de limiet erna
+_ZENDURE_HA_STILTE = 25         # s: zo lang mag een laadopdracht zonder enig effect blijven
+
+
+def _zendure_ha_gemeld(sn):
+    """Wat de accu zelf terugmeldt, voor zover ze dat doet."""
+    with _zendure_mqtt_lock:
+        return dict((_zendure_mqtt_devices.get(sn) or {}).get("props") or {})
+
+
+def _zendure_ha_neemt_op(sn):
+    """Komt er ergens vermogen de accu in? None als ze er niets over zegt.
+
+    De solarFlow800Plus publiceert geen inputLimit terug, dus of een laadopdracht
+    echt geland is kunnen we niet aan die waarde zien. Wel aan wat er binnenkomt:
+    van het net, van de zon, of in het pakket.
+    """
+    props = _zendure_ha_gemeld(sn)
+    velden = [props.get(k) for k in ("gridInputPower", "solarInputPower", "packInputPower")]
+    if all(v is None for v in velden):
+        return None
+    return any((v or 0) > 10 for v in velden)
+
+
 def zendure_mqtt_ha_set_power(power_w, serienummer=None):
     """Stuurt een setpoint in het Home Assistant-schema.
 
@@ -10456,6 +10484,20 @@ def zendure_mqtt_ha_set_power(power_w, serienummer=None):
     set-topics, precies zoals Home Assistant ze zou bedienen: een keuze tussen
     laden en ontladen, en daarnaast de bijbehorende limiet. Geverifieerd op een
     solarFlow800Plus met firmware 2.0.59 op 16 september 2026.
+
+    Alleen schrijven wat verandert. Eerder gingen alle drie de waarden elke twee
+    seconden opnieuw de deur uit, ook als er niets te wijzigen viel. Gemeten op
+    een solarFlow800Plus op 30 september 2026: één losse schrijfactie van
+    inputLimit houdt stand en de accu bouwt in een seconde of tien haar
+    laadvermogen op, maar zodra diezelfde drie waarden er elke twee seconden
+    achteraan komen zakt het laadvermogen terug naar nul en staat de laadlimiet
+    even later weer op 0. De accu kan dat tempo niet volgen en valt terug op haar
+    eigen stand. Daarmee laadde ze bij overschot helemaal niet meer.
+
+    Een richtingswissel krijgt daarom eerst de modus en de limiet die niet meer
+    geldt, een korte pauze, en pas daarna de limiet die wel telt. Anders landt de
+    nieuwe limiet nog voordat de accu de moduswissel verwerkt heeft, en veegt die
+    wissel hem meteen weer weg.
 
     power_w volgt de interne conventie: positief = laden, negatief = ontladen.
     """
@@ -10467,21 +10509,67 @@ def zendure_mqtt_ha_set_power(power_w, serienummer=None):
         raise RuntimeError("Geen eenduidig Zendure-apparaat met het nieuwe schema")
 
     power_w = int(power_w or 0)
+    doel_mode = "Input mode" if power_w > 0 else ("Output mode" if power_w < 0 else None)
+    doel_in = power_w if power_w > 0 else 0
+    doel_uit = -power_w if power_w < 0 else 0
+
+    now = time.time()
+    vorig = _zendure_ha_gestuurd.get(sn) or {}
+    herhaal = (now - vorig.get("ts", 0.0)) >= _ZENDURE_HA_HERHAAL
+    wissel = doel_mode is not None and vorig.get("acMode") != doel_mode
+
+    # Terugkoppeling. Vragen we al een tijd om te laden terwijl er nergens
+    # vermogen binnenkomt, dan is de opdracht niet aangekomen. Dat bleef vroeger
+    # onzichtbaar: de regeling logde "VERZONDEN" en ging door alsof het goed was.
+    if power_w > 0 and not wissel and vorig.get("inputLimit"):
+        bezig_sinds = vorig.get("sinds") or now
+        if (now - bezig_sinds) >= _ZENDURE_HA_STILTE and _zendure_ha_neemt_op(sn) is False:
+            print(f"[ZENDURE] accu {sn} neemt al {int(now - bezig_sinds)}s niets op "
+                  f"terwijl we {doel_in} W laden vragen, opdracht opnieuw opbouwen",
+                  flush=True)
+            wissel = True
+
     basis = f"Zendure/number/{sn}"
+    geschreven = []
+
+    if wissel:
+        # Eerst de richting, samen met de limiet die daarmee betekenisloos wordt.
+        client.publish(f"Zendure/select/{sn}/acMode/set", doel_mode)
+        tegenover = "outputLimit" if power_w > 0 else "inputLimit"
+        client.publish(f"{basis}/{tegenover}/set", "0")
+        geschreven += ["acMode", tegenover]
+        time.sleep(_ZENDURE_HA_MODE_PAUZE)
+
     if power_w > 0:
-        client.publish(f"Zendure/select/{sn}/acMode/set", "Input mode")
-        client.publish(f"{basis}/inputLimit/set", str(power_w))
-        client.publish(f"{basis}/outputLimit/set", "0")
+        if wissel or herhaal or vorig.get("inputLimit") != doel_in:
+            client.publish(f"{basis}/inputLimit/set", str(doel_in))
+            geschreven.append("inputLimit")
     elif power_w < 0:
-        client.publish(f"Zendure/select/{sn}/acMode/set", "Output mode")
-        client.publish(f"{basis}/outputLimit/set", str(-power_w))
-        client.publish(f"{basis}/inputLimit/set", "0")
+        if wissel or herhaal or vorig.get("outputLimit") != doel_uit:
+            client.publish(f"{basis}/outputLimit/set", str(doel_uit))
+            geschreven.append("outputLimit")
     else:
         # Stilstand: allebei de limieten op nul. De modus laten we staan, want
         # omschakelen zonder reden geeft alleen maar extra schrijfacties.
-        client.publish(f"{basis}/outputLimit/set", "0")
-        client.publish(f"{basis}/inputLimit/set", "0")
-    return True
+        if herhaal or vorig.get("inputLimit") != 0:
+            client.publish(f"{basis}/inputLimit/set", "0")
+            geschreven.append("inputLimit")
+        if herhaal or vorig.get("outputLimit") != 0:
+            client.publish(f"{basis}/outputLimit/set", "0")
+            geschreven.append("outputLimit")
+
+    richting_blijft = doel_mode is not None and vorig.get("acMode") == doel_mode and not wissel
+    _zendure_ha_gestuurd[sn] = {
+        "acMode": doel_mode or vorig.get("acMode"),
+        "inputLimit": doel_in,
+        "outputLimit": doel_uit,
+        # ts alleen verzetten als we echt iets geschreven hebben, anders zou de
+        # trage bevestiging nooit aan de beurt komen.
+        "ts": now if geschreven else vorig.get("ts", 0.0),
+        # Sinds wanneer deze opdracht loopt, voor de terugkoppeling hierboven.
+        "sinds": vorig.get("sinds", now) if (richting_blijft and doel_in == vorig.get("inputLimit")) else now,
+    }
+    return bool(geschreven)
 
 
 def _int_of_none(waarde):
@@ -10637,10 +10725,13 @@ def zendure_send_setpoint(ips, target_power, props=None):
     for ident, power in doelen:
         try:
             if via_mqtt:
-                zendure_mqtt_set_power(power, ident)
+                # Geeft False als er niets te wijzigen viel. Dat is geen fout,
+                # maar het mag ook niet als "verzonden" in het logboek komen.
+                if zendure_mqtt_set_power(power, ident):
+                    verstuurd.append((ident, power))
             else:
                 zendure_write_properties(ident, zendure_props(power))
-            verstuurd.append((ident, power))
+                verstuurd.append((ident, power))
         except Exception as e:
             laatste_fout = e
             print(f"Zendure setpoint mislukt voor {ident}: {e}")
@@ -11015,7 +11106,11 @@ def set_zendure_control(ips, mode, perms, measured_power=0, max_power=800, force
 
         try:
             verdeling = zendure_send_setpoint(ips, target_power)
-            log_battery_send("zendure", target_power, "VERZONDEN",
+            # Zonder deze splitsing stond er "VERZONDEN" in het logboek terwijl
+            # er niets de deur uit ging, en zocht je je bij een accu die niets
+            # doet suf naar een fout die er niet was.
+            log_battery_send("zendure", target_power,
+                             "VERZONDEN" if verdeling else "ONGEWIJZIGD",
                              modus=mode, perms=desired_perms,
                              net_w=round(measured_power, 1),
                              props=zendure_props(target_power),
