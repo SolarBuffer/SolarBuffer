@@ -7154,6 +7154,21 @@ def _system_status_label(devices_data, cfg):
     expert = cfg.get("expert_settings") or {}
     export_threshold = int(expert.get("EXPORT_THRESHOLD", -50))
     started = [d for d in devices_data if d.get("started") or d.get("pending_start")]
+
+    # Dezelfde twee uitzonderingen als op het dashboard, en in dezelfde volgorde.
+    # Zonder deze viel de status terug op "Wachten op teruglevering" zodra er
+    # toevallig teruglevering was en anders op "Standby", terwijl de echte reden
+    # was dat er niets mág starten. In Home Assistant zag je hem daardoor heen en
+    # weer springen tussen die twee, terwijl de app gewoon "Geblokkeerd, accu
+    # laadt eerst" liet zien.
+    if not started:
+        apparaten = cfg.get("shelly_devices", [])
+        geblokkeerd = get_blocked_device_ips(cfg.get("schedules", []), apparaten)
+        if apparaten and all(d["ip"] in geblokkeerd for d in apparaten):
+            return "Verboden"
+        if cfg.get("battery_enabled") and _battery_blocks_start:
+            return "Geblokkeerd"
+
     if current_power <= export_threshold and not started:
         return "Wachten op teruglevering"
     return "Standby"
