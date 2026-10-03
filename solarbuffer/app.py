@@ -251,8 +251,10 @@ def load_config():
             sched["device_ips"] = []
     if "anti_legionella_enabled" not in cfg:
         cfg["anti_legionella_enabled"] = False
-    if cfg.get("anti_legionella_mode") not in ("automatic", "manual"):
+    if cfg.get("anti_legionella_mode") not in ("automatic", "manual", "price"):
         cfg["anti_legionella_mode"] = "automatic"
+    if "anti_legionella_price_ct" not in cfg:
+        cfg["anti_legionella_price_ct"] = 0.0
     if "anti_legionella_triggers" not in cfg or not isinstance(cfg["anti_legionella_triggers"], list):
         cfg["anti_legionella_triggers"] = []
     if "pid_enabled" not in cfg:
@@ -271,6 +273,18 @@ def load_config():
         cfg["temp_shutoff_enabled"] = False
     if "temp_shutoff_retry_min" not in cfg:
         cfg["temp_shutoff_retry_min"] = 10
+
+    # Groep- en fasebewaking. Leeg betekent: deze Hub heeft de vraag nog nooit
+    # gekregen. Bestaande Hubs komen daar na een update dus in terecht, en dan
+    # hoort er niets te gebeuren. Een aansluiting raden is hier het slechtste
+    # wat we kunnen doen: op een 1x25 zou een gok van 3x25 de zekering juist
+    # laten vallen, precies wat deze functie moet voorkomen.
+    if "aansluiting_type" not in cfg:
+        cfg["aansluiting_type"] = ""
+    if "fase_bewaking_enabled" not in cfg:
+        cfg["fase_bewaking_enabled"] = False
+    if "fase_limiet_a" not in cfg:
+        cfg["fase_limiet_a"] = 0   # 0 = afleiden uit het type aansluiting
 
     if "mqtt_enabled" not in cfg:
         cfg["mqtt_enabled"] = False
@@ -534,6 +548,11 @@ def load_config():
     # ontladen. Laden blijft altijd toegestaan, met of zonder deze schakelaar.
     if "battery_block_discharge_when_forced" not in cfg:
         cfg["battery_block_discharge_when_forced"] = False
+    # Terugvalbeveiliging: standaard de laatste stand vasthouden, want dat is wat
+    # SolarBuffer altijd deed. Wie liever heeft dat de boiler eruit gaat zodra de
+    # meter niet meer te vertrouwen is, zet dit aan.
+    if "p1_uitval_uitschakelen" not in cfg:
+        cfg["p1_uitval_uitschakelen"] = False
     # All-in prijs staat standaard uit, zodat een bestaande Hub met een
     # ingestelde drempel zich niet ineens anders gedraagt: die drempel is daar
     # op de kale beursprijs gezet.
@@ -1076,6 +1095,107 @@ _p1_meter_import_kwh = None
 _p1_meter_export_kwh = None
 _p1_online = False
 _p1_mac_relocating = False
+
+# ================= GROEP- EN FASEBEWAKING =================
+# Wat er op het etiket van de hoofdzekering staat, en hoeveel ampère dat is.
+AANSLUITINGEN = {
+    "1x25": (1, 25), "1x35": (1, 35), "1x40": (1, 40), "1x50": (1, 50),
+    "3x25": (3, 25), "3x35": (3, 35), "3x50": (3, 50), "3x63": (3, 63),
+}
+AANSLUITING_MARGE_A = 1.5    # A: standaard zoveel onder de nominale waarde blijven.
+                             # Een gG-smeltveiligheid heeft meer geduld dan dit, maar
+                             # er zit meetvertraging tussen en de boiler heeft een paar
+                             # seconden nodig om terug te zakken. Anderhalve ampère is
+                             # ruim genoeg om dat op te vangen zonder opbrengst weg te
+                             # gooien die je gewoon had kunnen gebruiken.
+GROEP_LIMIET_STANDAARD_A = 16
+NET_SPANNING_TERUGVAL_V = 230.0   # als de meter geen spanning per fase meldt
+
+# Stroom per fase, alleen de kant die uit het net komt. Een fase die terugleve-
+# rt trekt die stroom niet door de zekering vanuit het net, en belangrijker: de
+# boiler maakt dat juist minder erg in plaats van erger. Afknijpen op een expor-
+# terende fase zou de overbelasting dus vergroten. Vandaar alleen de importkant.
+_fase_stromen = {}           # {1: ampère, 2: ..., 3: ...}
+_fase_stromen_ts = 0.0
+
+
+def _ampere_uit(vermogen_w, spanning_v):
+    """Importstroom uit vermogen en spanning. Teruglevering telt als nul."""
+    try:
+        w = float(vermogen_w)
+    except (TypeError, ValueError):
+        return None
+    if w <= 0:
+        return 0.0
+    try:
+        v = float(spanning_v)
+    except (TypeError, ValueError):
+        v = 0.0
+    if v < 100:
+        v = NET_SPANNING_TERUGVAL_V
+    return w / v
+
+
+def fase_stromen_uit_homewizard(data):
+    """Importstroom per fase uit een HomeWizard P1-telegram.
+
+    Liever uit vermogen en spanning dan uit active_current_lN_a: een Nederlandse
+    slimme meter geeft die stroom in hele ampères, en met stappen van 1 A (ruim
+    230 W) is er niet fatsoenlijk op te regelen. Bovendien is dat veld bij veel
+    meters ongetekend, dus teruglevering is er niet van import te onderscheiden.
+    """
+    uit = {}
+    for n in (1, 2, 3):
+        w = data.get(f"active_power_l{n}_w")
+        if w is None:
+            continue
+        a = _ampere_uit(w, data.get(f"active_voltage_l{n}_v"))
+        if a is not None:
+            uit[n] = a
+    if not uit:
+        # Eenfase meter die alleen het totaal meldt: dat is dan fase 1.
+        a = _ampere_uit(data.get("active_power_w"), data.get("active_voltage_v"))
+        if a is not None:
+            uit[1] = a
+    return uit
+
+
+def fase_stromen_uit_shelly(status):
+    """Importstroom per fase uit EM.GetStatus van een Shelly Pro 3EM."""
+    uit = {}
+    for n, letter in ((1, "a"), (2, "b"), (3, "c")):
+        w = status.get(f"{letter}_act_power")
+        if w is None:
+            continue
+        a = _ampere_uit(w, status.get(f"{letter}_voltage"))
+        if a is not None:
+            uit[n] = a
+    return uit
+
+
+def noteer_fase_stromen(stromen):
+    global _fase_stromen, _fase_stromen_ts
+    if stromen:
+        _fase_stromen = dict(stromen)
+        _fase_stromen_ts = time.time()
+
+
+def aansluiting_limiet_a(cfg):
+    """De grens per fase in ampère, en hoeveel fasen de aansluiting heeft.
+
+    Geeft (None, None) zolang er geen aansluiting is gekozen. De bewaking doet
+    dan niets, want we weten dan simpelweg niet waartegen we zouden beschermen.
+    """
+    soort = (cfg.get("aansluiting_type") or "").strip()
+    if soort not in AANSLUITINGEN:
+        return None, None
+    fasen, nominaal = AANSLUITINGEN[soort]
+    try:
+        eigen = float(cfg.get("fase_limiet_a") or 0)
+    except (TypeError, ValueError):
+        eigen = 0.0
+    grens = eigen if eigen > 0 else max(1.0, nominaal - AANSLUITING_MARGE_A)
+    return fasen, min(grens, float(nominaal))
 _p1_shelly_mac_relocating = False
 current_brightness = 0
 current_gas_m3 = None      # meest recente meterstand (m³)
@@ -1184,7 +1304,32 @@ _last_calibration_reminder_check = 0.0
 # ================= ANTI-LEGIONELLA =================
 LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
 LEGIONELLA_RUN_SECONDS = 3 * 3600     # 3 uur op maximaal vermogen draaien
+# Wachten op een goedkoop uur mag, maar niet eindeloos. Blijft de stroom vijf dagen
+# lang duur, dan gaat de ronde alsnog draaien. Legionella trekt zich niets aan van
+# de beurs: na ongeveer 48 uur begint het zich te vormen en daarna verdubbelt het
+# aantal bacterien elke twee uur, dus rond dag vijf zit je al in de gevarenzone.
+# Precies daar ligt dus de grens, en niet een dag later.
+LEGIONELLA_HARD_IDLE_SECONDS = 5 * 24 * 3600
 anti_legionella_enabled = False
+
+
+def legionella_mag_starten(mode, trigger_due, prijs_laag, te_lang_gewacht):
+    """Mag de legionellaronde nu beginnen?
+
+    Geldt pas nadat een boiler lang genoeg niets heeft gedaan; dit gaat alleen
+    over het moment van starten.
+
+    automatic  meteen
+    manual     op het exacte moment van een ingestelde trigger
+    price      zodra de stroom onder de ingevulde grens zit, en anders uiterlijk
+               na vijf dagen. Legionella trekt zich niets aan van de beurs, dus
+               eindeloos wachten op een goedkoop uur is geen optie.
+    """
+    if mode == "manual":
+        return bool(trigger_due)
+    if mode == "price":
+        return bool(prijs_laag or te_lang_gewacht)
+    return True
 
 
 def _legionella_trigger_due(triggers):
@@ -2094,6 +2239,18 @@ def _p1_configured(cfg):
     return bool((cfg.get("p1_ip") or "").strip())
 
 
+def _bewaar_aansluiting_uit_request(cfg):
+    """Neemt het type aansluiting over uit de wizard.
+
+    Bewust alleen als er werkelijk een geldige keuze in zit. Komt er niets mee,
+    dan laten we staan wat er stond: een lege waarde zou de bewaking stilzwijgend
+    uitzetten bij iemand die hem juist had ingesteld.
+    """
+    soort = (request.form.get("aansluiting_type") or "").strip()
+    if soort in AANSLUITINGEN:
+        cfg["aansluiting_type"] = soort
+
+
 @app.route("/", methods=["GET", "POST"])
 def wizard():
     if not require_login():
@@ -2115,6 +2272,7 @@ def wizard():
             ))
         except (ValueError, TypeError):
             cfg["p1_shelly_channels"] = []
+        _bewaar_aansluiting_uit_request(cfg)
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
         cfg["shelly_devices"] = parse_devices_from_request(request)
@@ -2129,7 +2287,8 @@ def wizard():
         init_device_pids(cfg["shelly_devices"])
         threading.Thread(target=sync_configured_devices_off, args=(cfg["shelly_devices"],), daemon=True).start()
         return redirect("/dashboard")
-    return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
+    return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode(),
+                           aansluitingen=sorted(AANSLUITINGEN))
 
 
 @app.route("/setup", methods=["GET"])
@@ -2194,6 +2353,7 @@ def wizard_forced():
             ))
         except (ValueError, TypeError):
             cfg["p1_shelly_channels"] = []
+        _bewaar_aansluiting_uit_request(cfg)
         cfg["expert_mode"] = request.form.get("expert_mode") == "on"
         cfg["expert_settings"] = parse_expert_settings_from_request(request)
         cfg["shelly_devices"] = parse_devices_from_request(request)
@@ -2208,7 +2368,8 @@ def wizard_forced():
         init_device_pids(cfg["shelly_devices"])
         threading.Thread(target=sync_configured_devices_off, args=(cfg["shelly_devices"],), daemon=True).start()
         return redirect("/dashboard")
-    return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode())
+    return render_template("wizard.html", config=cfg, dark_mode=get_user_dark_mode(),
+                           aansluitingen=sorted(AANSLUITINGEN))
 
 
 @app.route("/settings/p1", methods=["GET", "POST"])
@@ -2265,12 +2426,64 @@ def settings_p1():
                 request.form.get("boiler_release_pct", 100))))
         except (ValueError, TypeError):
             cfg["boiler_release_pct"] = 100
+        # --- Aansluiting en bewaking ---
+        _aansl = (request.form.get("aansluiting_type") or "").strip()
+        cfg["aansluiting_type"] = _aansl if _aansl in AANSLUITINGEN else ""
+        cfg["fase_bewaking_enabled"] = "fase_bewaking_enabled" in request.form
+        try:
+            cfg["fase_limiet_a"] = max(0.0, round(float(request.form.get("fase_limiet_a") or 0), 1))
+        except (ValueError, TypeError):
+            cfg["fase_limiet_a"] = 0
+        for d in cfg.get("shelly_devices", []):
+            _dip = d.get("ip", "")
+            # Alleen overnemen wat ook echt is meegestuurd. Bij een eenfase
+            # aansluiting staat het fase-veld er niet, en bij een boiler zonder
+            # vermogensmeter het groepveld niet; die zouden anders bij elke
+            # opslagbeurt gewist worden.
+            if f"fase_{_dip}" in request.form:
+                try:
+                    d["fase"] = max(0, min(3, int(request.form.get(f"fase_{_dip}") or 0)))
+                except (ValueError, TypeError):
+                    d["fase"] = 0
+            if f"groep_{_dip}" in request.form:
+                try:
+                    d["groep_limiet_a"] = max(0.0, min(63.0, round(
+                        float(request.form.get(f"groep_{_dip}") or 0), 1)))
+                except (ValueError, TypeError):
+                    d["groep_limiet_a"] = 0
+
         changes = compare_configs(old_cfg, cfg)
         save_config(cfg)
         if changes:
             write_audit_log("config_updated", changes)
         return redirect("/settings")
-    return render_template("settings_p1.html", config=cfg, dark_mode=get_user_dark_mode())
+    return render_template("settings_p1.html", config=cfg, dark_mode=get_user_dark_mode(),
+                           aansluitingen=sorted(AANSLUITINGEN),
+                           fase_stromen={n: round(a, 1) for n, a in (_fase_stromen or {}).items()})
+
+
+@app.route("/api/fase/detect", methods=["POST"])
+def api_fase_detect():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    ip = ((request.get_json(silent=True) or {}).get("ip") or "").strip()
+    if not ip:
+        return jsonify(success=False, error="Geen apparaat opgegeven"), 400
+    if _fase_detectie.get(ip, {}).get("bezig"):
+        return jsonify(success=False, error="Detectie loopt al")
+    threading.Thread(target=detecteer_fase, args=(ip,), daemon=True).start()
+    return jsonify(success=True)
+
+
+@app.route("/api/fase/status")
+def api_fase_status():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    ip = (request.args.get("ip") or "").strip()
+    return jsonify(success=True, **(_fase_detectie.get(ip) or
+                                    {"bezig": False, "fase": None, "fout": None, "stap": None}))
 
 
 @app.route("/api/p1/shelly_probe", methods=["POST"])
@@ -2857,6 +3070,7 @@ def settings_expert():
         cfg["dynamic_pricing_enabled"] = request.form.get("dynamic_pricing_enabled") == "on"
         cfg["battery_block_discharge_when_forced"] = (
             request.form.get("battery_block_discharge_when_forced") == "on")
+        cfg["p1_uitval_uitschakelen"] = request.form.get("p1_uitval_uitschakelen") == "on"
         cfg["price_all_in_enabled"] = request.form.get("price_all_in_enabled") == "on"
         _lev = (request.form.get("price_supplier") or "").strip()
         cfg["price_supplier"] = _lev if _lev in LEVERANCIER_OPSLAG_CT else ""
@@ -3035,6 +3249,7 @@ def status_json():
         anti_legionella_enabled=anti_legionella_enabled,
         anti_legionella_mode=cfg.get("anti_legionella_mode", "automatic"),
         anti_legionella_triggers=cfg.get("anti_legionella_triggers", []),
+        anti_legionella_price_ct=cfg.get("anti_legionella_price_ct", 0),
         schedules_enabled=schedules_enabled,
         accessories=accessories,
         gas_enabled=cfg.get("gas_enabled", False), gas_today_m3=gas_today,
@@ -3206,8 +3421,17 @@ def set_anti_legionella_mode():
         return jsonify(success=False, error="Geen toegang"), 403
     data = request.json or {}
     mode = data.get("mode")
-    if mode not in ("automatic", "manual"):
+    if mode not in ("automatic", "manual", "price"):
         return jsonify(success=False, error="Ongeldige modus"), 400
+
+    prijs_ct = 0.0
+    if mode == "price":
+        try:
+            prijs_ct = round(float(data.get("price_ct")), 2)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Vul een prijsgrens in"), 400
+        if not (0 < prijs_ct <= 200):
+            return jsonify(success=False, error="Vul een prijsgrens in tussen 0 en 200 cent"), 400
 
     triggers = []
     if mode == "manual":
@@ -3228,9 +3452,11 @@ def set_anti_legionella_mode():
     cfg = load_config()
     cfg["anti_legionella_mode"] = mode
     cfg["anti_legionella_triggers"] = triggers
+    cfg["anti_legionella_price_ct"] = prijs_ct
     save_config(cfg)
-    write_audit_log("anti_legionella_mode_changed", {"mode": mode, "triggers": triggers})
-    return jsonify(success=True, mode=mode, triggers=triggers)
+    write_audit_log("anti_legionella_mode_changed",
+                    {"mode": mode, "triggers": triggers, "price_ct": prijs_ct})
+    return jsonify(success=True, mode=mode, triggers=triggers, price_ct=prijs_ct)
 
 
 @app.route("/vacation", methods=["POST"])
@@ -4741,14 +4967,24 @@ def shelly_factory_reset(ip):
 def system_updates_check():
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
+    # Beide stappen kunnen traag zijn. Pakketlijsten ophalen hangt aan de spiegel
+    # en de verbinding, en een dry-run moet de hele afhankelijkhedenboom oplossen
+    # vanaf een SD-kaart. Dertig seconden was daar te krap voor: op een rustige Pi
+    # haalt hij dat wel, op een drukke of met veel openstaande pakketten niet, en
+    # dan kreeg je een stuk Python op je scherm in plaats van een antwoord.
+    #
+    # Lock::Timeout laat apt netjes wachten op een al lopende achtergrondupdate in
+    # plaats van er meteen op af te ketsen. Zonder dat is "unattended-upgrades
+    # draait net" de meest voorkomende reden dat deze knop faalt.
+    SLOT = ["-o", "DPkg::Lock::Timeout=60"]
     try:
-        subprocess.run(["sudo", "apt-get", "update", "-qq"],
-                       capture_output=True, timeout=60)
+        subprocess.run(["sudo", "apt-get", "update", "-qq"] + SLOT,
+                       capture_output=True, timeout=180)
         result = subprocess.run(
             ["sudo", "apt-get", "full-upgrade", "--dry-run",
              "-o", "Dpkg::Options::=--force-confdef",
-             "-o", "Dpkg::Options::=--force-confold"],
-            capture_output=True, text=True, timeout=30
+             "-o", "Dpkg::Options::=--force-confold"] + SLOT,
+            capture_output=True, text=True, timeout=180
         )
         lines = []
         for ln in result.stdout.splitlines():
@@ -4756,6 +4992,11 @@ def system_updates_check():
             if ln.startswith("Inst "):
                 lines.append(ln[5:])
         return jsonify(success=True, count=len(lines), packages=lines[:30])
+    except subprocess.TimeoutExpired:
+        return jsonify(success=False, count=0, packages=[], error=(
+            "Het controleren duurde te lang. Meestal draait er dan al een "
+            "systeemupdate op de achtergrond, of is de verbinding met de "
+            "pakketbron traag. Probeer het over een paar minuten opnieuw."))
     except Exception as e:
         return jsonify(success=False, error=str(e), count=0, packages=[])
 
@@ -6401,6 +6642,21 @@ def get_shelly_em_power(ip, channels=None, timeout=2):
     return total
 
 
+def get_shelly_em_fasen(ip, timeout=2):
+    """Importstroom per fase van een Shelly Pro 3EM, of een leeg woordenboek.
+
+    Kost een extra verzoek, dus de pollus roept dit alleen aan als de bewaking
+    daadwerkelijk aanstaat. Bij losse EM1-kanalen is er geen driefasenbeeld te
+    maken en geven we niets terug; de bewaking blijft dan vanzelf stil.
+    """
+    try:
+        r = requests.get(f"http://{ip}/rpc/EM.GetStatus?id=0", timeout=timeout)
+        r.raise_for_status()
+        return fase_stromen_uit_shelly(r.json())
+    except Exception:
+        return {}
+
+
 def get_shelly_em_energy(ip, channels=None, timeout=2):
     """Tellerstanden van een Shelly-energiemeter in kWh, als (import, export).
 
@@ -7823,6 +8079,328 @@ def get_active_block_schedule_ids(schedules):
 
 
 # ================= CONTROL LOOP =================
+# ================= TERUGVALBEVEILIGING P1 =================
+# De hele regeling stuurt op wat de meter zegt. Zegt die niets meer, of blijft hij
+# seconden achtereen exact dezelfde waarde herhalen, dan regelt SolarBuffer op een
+# momentopname van minuten geleden terwijl het huis allang iets anders doet.
+#
+# Onbereikbaar is het makkelijke geval. Lastiger is een meter die wel antwoordt maar
+# bevroren is, want dan lijkt alles in orde. Daar helpt een eenvoudige observatie:
+# een echte fasebelasting danst altijd een paar watt. Een waarde die seconden lang
+# precies gelijk blijft is dus verdacht, ongeacht wat de meter zelf beweert.
+P1_UITVAL_NA_S = 60
+_p1_laatste_contact = 0.0       # laatste geslaagde uitlezing
+_p1_laatste_verandering = 0.0   # laatste keer dat de waarde echt veranderde
+_p1_vorige_waarde = None
+
+
+def noteer_p1_leven(waarde):
+    """Legt vast dat de meter antwoordde, en of hij iets nieuws te melden had."""
+    global _p1_laatste_contact, _p1_laatste_verandering, _p1_vorige_waarde
+    nu = time.time()
+    _p1_laatste_contact = nu
+    if _p1_vorige_waarde is None or waarde != _p1_vorige_waarde:
+        _p1_vorige_waarde = waarde
+        _p1_laatste_verandering = nu
+
+
+def p1_meting_onbetrouwbaar(now=None):
+    """(onbetrouwbaar, reden) van de meting op dit moment.
+
+    Zolang er nog nooit contact is geweest oordelen we niet. Bij het opstarten is
+    dat normaal, en een Hub die net aan gaat moet niet meteen alles uitzetten.
+    """
+    now = now or time.time()
+    if not _p1_laatste_contact:
+        return False, None
+    stil = now - _p1_laatste_contact
+    if stil >= P1_UITVAL_NA_S:
+        return True, f"meter al {int(stil)} s niet bereikbaar"
+    vast = now - _p1_laatste_verandering
+    if vast >= P1_UITVAL_NA_S:
+        return True, f"meterwaarde al {int(vast)} s exact gelijk"
+    return False, None
+
+
+def bewaak_p1_uitval(cfg, devices, now):
+    """Zet de boilers uit zodra de meting niet meer te vertrouwen is.
+
+    Alleen als daarvoor gekozen is. Standaard houdt SolarBuffer de laatste stand
+    vast; dat is wat hij altijd deed en voor de meeste installaties ook prima,
+    want een boiler die even op zijn laatste stand doorgaat is zelden een
+    probleem. Bij een krappe aansluiting is het dat wel, en dan wil je hem eruit.
+    """
+    if not cfg.get("p1_uitval_uitschakelen"):
+        return
+    onbetrouwbaar, reden = p1_meting_onbetrouwbaar(now)
+    if not onbetrouwbaar:
+        return
+    for d in devices:
+        ip = d["ip"]
+        st = device_states.get(ip)
+        if st is None or ip in _calibrating_ips:
+            continue
+        if st.get("started") or st.get("on"):
+            reset_device_to_off(ip)
+            print(f"[P1] {d.get('name', ip)} uitgezet: {reden}", flush=True)
+        # Blijft staan zolang de meter onbetrouwbaar is, plus een halve minuut
+        # natijd zodat hij niet meteen weer aanslaat op de eerste meting.
+        st["temp_shutoff_until"] = max(st.get("temp_shutoff_until") or 0, now + 30)
+
+
+# ================= FASEDETECTIE =================
+# Op welke fase zit deze boiler? Dat staat nergens in een apparaat te lezen, dus
+# we zoeken het proefondervindelijk: boiler uit, meten, boiler vol open, meten,
+# en kijken welke fase meebeweegt. Twee keer, en alleen als beide rondes
+# hetzelfde zeggen leggen we het vast. Een verkeerde uitkomst is erger dan geen
+# uitkomst: dan knijpt hij straks af op een fase waar hij niet eens op zit.
+FASE_DETECTIE_MONSTERS = 4          # metingen per meetpunt
+FASE_DETECTIE_RUST_S = 2.5          # s tussen metingen, iets ruimer dan de P1 ververst
+FASE_DETECTIE_WACHT_S = 6           # s na het omzetten voor de meter is bijgetrokken
+FASE_DETECTIE_DREMPEL_A = 1.5       # A: minder verschil is ruis van de rest van het huis
+FASE_DETECTIE_AANDEEL = 0.6         # zoveel van het totale verschil moet op de winnaar zitten
+_fase_detectie = {}                 # ip -> {bezig, fase, fout, stap}
+
+
+def _fase_monster():
+    """Gemiddelde importstroom per fase over een paar opeenvolgende metingen."""
+    opgeteld = {}
+    for _ in range(FASE_DETECTIE_MONSTERS):
+        for n, a in (_fase_stromen or {}).items():
+            opgeteld.setdefault(n, []).append(a)
+        time.sleep(FASE_DETECTIE_RUST_S)
+    return {n: sum(v) / len(v) for n, v in opgeteld.items() if v}
+
+
+def _fase_uit_verschil(laag, hoog):
+    """Welke fase bewoog mee, of None als het niet overtuigend is."""
+    verschillen = {n: hoog.get(n, 0.0) - laag.get(n, 0.0) for n in set(laag) | set(hoog)}
+    stijgingen = {n: v for n, v in verschillen.items() if v > 0}
+    if not stijgingen:
+        return None, verschillen
+    winnaar = max(stijgingen, key=stijgingen.get)
+    grootste = stijgingen[winnaar]
+    if grootste < FASE_DETECTIE_DREMPEL_A:
+        return None, verschillen
+    if grootste < FASE_DETECTIE_AANDEEL * sum(stijgingen.values()):
+        # Meerdere fasen bewogen ongeveer evenveel: dan was het iets anders in
+        # huis, of een driefasen apparaat. Geen conclusie trekken.
+        return None, verschillen
+    return winnaar, verschillen
+
+
+def detecteer_fase(ip):
+    """Zoekt uit op welke fase deze boiler zit en legt dat vast in de instellingen."""
+    _fase_detectie[ip] = {"bezig": True, "fase": None, "fout": None, "stap": "voorbereiden"}
+    _calibrating_ips.add(ip)
+    st = device_states.get(ip) or {}
+    was_aan = st.get("on", False)
+    was_helderheid = st.get("brightness", 0)
+    try:
+        cfg = load_config()
+        fasen, _ = aansluiting_limiet_a(cfg)
+        if fasen is None:
+            _fase_detectie[ip].update(fout="Kies eerst je type aansluiting.")
+            return
+        if fasen == 1:
+            _fase_detectie[ip].update(fase=1, fout=None, stap="klaar")
+            _bewaar_fase(ip, 1)
+            return
+        if not _fase_stromen:
+            _fase_detectie[ip].update(
+                fout="Je meter geeft geen stroom per fase, detectie kan niet.")
+            return
+        if len(_fase_stromen) < 2:
+            # Hier staat driefasen ingesteld terwijl de meter er maar één meldt.
+            # Dat is bijna altijd een verkeerd gekozen type aansluiting, en dat
+            # is een nuttiger antwoord dan klagen over de meter.
+            _fase_detectie[ip].update(fout=(
+                "Je meter meldt maar één fase, terwijl hier een driefasen aansluiting "
+                "staat ingesteld. Klopt dat type wel? Bij een eenfase aansluiting is "
+                "detectie niet nodig, dan zit alles per definitie op dezelfde fase."))
+            return
+
+        device = next((d for d in cfg.get("shelly_devices", []) if d["ip"] == ip), None)
+        if not device:
+            _fase_detectie[ip].update(fout="Apparaat niet gevonden.")
+            return
+        if has_power_socket(device):
+            set_power_socket((device.get("power_socket_type") or "").strip(),
+                             (device.get("power_socket_ip") or "").strip(), True)
+            time.sleep(5)
+
+        uitslagen = []
+        for ronde in (1, 2):
+            _fase_detectie[ip].update(stap=f"ronde {ronde} van 2, boiler uit")
+            set_shelly(0, False, ip)
+            time.sleep(FASE_DETECTIE_WACHT_S)
+            laag = _fase_monster()
+
+            _fase_detectie[ip].update(stap=f"ronde {ronde} van 2, boiler aan")
+            set_shelly(MAX_BRIGHTNESS, True, ip)
+            time.sleep(FASE_DETECTIE_WACHT_S)
+            hoog = _fase_monster()
+
+            gevonden, verschillen = _fase_uit_verschil(laag, hoog)
+            uitslagen.append(gevonden)
+            print(f"[FASE] {ip} ronde {ronde}: "
+                  + ", ".join(f"L{n} {v:+.1f} A" for n, v in sorted(verschillen.items()))
+                  + f" -> {gevonden or 'geen conclusie'}", flush=True)
+
+        if uitslagen[0] and uitslagen[0] == uitslagen[1]:
+            _bewaar_fase(ip, uitslagen[0])
+            _fase_detectie[ip].update(fase=uitslagen[0], stap="klaar")
+            write_audit_log("fase_gedetecteerd", {"ip": ip, "fase": uitslagen[0]})
+        else:
+            _fase_detectie[ip].update(fout=(
+                "Geen eenduidige uitkomst. Zet zo veel mogelijk andere apparaten "
+                "uit en probeer het opnieuw, of vul de fase met de hand in."))
+    except Exception as e:
+        _fase_detectie[ip].update(fout=f"Detectie mislukt: {e}")
+    finally:
+        _calibrating_ips.discard(ip)
+        _fase_detectie.setdefault(ip, {})["bezig"] = False
+        _fase_detectie[ip].setdefault("stap", "klaar")
+        try:
+            set_shelly(was_helderheid if was_aan else 0, was_aan, ip)
+        except Exception:
+            pass
+
+
+def _bewaar_fase(ip, fase):
+    cfg = load_config()
+    for d in cfg.get("shelly_devices", []):
+        if d["ip"] == ip:
+            d["fase"] = int(fase)
+    save_config(cfg)
+
+
+# ================= GROEP- EN FASEBEWAKING: INGRIJPEN =================
+BEWAKING_MAX_MEETLEEFTIJD_S = 30   # s: oudere fasemetingen zijn geen basis om op te regelen
+BEWAKING_HERSTEL_PER_RONDE = 2     # helderheidspunten die de grens per ronde terugkruipt
+BEWAKING_HERSTEL_MARGE_A = 1.0     # A: zoveel ruimte moet er zijn voor hij weer omhoog mag
+BEWAKING_UIT_WACHTTIJD_S = 60      # s: zo lang uit voordat hij het weer mag proberen
+
+
+def _bewaking_stap(tekort_a):
+    """Hoeveel helderheidspunten eraf moeten bij dit tekort.
+
+    Geen fijnregeling maar een gestage daling. Een zekering heeft meer geduld
+    dan je denkt: een gG-smeltveiligheid houdt anderhalf keer zijn waarde
+    minutenlang vol. Een paar cycli de tijd nemen mag dus, en dat is beter dan
+    in één klap van honderd naar uit springen terwijl de meting nog moet
+    volgen. Eén ampère te veel kost vijftien punten, drie ampère of meer de
+    maximale twintig. Terugkruipen gaat daarna bewust veel trager, anders gaat
+    hij pompen.
+    """
+    return max(5, min(20, int(tekort_a * 10) + 5))
+
+
+def bewaak_groep_en_fase(cfg, devices, now):
+    """Knijpt boilers af zodra hun fase of hun groep tegen de grens loopt.
+
+    Dit gaat boven alles heen: ook tijdens een legionellaronde, een tijdschema,
+    een boost of een goedkoop uur. Al die dingen gaan over geld of comfort, dit
+    gaat over de zekering.
+
+    Er wordt alleen gekeken naar stroom die uit het net komt. Een fase die
+    terugleveRt belast de zekering ook, maar daar maakt de boiler het juist
+    minder erg in plaats van erger: afknijpen zou de export vergroten. De boiler
+    afregelen helpt alleen tegen import, dus daar begrenzen we op.
+
+    Doet niets zolang er geen aansluiting gekozen is, zolang de schakelaar uit
+    staat, of zolang de meting ouder is dan een halve minuut.
+    """
+    fasen, fase_grens = aansluiting_limiet_a(cfg)
+    fase_aan = bool(cfg.get("fase_bewaking_enabled")) and fase_grens is not None
+    meting_vers = (now - _fase_stromen_ts) <= BEWAKING_MAX_MEETLEEFTIJD_S
+    stromen = _fase_stromen if (fase_aan and meting_vers) else {}
+
+    for d in devices:
+        ip = d["ip"]
+        st = device_states.get(ip)
+        if st is None or ip in _calibrating_ips:
+            # Tijdens kalibratie of fasedetectie stuurt een ander stuk code dit
+            # apparaat met opzet vol open; daar moeten we niet doorheen fietsen.
+            continue
+
+        tekort_a = 0.0
+        marge_a = None        # hoeveel ruimte er nog is tot de krapste grens
+        reden = None          # grof, bepaalt of we iets in het logboek zetten
+        toelichting = None    # met de getallen erbij, voor in die ene regel
+
+        # --- fase ---
+        if stromen:
+            # Bij een eenfase aansluiting zit alles per definitie op fase 1, wat
+            # de klant ook ingevuld heeft. Bij driefasen alleen ingrijpen als we
+            # weten op welke fase deze boiler zit: afknijpen op een fase waar hij
+            # niet op zit haalt de belasting daar niet omlaag.
+            fase = 1 if fasen == 1 else int(d.get("fase") or 0)
+            gemeten = stromen.get(fase)
+            if fase and gemeten is not None:
+                marge_a = fase_grens - gemeten
+            if fase and gemeten is not None and gemeten > fase_grens:
+                tekort_a = gemeten - fase_grens
+                reden = f"fase {fase}"
+                toelichting = f"fase {fase} op {gemeten:.1f} A van {fase_grens:g} A"
+
+        # --- groep ---
+        try:
+            groep_grens = float(d.get("groep_limiet_a") or 0)
+        except (TypeError, ValueError):
+            groep_grens = 0.0
+        if groep_grens > 0 and st.get("power_meter_online"):
+            spanning = _meter_voltage.get((d.get("power_ip") or "").strip() or ip,
+                                          NET_SPANNING_TERUGVAL_V) or NET_SPANNING_TERUGVAL_V
+            groep_a = max(0.0, float(st.get("power") or 0.0)) / spanning
+            groep_marge = groep_grens - groep_a
+            if marge_a is None or groep_marge < marge_a:
+                marge_a = groep_marge
+            if groep_a > groep_grens:
+                groep_tekort = groep_a - groep_grens
+                if groep_tekort > tekort_a:
+                    tekort_a = groep_tekort
+                    reden = "groep"
+                    toelichting = f"groep op {groep_a:.1f} A van {groep_grens:g} A"
+
+        cap = st.get("bewaking_cap")
+
+        if tekort_a > 0:
+            vanaf = cap if cap is not None else st.get("brightness", MAX_BRIGHTNESS)
+            cap = vanaf - _bewaking_stap(tekort_a)
+            st["bewaking_cap"] = cap
+            if st.get("bewaking_reden") != reden:
+                st["bewaking_reden"] = reden
+                print(f"[BEWAKING] {d.get('name', ip)} afgeknepen: {toelichting}", flush=True)
+        elif cap is not None and (marge_a is None or marge_a >= BEWAKING_HERSTEL_MARGE_A):
+            # Alleen opruimen als er werkelijk lucht is. Zit hij er net onder,
+            # dan laten we de grens staan. Anders kruipt hij omhoog, loopt er
+            # weer overheen, en krijg je een boiler die om de twintig seconden
+            # op en neer gaat zonder dat er iets veranderd is.
+            cap += BEWAKING_HERSTEL_PER_RONDE
+            if cap >= MAX_BRIGHTNESS:
+                cap = None
+                st["bewaking_reden"] = None
+                print(f"[BEWAKING] {d.get('name', ip)} weer vrij", flush=True)
+            st["bewaking_cap"] = cap
+
+        if cap is None:
+            continue
+
+        if cap < MIN_BRIGHTNESS:
+            # Zelfs het laagste standje past niet meer. Dan moet hij eruit, en
+            # even uit blijven, anders schakelt hij zichzelf stuk op de grens.
+            if st.get("started") or st.get("on"):
+                reset_device_to_off(ip)
+                st["temp_shutoff_until"] = max(st.get("temp_shutoff_until") or 0,
+                                               now + BEWAKING_UIT_WACHTTIJD_S)
+                print(f"[BEWAKING] {d.get('name', ip)} uitgezet, {toelichting}", flush=True)
+            st["bewaking_cap"] = MIN_BRIGHTNESS - 1
+        elif st.get("on") and st.get("brightness", 0) > cap:
+            st["brightness"] = cap
+            set_shelly(cap, True, ip)
+
+
 def control_loop():
     global current_power, current_brightness, active_schedule_info, anti_legionella_enabled, schedules_enabled, vacation_mode
 
@@ -8181,10 +8759,24 @@ def control_loop():
             # --- Anti-Legionella ---
             legionella_handled = set()
             if anti_legionella_enabled and (not vacation_mode or vacation_legionella):
-                legionella_manual = cfg.get("anti_legionella_mode") == "manual"
+                _leg_mode = cfg.get("anti_legionella_mode", "automatic")
+                legionella_manual = _leg_mode == "manual"
+                legionella_prijs = _leg_mode == "price"
                 legionella_trigger_due = legionella_manual and _legionella_trigger_due(
                     cfg.get("anti_legionella_triggers", [])
                 )
+                # Bij de prijsstand wachten we op een goedkoop uur. Dezelfde
+                # all-in prijs als op het dashboard, anders vergelijk je een
+                # ingevulde grens met een bedrag dat de klant nergens terugziet.
+                legionella_prijs_laag = False
+                if legionella_prijs:
+                    try:
+                        _leg_grens = float(cfg.get("anti_legionella_price_ct") or 0)
+                    except (TypeError, ValueError):
+                        _leg_grens = 0.0
+                    _leg_prijs_nu = prijs_all_in_ct(get_current_price_ct(), cfg)
+                    legionella_prijs_laag = (_leg_grens > 0 and _leg_prijs_nu is not None
+                                             and _leg_prijs_nu <= _leg_grens)
                 for d in devices_sorted:
                     ip = d["ip"]
                     st = device_states[ip]
@@ -8192,16 +8784,31 @@ def control_loop():
                     idle_too_long = (now - last_active) >= LEGIONELLA_IDLE_SECONDS
                     legionella_run_seconds = int((d.get("boiler_volume", 100) / 100) * 3 * 3600)
 
+                    # Wachten op een goedkoop uur mag, maar niet langer dan een
+                    # week. Daarna gaat de ronde hoe dan ook draaien, ook als de
+                    # stroom duur is.
+                    leg_te_lang_gewacht = (now - last_active) >= LEGIONELLA_HARD_IDLE_SECONDS
+
                     if not st.get("legionella_active") and idle_too_long:
-                        if legionella_manual:
-                            # Automatisch modus start meteen; handmatig wacht tot de
-                            # eerstvolgende ingestelde trigger, en zet tot die tijd de vlag.
+                        if legionella_manual or legionella_prijs:
+                            # Automatische stand start meteen. Handmatig wacht op de
+                            # eerstvolgende ingestelde trigger, de prijsstand op een
+                            # goedkoop uur. Tot die tijd staat de vlag.
                             if not st.get("legionella_required"):
                                 st["legionella_required"] = True
                                 save_state(force=True)
-                                print(f"Anti-Legionella: vereist voor {ip}, wacht op trigger")
+                                _waarop = "een goedkoop uur" if legionella_prijs else "trigger"
+                                print(f"Anti-Legionella: vereist voor {ip}, wacht op {_waarop}")
 
-                        if (not legionella_manual) or legionella_trigger_due:
+                        _leg_mag_starten = legionella_mag_starten(
+                            _leg_mode, legionella_trigger_due,
+                            legionella_prijs_laag, leg_te_lang_gewacht)
+                        if (legionella_prijs and leg_te_lang_gewacht
+                                and not legionella_prijs_laag):
+                            print(f"Anti-Legionella: {ip} wacht al vijf dagen op een "
+                                  f"goedkoop uur, ronde start nu alsnog", flush=True)
+
+                        if _leg_mag_starten:
                             if st.get("pre_legionella_started") is None:
                                 st["pre_legionella_started"] = st.get("started", False)
                                 st["pre_legionella_brightness"] = st.get("brightness", 0)
@@ -9467,6 +10074,12 @@ def control_loop():
                     st["on"] = True
                     set_shelly(st["brightness"], True, ip)
                     mark_device_activity(d)
+
+            # Eerst: kunnen we de meter nog vertrouwen? Zo niet, dan heeft
+            # verder regelen geen zin, want alles hieronder rekent met die meting.
+            bewaak_p1_uitval(cfg, devices, now)
+            # Laatste woord: de zekering gaat boven zon, prijs en schema.
+            bewaak_groep_en_fase(cfg, devices, now)
 
             current_brightness = active_brightness
             lowest_running = get_lowest_priority_running(non_legionella)
@@ -12268,6 +12881,10 @@ def p1_poll_loop():
                     current_power = get_shelly_em_power(shelly_ip, cfg.get("p1_shelly_channels") or [])
                     _p1_meter_import_kwh, _p1_meter_export_kwh = get_shelly_em_energy(
                         shelly_ip, cfg.get("p1_shelly_channels") or [])
+                    if cfg.get("fase_bewaking_enabled") and not (cfg.get("p1_shelly_channels") or []):
+                        # Alleen ophalen als iemand er ook werkelijk op bewaakt.
+                        noteer_fase_stromen(get_shelly_em_fasen(shelly_ip))
+                    noteer_p1_leven(current_power)
                     _p1_online = True
                     p1_shelly_offline_since = None
                     if not (cfg.get("p1_shelly_mac") or "").strip() and time.time() - p1_shelly_mac_last_try > 300:
@@ -12283,6 +12900,9 @@ def p1_poll_loop():
                     _exp = hw_data.get("total_power_export_kwh")
                     _p1_meter_import_kwh = float(_imp) if _imp is not None else None
                     _p1_meter_export_kwh = float(_exp) if _exp is not None else None
+                    # Komt uit hetzelfde telegram, dus dit kost geen extra verzoek.
+                    noteer_fase_stromen(fase_stromen_uit_homewizard(hw_data))
+                    noteer_p1_leven(current_power)
                     _p1_online = True
                     p1_offline_since = None
                     if not (cfg.get("p1_mac") or "").strip() and time.time() - p1_mac_last_try > 300:

@@ -858,6 +858,21 @@
                         <div class="scan-status" id="shellyProbeStatus" aria-live="polite"></div>
                         <div id="shellyChannelPicker"></div>
                     </div>
+                    <div style="margin-top:1.25rem;padding-top:1.1rem;border-top:1px solid #e6e6e6;">
+                        <label for="aansluitingType">Type aansluiting</label>
+                        <select id="aansluitingType" name="aansluiting_type">
+                            <option value="" {% if config.aansluiting_type not in aansluitingen %}selected{% endif %}>Weet ik niet</option>
+                            {% for soort in aansluitingen %}
+                            <option value="{{ soort }}" {% if config.aansluiting_type == soort %}selected{% endif %}>{{ soort.replace('x', ' x ') }} A</option>
+                            {% endfor %}
+                        </select>
+                        <div style="font-size:0.78rem;color:#888;margin-top:0.3rem;">
+                            Staat op je hoofdzekering in de meterkast. Hiermee kan SolarBuffer de boiler terugregelen
+                            voordat een fase vol loopt. Weet je het niet, kies dan niets; je kunt het later invullen
+                            bij Instellingen, P1-meter.
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="wizard-actions">

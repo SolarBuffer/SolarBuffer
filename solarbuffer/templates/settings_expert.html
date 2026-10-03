@@ -517,6 +517,27 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Terugvalbeveiliging</div>
+        <div class="feature-row">
+          <div class="feature-text">
+            <div class="feature-label">Boiler uitzetten als de P1-meter wegvalt</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" name="p1_uitval_uitschakelen"
+                   {% if config.p1_uitval_uitschakelen %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p style="font-size:0.8rem; color:hsl(224, 18%, 71%); margin-top:0.5rem; line-height:1.4;">
+          Standaard houdt SolarBuffer de laatste stand vast als de meter wegvalt. Zet
+          dit aan en de boiler gaat eruit tot de meting weer klopt. Hij grijpt in als
+          de meter een minuut lang niet antwoordt, en ook als hij wél antwoordt maar
+          een minuut lang exact dezelfde waarde geeft: een echte belasting danst
+          altijd een paar watt.
+        </p>
+      </div>
+
+      <div class="card">
         <div class="card-title">Batterij</div>
         <div class="feature-row">
           <div class="feature-text">

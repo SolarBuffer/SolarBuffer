@@ -420,6 +420,95 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Aansluiting</div>
+        <div class="field-group">
+          <label>Type aansluiting</label>
+          <select name="aansluiting_type" id="aansluitingType" onchange="updateAansluiting()">
+            <option value="" {% if config.aansluiting_type not in aansluitingen %}selected{% endif %}>Nog niet gekozen</option>
+            {% for soort in aansluitingen %}
+            <option value="{{ soort }}" {% if config.aansluiting_type == soort %}selected{% endif %}>{{ soort.replace('x', ' x ') }} A</option>
+            {% endfor %}
+          </select>
+          <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Staat op je hoofdzekering in de meterkast. Zolang hier niets staat doet de bewaking niets.</div>
+        </div>
+
+        <div id="bewakingVelden" style="display:none;">
+          <div class="toggle-row" style="margin:0.9rem 0 0.75rem;">
+            <label for="faseBewaking" style="cursor:pointer;font-weight:600;">Terugregelen bij een volle fase</label>
+            <label class="toggle">
+              <input type="checkbox" id="faseBewaking" name="fase_bewaking_enabled"
+                     {% if config.fase_bewaking_enabled %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin:0.3rem 0 0.9rem;">
+            Loopt een fase tegen zijn grens, dan knijpt SolarBuffer de boiler terug tot het weer past,
+            ongeacht zon, tijdschema, legionellaronde of tarief. Past het laagste standje ook niet meer,
+            dan gaat hij even uit. Dit vervangt de zekering in je meterkast niet, het zorgt dat je er niet tegenaan loopt.
+          </div>
+
+          {% if (config.aansluiting_type|default('', true)).startswith('3x') and fase_stromen and fase_stromen|length < 2 %}
+          <div style="font-size:0.75rem;color:hsl(14, 70%, 45%);margin:0.3rem 0 0.9rem;padding:0.55rem 0.7rem;background:hsl(14, 80%, 97%);border:1px solid hsl(14, 70%, 88%);border-radius:0.5rem;">
+            Je meter meldt maar één fase, terwijl hier een driefasen aansluiting staat.
+            Controleer of dat type klopt, want anders wordt er op de verkeerde grens geregeld.
+          </div>
+          {% endif %}
+
+          {% if fase_stromen %}
+          <div style="font-size:0.75rem;color:hsl(224, 18%, 60%);margin:0.3rem 0 0.9rem;padding:0.55rem 0.7rem;background:hsl(224, 20%, 97%);border:1px solid hsl(224, 20%, 92%);border-radius:0.5rem;">
+            Nu gemeten{% for n, a in fase_stromen|dictsort %}, L{{ n }} {{ a }} A{% endfor %}.
+            Alleen stroom die uit het net komt; teruglevering telt hier niet mee.
+          </div>
+          {% endif %}
+
+          <div class="field-group">
+            <label>Grens per fase (A)</label>
+            <input type="number" name="fase_limiet_a" min="0" max="63" step="0.5"
+                   value="{{ config.fase_limiet_a or '' }}" placeholder="standaard: 1,5 A onder je zekering">
+            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Leeg laten is prima, dan houdt hij zelf 1,5 A marge aan. Bij 3 x 25 A is dat 23,5 A.</div>
+          </div>
+
+          {% if config.shelly_devices %}
+          <div style="margin-top:1.1rem;">
+            <div class="card-title" style="font-size:0.78rem;">Per SolarBuffer</div>
+            {% for d in config.shelly_devices %}
+            <div class="boiler-bewaking" data-ip="{{ d.ip }}" style="border:1px solid hsl(224, 20%, 90%);border-radius:0.6rem;padding:0.8rem;margin-top:0.6rem;">
+              <div style="font-weight:600;margin-bottom:0.6rem;">{{ d.name or d.ip }}</div>
+
+              <div class="fase-rij" style="display:none;">
+                <div class="two-col-row" style="display:flex;gap:0.6rem;align-items:flex-end;">
+                  <div class="field-group" style="flex:1;margin-bottom:0;">
+                    <label>Op welke fase</label>
+                    <select name="fase_{{ d.ip }}">
+                      <option value="0" {% if not d.fase %}selected{% endif %}>Onbekend</option>
+                      <option value="1" {% if d.fase == 1 %}selected{% endif %}>L1</option>
+                      <option value="2" {% if d.fase == 2 %}selected{% endif %}>L2</option>
+                      <option value="3" {% if d.fase == 3 %}selected{% endif %}>L3</option>
+                    </select>
+                  </div>
+                  <button type="button" class="btn-secondary" style="flex-shrink:0;padding:0.6rem 0.9rem;"
+                          onclick="detecteerFase('{{ d.ip }}', this)">Detecteer</button>
+                </div>
+                <div class="fase-uitslag" style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.45rem;"></div>
+                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Onbekend betekent dat er niets wordt teruggeregeld voor deze boiler.</div>
+              </div>
+
+              {% if d.power_meter %}
+              <div class="field-group" style="margin-top:0.8rem;margin-bottom:0;">
+                <label>Grens voor de groep (A)</label>
+                <input type="number" name="groep_{{ d.ip }}" min="0" max="63" step="0.5"
+                       value="{{ d.groep_limiet_a or '' }}" placeholder="uit">
+                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Kijkt naar de vermogensmeter van deze SolarBuffer. Meestal 16 A. Leeg laten zet het uit.</div>
+              </div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title">Batterij</div>
         <div class="toggle-row" style="margin-bottom:0.75rem;">
           <label for="batteryEnabled" style="cursor:pointer;font-weight:600;">Batterij koppelen via lokale API</label>
@@ -826,6 +915,71 @@
       {% endif %}
     });
     {% endif %}
+
+    // ---- Aansluiting en bewaking ----
+    function updateAansluiting() {
+      var keuze = document.getElementById('aansluitingType').value;
+      var velden = document.getElementById('bewakingVelden');
+      velden.style.display = keuze ? '' : 'none';
+      // De fase per boiler doet er alleen toe bij driefasen. Bij eenfase zit
+      // alles per definitie op dezelfde fase en is de keuze zinloos.
+      var driefasen = keuze.indexOf('3x') === 0;
+      document.querySelectorAll('.fase-rij').forEach(function (rij) {
+        rij.style.display = driefasen ? '' : 'none';
+      });
+    }
+
+    function detecteerFase(ip, knop) {
+      var kaart = document.querySelector('.boiler-bewaking[data-ip="' + ip + '"]');
+      var uitslag = kaart.querySelector('.fase-uitslag');
+      knop.disabled = true;
+      uitslag.textContent = 'Starten...';
+      fetch('/api/fase/detect', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ip: ip})
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.success) {
+          uitslag.textContent = d.error || 'Kon niet starten';
+          knop.disabled = false;
+          return;
+        }
+        volgFase(ip, kaart, uitslag, knop);
+      }).catch(function () {
+        uitslag.textContent = 'Kon niet starten';
+        knop.disabled = false;
+      });
+    }
+
+    function volgFase(ip, kaart, uitslag, knop) {
+      var timer = setInterval(function () {
+        fetch('/api/fase/status?ip=' + encodeURIComponent(ip))
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.bezig) {
+              uitslag.textContent = 'Bezig: ' + (d.stap || 'meten') + '. Dit duurt ongeveer een minuut.';
+              return;
+            }
+            clearInterval(timer);
+            knop.disabled = false;
+            if (d.fout) {
+              uitslag.textContent = d.fout;
+            } else if (d.fase) {
+              uitslag.textContent = 'Gevonden: L' + d.fase + '. Staat opgeslagen.';
+              var keuze = kaart.querySelector('select[name^="fase_"]');
+              if (keuze) keuze.value = String(d.fase);
+            } else {
+              uitslag.textContent = 'Geen uitkomst.';
+            }
+          }).catch(function () {
+            clearInterval(timer);
+            knop.disabled = false;
+            uitslag.textContent = 'Verbinding kwijt tijdens de meting.';
+          });
+      }, 2000);
+    }
+
+    document.addEventListener('DOMContentLoaded', updateAansluiting);
 
     var _rowPairTimers = new WeakMap();
 

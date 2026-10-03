@@ -776,12 +776,27 @@
           <div class="legionella-mode-tabs">
             <button type="button" class="legionella-mode-tab" id="legModeTabAuto" onclick="setLegionellaMode('automatic')">Automatisch</button>
             <button type="button" class="legionella-mode-tab" id="legModeTabManual" onclick="setLegionellaMode('manual')">Handmatig</button>
+            <button type="button" class="legionella-mode-tab" id="legModeTabPrice" onclick="setLegionellaMode('price')">Laag tarief</button>
           </div>
           <div class="legionella-mode-hint" id="legModeHint"></div>
 
           <div id="legionellaManualFields" style="display:none; flex-direction:column; gap:0.6rem;">
             <div class="legionella-triggers" id="legionellaTriggers"></div>
             <button type="button" class="legionella-add-btn" onclick="addLegionellaTrigger()">+ Trigger toevoegen</button>
+          </div>
+
+          <div id="legionellaPriceFields" style="display:none; flex-direction:column; gap:0.4rem;">
+            <label for="legionellaPriceInput" style="font-size:0.78rem;font-weight:600;color:hsl(224,18%,45%);">Start onder deze prijs (ct/kWh)</label>
+            <input type="number" id="legionellaPriceInput" min="0" max="200" step="0.5"
+                   style="width:100%;padding:0.6rem 0.7rem;border:1px solid hsl(224,20%,86%);border-radius:0.55rem;font-size:0.9rem;"
+                   onchange="_legionellaDirty = true;">
+            <div style="font-size:0.75rem;color:hsl(224,18%,60%);">
+              Dezelfde all-in prijs als op het dashboard, dus inclusief opslag, energiebelasting en btw.
+              Blijft de stroom vijf dagen lang duur, dan draait de ronde alsnog.
+            </div>
+          </div>
+
+          <div id="legionellaSaveRow" style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.6rem;">
             <div id="legionellaError" style="display:none; font-size:0.78rem; color:hsl(0,65%,48%);"></div>
             <div class="legionella-btn-row">
               <button class="vacation-save-btn" id="legionellaSaveBtn" onclick="saveLegionellaMode()">Opslaan</button>
@@ -1278,6 +1293,8 @@
         if (alEnabled && !_legionellaDirty) {
           _legionellaMode = data.anti_legionella_mode || 'automatic';
           _legionellaTriggers = (data.anti_legionella_triggers || []).map(t => ({ day: t.day, time: t.time }));
+          const prijsVeld = document.getElementById('legionellaPriceInput');
+          if (prijsVeld) prijsVeld.value = data.anti_legionella_price_ct || '';
           _applyLegionellaModeUI(_legionellaMode);
           renderLegionellaTriggers();
         }
@@ -1450,13 +1467,19 @@
     let _legionellaTriggers = [];
     const LEGIONELLA_DAY_NAMES = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
 
+    const LEGIONELLA_HINTS = {
+      automatic: 'Start automatisch zodra een boiler 72 uur niet actief is geweest.',
+      manual: 'Start pas als een boiler 72 uur niet actief is geweest én een van onderstaande triggers wordt bereikt.',
+      price: 'Start zodra een boiler 72 uur niet actief is geweest én de stroomprijs onder je grens zakt. Eenmaal begonnen loopt de ronde gewoon door, ook als de prijs weer stijgt.'
+    };
+
     function _applyLegionellaModeUI(mode) {
       document.getElementById('legModeTabAuto').classList.toggle('active', mode === 'automatic');
       document.getElementById('legModeTabManual').classList.toggle('active', mode === 'manual');
+      document.getElementById('legModeTabPrice').classList.toggle('active', mode === 'price');
       document.getElementById('legionellaManualFields').style.display = mode === 'manual' ? 'flex' : 'none';
-      document.getElementById('legModeHint').textContent = mode === 'automatic'
-        ? 'Start automatisch zodra een boiler 72 uur niet actief is geweest.'
-        : 'Start pas als een boiler 72 uur niet actief is geweest én een van onderstaande triggers wordt bereikt.';
+      document.getElementById('legionellaPriceFields').style.display = mode === 'price' ? 'flex' : 'none';
+      document.getElementById('legModeHint').textContent = LEGIONELLA_HINTS[mode] || LEGIONELLA_HINTS.automatic;
     }
 
     function setLegionellaMode(mode) {
@@ -1465,6 +1488,10 @@
       _applyLegionellaModeUI(mode);
       if (mode === 'manual' && _legionellaTriggers.length === 0) {
         addLegionellaTrigger();
+      }
+      if (mode === 'price') {
+        const veld = document.getElementById('legionellaPriceInput');
+        if (veld && !veld.value) veld.value = '20';
       }
     }
 
@@ -1519,12 +1546,21 @@
         errorEl.style.display = '';
         return;
       }
+      let prijsGrens = 0;
+      if (_legionellaMode === 'price') {
+        prijsGrens = parseFloat(document.getElementById('legionellaPriceInput').value);
+        if (!(prijsGrens > 0)) {
+          errorEl.textContent = 'Vul een prijsgrens in.';
+          errorEl.style.display = '';
+          return;
+        }
+      }
       btn.disabled = true;
       btn.textContent = 'Opslaan…';
       fetch('/settings/anti_legionella_mode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: _legionellaMode, triggers: _legionellaTriggers })
+        body: JSON.stringify({ mode: _legionellaMode, triggers: _legionellaTriggers, price_ct: prijsGrens })
       }).then(r => r.json()).then(data => {
         btn.disabled = false;
         btn.textContent = 'Opslaan';
