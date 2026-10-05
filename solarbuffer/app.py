@@ -4733,6 +4733,75 @@ def install_required_pip_packages():
         pass
 
 
+def _ssh_luistert():
+    """Antwoordt er iets op poort 22 van deze Hub?
+
+    Betrouwbaarder dan systemctl bevragen, want Debian kan SSH op twee manieren
+    draaien en welke van de twee actief is verschilt per versie. Wat telt is of
+    er iemand opneemt.
+    """
+    try:
+        with socket.create_connection(("127.0.0.1", 22), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+def ensure_ssh_available():
+    """Zorgt dat SSH aanstaat, bij elke opstart opnieuw.
+
+    Raspberry Pi OS levert SSH uitgeschakeld, dus een vers gevlashte Hub heeft
+    hem niet. En Debian is bij de nieuwere versies overgestapt op socket-
+    activatie: niet sshd zelf luistert op poort 22, maar systemd, die sshd pas
+    start als er iemand verbindt. Bij een pakketupgrade kan de ene unit aan
+    blijven staan terwijl de andere het overneemt, en dan luistert er daarna
+    niets meer. Op drie Hubs tegelijk gezien.
+
+    Zonder SSH is een Hub op afstand niet te helpen, en dat weegt zwaarder dan
+    de open deur die het ook is. Wel iets om in de gaten te houden: zolang het
+    standaardwachtwoord erop staat is dit de makkelijkste weg naar binnen.
+
+    Doet niets als er al iemand opneemt, dus dit kost bij een gezonde Hub één
+    verbinding naar zichzelf en verder niets.
+    """
+    if os.name == "nt" or shutil.which("systemctl") is None:
+        # Geen systemd, dus geen Hub. Op een ontwikkelmachine zou dit anders om
+        # een sudo-wachtwoord gaan vragen dat niemand intypt.
+        return
+    try:
+        if _ssh_luistert():
+            return
+        # Zonder hostsleutels weigert sshd te starten, en dan geeft systemd
+        # alleen "control process exited with error code" terug. Dat is de
+        # normale toestand van een vers gevlashte of gekloonde Hub: bij het
+        # klaarmaken van een image hoor je die sleutels te wissen, anders deelt
+        # de hele vloot dezelfde. Ze horen dan bij de eerste start opnieuw
+        # gemaakt te worden, en als dat niet gebeurt staat SSH er voorgoed uit.
+        if _sudo_sh("ls /etc/ssh/ssh_host_*_key 2>/dev/null | head -1") in ("", "niets"):
+            print("[SSH] hostsleutels ontbreken, opnieuw aanmaken", flush=True)
+            _sudo_sh("ssh-keygen -A")
+
+        bestaand = _sudo_sh(
+            "systemctl list-unit-files --no-legend ssh.socket ssh.service "
+            "sshd.service 2>/dev/null | awk '{print $1}'")
+        # Socket eerst: dat is op recente Debian de bedoelde weg, en dan draait
+        # sshd alleen als er werkelijk iemand verbindt.
+        for unit in ("ssh.socket", "ssh.service", "sshd.service"):
+            if unit not in (bestaand or ""):
+                continue
+            _sudo_sh(f"systemctl enable --now {unit}")
+            time.sleep(1.5)
+            if _ssh_luistert():
+                print(f"[SSH] stond uit, aangezet via {unit}", flush=True)
+                write_audit_log("ssh_ingeschakeld", {"unit": unit})
+                return
+        fout = _sudo_sh("sshd -t 2>&1 | head -2")
+        print(f"[SSH] staat uit en kon niet worden aangezet. sshd zegt: {fout}",
+              flush=True)
+    except Exception as e:
+        print(f"[SSH] controle mislukt: {e}", flush=True)
+
+
 def ensure_bluetooth_unblocked():
     """Sommige Hubs starten met de Bluetooth-radio rfkill-geblokkeerd (bv. vanuit
     het fabrieksimage), waardoor bleak faalt met 'No powered bluetooth adapters
@@ -13057,6 +13126,7 @@ if __name__ == "__main__":
     threading.Thread(target=automation_loop, daemon=True).start()
     threading.Thread(target=history_worker, daemon=True).start()
     threading.Thread(target=ensure_bluetooth_unblocked, daemon=True).start()
+    threading.Thread(target=ensure_ssh_available, daemon=True).start()
     threading.Thread(target=ensure_git_remote_uses_deploy_key, daemon=True).start()
     threading.Thread(target=ensure_no_nightly_autoupdate, daemon=True).start()
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
