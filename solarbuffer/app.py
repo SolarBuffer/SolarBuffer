@@ -3196,6 +3196,9 @@ def status_json():
             # en begint de legionellaklok opnieuw.
             "warmte_kwh": round(float(s.get("warmte_kwh", 0.0) or 0.0), 2),
             "warmte_vol_kwh": round(boiler_vol_kwh(d), 2),
+            # Resterende tijd op het vermogen van dit moment, voor de aftelling
+            # tijdens een legionellaronde. None als er niets in gaat.
+            "warmte_eta_s": warmte_eta_seconden(d, s),
             "boiler_volume": d.get("boiler_volume", 100),
             "element_power_w": d.get("element_power_w", 0),
             "linked_temperatures": linked_temp_map.get(d["ip"], []),
@@ -7306,6 +7309,21 @@ def thermostaat_is_afgeslagen(device, st, now, vol_stand_vanaf):
         st["warmte_temp_since"] = now
         return False
     return (now - st["warmte_temp_since"]) >= TEMP_SHUTOFF_CONFIRM
+
+
+def warmte_eta_seconden(device, st):
+    """Hoe lang het op het vermogen van nu nog duurt tot het vat vol is.
+
+    Geen vaste looptijd, maar wat er nog in moet gedeeld door wat er op dit moment
+    in gaat. Geeft None als er niets in gaat, want dan valt er niets te voorspellen.
+    """
+    rest = boiler_vol_kwh(device) - float(st.get("warmte_kwh") or 0.0)
+    if rest <= 0.001:
+        return 0
+    watt = opgenomen_watt(device, st)
+    if watt <= 10:
+        return None
+    return int(rest / (watt / 1000.0) * 3600)
 
 
 def werk_warmtevoorraad_bij(device, st, now, vol_stand_vanaf=95):

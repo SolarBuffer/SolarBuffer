@@ -1262,6 +1262,16 @@
 
     {% if is_admin %}
     // ===== BESTURING =====
+    // Resterende tijd tot het vat vol is, gerekend op het vermogen van dit moment.
+    // Verandert dus mee met de zon; het is een schatting, geen vaste looptijd.
+    function warmteEta(secs) {
+      if (secs === null || secs === undefined) return null;
+      if (secs <= 60) return 'bijna klaar';
+      const h = Math.floor(secs / 3600);
+      const m = Math.round((secs % 3600) / 60);
+      if (h > 0) return h + 'u ' + (m < 10 ? '0' + m : m) + 'm';
+      return m + ' min';
+    }
     function loadBesturing() {
       fetch('/status_json').then(r => r.json()).then(data => {
         const pidEnabled = !!data.enabled;
@@ -1276,10 +1286,14 @@
         let alSub = 'Uitgeschakeld';
         if (alEnabled) {
           if (alActive.length > 0) {
-            // Geen aftelling meer: de ronde loopt tot het vat vol is, niet op tijd.
+            // De ronde loopt tot het vat vol is, dus telt de aftelling af op het
+            // vermogen dat er nu in gaat in plaats van op een vaste looptijd.
             const nu = (alActive[0].warmte_kwh || 0).toFixed(1).replace('.', ',');
             const vol = (alActive[0].warmte_vol_kwh || 0).toFixed(1).replace('.', ',');
-            alSub = `Cyclus actief — ${nu} van ${vol} kWh in het vat`;
+            const eta = warmteEta(alActive[0].warmte_eta_s);
+            alSub = eta
+              ? `Cyclus actief — nog ${eta}, ${nu} van ${vol} kWh`
+              : `Cyclus actief — ${nu} van ${vol} kWh, wacht op vermogen`;
           } else if (alRequired.length > 0) {
             alSub = 'Wacht op ingestelde trigger';
           } else {
@@ -1309,7 +1323,9 @@
               + '<div style="display:flex;justify-content:space-between;font-size:0.78rem;'
               + 'color:hsl(224,18%,45%);margin-bottom:0.2rem;">'
               + '<span>' + (d.name || d.ip) + '</span>'
-              + '<span>' + nu.toFixed(1) + ' van ' + vol.toFixed(1) + ' kWh</span></div>'
+              + '<span>' + nu.toFixed(1).replace('.', ',') + ' van ' + vol.toFixed(1).replace('.', ',')
+              + ' kWh' + (klaar ? '' : (warmteEta(d.warmte_eta_s) ? ' · nog ' + warmteEta(d.warmte_eta_s) : ''))
+              + '</span></div>'
               + '<div style="height:6px;border-radius:3px;background:hsl(224,20%,90%);overflow:hidden;">'
               + '<div style="height:100%;width:' + pct.toFixed(0) + '%;background:' + kleur + ';"></div>'
               + '</div></div>';
@@ -1496,9 +1512,9 @@
     const LEGIONELLA_DAY_NAMES = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
 
     const LEGIONELLA_HINTS = {
-      automatic: 'Start automatisch zodra een boiler 72 uur niet actief is geweest.',
-      manual: 'Start pas als een boiler 72 uur niet actief is geweest én een van onderstaande triggers wordt bereikt.',
-      price: 'Start zodra een boiler 72 uur niet actief is geweest én de stroomprijs onder je grens zakt. Eenmaal begonnen loopt de ronde gewoon door, ook als de prijs weer stijgt.'
+      automatic: 'Start automatisch zodra een boiler 72 uur niet helemaal is doorgewarmd.',
+      manual: 'Start pas als een boiler 72 uur niet helemaal is doorgewarmd én een van onderstaande triggers wordt bereikt.',
+      price: 'Start zodra een boiler 72 uur niet helemaal is doorgewarmd én de stroomprijs onder je grens zakt. Eenmaal begonnen loopt de ronde gewoon door, ook als de prijs weer stijgt.'
     };
 
     function _applyLegionellaModeUI(mode) {
