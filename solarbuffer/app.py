@@ -397,6 +397,8 @@ def load_config():
             dev["power_socket_ip"] = ""
         if "boiler_volume" not in dev:
             dev["boiler_volume"] = 100
+        if "element_power_w" not in dev:
+            dev["element_power_w"] = 0   # 0 = niet ingevuld, dan rekenen we met 2 kW
         if "mac" not in dev:
             dev["mac"] = ""
         elif dev["mac"]:
@@ -614,6 +616,10 @@ def save_state(force=False):
     state = {
         ip: {
             "last_active_time": st.get("last_active_time", 0),
+            # De emmer moet een herstart overleven, anders begint een boiler na
+            # elke update weer bij nul en haalt hij de bovenrand nooit.
+            "warmte_kwh": round(float(st.get("warmte_kwh", 0.0) or 0.0), 4),
+            "warmte_vol": bool(st.get("warmte_vol", False)),
             "legionella_active": st.get("legionella_active", False),
             "legionella_start": st.get("legionella_start"),
             "legionella_required": st.get("legionella_required", False),
@@ -2174,6 +2180,7 @@ def parse_devices_from_request(req):
     power_socket_types = req.form.getlist("power_socket_type[]")
     power_socket_ips = req.form.getlist("power_socket_ip[]")
     boiler_volumes = req.form.getlist("boiler_volume[]")
+    element_powers = req.form.getlist("element_power_w[]")
     power_curve_enableds = req.form.getlist("power_curve_enabled[]")
 
     row_count = max(len(names), len(ips), len(priorities), len(power_meters),
@@ -2204,6 +2211,7 @@ def parse_devices_from_request(req):
         ps_type = get_val(power_socket_types, i).strip().lower()
         ps_ip = get_val(power_socket_ips, i).strip()
         bv = max(10, safe_int(get_val(boiler_volumes, i, "100"), 100))
+        ew = max(0, safe_int(get_val(element_powers, i, "0"), 0))
         # Zonder vermogensmeter is er geen curve te maken, dus dan kan deze stand
         # ook niet aan staan. De interface schermt het al af; dit is het vangnet
         # voor het geval de meter later verwijderd wordt of iemand het formulier
@@ -2217,6 +2225,7 @@ def parse_devices_from_request(req):
             "power_socket_type": ps_type if ps_type else "",
             "power_socket_ip": ps_ip if ps_ip else "",
             "boiler_volume": bv,
+            "element_power_w": ew,
             "mac": (prev.get("mac") or "").strip(),
             "power_socket_mac": (prev.get("power_socket_mac") or "").strip(),
             "power_meter_mac": (prev.get("power_meter_mac") or "").strip(),
@@ -3180,6 +3189,13 @@ def status_json():
             "price_triggered": s.get("price_triggered", False),
             "temp_shutoff_until": s.get("temp_shutoff_until"),
             "energy_today_kwh": round(s.get("energy_today_kwh", 0.0), 3),
+            # Warmtevoorraad: hoeveel er in het vat zit en hoeveel er in past.
+            # Komt de stand aan het plafond, dan is het vat doorgewarmd geweest
+            # en begint de legionellaklok opnieuw.
+            "warmte_kwh": round(float(s.get("warmte_kwh", 0.0) or 0.0), 2),
+            "warmte_vol_kwh": round(boiler_vol_kwh(d), 2),
+            "boiler_volume": d.get("boiler_volume", 100),
+            "element_power_w": d.get("element_power_w", 0),
             "linked_temperatures": linked_temp_map.get(d["ip"], []),
         })
     accessories = []
@@ -7164,13 +7180,129 @@ def get_socket_relay_state(power_socket_type, ip):
     return None
 
 
+# ================= WARMTEVOORRAAD IN HET VAT =================
+# Een boiler die aanstaat maar al op temperatuur is neemt vrijwel niets op. Dat
+# telde vroeger toch als "verwarmd" en zette de legionellateller terug op nul,
+# terwijl het vat van onderen gewoon koud bleef.
+#
+# Daarom houden we per boiler bij hoeveel energie erin gegaan is, als een emmer
+# die volloopt terwijl hij verwarmt en leegloopt zodra hij uit staat. Het gat in
+# die emmer is zo gekozen dat een vol vat er in een etmaal doorheen is. Wie elke
+# dag maar een derde van zijn vat opstookt haalt de bovenrand dus nooit, en dat
+# is precies de bedoeling: alleen een volledige opwarming telt als bewijs dat
+# ook de onderste laag heet is geweest.
+WATER_WARMTE_KJ = 4.18          # kJ om een liter water een graad op te warmen
+BOILER_DELTA_T = 55             # van 10 graden uit de kraan naar 65 in het vat
+ELEMENT_W_STANDAARD = 2000      # aanname als niemand het elementvermogen invult
+WARMTE_LEEGLOOP_UREN = 24       # zo lang doet een vol vat erover om op nul te staan
+
+
+def boiler_vol_kwh(device):
+    """Hoeveel energie er in gaat om dit vat van koud naar warm te brengen."""
+    try:
+        liters = max(10, int(device.get("boiler_volume", 100) or 100))
+    except (TypeError, ValueError):
+        liters = 100
+    return liters * WATER_WARMTE_KJ * BOILER_DELTA_T / 3600.0
+
+
+def element_vermogen_w(device):
+    """Het vermogen van het verwarmingselement, of de aanname van 2 kW."""
+    try:
+        w = int(device.get("element_power_w") or 0)
+    except (TypeError, ValueError):
+        w = 0
+    return w if w > 0 else ELEMENT_W_STANDAARD
+
+
+def vermogen_bij_helderheid(curve, helderheid):
+    """Watt bij deze dimstand volgens een ingemeten curve, of None.
+
+    De curve is {percentage: watt} en loopt op. Tussen twee meetpunten rekenen
+    we rechtlijnig, daarbuiten klemmen we vast op het laagste of hoogste punt.
+    """
+    if not curve:
+        return None
+    try:
+        punten = sorted((float(k), float(v)) for k, v in curve.items())
+    except (TypeError, ValueError):
+        return None
+    if not punten:
+        return None
+    if helderheid <= punten[0][0]:
+        return punten[0][1]
+    if helderheid >= punten[-1][0]:
+        return punten[-1][1]
+    for (p_a, w_a), (p_b, w_b) in zip(punten, punten[1:]):
+        if p_a <= helderheid <= p_b:
+            if p_b == p_a:
+                return w_a
+            deel = (helderheid - p_a) / (p_b - p_a)
+            return w_a + deel * (w_b - w_a)
+    return punten[-1][1]
+
+
+def opgenomen_watt(device, st):
+    """Wat deze boiler op dit moment opneemt.
+
+    Een gekoppelde vermogensmeter is de waarheid. Zonder meter schatten we het:
+    met een ingemeten curve nauwkeurig, en anders rechtlijnig over de dimband.
+    Dat laatste is grof, want een fasedimmer loopt niet rechtlijnig, maar beter
+    dan niets en de curve lost het netjes op voor wie hem laat inmeten.
+    """
+    if device.get("power_meter") and st.get("power_meter_online"):
+        return max(0.0, float(st.get("power") or 0.0))
+    if not st.get("on"):
+        return 0.0
+    helderheid = st.get("brightness", 0) or 0
+    uit_curve = vermogen_bij_helderheid(device.get("power_curve"), helderheid)
+    if uit_curve is not None:
+        return max(0.0, uit_curve)
+    deel = (helderheid - MIN_BRIGHTNESS) / float(MAX_BRIGHTNESS - MIN_BRIGHTNESS)
+    return max(0.0, min(1.0, deel)) * element_vermogen_w(device)
+
+
+def werk_warmtevoorraad_bij(device, st, now):
+    """Vult of leegt de emmer, en meldt of het vat zojuist vol is geraakt."""
+    vol = boiler_vol_kwh(device)
+    vorige = st.get("warmte_ts")
+    st["warmte_ts"] = now
+    if vorige is None:
+        return False
+    dt = now - vorige
+    if dt <= 0 or dt > 120:
+        # Gat in de metingen, bijvoorbeeld na een herstart. Niet gokken wat er
+        # in die tijd gebeurd is, gewoon overslaan.
+        return False
+
+    watt = opgenomen_watt(device, st)
+    stand = float(st.get("warmte_kwh", 0.0) or 0.0)
+    if watt > 10:
+        # Hij verwarmt. Dan loopt er niets weg, dat gebeurt pas als hij uit is.
+        stand += watt * dt / 3_600_000.0
+    else:
+        stand -= vol / (WARMTE_LEEGLOOP_UREN * 3600.0) * dt
+
+    stand = max(0.0, min(vol, stand))
+    was_vol = st.get("warmte_vol", False)
+    nu_vol = stand >= vol - 0.001
+    st["warmte_kwh"] = stand
+    st["warmte_vol"] = nu_vol
+    return nu_vol and not was_vol
+
+
 def mark_device_activity(device):
+    """Legt vast dat we deze boiler hebben aangezet.
+
+    Zet bewust niet meer last_active_time. Dat veld is de legionellaklok, en die
+    hoort alleen terug naar nul bij een volledige opwarming. Aanzetten zei daar
+    niets over: een vat dat al op temperatuur is gaat ook aan, neemt vrijwel
+    niets op, en zette toch de klok terug. Zie werk_warmtevoorraad_bij().
+    """
     st = get_device_state(device)
-    now = time.time()
-    st["last_active_time"] = now
     if has_power_socket(device):
-        st["power_socket_last_on_command"] = now
-    save_state()
+        st["power_socket_last_on_command"] = time.time()
+        save_state()
 
 
 def ensure_power_socket_on(device):
@@ -7253,6 +7385,15 @@ def init_device_states(devices):
                 "freeze": False, "started": False, "pending_start": False,
                 "saturated_since": None, "min_since": None,
                 "last_active_time": s.get("last_active_time", time.time()), "power": 0,
+                # Een Hub die van voor deze functie komt heeft nog geen emmer.
+                # Die beginnen we vol: hun legionellaklok liep tot nu toe op
+                # "aangezet" en stond dus net zo goed bij. Leeg beginnen zou
+                # betekenen dat iedereen de dag na de update een ronde van het
+                # net krijgt, voor een vat dat misschien gewoon warm is.
+                "warmte_kwh": (float(s["warmte_kwh"]) if "warmte_kwh" in s
+                               else boiler_vol_kwh(d)),
+                "warmte_vol": bool(s.get("warmte_vol", "warmte_kwh" not in s)),
+                "warmte_ts": None,
                 "chip_temp": None,
                 "power_socket_on": False, "power_socket_online": False,
                 "power_socket_last_on_command": 0,
@@ -8814,6 +8955,15 @@ def control_loop():
                         save_energy_baselines()
                     else:
                         state["energy_today_kwh"] = max(0.0, delta / 1000)
+
+                # Emmer bijwerken. Raakt hij vol, dan is het hele vat doorgewarmd
+                # geweest en begint de legionellaklok opnieuw.
+                if werk_warmtevoorraad_bij(d, state, now):
+                    state["last_active_time"] = now
+                    save_state()
+                    print(f"[WARMTE] {d.get('name', ip)} volledig doorgewarmd "
+                          f"({boiler_vol_kwh(d):.1f} kWh), legionellaklok opnieuw",
+                          flush=True)
 
             measured_power = current_power
             # Een trage meter herhaalt zijn waarde tot het volgende telegram. Alleen

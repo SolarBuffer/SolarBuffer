@@ -1250,7 +1250,8 @@
             power_ip = '',
             power_socket_type = '',
             power_socket_ip = '',
-            boiler_volume = 100
+            boiler_volume = 100,
+            element_power_w = 0
         ) {
             const container = document.getElementById('deviceContainer');
             if (container.children.length >= 5) {
@@ -1290,6 +1291,28 @@
             </div>
         </div>
 
+        <div class="two-col">
+            <div class="field-group" style="margin-bottom:0;">
+                <label>Inhoud boiler</label>
+                <div class="input-with-unit">
+                    <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" required value="${escapeHtml(boiler_volume || 100)}">
+                    <span class="unit">L</span>
+                </div>
+            </div>
+            <div class="field-group" style="margin-bottom:0;">
+                <label>Vermogen element</label>
+                <div class="input-with-unit">
+                    <input type="number" name="element_power_w[]" min="0" max="20000" step="100" placeholder="2000" required value="${escapeHtml(element_power_w || 2000)}">
+                    <span class="unit">W</span>
+                </div>
+            </div>
+        </div>
+        <div style="font-size:0.78rem;color:#888;margin:0.4rem 0 0.2rem;">
+            Staan meestal op het typeplaatje van je boiler. Hiermee weet SolarBuffer
+            wanneer het vat volledig is doorgewarmd, en dat bepaalt wanneer een
+            legionellaronde nodig is.
+        </div>
+
         <button type="button" class="advanced-toggle" onclick="toggleDeviceAdvanced(this)">
             <span>Slimme stekker &amp; vermogensmeter</span>
             <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41,8.59L12,13.17L16.59,8.59L18,10L12,16L6,10L7.41,8.59Z"/></svg>
@@ -1324,17 +1347,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="subsection">
-                <div class="subsection-title">Anti-legionella</div>
-                <div class="field-group" style="margin-bottom:0;">
-                    <label>Inhoud boiler</label>
-                    <div class="input-with-unit" style="max-width:160px;">
-                        <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" value="${escapeHtml(boiler_volume || 100)}">
-                        <span class="unit">L</span>
-                    </div>
-                </div>
-            </div>
         </div>
     `;
 
@@ -1351,8 +1363,7 @@
             updatePriorities();
             updateDeviceNumbers();
 
-            const hasAdvancedData = Boolean(power_meter) || Boolean(power_socket_type) ||
-                (Number(boiler_volume) && Number(boiler_volume) !== 100);
+            const hasAdvancedData = Boolean(power_meter) || Boolean(power_socket_type);
             if (hasAdvancedData) {
                 const toggleBtn = card.querySelector('.advanced-toggle');
                 if (toggleBtn) toggleDeviceAdvanced(toggleBtn);
@@ -1749,7 +1760,8 @@
                 d.power_ip || "",
                 d.power_socket_type || "",
                 d.power_socket_ip || "",
-                d.boiler_volume || 100
+                d.boiler_volume || 100,
+                d.element_power_w || 0
             ));
         } else {
             addDevice();

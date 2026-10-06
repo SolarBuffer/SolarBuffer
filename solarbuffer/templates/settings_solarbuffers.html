@@ -563,7 +563,7 @@
       if (macGroup) macGroup.style.display = enabled ? '' : 'none';
     }
 
-    function addDevice(name='', ip='', priority='', power_meter='', power_ip='', power_socket_type='', power_socket_ip='', boiler_volume=100, mac='', power_socket_mac='', power_meter_mac='', power_curve_enabled=false, power_curve_calibrated_at=null) {
+    function addDevice(name='', ip='', priority='', power_meter='', power_ip='', power_socket_type='', power_socket_ip='', boiler_volume=100, mac='', power_socket_mac='', power_meter_mac='', power_curve_enabled=false, power_curve_calibrated_at=null, element_power_w=0) {
       const container = document.getElementById('deviceContainer');
       if (container.children.length >= 5) { alert("Maximaal 5 SolarBuffers mogelijk."); return false; }
 
@@ -673,12 +673,28 @@
 
         <div class="subsection">
           <div class="subsection-title">Anti-legionella</div>
-          <div class="field-group" style="margin-bottom:0;">
-            <label>Inhoud boiler</label>
-            <div class="input-with-unit">
-              <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" value="${escapeHtml(boiler_volume || 100)}">
-              <span class="unit">L</span>
+          <div class="two-col">
+            <div class="field-group" style="margin-bottom:0;">
+              <label>Inhoud boiler</label>
+              <div class="input-with-unit">
+                <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" required value="${escapeHtml(boiler_volume || 100)}">
+                <span class="unit">L</span>
+              </div>
             </div>
+            <div class="field-group" style="margin-bottom:0;">
+              <label>Vermogen element</label>
+              <div class="input-with-unit">
+                <input type="number" name="element_power_w[]" min="0" max="20000" step="100" placeholder="2000" required value="${escapeHtml(element_power_w || 2000)}">
+                <span class="unit">W</span>
+              </div>
+            </div>
+          </div>
+          <div class="subsection-hint" style="margin-top:0.5rem;">
+            Samen bepalen deze twee wanneer je vat volledig doorgewarmd is geweest.
+            Bij 100 liter kost dat 6,4 kWh. Pas als die er in gegaan zijn begint de
+            legionellaklok opnieuw, want dan is ook de onderste laag heet geweest.
+            Heb je een vermogensmeter, dan meten we het echt; anders rekenen we met
+            het vermogen dat je hier invult.
           </div>
         </div>
       `;
@@ -1002,8 +1018,7 @@
           d.power_socket_type || "", d.power_socket_ip || "",
           d.boiler_volume || 100, d.mac || "",
           d.power_socket_mac || "", d.power_meter_mac || "",
-          !!d.power_curve_enabled, d.power_curve_calibrated_at || null
-        ));
+          !!d.power_curve_enabled, d.power_curve_calibrated_at || null, d.element_power_w || 0));
       } else {
         addDevice();
       }

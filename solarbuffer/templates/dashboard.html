@@ -1632,6 +1632,19 @@
       font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem;
     }
     .vacation-banner svg { flex-shrink: 0; }
+    .warn-banner {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: hsl(0, 85%, 95%); color: hsl(0, 65%, 35%);
+      border: 1px solid hsl(0, 70%, 86%);
+      border-radius: 0.6rem; padding: 0.55rem 0.85rem;
+      font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem;
+      text-decoration: none;
+    }
+    .warn-banner i { flex-shrink: 0; }
+    html[data-theme="dark"] .warn-banner {
+      background: hsl(0, 35%, 24%); color: hsl(0, 80%, 80%);
+      border-color: hsl(0, 35%, 34%);
+    }
     html[data-theme="dark"] .vacation-banner {
       background: hsl(37, 35%, 26%);
       color: hsl(37, 80%, 70%);
@@ -2917,6 +2930,11 @@
 {% block tagline %}<p>Dashboard</p>{% endblock %}
 
 {% block content %}
+    <a id="elementPowerBanner" class="warn-banner" href="/settings/solarbuffers" style="display:none;">
+      <i class="mdi mdi-alert-circle" style="font-size:1rem;line-height:1;"></i>
+      <span id="elementPowerText"></span>
+    </a>
+
     <div id="vacationTopBanner" class="vacation-banner" style="display:none; margin-bottom:0.5rem;">
       <i class="mdi mdi-palm-tree" style="font-size:1rem;line-height:1;flex-shrink:0"></i>
       <span id="vacationTopText">Vakantiestand actief</span>
@@ -3506,6 +3524,28 @@
     // ===== VAKANTIESTAND (banner only — beheer via Instellingen) =====
     function renderVacationStatus(data) {
       const active = !!data.vacation_mode;
+      // Zonder elementvermogen kan SolarBuffer niet uitrekenen wanneer het vat
+      // volledig is doorgewarmd, en dus niet goed bepalen wanneer er een
+      // legionellaronde nodig is. Bestaande installaties hebben dat veld nog
+      // niet, dus daar moeten we om vragen.
+      (function () {
+        const zonder = (data.devices || []).filter(d => !Number(d.element_power_w));
+        const balk = document.getElementById("elementPowerBanner");
+        if (!balk) return;
+        if (zonder.length === 0) {
+          balk.style.display = "none";
+          return;
+        }
+        const welke = zonder.length === 1
+          ? `van ${zonder[0].name}`
+          : `van ${zonder.length} SolarBuffers`;
+        document.getElementById("elementPowerText").textContent =
+          `Vermogen van het verwarmingselement ${welke} ontbreekt. Nodig voor de ` +
+          `legionellabeveiliging. Tik hier om het in te vullen bij Instellingen, ` +
+          `Configuratie, SolarBuffers.`;
+        balk.style.display = "flex";
+      })();
+
       document.getElementById("vacationTopBanner").style.display = active ? "flex" : "none";
       if (active && data.vacation_until) {
         const d = new Date(data.vacation_until * 1000);

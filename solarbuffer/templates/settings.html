@@ -773,6 +773,8 @@
         </div>
 
         <div class="legionella-panel" id="legionellaPanel">
+          <div id="warmteVoorraad" style="display:none; flex-direction:column; gap:0.45rem; margin-bottom:0.85rem;"></div>
+
           <div class="legionella-mode-tabs">
             <button type="button" class="legionella-mode-tab" id="legModeTabAuto" onclick="setLegionellaMode('automatic')">Automatisch</button>
             <button type="button" class="legionella-mode-tab" id="legModeTabManual" onclick="setLegionellaMode('manual')">Handmatig</button>
@@ -1290,6 +1292,34 @@
         document.getElementById('legionella_dot').className = 'dot' + (alEnabled ? ' active' : '');
 
         document.getElementById('legionellaPanel').style.display = alEnabled ? 'flex' : 'none';
+
+        // Warmtevoorraad per boiler. De klok voor de legionellaronde begint pas
+        // opnieuw als een vat helemaal vol is geweest, dus laat zien hoe ver het is.
+        (function () {
+          const bak = document.getElementById('warmteVoorraad');
+          if (!bak) return;
+          const app = (data.devices || []).filter(d => d.warmte_vol_kwh);
+          if (!alEnabled || app.length === 0) { bak.style.display = 'none'; return; }
+          bak.style.display = 'flex';
+          bak.innerHTML = app.map(function (d) {
+            const vol = Number(d.warmte_vol_kwh) || 0;
+            const nu = Number(d.warmte_kwh) || 0;
+            const pct = vol > 0 ? Math.max(0, Math.min(100, nu / vol * 100)) : 0;
+            const klaar = pct >= 99.5;
+            const kleur = klaar ? 'hsl(145,55%,45%)' : 'hsl(32,85%,55%)';
+            return '<div>'
+              + '<div style="display:flex;justify-content:space-between;font-size:0.78rem;'
+              + 'color:hsl(224,18%,45%);margin-bottom:0.2rem;">'
+              + '<span>' + (d.name || d.ip) + '</span>'
+              + '<span>' + nu.toFixed(1) + ' van ' + vol.toFixed(1) + ' kWh</span></div>'
+              + '<div style="height:6px;border-radius:3px;background:hsl(224,20%,90%);overflow:hidden;">'
+              + '<div style="height:100%;width:' + pct.toFixed(0) + '%;background:' + kleur + ';"></div>'
+              + '</div></div>';
+          }).join('')
+          + '<div style="font-size:0.75rem;color:hsl(224,18%,62%);margin-top:0.1rem;">'
+          + 'Zodra een vat helemaal vol is geweest begint de klok van 72 uur opnieuw. '
+          + 'Staat de boiler uit, dan loopt de stand in een etmaal terug naar nul.</div>';
+        })();
         if (alEnabled && !_legionellaDirty) {
           _legionellaMode = data.anti_legionella_mode || 'automatic';
           _legionellaTriggers = (data.anti_legionella_triggers || []).map(t => ({ day: t.day, time: t.time }));
