@@ -1312,7 +1312,6 @@ _last_calibration_reminder_check = 0.0
 
 # ================= ANTI-LEGIONELLA =================
 LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
-LEGIONELLA_RUN_SECONDS = 3 * 3600     # 3 uur op maximaal vermogen draaien
 # Wachten op een goedkoop uur mag, maar niet eindeloos. Blijft de stroom vijf dagen
 # lang duur, dan gaat de ronde alsnog draaien. Legionella trekt zich niets aan van
 # de beurs: na ongeveer 48 uur begint het zich te vormen en daarna verdubbelt het
@@ -9062,7 +9061,16 @@ def control_loop():
                     st = device_states[ip]
                     last_active = st.get("last_active_time", 0)
                     idle_too_long = (now - last_active) >= LEGIONELLA_IDLE_SECONDS
-                    legionella_run_seconds = int((d.get("boiler_volume", 100) / 100) * 3 * 3600)
+                    # De ronde loopt tot de warmtevoorraad vol is, niet op de klok.
+                    # Een vaste looptijd zei niets: drie uur op 2 kW is 6,0 kWh en
+                    # een vat van 100 liter vraagt er 6,39, dus stopte hij net voor
+                    # de rand. Alleen als noodstop staat er nog een grens op, het
+                    # dubbele van de tijd die dit vat op dit element nodig heeft.
+                    # Die is er voor een boiler die niets opneemt (element eraf),
+                    # want dan komt de voorraad nooit vol en zou de ronde blijven
+                    # hangen.
+                    legionella_noodstop_seconds = int(
+                        boiler_vol_kwh(d) / (element_vermogen_w(d) / 1000.0) * 3600 * 2)
 
                     # Wachten op een goedkoop uur mag, maar niet langer dan een
                     # week. Daarna gaat de ronde hoe dan ook draaien, ook als de
@@ -9101,12 +9109,25 @@ def control_loop():
 
                     if st.get("legionella_active"):
                         elapsed = now - (st.get("legionella_start") or now)
-                        if elapsed >= legionella_run_seconds:
+                        # Klaar als de warmtevoorraad vol is: dan is de energie er
+                        # echt in gegaan, of de thermostaat sloeg af en was het vat al
+                        # heet. Zo stookt niemand nog uren van het net door voor een
+                        # boiler die na een uur al op temperatuur was.
+                        voorraad_vol = bool(st.get("warmte_vol"))
+                        if voorraad_vol or elapsed >= legionella_noodstop_seconds:
                             st["legionella_active"] = False
                             st["legionella_start"] = None
                             st["last_active_time"] = now
                             save_state(force=True)
-                            print(f"Anti-Legionella: cyclus voltooid voor {ip}")
+                            if voorraad_vol:
+                                print(f"Anti-Legionella: cyclus voltooid voor {ip}, "
+                                      f"warmtevoorraad vol na {elapsed / 60:.0f} min")
+                            else:
+                                print(f"Anti-Legionella: noodstop voor {ip} na "
+                                      f"{elapsed / 60:.0f} min, de voorraad bleef op "
+                                      f"{float(st.get('warmte_kwh') or 0.0):.1f} van "
+                                      f"{boiler_vol_kwh(d):.1f} kWh. Neemt deze boiler wel "
+                                      f"vermogen op?")
                             send_notification(f"🦠 <b>Legionellabeveiliging voltooid</b> voor {d.get('name', ip)}.", event_key="ntfy_notify_legionella")
                             pre_started = st.get("pre_legionella_started")
                             pre_brightness = st.get("pre_legionella_brightness", 0)
@@ -9521,6 +9542,19 @@ def control_loop():
                             st["temp_shutoff_since"] = None
                             st["temp_shutoff_until"] = now + _ts_retry_min * 60
                             st["price_triggered"] = False
+                            # Zelfde bewijs als in werk_warmtevoorraad_bij: slaat de
+                            # thermostaat af, dan is het vat heet. Hier nog een keer,
+                            # zodat het niet uitmaakt welke van de twee als eerste
+                            # tot die conclusie komt voordat de boiler uit gaat.
+                            if not st.get("warmte_vol"):
+                                st["warmte_kwh"] = boiler_vol_kwh(d)
+                                st["warmte_vol"] = True
+                                st["warmte_bron"] = "thermostaat"
+                                st["last_active_time"] = now
+                                print(f"[WARMTE] {d.get('name', ip)} op temperatuur bij de "
+                                      f"temp-uitschakeling, voorraad op "
+                                      f"{boiler_vol_kwh(d):.1f} kWh gezet, legionellaklok opnieuw",
+                                      flush=True)
                             # De herstart na de wachttijd verloopt stil: de
                             # temp-melding belooft die al, geen extra startbericht
                             st["temp_shutoff_silent_restart"] = True

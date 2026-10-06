@@ -1276,12 +1276,10 @@
         let alSub = 'Uitgeschakeld';
         if (alEnabled) {
           if (alActive.length > 0) {
-            const nowSec = Date.now() / 1000;
-            const elapsed = nowSec - (alActive[0].legionella_start || nowSec);
-            const remaining = Math.max(0, 3 * 3600 - elapsed);
-            const h = Math.floor(remaining / 3600);
-            const m = Math.floor((remaining % 3600) / 60);
-            alSub = `Cyclus actief — ${h}u ${m < 10 ? '0' + m : m}m resterend`;
+            // Geen aftelling meer: de ronde loopt tot het vat vol is, niet op tijd.
+            const nu = (alActive[0].warmte_kwh || 0).toFixed(1).replace('.', ',');
+            const vol = (alActive[0].warmte_vol_kwh || 0).toFixed(1).replace('.', ',');
+            alSub = `Cyclus actief — ${nu} van ${vol} kWh in het vat`;
           } else if (alRequired.length > 0) {
             alSub = 'Wacht op ingestelde trigger';
           } else {
