@@ -7385,14 +7385,20 @@ def init_device_states(devices):
                 "freeze": False, "started": False, "pending_start": False,
                 "saturated_since": None, "min_since": None,
                 "last_active_time": s.get("last_active_time", time.time()), "power": 0,
-                # Een Hub die van voor deze functie komt heeft nog geen emmer.
-                # Die beginnen we vol: hun legionellaklok liep tot nu toe op
+                # Drie gevallen. Staat de emmer al in de opgeslagen toestand,
+                # dan nemen we die over. Is er wel een toestand maar nog geen
+                # emmer, dan is dit een bestaande installatie die bijwerkt: die
+                # beginnen we vol, want hun legionellaklok liep tot nu toe op
                 # "aangezet" en stond dus net zo goed bij. Leeg beginnen zou
                 # betekenen dat iedereen de dag na de update een ronde van het
-                # net krijgt, voor een vat dat misschien gewoon warm is.
+                # net krijgt voor een vat dat misschien gewoon warm is.
+                # Is er helemaal geen toestand, dan is deze boiler zojuist
+                # toegevoegd en hebben we nog nooit iets gemeten. Dan hoort de
+                # emmer leeg te zijn; vol zetten zou een meting voorwenden die
+                # er niet is.
                 "warmte_kwh": (float(s["warmte_kwh"]) if "warmte_kwh" in s
-                               else boiler_vol_kwh(d)),
-                "warmte_vol": bool(s.get("warmte_vol", "warmte_kwh" not in s)),
+                               else (boiler_vol_kwh(d) if s else 0.0)),
+                "warmte_vol": bool(s.get("warmte_vol", bool(s))),
                 "warmte_ts": None,
                 "chip_temp": None,
                 "power_socket_on": False, "power_socket_online": False,
