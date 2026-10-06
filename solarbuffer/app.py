@@ -620,6 +620,9 @@ def save_state(force=False):
             # elke update weer bij nul en haalt hij de bovenrand nooit.
             "warmte_kwh": round(float(st.get("warmte_kwh", 0.0) or 0.0), 4),
             "warmte_vol": bool(st.get("warmte_vol", False)),
+            # Ook het tijdstip, zodat een herstart weet hoe lang hij weg was en
+            # die tijd alsnog van de emmer af kan halen.
+            "warmte_ts": st.get("warmte_ts"),
             "legionella_active": st.get("legionella_active", False),
             "legionella_start": st.get("legionella_start"),
             "legionella_required": st.get("legionella_required", False),
@@ -7195,6 +7198,7 @@ WATER_WARMTE_KJ = 4.18          # kJ om een liter water een graad op te warmen
 BOILER_DELTA_T = 55             # van 10 graden uit de kraan naar 65 in het vat
 ELEMENT_W_STANDAARD = 2000      # aanname als niemand het elementvermogen invult
 WARMTE_LEEGLOOP_UREN = 24       # zo lang doet een vol vat erover om op nul te staan
+WARMTE_GAT_S = 120              # grotere stap tussen metingen is een gat, geen tik
 
 
 def boiler_vol_kwh(device):
@@ -7262,20 +7266,62 @@ def opgenomen_watt(device, st):
     return max(0.0, min(1.0, deel)) * element_vermogen_w(device)
 
 
-def werk_warmtevoorraad_bij(device, st, now):
+def thermostaat_is_afgeslagen(device, st, now, vol_stand_vanaf):
+    """Of de thermostaat in het vat afschakelt terwijl wij vol vermogen geven.
+
+    Wij geven alles vrij, de meter ziet alleen standby: dan heeft de thermostaat
+    in het vat de ketel losgelaten en is het water op temperatuur. Dat is harder
+    bewijs dan onze eigen emmer, want het komt uit het vat zelf. Het venster van
+    2 tot 10 watt houdt een losgeraakt of defect element buiten de deur, want dat
+    meet nul. Zonder vermogensmeter is dit niet te zien.
+    """
+    op_temperatuur = (
+        device.get("power_meter")
+        and st.get("power_meter_online")
+        and st.get("started")
+        and st.get("on")
+        and not st.get("manual_override")
+        and (st.get("brightness") or 0) >= vol_stand_vanaf
+        and TEMP_SHUTOFF_MIN_W <= (st.get("power") or 0) <= TEMP_SHUTOFF_MAX_W
+    )
+    if not op_temperatuur:
+        st["warmte_temp_since"] = None
+        return False
+    if st.get("warmte_temp_since") is None:
+        st["warmte_temp_since"] = now
+        return False
+    return (now - st["warmte_temp_since"]) >= TEMP_SHUTOFF_CONFIRM
+
+
+def werk_warmtevoorraad_bij(device, st, now, vol_stand_vanaf=95):
     """Vult of leegt de emmer, en meldt of het vat zojuist vol is geraakt."""
     vol = boiler_vol_kwh(device)
     vorige = st.get("warmte_ts")
     st["warmte_ts"] = now
+
+    # Slaat de thermostaat af, dan is het vat heet en hoeven we niet verder op te
+    # tellen. De emmer gaat in een keer naar de rand.
+    if thermostaat_is_afgeslagen(device, st, now, vol_stand_vanaf):
+        was_vol = st.get("warmte_vol", False)
+        st["warmte_kwh"] = vol
+        st["warmte_vol"] = True
+        st["warmte_bron"] = "thermostaat"
+        return not was_vol
+
     if vorige is None:
         return False
     dt = now - vorige
-    if dt <= 0 or dt > 120:
-        # Gat in de metingen, bijvoorbeeld na een herstart. Niet gokken wat er
-        # in die tijd gebeurd is, gewoon overslaan.
+    if dt <= 0:
+        # Klok achteruit gezet, bijvoorbeeld de eerste NTP-sync na een herstart.
         return False
 
-    watt = opgenomen_watt(device, st)
+    # Een gat tussen twee metingen (hub uit, update, stroomstoring) rekenen we als
+    # leegloop. We hebben in die tijd niets gezien, en dan is aannemen dat het vat
+    # afkoelt de veilige kant: te vroeg een legionellaronde kost wat stroom, te
+    # laat is een risico. Stookte de klant in de tussentijd zelf, dan zien we dat
+    # bij de eerstvolgende poging alsnog: de thermostaat slaat dan binnen een
+    # minuut af en de emmer springt vol.
+    watt = 0.0 if dt > WARMTE_GAT_S else opgenomen_watt(device, st)
     stand = float(st.get("warmte_kwh", 0.0) or 0.0)
     if watt > 10:
         # Hij verwarmt. Dan loopt er niets weg, dat gebeurt pas als hij uit is.
@@ -7288,6 +7334,8 @@ def werk_warmtevoorraad_bij(device, st, now):
     nu_vol = stand >= vol - 0.001
     st["warmte_kwh"] = stand
     st["warmte_vol"] = nu_vol
+    if nu_vol and not was_vol:
+        st["warmte_bron"] = "emmer"
     return nu_vol and not was_vol
 
 
@@ -7399,7 +7447,9 @@ def init_device_states(devices):
                 "warmte_kwh": (float(s["warmte_kwh"]) if "warmte_kwh" in s
                                else (boiler_vol_kwh(d) if s else 0.0)),
                 "warmte_vol": bool(s.get("warmte_vol", bool(s))),
-                "warmte_ts": None,
+                "warmte_ts": s.get("warmte_ts"),
+                "warmte_temp_since": None,
+                "warmte_bron": None,
                 "chip_temp": None,
                 "power_socket_on": False, "power_socket_online": False,
                 "power_socket_last_on_command": 0,
@@ -8964,12 +9014,17 @@ def control_loop():
 
                 # Emmer bijwerken. Raakt hij vol, dan is het hele vat doorgewarmd
                 # geweest en begint de legionellaklok opnieuw.
-                if werk_warmtevoorraad_bij(d, state, now):
+                if werk_warmtevoorraad_bij(d, state, now, FREEZE_AT):
                     state["last_active_time"] = now
                     save_state()
-                    print(f"[WARMTE] {d.get('name', ip)} volledig doorgewarmd "
-                          f"({boiler_vol_kwh(d):.1f} kWh), legionellaklok opnieuw",
-                          flush=True)
+                    if state.get("warmte_bron") == "thermostaat":
+                        print(f"[WARMTE] {d.get('name', ip)} op temperatuur: thermostaat valt af "
+                              f"bij vol vermogen, voorraad op {boiler_vol_kwh(d):.1f} kWh gezet, "
+                              f"legionellaklok opnieuw", flush=True)
+                    else:
+                        print(f"[WARMTE] {d.get('name', ip)} volledig doorgewarmd "
+                              f"({boiler_vol_kwh(d):.1f} kWh), legionellaklok opnieuw",
+                              flush=True)
 
             measured_power = current_power
             # Een trage meter herhaalt zijn waarde tot het volgende telegram. Alleen
