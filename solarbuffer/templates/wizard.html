@@ -1120,6 +1120,24 @@
                     alert('Elke prioriteit mag maar één keer voorkomen.');
                     return false;
                 }
+
+                // Zonder inhoud en elementvermogen kan SolarBuffer niet uitrekenen
+                // wanneer een vat volledig is doorgewarmd, en dus niet bepalen
+                // wanneer er een legionellaronde nodig is. Daarom staan ze leeg en
+                // moet je er echt even naar kijken.
+                for (const c of filledCards) {
+                    const naam = c.querySelector('input[name="shelly_name[]"]').value.trim() || 'deze SolarBuffer';
+                    const inhoud = Number(c.querySelector('input[name="boiler_volume[]"]').value);
+                    const verm = Number(c.querySelector('input[name="element_power_w[]"]').value);
+                    if (!(inhoud > 0)) {
+                        alert(`Vul de inhoud van de boiler in bij ${naam}. Dat staat meestal op het typeplaatje.`);
+                        return false;
+                    }
+                    if (!(verm > 0)) {
+                        alert(`Vul het vermogen van het verwarmingselement in bij ${naam}. Dat staat meestal op het typeplaatje.`);
+                        return false;
+                    }
+                }
             }
 
             return true;
@@ -1250,8 +1268,8 @@
             power_ip = '',
             power_socket_type = '',
             power_socket_ip = '',
-            boiler_volume = 100,
-            element_power_w = 0
+            boiler_volume = '',
+            element_power_w = ''
         ) {
             const container = document.getElementById('deviceContainer');
             if (container.children.length >= 5) {
@@ -1295,14 +1313,14 @@
             <div class="field-group" style="margin-bottom:0;">
                 <label>Inhoud boiler</label>
                 <div class="input-with-unit">
-                    <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" required value="${escapeHtml(boiler_volume || 100)}">
+                    <input type="number" name="boiler_volume[]" min="10" max="2000" placeholder="100" required value="${boiler_volume ? escapeHtml(boiler_volume) : ''}">
                     <span class="unit">L</span>
                 </div>
             </div>
             <div class="field-group" style="margin-bottom:0;">
                 <label>Vermogen element</label>
                 <div class="input-with-unit">
-                    <input type="number" name="element_power_w[]" min="0" max="20000" step="100" placeholder="2000" required value="${escapeHtml(element_power_w || 2000)}">
+                    <input type="number" name="element_power_w[]" min="0" max="20000" step="100" placeholder="2000" required value="${element_power_w ? escapeHtml(element_power_w) : ''}">
                     <span class="unit">W</span>
                 </div>
             </div>
@@ -1760,8 +1778,8 @@
                 d.power_ip || "",
                 d.power_socket_type || "",
                 d.power_socket_ip || "",
-                d.boiler_volume || 100,
-                d.element_power_w || 0
+                d.boiler_volume || '',
+                d.element_power_w || ''
             ));
         } else {
             addDevice();
