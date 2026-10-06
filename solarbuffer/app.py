@@ -7198,6 +7198,7 @@ BOILER_DELTA_T = 55             # van 10 graden uit de kraan naar 65 in het vat
 ELEMENT_W_STANDAARD = 2000      # aanname als niemand het elementvermogen invult
 WARMTE_LEEGLOOP_UREN = 24       # zo lang doet een vol vat erover om op nul te staan
 WARMTE_GAT_S = 120              # grotere stap tussen metingen is een gat, geen tik
+DIM_MIN_AANDEEL = 0.10          # op de laagste dimstand neemt het element een tiende op
 
 
 def boiler_vol_kwh(device):
@@ -7245,13 +7246,29 @@ def vermogen_bij_helderheid(curve, helderheid):
     return punten[-1][1]
 
 
+def dim_aandeel(helderheid):
+    """Welk deel van zijn volle vermogen het element bij deze dimstand opneemt.
+
+    We regelen van stand 30 tot 100. Op de laagste stand gaan we uit van een tiende
+    van het element, en vandaar rechtlijnig omhoog naar het volle vermogen op 100.
+    Onder stand 30 regelen we niet, daar staat hij uit.
+    """
+    if (helderheid or 0) < MIN_BRIGHTNESS:
+        return 0.0
+    deel = (helderheid - MIN_BRIGHTNESS) / float(MAX_BRIGHTNESS - MIN_BRIGHTNESS)
+    deel = max(0.0, min(1.0, deel))
+    return DIM_MIN_AANDEEL + deel * (1.0 - DIM_MIN_AANDEEL)
+
+
 def opgenomen_watt(device, st):
     """Wat deze boiler op dit moment opneemt.
 
     Een gekoppelde vermogensmeter is de waarheid. Zonder meter schatten we het:
-    met een ingemeten curve nauwkeurig, en anders rechtlijnig over de dimband.
-    Dat laatste is grof, want een fasedimmer loopt niet rechtlijnig, maar beter
-    dan niets en de curve lost het netjes op voor wie hem laat inmeten.
+    met een ingemeten curve nauwkeurig, en anders uit de dimstand: een tiende van het
+    element op de laagste stand, rechtlijnig omhoog naar het volle vermogen. Dat
+    blijft een aanname, maar het eerdere model zette stand 30 op nul watt, en zo'n
+    onderschatting houdt de warmtevoorraad kunstmatig laag en levert hubs zonder
+    meter legionellarondes op die ze niet nodig hadden.
     """
     if device.get("power_meter") and st.get("power_meter_online"):
         return max(0.0, float(st.get("power") or 0.0))
@@ -7261,8 +7278,7 @@ def opgenomen_watt(device, st):
     uit_curve = vermogen_bij_helderheid(device.get("power_curve"), helderheid)
     if uit_curve is not None:
         return max(0.0, uit_curve)
-    deel = (helderheid - MIN_BRIGHTNESS) / float(MAX_BRIGHTNESS - MIN_BRIGHTNESS)
-    return max(0.0, min(1.0, deel)) * element_vermogen_w(device)
+    return dim_aandeel(helderheid) * element_vermogen_w(device)
 
 
 def thermostaat_is_afgeslagen(device, st, now, vol_stand_vanaf):
