@@ -1311,7 +1311,7 @@ _calibrating_ips = set()
 _last_calibration_reminder_check = 0.0
 
 # ================= ANTI-LEGIONELLA =================
-LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder activiteit → cyclus starten
+LEGIONELLA_IDLE_SECONDS = 72 * 3600   # 72 uur zonder volledig doorgewarmd vat → cyclus starten
 # Wachten op een goedkoop uur mag, maar niet eindeloos. Blijft de stroom vijf dagen
 # lang duur, dan gaat de ronde alsnog draaien. Legionella trekt zich niets aan van
 # de beurs: na ongeveer 48 uur begint het zich te vormen en daarna verdubbelt het
