@@ -7293,12 +7293,15 @@ def thermostaat_is_afgeslagen(device, st, now, vol_stand_vanaf):
     2 tot 10 watt houdt een losgeraakt of defect element buiten de deur, want dat
     meet nul. Zonder vermogensmeter is dit niet te zien.
     """
+    # Bewust zonder manual_override. Dat hoort bij de temp-uitschakeling, die niet
+    # mag uitzetten wat de gebruiker zelf heeft aangezet. Voor de vaststelling dat
+    # het vat heet is doet het niet ter zake wie het vermogen vrijgaf: vol vermogen
+    # erin en alleen standby eruit betekent dat de thermostaat open staat.
     op_temperatuur = (
         device.get("power_meter")
         and st.get("power_meter_online")
         and st.get("started")
         and st.get("on")
-        and not st.get("manual_override")
         and (st.get("brightness") or 0) >= vol_stand_vanaf
         and TEMP_SHUTOFF_MIN_W <= (st.get("power") or 0) <= TEMP_SHUTOFF_MAX_W
     )
