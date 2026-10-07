@@ -1345,7 +1345,11 @@
 
         // ===== ACCU =====
         const batRow = document.getElementById('batCtrlRow');
-        const batIsZendure = !!data.battery_enabled && data.battery_type === 'zendure';
+        // Handmatig bedienen kan bij de typen die een setpoint aannemen. Bij
+        // HomeWizard en Marstek geven we rechten en regelt de accu zelf, daar is
+        // een vast vermogen niet uit te drukken.
+        const batIsZendure = !!data.battery_enabled
+          && ['zendure', 'indevolt'].includes(data.battery_type);
         batRow.style.display = batIsZendure ? '' : 'none';
         document.getElementById('batCtrlPanel').style.display =
           (batIsZendure && data.battery_control_mode !== 'off') ? 'flex' : 'none';

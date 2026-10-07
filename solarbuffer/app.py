@@ -2462,6 +2462,14 @@ def settings_p1():
             cfg["marstek_max_power"] = 2000
         if cfg.get("battery_type") == "marstek":
             cfg["marstek_invert_power"] = "marstek_invert_power" in request.form
+        try:
+            cfg["indevolt_port"] = int(request.form.get("indevolt_port", 8080))
+        except (ValueError, TypeError):
+            cfg["indevolt_port"] = 8080
+        try:
+            cfg["indevolt_max_power"] = int(request.form.get("indevolt_max_power", 2000))
+        except (ValueError, TypeError):
+            cfg["indevolt_max_power"] = 2000
         cfg["battery_power_meter"] = request.form.get("battery_power_meter", "").strip().lower()
         cfg["battery_power_ip"] = request.form.get("battery_power_ip", "").strip()
         _ztrans = request.form.get("zendure_transport", "http")
@@ -2864,7 +2872,7 @@ def _hw_pair_with_ip(ip):
     return r
 
 
-def _probe_een_accu(soort, ip, token, marstek_port):
+def _probe_een_accu(soort, ip, token, marstek_port, indevolt_port=8080):
     """Kijkt of er op dit adres werkelijk een accu antwoordt.
 
     Geeft terug wat er te zien is, en bij een fout waarom het misging. Dat
@@ -2892,6 +2900,12 @@ def _probe_een_accu(soort, ip, token, marstek_port):
                 return {"ip": ip, "online": True,
                         "soc": res.get("bat_soc"), "vermogen": res.get("bat_power")}
             return {"ip": ip, "online": False, "fout": "Geen antwoord op dit adres"}
+        if soort == "indevolt":
+            d = indevolt_lees_accu(ip, indevolt_port, timeout=3)
+            _standen = {1: "zelfverbruik", 4: "real-time", 5: "schema"}
+            return {"ip": ip, "online": True, "soc": d["soc"],
+                    "vermogen": d["vermogen_w"],
+                    "werkstand": _standen.get(d["werkstand"], d["werkstand"])}
         if soort == "zendure":
             props = zendure_get_report(ip, timeout=3) or {}
             laden = float(props.get("outputPackPower") or 0)
@@ -2930,13 +2944,17 @@ def battery_probe():
         poort = int(data.get("marstek_port") or 30000)
     except (TypeError, ValueError):
         poort = 30000
+    try:
+        iv_poort = int(data.get("indevolt_port") or 8080)
+    except (TypeError, ValueError):
+        iv_poort = 8080
     units = [u for u in (data.get("units") or []) if (u.get("ip") or "").strip()][:4]
 
     resultaten = [None] * len(units)
     draden = []
     for i, u in enumerate(units):
         def werk(i=i, u=u):
-            resultaten[i] = _probe_een_accu(soort, u.get("ip"), u.get("token"), poort)
+            resultaten[i] = _probe_een_accu(soort, u.get("ip"), u.get("token"), poort, iv_poort)
         t = threading.Thread(target=werk, daemon=True)
         t.start()
         draden.append(t)
@@ -3049,8 +3067,12 @@ def battery_control_mode():
         return jsonify(success=False, error="Ongeldige stand"), 400
 
     cfg = load_config()
-    if cfg.get("battery_type") != "zendure":
-        return jsonify(success=False, error="Alleen beschikbaar voor een gekoppelde Zendure"), 400
+    # Alleen voor de typen die een setpoint aannemen. Bij HomeWizard en Marstek
+    # geven we rechten en regelt de accu zelf; een vast vermogen is daar niet uit
+    # te drukken, dus die stand zou niets doen.
+    if cfg.get("battery_type") not in ("zendure", "indevolt"):
+        return jsonify(success=False,
+                       error="Alleen beschikbaar voor een Zendure of Indevolt"), 400
 
     direction = cfg.get("battery_manual_direction", "charge")
     power = int(cfg.get("battery_manual_power") or 0)
@@ -3067,7 +3089,10 @@ def battery_control_mode():
         # ontlaadt met 800. Eén gedeeld getal knipte een handmatige laadopdracht
         # stilletjes af op de ontlaadgrens.
         _veld = "max_consumption_w" if direction == "charge" else "max_production_w"
-        _plafond = int(battery_state.get(_veld) or 0) or int(cfg.get("zendure_max_power") or 800)
+        _terugval = (int(cfg.get("indevolt_max_power") or 2000)
+                     if cfg.get("battery_type") == "indevolt"
+                     else int(cfg.get("zendure_max_power") or 800))
+        _plafond = int(battery_state.get(_veld) or 0) or _terugval
         power = min(power, _plafond)
 
     cfg["battery_control_mode"] = mode
@@ -9471,12 +9496,36 @@ def control_loop():
                                 args=(_marstek_ips[0], int(cfg.get("marstek_port") or 30000)),
                                 daemon=True,
                             ).start()
+                    elif _bat_type == "indevolt":
+                        _iv_ips = cfg.get("battery_ips") or []
+                        if _iv_ips:
+                            _iv_port = int(cfg.get("indevolt_port") or 8080)
+                            _iv_forced = accu_handmatige_override(cfg)
+                            if _iv_forced is None:
+                                # Wij regelen niet meer, dus krijgt de accu zijn eigen
+                                # regeling terug. Hem op het laatste setpoint laten
+                                # staan zou betekenen dat hij de hele nacht doet wat
+                                # er toevallig als laatste in stond.
+                                threading.Thread(
+                                    target=release_indevolt_to_self_consumption,
+                                    args=(_iv_ips[0], _iv_port),
+                                    daemon=True,
+                                ).start()
+                            else:
+                                threading.Thread(
+                                    target=set_indevolt_control,
+                                    args=(_iv_ips[0], _iv_port, "manual_fixed", [],
+                                          measured_power,
+                                          int(cfg.get("indevolt_max_power") or 2000)),
+                                    kwargs={"forced_power": _iv_forced},
+                                    daemon=True,
+                                ).start()
                     elif _bat_type == "zendure":
                         _zendure_ips = cfg.get("battery_ips") or []
                         if _zendure_ips:
                             # Handmatig of uit blijft ook hier gelden: de accu volgt
                             # zijn eigen stand, niet de hoofdschakelaar van de boiler.
-                            _z_forced = zendure_manual_override(cfg)
+                            _z_forced = accu_handmatige_override(cfg)
                             if _z_forced is None:
                                 _z_args = (_zendure_ips, "zero",
                                            ["charge_allowed", "discharge_allowed"],
@@ -9677,13 +9726,16 @@ def control_loop():
                 _bat_priority = cfg.get("battery_priority", "boiler")
                 _bat_soc_thr = cfg.get("battery_soc_threshold", 95)
                 _bat_soc = battery_state.get("soc")
-                # Handmatige accubediening, voorlopig alleen Zendure: bij manual en
-                # off slaat de hele prioriteitslogica over. De accu krijgt dan een
-                # vast setpoint van de gebruiker en blokkeert de boiler niet meer,
-                # dus 'accu eerst' en 'boiler eerst' spelen geen rol meer.
+                # Handmatige accubediening, voor de typen die op een setpoint te
+                # sturen zijn: bij manual en off slaat de hele prioriteitslogica
+                # over. De accu krijgt dan een vast setpoint van de gebruiker en
+                # blokkeert de boiler niet meer, dus 'accu eerst' en 'boiler eerst'
+                # spelen geen rol meer. Bij HomeWizard en Marstek bestaat die
+                # bediening niet: daar geven we rechten en regelt de accu zelf.
                 _bat_ctrl_mode = (cfg.get("battery_control_mode", "auto")
-                                  if cfg.get("battery_type") == "zendure" else "auto")
-                _bat_manual_power = (zendure_manual_override(cfg) or 0) if _bat_ctrl_mode != "auto" else 0
+                                  if cfg.get("battery_type") in ("zendure", "indevolt")
+                                  else "auto")
+                _bat_manual_power = (accu_handmatige_override(cfg) or 0) if _bat_ctrl_mode != "auto" else 0
 
                 # Heeft de klant zijn HomeWizard-accu zelf op een stand gezet die
                 # wij niet sturen, bijvoorbeeld slim laden, dan laten we hem met
@@ -9695,7 +9747,7 @@ def control_loop():
                 # buitenspel zetten voordat we iets weten.
                 _bat_gelezen_stand = (battery_state.get("mode") or "").strip().lower()
                 _bat_eigen_regie = (
-                    cfg.get("battery_type", "homewizard") not in ("marstek", "zendure")
+                    cfg.get("battery_type", "homewizard") not in ("marstek", "zendure", "indevolt")
                     and bool(_bat_gelezen_stand)
                     and _bat_gelezen_stand not in HW_EIGEN_STANDEN
                 )
@@ -9807,13 +9859,13 @@ def control_loop():
                     # gewoon weer de normale volgorde.
                     _sched_accu_w = actief_accu_laadvermogen(cfg.get("schedules", [])) if schedules_enabled else 0
                     if _sched_accu_w > 0:
-                        # Alleen bij Zendure kunnen we een exact vermogen opleggen.
-                        # Marstek en HomeWizard kennen geen setpoint over deze weg,
-                        # daar is volladen het dichtste wat er in de buurt komt: die
-                        # laden dan op hun eigen maximum in plaats van op het
-                        # ingevulde getal.
+                        # Alleen bij een accu die een setpoint aanneemt kunnen we
+                        # een exact vermogen opleggen. Marstek en HomeWizard kennen
+                        # dat over deze weg niet, daar is volladen het dichtste wat
+                        # er in de buurt komt: die laden dan op hun eigen maximum in
+                        # plaats van op het ingevulde getal.
                         _desired_mode = ("manual_fixed"
-                                         if cfg.get("battery_type") == "zendure"
+                                         if cfg.get("battery_type") in ("zendure", "indevolt")
                                          else "to_full")
                         _desired_perms = []
                         battery_blocks_start = False
@@ -10055,6 +10107,41 @@ def control_loop():
                                     args=(_marstek_ips[0], _marstek_port, _desired_mode,
                                           _desired_perms, measured_power, _marstek_max,
                                           cfg.get("marstek_invert_power", True)),
+                                    daemon=True,
+                                ).start()
+                    elif _bat_type == "indevolt":
+                        _iv_ips = cfg.get("battery_ips") or []
+                        _iv_port = int(cfg.get("indevolt_port") or 8080)
+                        _iv_max = int(cfg.get("indevolt_max_power") or 2000)
+                        if _iv_ips:
+                            if _bat_ctrl_mode in ("manual", "off"):
+                                # Vast setpoint: hangt niet af van de P1-meting en
+                                # ook niet van de hoofdschakelaar van de boiler.
+                                threading.Thread(
+                                    target=set_indevolt_control,
+                                    args=(_iv_ips[0], _iv_port, "manual_fixed", [],
+                                          measured_power, _iv_max),
+                                    kwargs={"forced_power": _bat_manual_power},
+                                    daemon=True,
+                                ).start()
+                            elif not enabled or not _p1_online:
+                                # Zonder betrouwbare meting kunnen we niet regelen, en
+                                # een accu die op het laatste setpoint blijft staan laadt
+                                # desnoods de hele nacht van het net. Eigen regeling terug.
+                                threading.Thread(
+                                    target=release_indevolt_to_self_consumption,
+                                    args=(_iv_ips[0], _iv_port),
+                                    daemon=True,
+                                ).start()
+                            else:
+                                threading.Thread(
+                                    target=set_indevolt_control,
+                                    args=(_iv_ips[0], _iv_port, _desired_mode,
+                                          _desired_perms,
+                                          p1_average(INDEVOLT_REG_AVG_SECONDS, measured_power),
+                                          _iv_max),
+                                    kwargs={"forced_power": (_sched_accu_w or
+                                                             _bat_manual_power)},
                                     daemon=True,
                                 ).start()
                     elif _bat_type == "zendure":
@@ -11979,8 +12066,12 @@ def zendure_send_setpoint(ips, target_power, props=None):
     return verstuurd
 
 
-def zendure_manual_override(cfg):
+def accu_handmatige_override(cfg):
     """Vertaalt de handmatige accustand naar een vast setpoint in watt.
+
+    Geldt voor elk accutype dat op een setpoint te sturen is, dus Zendure en
+    Indevolt. Leest alleen battery_control_mode, battery_manual_power en
+    battery_manual_direction en is daarmee niet merkgebonden.
 
     Geeft None terug als de accu op automatisch staat; dan geldt de normale
     regellogica met de prioriteit tussen boiler en accu. Positief = laden,
