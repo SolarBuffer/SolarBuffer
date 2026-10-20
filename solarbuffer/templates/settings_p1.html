@@ -294,12 +294,96 @@
     html[data-theme="dark"] .prio-option:checked + .prio-card .prio-icon { background: hsl(32, 85%, 50%); color: #fff; }
     html[data-theme="dark"] .prio-label { color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .prio-sub   { color: hsl(224, 18%, 74%); }
+    /* ---- Herbruikbare bouwstenen voor deze pagina ----------------------------
+       Deze stonden eerder als inline stijl bij elk veld, tien keer dezelfde regel.
+       Als klasse zijn ze op een plek te veranderen en, belangrijker, kan het
+       donkere thema er wel overheen: een blok van hsl(224,20%,96%) staat in het
+       donker te stralen en dat was inline niet te verhelpen. */
+    .hint {
+      font-size: 0.75rem;
+      color: hsl(224, 18%, 73%);
+      margin-top: 0.3rem;
+    }
+    .note {
+      font-size: 0.82rem;
+      color: hsl(224, 18%, 45%);
+      padding: 0.6rem 0.75rem;
+      background: hsl(224, 20%, 96%);
+      border-radius: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .warn {
+      font-size: 0.78rem;
+      color: hsl(30, 80%, 28%);
+      padding: 0.6rem 0.75rem;
+      background: hsl(37, 90%, 95%);
+      border: 1px solid hsl(37, 80%, 80%);
+      border-radius: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .subsec {
+      border-top: 1px solid hsl(224, 18%, 90%);
+      margin: 0.9rem 0 0.75rem;
+      padding-top: 0.75rem;
+    }
+    .subsec-title { font-weight: 600; font-size: 0.88rem; margin-bottom: 0.35rem; }
+    .subsec-sub   { font-size: 0.78rem; color: hsl(224, 18%, 65%); margin-bottom: 0.6rem; }
+    .row-inline   { display: flex; gap: 0.5rem; align-items: center; }
+    .btn-inline   { width: auto; display: inline-block; padding: 0.5rem 0.9rem; font-size: 0.85rem; }
+    .status-box {
+      display: none;
+      margin-top: 0.5rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.5rem;
+      font-size: 0.82rem;
+      border: 1px solid transparent;
+    }
+    html[data-theme="dark"] .hint { color: hsl(224, 18%, 60%); }
+    html[data-theme="dark"] .note { background: hsl(224, 38%, 15%); color: hsl(224, 18%, 78%); }
+    html[data-theme="dark"] .warn {
+      background: hsl(32, 40%, 16%);
+      border-color: hsl(32, 45%, 30%);
+      color: hsl(37, 70%, 76%);
+    }
+    /* Een lange uitleg hoort beschikbaar te zijn, niet altijd open te staan. */
+    details.note > summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: hsl(224, 20%, 35%);
+      list-style: none;
+    }
+    details.note > summary::-webkit-details-marker { display: none; }
+    details.note > summary::before { content: "▸ "; }
+    details.note[open] > summary::before { content: "▾ "; }
+    details.note[open] > summary { margin-bottom: 0.4rem; }
+    html[data-theme="dark"] details.note > summary { color: hsl(224, 18%, 82%); }
+    .step-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: hsl(224, 20%, 25%);
+      margin-bottom: 0.5rem;
+    }
+    html[data-theme="dark"] .step-title { color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .subsec { border-top-color: hsl(224, 38%, 20%); }
+    html[data-theme="dark"] .subsec-sub { color: hsl(224, 18%, 62%); }
+
     /* Vier accutypen in 2x2. Een rij van vier knijpt de kaarten zo smal dat de
        ondertitel afbreekt, en op een telefoon waren drie kolommen al krap. */
     .bat-type-grid { grid-template-columns: 1fr 1fr; }
     .p1-source-grid { grid-template-columns: 1fr 1fr; }
     .bat-type-grid .prio-icon, .p1-source-grid .prio-icon { background: transparent !important; width: auto; height: auto; border-radius: 0; }
     .bat-type-grid .prio-icon img, .p1-source-grid .prio-icon img { border-radius: 50%; display: block; }
+    /* Indevolt levert een woordmerk, geen rond beeldmerk. Verkleind tot 44 px is
+       de tekst onleesbaar en knipt de cirkel de I en de T eraf, dus snijden we met
+       object-fit de tekstband eruit en tonen die breed. */
+    .bat-type-grid .prio-icon img.logo-breed {
+      width: 120px;
+      height: 33px;
+      object-fit: cover;
+      object-position: center;
+      border-radius: 0.35rem;
+      margin: 5px auto;
+    }
     .bat-type-grid .prio-option:checked + .prio-card .prio-icon, .p1-source-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
     html[data-theme="dark"] .bat-type-grid .prio-icon, html[data-theme="dark"] .p1-source-grid .prio-icon { background: transparent !important; border-radius: 0; }
     html[data-theme="dark"] .bat-type-grid .prio-option:checked + .prio-card .prio-icon, html[data-theme="dark"] .p1-source-grid .prio-option:checked + .prio-card .prio-icon { background: transparent !important; }
@@ -377,7 +461,7 @@
           </div>
           <div class="field-group">
             <label for="p1mac">MAC-adres P1-meter</label>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
+            <div class="row-inline">
               <input type="text" id="p1mac" readonly
                      value="{{ config.p1_mac or 'Wordt automatisch opgehaald zodra de meter online is' }}"
                      style="flex:1;">
@@ -386,7 +470,7 @@
                 Reset
               </button>
             </div>
-            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Gebruikt om het IP-adres automatisch te herstellen als het wijzigt. Heb je een nieuwe P1-meter gekoppeld op dit IP-adres? Klik dan op Reset zodat het juiste MAC-adres opnieuw wordt opgehaald.</div>
+            <div class="hint">Gebruikt om het IP-adres automatisch te herstellen als het wijzigt. Heb je een nieuwe P1-meter gekoppeld op dit IP-adres? Klik dan op Reset zodat het juiste MAC-adres opnieuw wordt opgehaald.</div>
             <div id="p1MacStatus" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
           </div>
         </div>
@@ -401,7 +485,7 @@
           </div>
           <div class="field-group">
             <label for="p1_shelly_mac">MAC-adres Shelly Pro EM/3EM</label>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
+            <div class="row-inline">
               <input type="text" id="p1_shelly_mac" readonly
                      value="{{ config.p1_shelly_mac or 'Wordt automatisch opgehaald zodra het apparaat online is' }}"
                      style="flex:1;">
@@ -410,13 +494,13 @@
                 Reset
               </button>
             </div>
-            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Gebruikt om het IP-adres automatisch te herstellen als het wijzigt. Heb je een nieuwe Shelly op dit IP-adres aangesloten? Klik dan op Reset zodat het juiste MAC-adres opnieuw wordt opgehaald.</div>
+            <div class="hint">Gebruikt om het IP-adres automatisch te herstellen als het wijzigt. Heb je een nieuwe Shelly op dit IP-adres aangesloten? Klik dan op Reset zodat het juiste MAC-adres opnieuw wordt opgehaald.</div>
             <div id="p1ShellyMacStatus" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
           </div>
-          <button type="button" class="btn-primary" id="shellyProbeBtn" onclick="probeShellyEm()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">
+          <button type="button" class="btn-primary btn-inline" id="shellyProbeBtn" onclick="probeShellyEm()">
             Kanalen zoeken
           </button>
-          <div id="shellyProbeStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+          <div id="shellyProbeStatus" class="status-box"></div>
           <div id="shellyChannelPicker"></div>
         </div>
       </div>
@@ -431,7 +515,7 @@
             <option value="{{ soort }}" {% if config.aansluiting_type == soort %}selected{% endif %}>{{ soort.replace('x', ' x ') }} A</option>
             {% endfor %}
           </select>
-          <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Staat op je hoofdzekering in de meterkast. Zolang hier niets staat doet de bewaking niets.</div>
+          <div class="hint">Staat op je hoofdzekering in de meterkast. Zolang hier niets staat doet de bewaking niets.</div>
         </div>
 
         <div id="bewakingVelden" style="display:none;">
@@ -467,7 +551,7 @@
             <label>Grens per fase (A)</label>
             <input type="number" name="fase_limiet_a" min="0" max="63" step="0.5"
                    value="{{ config.fase_limiet_a or '' }}" placeholder="standaard: 1,5 A onder je zekering">
-            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Leeg laten is prima, dan houdt hij zelf 1,5 A marge aan. Bij 3 x 25 A is dat 23,5 A.</div>
+            <div class="hint">Leeg laten is prima, dan houdt hij zelf 1,5 A marge aan. Bij 3 x 25 A is dat 23,5 A.</div>
           </div>
 
           {% if config.shelly_devices %}
@@ -492,7 +576,7 @@
                           onclick="detecteerFase('{{ d.ip }}', this)">Detecteer</button>
                 </div>
                 <div class="fase-uitslag" style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.45rem;"></div>
-                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Onbekend betekent dat er niets wordt teruggeregeld voor deze boiler.</div>
+                <div class="hint">Onbekend betekent dat er niets wordt teruggeregeld voor deze boiler.</div>
               </div>
 
               {% if d.power_meter %}
@@ -500,7 +584,7 @@
                 <label>Grens voor de groep (A)</label>
                 <input type="number" name="groep_{{ d.ip }}" min="0" max="63" step="0.5"
                        value="{{ d.groep_limiet_a or '' }}" placeholder="uit">
-                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Kijkt naar de vermogensmeter van deze SolarBuffer. Meestal 16 A. Leeg laten zet het uit.</div>
+                <div class="hint">Kijkt naar de vermogensmeter van deze SolarBuffer. Meestal 16 A. Leeg laten zet het uit.</div>
               </div>
               {% endif %}
             </div>
@@ -564,12 +648,8 @@
                      onchange="updateBatteryType()">
               <label class="prio-card" for="bt_indevolt">
                 <div class="prio-icon">
-                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none"
-                       stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                    <rect x="2" y="7" width="16" height="10" rx="2"/>
-                    <path d="M21 10.5v3"/>
-                    <path d="M9.5 9.5 7 12.5h3l-1 2.5 3-3H9l1.5-2.5z" fill="currentColor" stroke="none"/>
-                  </svg>
+                  <img src="/static/icons/battery-indevolt.png" width="120" height="33"
+                       class="logo-breed" alt="Indevolt">
                 </div>
                 <span class="prio-label">Indevolt</span>
                 <span class="prio-sub">Via lokale API (real-time control)</span>
@@ -591,9 +671,9 @@
                          value="{{ ip }}" style="flex:1;">
                   <button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>
                 </div>
-                <div id="hwTokenRow" style="display:flex;gap:0.5rem;align-items:center;">
+                <div id="hwTokenRow" class="row-inline">
                   <input type="text" name="battery_token[]"
-                         placeholder="Token — klik op Koppelen"
+                         placeholder="Token, klik op Koppelen"
                          value="{{ tok }}" autocomplete="off" style="flex:1;font-size:0.82rem;">
                   <button type="button" class="btn-secondary" onclick="pairRow(this)" style="white-space:nowrap;padding:0.45rem 0.65rem;flex-shrink:0;font-size:0.82rem;">
                     Koppelen
@@ -609,7 +689,7 @@
             <button type="button" id="probeBtn" onclick="probeBatteries()" style="margin-top:0.5rem;background:none;border:1px solid hsl(224, 20%, 85%);border-radius:0.5rem;color:hsl(224, 18%, 45%);font-size:0.85rem;padding:0.45rem 0.75rem;cursor:pointer;width:100%;">
               Verbinding testen
             </button>
-            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">
+            <div class="hint">
               Test wat je hierboven hebt ingevuld, nog voordat je opslaat.
             </div>
           </div>
@@ -618,7 +698,7 @@
           <div id="hwFields">
             <div class="field-group">
               <label for="battery_control_token">API-token P1 meter (aansturen)</label>
-              <div style="display:flex;gap:0.5rem;align-items:center;">
+              <div class="row-inline">
                 <input type="text" id="battery_control_token" name="battery_control_token"
                        placeholder="Klik op Koppelen om automatisch op te halen"
                        value="{{ config.battery_control_token or '' }}"
@@ -627,7 +707,7 @@
                   Koppelen
                 </button>
               </div>
-              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">Druk de knop in op de P1 meter — dit token gebruikt SolarBuffer om de accu aan te sturen.</div>
+              <div class="hint">Druk de knop in op de P1 meter, dit token gebruikt SolarBuffer om de accu aan te sturen.</div>
             </div>
             <div id="pairP1Status" style="display:none; margin-bottom:0.75rem; padding:0.75rem 1rem; border-radius:0.6rem; font-size:0.88rem; border:1px solid transparent;">
               <div id="pairP1StatusText"></div>
@@ -637,10 +717,10 @@
           <!-- Marstek-specifieke velden -->
           <div id="marstekFields" style="display:none;">
             <div class="field-group">
-              <button type="button" class="btn-primary" id="marstekScanBtn" onclick="scanMarstek()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">
+              <button type="button" class="btn-primary btn-inline" id="marstekScanBtn" onclick="scanMarstek()">
                 Marstek-accu's zoeken op netwerk
               </button>
-              <div id="marstekScanStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+              <div id="marstekScanStatus" class="status-box"></div>
               <div id="marstekScanResults"></div>
             </div>
             <div class="two-col-row">
@@ -649,14 +729,14 @@
                 <input type="number" id="marstek_port" name="marstek_port"
                        min="1024" max="65535" step="1"
                        value="{{ config.marstek_port or 30000 }}">
-                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Stel in via de Marstek app (standaard 30000)</div>
+                <div class="hint">Stel in via de Marstek app (standaard 30000)</div>
               </div>
               <div class="field-group">
                 <label for="marstek_max_power">Max. vermogen (W)</label>
                 <input type="number" id="marstek_max_power" name="marstek_max_power"
                        min="100" max="10000" step="100"
                        value="{{ config.marstek_max_power or 2000 }}">
-                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Max. laad- én ontlaadvermogen van je accu</div>
+                <div class="hint">Max. laad- én ontlaadvermogen van je accu</div>
               </div>
             </div>
             <div class="toggle-row" style="margin-bottom:0.75rem;">
@@ -670,16 +750,17 @@
                 <span class="slider"></span>
               </label>
             </div>
-            <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
+            <details class="note">
+              <summary>Wat je bij Marstek zelf moet instellen</summary>
               Stel de Open API in via de Marstek app en configureer een statisch IP-adres voor je accu.
               De accu blijft normaal in zijn eigen Auto-modus; alleen om het vermogen vast te zetten
-              (boiler-vrijgave of stilstand) schrijft SolarBuffer een tijdschema in slot 0 —
+              (boiler-vrijgave of stilstand) schrijft SolarBuffer een tijdschema in slot 0,
               een eigen handmatig schema in slot 0 wordt dan overschreven.
-            </div>
+            </details>
 
-            <div style="border-top:1px solid hsl(224, 18%, 90%);margin:0.9rem 0 0.75rem;padding-top:0.75rem;">
-              <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.35rem;">Vermogensmeter op stopcontact accu (optioneel)</div>
-              <div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-bottom:0.6rem;">
+            <div class="subsec">
+              <div class="subsec-title">Vermogensmeter op stopcontact accu (optioneel)</div>
+              <div class="subsec-sub">
                 Sommige Marstek-firmwares geven geen bruikbaar vermogen terug via de eigen API.
                 Koppel hier een losse Shelly- of HomeWizard-stekker op het stopcontact van de accu
                 voor een echte meting in plaats van een schatting.
@@ -711,23 +792,24 @@
                 <input type="number" id="indevolt_port" name="indevolt_port"
                        min="1" max="65535" step="1"
                        value="{{ config.indevolt_port or 8080 }}">
-                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Standaard 8080</div>
+                <div class="hint">Standaard 8080</div>
               </div>
               <div class="field-group">
                 <label for="indevolt_max_power">Max. vermogen (W)</label>
                 <input type="number" id="indevolt_max_power" name="indevolt_max_power"
                        min="100" max="10800" step="100"
                        value="{{ config.indevolt_max_power or 2000 }}">
-                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Max. laad- en ontlaadvermogen van je accu</div>
+                <div class="hint">Max. laad- en ontlaadvermogen van je accu</div>
               </div>
             </div>
-            <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
+            <details class="note">
+              <summary>Hoe SolarBuffer deze accu aanstuurt</summary>
               SolarBuffer zet deze accu in real-time control en stuurt zelf het laad- en
               ontlaadvermogen, want in zijn eigen stand zelfverbruik neemt hij het
               zonoverschot op dat naar de boiler moet. Zodra SolarBuffer niet meer regelt,
               of de P1-meting wegvalt, krijgt de accu zijn eigen stand terug. Zet een vast
               IP-adres voor je accu in je router.
-            </div>
+            </details>
           </div>
 
           <!-- Zendure-specifieke velden -->
@@ -738,29 +820,29 @@
                 <option value="http" {% if config.zendure_transport != 'mqtt' %}selected{% endif %}>Lokale API op de accu (HTTP)</option>
                 <option value="mqtt" {% if config.zendure_transport == 'mqtt' %}selected{% endif %}>Lokale MQTT-broker op deze Hub</option>
               </select>
-              <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">MQTT is voor accu&#39;s zonder eigen HTTP-API; een IP-adres is dan niet nodig.</div>
+              <div class="hint">MQTT is voor accu&#39;s zonder eigen HTTP-API; een IP-adres is dan niet nodig.</div>
             </div>
-            <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
+            <div class="note">
               Werkt met SolarFlow 800 (Plus/Pro), 1600 AC+ en 2400 AC (Pro). Geef je accu een vast IP-adres.
             </div>
 
-            <div style="border-top:1px solid hsl(224, 18%, 90%);margin:0.9rem 0 0.75rem;padding-top:0.75rem;">
-              <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.35rem;">Hyper 2000 / Hub / ACE (legacy, via Bluetooth)</div>
-              <div style="font-size:0.78rem;color:hsl(224, 18%, 65%);margin-bottom:0.6rem;">
+            <div class="subsec">
+              <div class="subsec-title">Hyper 2000 / Hub / ACE (legacy, via Bluetooth)</div>
+              <div class="subsec-sub">
                 Deze modellen praten alleen via Zendure&#39;s cloud. Koppel ze hieronder via Bluetooth
                 en zet de verbinding hierboven op MQTT. Aansturen via die weg is nog niet op hardware
                 beproefd.
               </div>
 
-              <div style="background:hsl(37,90%,95%);border:1px solid hsl(37,80%,80%);border-radius:0.5rem;padding:0.6rem 0.75rem;font-size:0.78rem;color:hsl(30,80%,28%);margin-bottom:0.75rem;">
+              <div class="warn">
                 Let op: na het koppelen verdwijnt het apparaat uit de Zendure-app, want die werkt via
                 de cloud.
               </div>
 
-              <button type="button" class="btn-primary" id="zendureBleScanBtn" onclick="scanZendureBle()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">
+              <button type="button" class="btn-primary btn-inline" id="zendureBleScanBtn" onclick="scanZendureBle()">
                 Zoek via Bluetooth
               </button>
-              <div id="zendureBleScanStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+              <div id="zendureBleScanStatus" class="status-box"></div>
               <div id="zendureBleScanResults"></div>
 
               <div id="zendureBleProvisionPanel" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid hsl(224, 18%, 90%);">
@@ -775,13 +857,24 @@
                     <input type="password" id="zendureBlePassword" placeholder="Wachtwoord">
                   </div>
                 </div>
-                <button type="button" class="btn-primary" id="zendureBleProvisionBtn" onclick="provisionZendureBle()" style="width:auto;display:inline-block;padding:0.5rem 0.9rem;font-size:0.85rem;">
+                <button type="button" class="btn-primary btn-inline" id="zendureBleProvisionBtn" onclick="provisionZendureBle()">
                   Koppel via Bluetooth
                 </button>
-                <div id="zendureBleProvisionStatus" style="display:none;margin-top:0.5rem;padding:0.6rem 0.8rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>
+                <div id="zendureBleProvisionStatus" class="status-box"></div>
               </div>
             </div>
           </div>
+          <!-- Gedrag, los van het aansluiten hierboven. Die twee stonden door elkaar
+               in een doorlopende stapel, en dat is precies waarom de kaart onleesbaar
+               was: je kon niet zien waar het instellen ophield en het kiezen begon. -->
+          <div class="subsec">
+            <div class="step-title">Samenspel met de boiler</div>
+            <div class="subsec-sub">
+              Wie krijgt het zonoverschot als er niet genoeg is voor allebei. De drempel
+              eronder hoort bij de keuze die je hier maakt; de andere verdwijnt.
+            </div>
+          </div>
+
           <div class="field-group">
             <label>Prioriteit</label>
             <div class="prio-grid">
@@ -815,7 +908,7 @@
             <input type="number" id="battery_soc_threshold" name="battery_soc_threshold"
                    min="50" max="100" step="1"
                    value="{{ config.battery_soc_threshold or 95 }}">
-            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">
+            <div class="hint">
               Bij batterij-prioriteit: tot deze laadstand krijgt de accu het overschot,
               daarna neemt de boiler het over.
             </div>
@@ -825,11 +918,10 @@
             <input type="number" id="boiler_release_pct" name="boiler_release_pct"
                    min="10" max="100" step="1"
                    value="{{ config.boiler_release_pct or 100 }}">
-            <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.3rem;">
+            <div class="hint">
               Zodra de draaiende SolarBuffer op dit vermogen staat mag de accu het
-              resterende overschot opnemen. Hetzelfde percentage als op het dashboard
-              bij de SolarBuffer staat. Een bevroren SolarBuffer telt hier niet mee,
-              want die neemt toch niets meer op.
+              resterende overschot opnemen, hetzelfde percentage dat op het dashboard
+              staat. Een bevroren SolarBuffer telt niet mee.
             </div>
           </div>
         </div>
@@ -1372,7 +1464,7 @@
             clearInterval(_rowPairTimers.get(row).interval);
             _rowPairTimers.delete(row);
             btn.disabled = false; btn.textContent = 'Koppelen';
-            setRowStatus(statusEl, 'Verbindingsfout — controleer het IP-adres.', 'error');
+            setRowStatus(statusEl, 'Verbindingsfout, controleer het IP-adres.', 'error');
           });
       }
 
@@ -1383,7 +1475,7 @@
           clearInterval(interval);
           _rowPairTimers.delete(row);
           btn.disabled = false; btn.textContent = 'Koppelen';
-          setRowStatus(statusEl, 'Timeout — knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
+          setRowStatus(statusEl, 'Timeout, knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
           return;
         }
         doRequest();
@@ -1422,7 +1514,7 @@
         _pairP1Countdown++;
         if (_pairP1Countdown >= 15) {
           stopPairingP1();
-          setPairP1Status('Timeout — knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
+          setPairP1Status('Timeout, knop niet op tijd ingedrukt. Probeer opnieuw.', 'error');
           return;
         }
         sendPairP1Request();
@@ -1447,7 +1539,7 @@
         })
         .catch(function() {
           stopPairingP1();
-          setPairP1Status('Verbindingsfout — controleer het P1 IP-adres.', 'error');
+          setPairP1Status('Verbindingsfout, controleer het P1 IP-adres.', 'error');
         });
     }
 
@@ -1461,8 +1553,8 @@
         + '<input type="text" name="battery_ip[]" placeholder="Bijv. 192.168.178.50" style="flex:1;">'
         + '<button type="button" onclick="removeIpRow(this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:hsl(0,60%,55%);padding:0.3rem;flex-shrink:0;" title="Verwijderen">✕</button>'
         + '</div>'
-        + '<div id="hwTokenRow" style="display:flex;gap:0.5rem;align-items:center;">'
-        + '<input type="text" name="battery_token[]" placeholder="Token — klik op Koppelen" autocomplete="off" style="flex:1;font-size:0.82rem;">'
+        + '<div id="hwTokenRow" class="row-inline">'
+        + '<input type="text" name="battery_token[]" placeholder="Token, klik op Koppelen" autocomplete="off" style="flex:1;font-size:0.82rem;">'
         + '<button type="button" class="btn-secondary" onclick="pairRow(this)" style="white-space:nowrap;padding:0.45rem 0.65rem;flex-shrink:0;font-size:0.82rem;">Koppelen</button>'
         + '</div>'
         + '<div class="row-pair-status" style="display:none;margin-top:0.4rem;padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;border:1px solid transparent;"></div>';
