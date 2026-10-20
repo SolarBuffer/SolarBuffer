@@ -221,17 +221,6 @@
       transition: background 0.25s;
     }
     .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
-    .toggle .slider::before {
-      content: "";
-      position: absolute;
-      width: 20px; height: 20px;
-      left: 2px; top: 2px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-      transition: transform 0.25s;
-    }
-    .toggle input:checked + .slider::before { transform: translateX(20px); }
     html[data-theme="dark"] .toggle .slider { background: hsl(224, 38%, 22%); }
     html[data-theme="dark"] .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
     html[data-theme="dark"] .toggle-row { color: hsl(224, 18%, 95%); }

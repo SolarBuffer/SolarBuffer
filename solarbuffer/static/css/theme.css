@@ -281,3 +281,84 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ===================== SCHAKELAARS: DE DRUPPEL ==========================
+   De bal is één vorm waarvan de voorrand en de achterrand los van elkaar
+   bewegen. Hij staat niet vast met een breedte maar is opgespannen tussen left
+   en right, dus als die twee niet even snel lopen verandert zijn breedte
+   vanzelf. De voorrand vertrekt kordaat, de achterrand komt later los: onderweg
+   rekt de bal daardoor uit tot een druppel, en zodra de achterrand hem inhaalt
+   is het aan de overkant weer een bal.
+
+   Eerst geprobeerd met twee vormen, een kop met een kleinere staart erachter.
+   Dat werkte niet: twee cirkels die elkaar overlappen houden altijd een plooi
+   op de naad, en de schaduw van de kop tekende een donkere boog over de staart.
+   Het werd een sneeuwpop in plaats van een druppel. Eén vorm die uitrekt heeft
+   dat probleem niet.
+
+   De timing staat twee keer, en dat is de kern van het geheel. Een browser leest
+   de transition van de toestand waar hij naartoe gaat. Bij het aanzetten geldt
+   dus de regel onder :checked, en daar is right de snelle: dat is de voorrand
+   als hij naar rechts gaat. Bij het uitzetten geldt de gewone regel, en daar is
+   left de snelle, want dan is dát de voorrand. Zo rekt hij beide kanten op uit.
+   Met één keer timing zou hij de ene kant uitrekken en de andere kant juist
+   indeuken.
+
+   Geen keyframes, met opzet. Een animatie op de uit-stand gaat ook af zodra de
+   pagina opent, en dan zie je elke schakelaar bij het laden één keer schieten.
+   Een transition doet bij de eerste weergave niets.
+
+   De drie maten verschillen alleen in hoe ver de randen staan. De baan eromheen
+   staat nog per pagina. */
+
+.toggle .slider::before,
+.toggle-mini .slider::before,
+.sched-switch .slider::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background: #fff;
+  border-radius: 999px;
+  will-change: left, right;
+}
+
+/* De voorrand trekt meteen aan, 0.26s. De achterrand komt lui los en haalt in,
+   0.40s. Nagerekend: de bal van 20 px rekt onderweg uit tot 30 px, met zijn
+   piek rond 0.09s, en zakt daarna terug naar 20. De vorige poging had de
+   versnellingen omgedraaid; toen deukte hij eerst in tot 17 px voordat hij
+   uitrekte, wat er verkeerd uitzag zonder dat je kon zeggen waarom. */
+.toggle .slider::before,
+.toggle-mini .slider::before,
+.sched-switch .slider::before {
+  transition: left  0.26s cubic-bezier(0.2, 0.7, 0.3, 1),
+              right 0.40s cubic-bezier(0.35, 0.25, 0.3, 1);
+}
+.toggle input:checked + .slider::before,
+.toggle-mini input:checked + .slider::before,
+.sched-switch input:checked + .slider::before {
+  transition: left  0.40s cubic-bezier(0.35, 0.25, 0.3, 1),
+              right 0.26s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* 44 x 24, bal 20 */
+.toggle .slider::before { left: 2px; right: 22px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); }
+.toggle input:checked + .slider::before { left: 22px; right: 2px; }
+
+/* 34 x 18, bal 14 */
+.toggle-mini .slider::before { left: 2px; right: 18px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.toggle-mini input:checked + .slider::before { left: 18px; right: 2px; }
+
+/* 38 x 22, bal 18 */
+.sched-switch .slider::before { left: 2px; right: 18px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.sched-switch input:checked + .slider::before { left: 18px; right: 2px; }
+
+/* Wie bewegende beelden heeft uitgezet krijgt een bal die gewoon verschuift. */
+@media (prefers-reduced-motion: reduce) {
+  .toggle .slider::before, .toggle-mini .slider::before, .sched-switch .slider::before,
+  .toggle input:checked + .slider::before,
+  .toggle-mini input:checked + .slider::before,
+  .sched-switch input:checked + .slider::before {
+    transition: left 0.12s linear, right 0.12s linear;
+  }
+}

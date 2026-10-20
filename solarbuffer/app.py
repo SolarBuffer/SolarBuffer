@@ -7599,6 +7599,17 @@ def _sync_single_device_off(d):
     ip = d["ip"]
     if ip not in device_states:
         return
+    # Loopt er een initialisatie van de vermogenscurve, dan staat dit apparaat
+    # expres aan en meet die routine per stap wat het element werkelijk trekt.
+    # Uitzetten breekt de run halverwege en levert een curve van onzin op, of
+    # helemaal geen curve. Dat gebeurde doordat het opslaan van de instellingen
+    # alles naar uit schakelt: wie eerst op Initialiseren drukte en daarna op
+    # Opslaan, zette zijn eigen initialisatie uit. De gewone regellus laat een
+    # apparaat in deze lijst ook met rust, en de routine zet hem zelf uit als hij
+    # klaar is.
+    if ip in _calibrating_ips:
+        print(f"Sync: {ip} overgeslagen, initialisatie van de vermogenscurve loopt")
+        return
     state = device_states[ip]
     state["on"] = False
     state["brightness"] = 0

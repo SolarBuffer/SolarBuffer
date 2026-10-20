@@ -657,22 +657,7 @@
       background: hsl(32, 95%, 52%);
     }
 
-    .toggle .slider::before {
-      content: "";
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      left: 2px;
-      top: 2px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-      transition: transform 0.3s;
-    }
 
-    .toggle input:checked + .slider::before {
-      transform: translateX(20px);
-    }
 
     .toggle-mini {
       display: inline-block;
@@ -691,19 +676,6 @@
       transition: background 0.3s;
     }
     .toggle-mini input:checked + .slider { background: hsl(32, 95%, 52%); }
-    .toggle-mini .slider::before {
-      content: "";
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      left: 2px;
-      top: 2px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-      transition: transform 0.3s;
-    }
-    .toggle-mini input:checked + .slider::before { transform: translateX(16px); }
     html[data-theme="dark"] .toggle-mini .slider { background: hsl(224, 38%, 22%); }
     html[data-theme="dark"] .toggle-mini input:checked + .slider { background: hsl(32, 95%, 52%); }
 
@@ -2729,19 +2701,6 @@
       transition: background 0.3s;
     }
     .sched-switch input:checked + .slider { background: hsl(32, 95%, 52%); }
-    .sched-switch .slider::before {
-      content: "";
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      left: 2px;
-      top: 2px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-      transition: transform 0.3s;
-    }
-    .sched-switch input:checked + .slider::before { transform: translateX(16px); }
 
     .sched-icon-btn {
       width: 30px;
@@ -3212,7 +3171,7 @@
 
 {% block footer %}
 <div class="footer">Live data · Verversing elke seconde</div>
-<div class="footer">Version 0.8.1</div>
+<div class="footer">Version 0.8.2</div>
 {% endblock %}
 
 {% block scripts %}
