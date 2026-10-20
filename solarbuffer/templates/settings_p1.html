@@ -294,7 +294,9 @@
     html[data-theme="dark"] .prio-option:checked + .prio-card .prio-icon { background: hsl(32, 85%, 50%); color: #fff; }
     html[data-theme="dark"] .prio-label { color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .prio-sub   { color: hsl(224, 18%, 74%); }
-    .bat-type-grid { grid-template-columns: 1fr 1fr 1fr; }
+    /* Vier accutypen in 2x2. Een rij van vier knijpt de kaarten zo smal dat de
+       ondertitel afbreekt, en op een telefoon waren drie kolommen al krap. */
+    .bat-type-grid { grid-template-columns: 1fr 1fr; }
     .p1-source-grid { grid-template-columns: 1fr 1fr; }
     .bat-type-grid .prio-icon, .p1-source-grid .prio-icon { background: transparent !important; width: auto; height: auto; border-radius: 0; }
     .bat-type-grid .prio-icon img, .p1-source-grid .prio-icon img { border-radius: 50%; display: block; }

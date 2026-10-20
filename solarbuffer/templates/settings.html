@@ -1348,18 +1348,18 @@
         // Handmatig bedienen kan bij de typen die een setpoint aannemen. Bij
         // HomeWizard en Marstek geven we rechten en regelt de accu zelf, daar is
         // een vast vermogen niet uit te drukken.
-        const batIsZendure = !!data.battery_enabled
+        const batHeeftSetpoint = !!data.battery_enabled
           && ['zendure', 'indevolt'].includes(data.battery_type);
-        batRow.style.display = batIsZendure ? '' : 'none';
+        batRow.style.display = batHeeftSetpoint ? '' : 'none';
         document.getElementById('batCtrlPanel').style.display =
-          (batIsZendure && data.battery_control_mode !== 'off') ? 'flex' : 'none';
-        if (batIsZendure && !_batCtrlDirty) {
+          (batHeeftSetpoint && data.battery_control_mode !== 'off') ? 'flex' : 'none';
+        if (batHeeftSetpoint && !_batCtrlDirty) {
           _batCtrlMode = data.battery_control_mode || 'auto';
           _batDirection = data.battery_manual_direction || 'charge';
           document.getElementById('batManualPower').value = data.battery_manual_power || 0;
           _applyBatteryCtrlUI();
         }
-        if (batIsZendure) {
+        if (batHeeftSetpoint) {
           const batOn = _batCtrlMode !== 'off';
           document.getElementById('bat_ctrl_toggle').checked = batOn;
           document.getElementById('bat_ctrl_dot').className = 'dot' + (batOn ? ' active' : '');
