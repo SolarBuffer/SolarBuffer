@@ -115,15 +115,6 @@
       color: hsl(224, 18%, 75%);
       cursor: default;
     }
-    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
-    .toggle input { display: none; }
-    .toggle .slider {
-      position: absolute; inset: 0;
-      background: hsl(224, 20%, 88%);
-      border-radius: 12px;
-      transition: background 0.3s;
-    }
-    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
 
     .expert-grid {
       display: grid;
@@ -285,7 +276,6 @@
     html[data-theme="dark"] .feature-retry { border-color: hsl(224, 38%, 18%); }
     html[data-theme="dark"] .feature-retry label { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .input-with-unit input:read-only { background: hsl(224, 38%, 16%); color: hsl(224, 18%, 70%); }
-    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(224, 38%, 22%); }
     html[data-theme="dark"] .field-label { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .field-help { color: hsl(224, 18%, 69%); }
     html[data-theme="dark"] .ki-value { color: hsl(224, 18%, 85%); }

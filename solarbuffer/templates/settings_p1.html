@@ -205,24 +205,6 @@
       accent-color: hsl(32, 95%, 52%);
       cursor: pointer;
     }
-    .toggle {
-      position: relative;
-      width: 44px;
-      height: 24px;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-    .toggle input { display: none; }
-    .toggle .slider {
-      position: absolute;
-      inset: 0;
-      background: hsl(224, 20%, 80%);
-      border-radius: 12px;
-      transition: background 0.25s;
-    }
-    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
-    html[data-theme="dark"] .toggle .slider { background: hsl(224, 38%, 22%); }
-    html[data-theme="dark"] .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
     html[data-theme="dark"] .toggle-row { color: hsl(224, 18%, 95%); }
 
     .prio-grid {

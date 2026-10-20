@@ -53,17 +53,12 @@
     .toggle-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 0.65rem;
       font-weight: 600;
       font-size: 0.95rem;
-      cursor: pointer;
     }
-    .toggle-row input[type="checkbox"] {
-      width: 1rem;
-      height: 1rem;
-      accent-color: hsl(32, 95%, 52%);
-      cursor: pointer;
-    }
+    .toggle-row > label:first-child { cursor: pointer; }
 
     .fields-grid {
       display: grid;
@@ -169,11 +164,14 @@
     <form method="POST" action="/settings/mqtt">
       <div class="card">
         <div class="card-title">Verbinding</div>
-        <label class="toggle-row">
-          <input type="checkbox" id="mqttEnabled" name="mqtt_enabled"
-                 {% if config.mqtt_enabled %}checked{% endif %}>
-          MQTT inschakelen
-        </label>
+        <div class="toggle-row">
+          <label for="mqttEnabled">MQTT inschakelen</label>
+          <label class="toggle">
+            <input type="checkbox" id="mqttEnabled" name="mqtt_enabled"
+                   {% if config.mqtt_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
 
         <div id="mqttFields" style="display:none;">
           <div class="fields-grid">
@@ -217,11 +215,14 @@
 
       <div class="card" id="haCard" style="display:none;">
         <div class="card-title">Home Assistant</div>
-        <label class="toggle-row">
-          <input type="checkbox" name="mqtt_ha_discovery"
-                 {% if config.mqtt_ha_discovery is not defined or config.mqtt_ha_discovery %}checked{% endif %}>
-          HA Auto-discovery inschakelen
-        </label>
+        <div class="toggle-row">
+          <label for="mqttHaDiscovery">HA Auto-discovery inschakelen</label>
+          <label class="toggle">
+            <input type="checkbox" id="mqttHaDiscovery" name="mqtt_ha_discovery"
+                   {% if config.mqtt_ha_discovery is not defined or config.mqtt_ha_discovery %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
         <p style="font-size:0.8rem; color:hsl(224, 18%, 71%); margin-top:0.5rem; line-height:1.4;">
           Entiteiten automatisch registreren in Home Assistant via MQTT discovery.
         </p>

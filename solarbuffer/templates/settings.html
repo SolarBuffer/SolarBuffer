@@ -163,15 +163,6 @@
     .dot.active { background: #22c55e; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
-    .toggle input { display: none; }
-    .toggle .slider {
-      position: absolute; inset: 0;
-      background: hsl(224, 20%, 88%);
-      border-radius: 12px;
-      transition: background 0.3s;
-    }
-    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
 
     .vacation-panel {
       display: none;
@@ -432,7 +423,6 @@
 
     html[data-theme="dark"] .ctrl-row   { border-color: hsl(224, 38%, 17%); }
     html[data-theme="dark"] .ctrl-sub   { color: hsl(224, 18%, 73%); }
-    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(224, 38%, 22%); }
 
     html[data-theme="dark"] .vacation-panel      { background: hsl(37, 12%, 22%); border-color: hsl(224, 38%, 17%); }
     html[data-theme="dark"] .vacation-field label { color: hsl(224, 18%, 73%); }

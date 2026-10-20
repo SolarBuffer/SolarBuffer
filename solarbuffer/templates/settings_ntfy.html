@@ -53,17 +53,12 @@
     .toggle-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 0.65rem;
       font-weight: 600;
       font-size: 0.95rem;
-      cursor: pointer;
     }
-    .toggle-row input[type="checkbox"] {
-      width: 1rem;
-      height: 1rem;
-      accent-color: hsl(32, 95%, 52%);
-      cursor: pointer;
-    }
+    .toggle-row > label:first-child { cursor: pointer; }
 
     .fields { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
     .field { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -222,11 +217,14 @@
           Pushmeldingen — via ntfy
           <span class="free-badge">gratis &amp; geen account</span>
         </div>
-        <label class="toggle-row">
-          <input type="checkbox" id="ntfyEnabled" name="ntfy_enabled"
-                 {% if user.ntfy_enabled %}checked{% endif %}>
-          Pushmeldingen via ntfy inschakelen
-        </label>
+        <div class="toggle-row">
+          <label for="ntfyEnabled">Pushmeldingen via ntfy inschakelen</label>
+          <label class="toggle">
+            <input type="checkbox" id="ntfyEnabled" name="ntfy_enabled"
+                   {% if user.ntfy_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
 
         <div id="ntfyFields" style="display:none;">
           <div class="fields">
@@ -257,31 +255,46 @@
       <div class="card" id="eventsCard" style="display:none;">
         <div class="card-title">Meldingen bij</div>
         <div style="display:flex; flex-direction:column; gap:0.65rem;">
-          <label class="toggle-row">
-            <input type="checkbox" name="ntfy_notify_start"
-                   {% if user.ntfy_notify_start %}checked{% endif %}>
-            Apparaat gestart op zonnestroom
-          </label>
-          <label class="toggle-row">
-            <input type="checkbox" name="ntfy_notify_legionella"
-                   {% if user.ntfy_notify_legionella %}checked{% endif %}>
-            Legionellabeveiliging voltooid
-          </label>
-          <label class="toggle-row">
-            <input type="checkbox" name="ntfy_notify_schedule"
-                   {% if user.ntfy_notify_schedule %}checked{% endif %}>
-            Tijdschema wordt actief
-          </label>
-          <label class="toggle-row">
-            <input type="checkbox" name="ntfy_notify_offline"
-                   {% if user.ntfy_notify_offline %}checked{% endif %}>
-            Apparaat niet bereikbaar
-          </label>
-          <label class="toggle-row">
-            <input type="checkbox" name="ntfy_notify_temp_shutoff"
-                   {% if user.ntfy_notify_temp_shutoff %}checked{% endif %}>
-            Boiler op temperatuur uitgeschakeld
-          </label>
+          <div class="toggle-row">
+            <label for="ntfy_notify_start">Apparaat gestart op zonnestroom</label>
+            <label class="toggle">
+              <input type="checkbox" id="ntfy_notify_start" name="ntfy_notify_start"
+                     {% if user.ntfy_notify_start %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <label for="ntfy_notify_legionella">Legionellabeveiliging voltooid</label>
+            <label class="toggle">
+              <input type="checkbox" id="ntfy_notify_legionella" name="ntfy_notify_legionella"
+                     {% if user.ntfy_notify_legionella %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <label for="ntfy_notify_schedule">Tijdschema wordt actief</label>
+            <label class="toggle">
+              <input type="checkbox" id="ntfy_notify_schedule" name="ntfy_notify_schedule"
+                     {% if user.ntfy_notify_schedule %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <label for="ntfy_notify_offline">Apparaat niet bereikbaar</label>
+            <label class="toggle">
+              <input type="checkbox" id="ntfy_notify_offline" name="ntfy_notify_offline"
+                     {% if user.ntfy_notify_offline %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <label for="ntfy_notify_temp_shutoff">Boiler op temperatuur uitgeschakeld</label>
+            <label class="toggle">
+              <input type="checkbox" id="ntfy_notify_temp_shutoff" name="ntfy_notify_temp_shutoff"
+                     {% if user.ntfy_notify_temp_shutoff %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
 

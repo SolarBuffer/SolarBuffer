@@ -633,29 +633,9 @@
       50% { opacity: 0.5; }
     }
 
-    .toggle {
-      position: relative;
-      width: 44px;
-      height: 24px;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
 
-    .toggle input {
-      display: none;
-    }
 
-    .toggle .slider {
-      position: absolute;
-      inset: 0;
-      background: hsl(224, 20%, 88%);
-      border-radius: 12px;
-      transition: background 0.3s;
-    }
 
-    .toggle input:checked + .slider {
-      background: hsl(32, 95%, 52%);
-    }
 
 
 
@@ -1567,7 +1547,6 @@
 
     html[data-theme="dark"] .control-row { background: hsl(224, 38%, 17%); }
     html[data-theme="dark"] .control-label .sub { color: hsl(224, 18%, 75%); }
-    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(224, 38%, 22%); }
 
     html[data-theme="dark"] .device-card {
       background: hsl(224, 38%, 16%);

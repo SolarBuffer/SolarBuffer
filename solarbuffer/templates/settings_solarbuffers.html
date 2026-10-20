@@ -154,15 +154,6 @@
       margin-bottom: 0.75rem;
       line-height: 1.45;
     }
-    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
-    .toggle input { display: none; }
-    .toggle .slider {
-      position: absolute; inset: 0;
-      background: hsl(224, 20%, 88%);
-      border-radius: 12px;
-      transition: background 0.3s;
-    }
-    .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
 
     .input-with-unit {
       display: flex;
@@ -345,7 +336,6 @@
     html[data-theme="dark"] .input-with-unit input { background: hsl(224, 38%, 13%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .input-with-unit .unit { background: hsl(224, 38%, 16%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .scan-status { color: hsl(224, 18%, 74%); }
-    html[data-theme="dark"] .toggle input:not(:checked) + .slider { background: hsl(224, 38%, 22%); }
     html[data-theme="dark"] .scan-results { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .ble-device-btn { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .ble-device-btn:hover { background: hsl(224, 38%, 13%); }

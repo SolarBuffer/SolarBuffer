@@ -282,6 +282,33 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
   flex-shrink: 0;
 }
 
+/* ===================== SCHAKELAARS: DE BAAN =============================
+   De baan stond in zeven templates, telkens net iets anders: twee pagina's
+   hadden hem 40 px breed met een lichtere grijstint en de rest 44 px. Nu één
+   keer hier, zodat een nieuwe pagina een schakelaar kan zetten zonder opmaak
+   mee te nemen. De kleinere varianten (mini, sched-switch, dark-pill,
+   pill-thumb) staan nog bij hun eigen pagina, want die komen daar maar één keer
+   voor. */
+
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.toggle input { display: none; }
+.toggle .slider {
+  position: absolute;
+  inset: 0;
+  background: hsl(224, 20%, 88%);
+  border-radius: 999px;
+  transition: background 0.3s;
+}
+.toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+html[data-theme="dark"] .toggle .slider { background: hsl(224, 38%, 22%); }
+html[data-theme="dark"] .toggle input:checked + .slider { background: hsl(32, 95%, 52%); }
+
 /* ===================== SCHAKELAARS: DE DRUPPEL ==========================
    De bal is één vorm waarvan de voorrand en de achterrand los van elkaar
    bewegen. Hij staat niet vast met een breedte maar is opgespannen tussen left
