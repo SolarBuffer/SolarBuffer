@@ -5001,7 +5001,14 @@ def ensure_mdns_service():
             pass
 
 
-PORTAL_IP = "10.4.0.1"
+# NetworkManager deelt een gedeelde verbinding standaard 10.42.0.1 uit, en de
+# PI-SETUP-verbinding heeft geen eigen adres ingesteld, dus dat is wat hij krijgt.
+# Nagekeken op een hub: ipv4.method=shared en ipv4.addresses leeg. Hier stond
+# eerder 10.4.0.1, met een weggevallen 2; dat adres bestond dus niet en daarom
+# ging het instelvenster nooit open. app.py kan dit niet opvragen zoals wifi.py
+# dat doet, want hier draait de hotspot nog niet; daarom staat het hier wel vast
+# en controleert _portal_controleer_ap of de werkelijkheid er nog bij past.
+PORTAL_IP = "10.42.0.1"
 PORTAL_DNSMASQ_FILE = "/etc/NetworkManager/dnsmasq-shared.d/solarbuffer-portal.conf"
 PORTAL_AP_VERBINDING = "PI-SETUP"
 
@@ -5102,6 +5109,14 @@ def _portal_controleer_ap():
             print(f"Portaal: {PORTAL_AP_VERBINDING} staat op ipv4.method={methode} "
                   f"en niet op shared. Het venster gaat dan niet vanzelf open, want "
                   f"de hotspot deelt geen adressen uit en lost geen namen op.")
+        # Staat er wel een vast adres, dan telt dat en niet de standaard waar wij
+        # van uitgaan. Wijkt het af, dan wijst alles naar de verkeerde kant en
+        # gebeurt er niets; precies de fout die hier eerder in zat.
+        adres = (regels.get("ipv4.addresses") or "").strip().split("/")[0]
+        if adres and adres != PORTAL_IP:
+            print(f"Portaal: {PORTAL_AP_VERBINDING} heeft {adres} als vast adres, "
+                  f"maar het portaal is op {PORTAL_IP} ingesteld. Pas PORTAL_IP aan, "
+                  f"anders wijzen de omleidingen naar niets.")
     except Exception:
         pass
 

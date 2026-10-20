@@ -456,7 +456,36 @@ p {
 
 
 OWN_SSIDS = {"PI-SETUP"}
-PORTAL_IP = "10.4.0.1"
+
+
+def _bepaal_portal_ip(standaard="10.42.0.1"):
+    """Het adres waarop deze hotspot werkelijk luistert.
+
+    Hier stond een vast 10.4.0.1, en dat klopte niet. De PI-SETUP-verbinding
+    heeft geen eigen adres ingesteld en staat op ipv4.method=shared, en dan deelt
+    NetworkManager zijn eigen standaard uit: 10.42.0.1. Er was dus een 2
+    weggevallen, en omdat de handleiding klanten naar solarbuffer.local stuurt is
+    dat nooit opgevallen; alleen de omleidingen van het portaal wezen al die tijd
+    naar een adres waar niets luisterde.
+
+    Daarom nu opvragen in plaats van opschrijven. Deze code draait op de hotspot
+    zelf, dus het adres is er gewoon. Lukt het opvragen niet, dan valt hij terug
+    op de standaard van NetworkManager.
+    """
+    try:
+        uit = subprocess.run(
+            ["nmcli", "-g", "IP4.ADDRESS", "connection", "show", "--active", "PI-SETUP"],
+            capture_output=True, text=True, timeout=5)
+        for regel in uit.stdout.split("\n"):
+            adres = regel.strip().split("/")[0]
+            if adres.count(".") == 3 and all(d.isdigit() for d in adres.split(".")):
+                return adres
+    except Exception:
+        pass
+    return standaard
+
+
+PORTAL_IP = _bepaal_portal_ip()
 
 
 # iOS detecteert een captive portal als /hotspot-detect.html NIET de exacte
