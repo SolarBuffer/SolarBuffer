@@ -423,7 +423,7 @@
               <div class="update-title">Rustiger instellingen en geen verspringend lettertype meer</div>
               <div class="update-body">De pagina P1 en Batterij stond vol losse uitleg waardoor niets meer opviel. Elk accutype volgt nu dezelfde opbouw: eerst de velden, dan de knop, dan de uitleg die je open kunt klappen als je hem nodig hebt. Het kiezen van je accutype staat in een raster van twee bij twee. En het lettertype verspringt niet meer kort nadat een pagina opent: de letters worden nu meteen opgehaald in plaats van als laatste, en ze zijn teruggebracht van 401 naar 90 kilobyte.</div>
             </div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.8.2" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.8.2" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -437,7 +437,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">De legionellaklok kijkt naar energie in plaats van naar de klok</div>
             <div class="update-body">Voorheen begon de klok van 72 uur opnieuw zodra je boiler een keer had aangestaan, ook als er nauwelijks iets in ging. Nu houdt SolarBuffer per boiler bij hoeveel energie er in het vat zit, en pas als dat vat helemaal vol is geweest begint die klok opnieuw. Staat de boiler uit, dan loopt de stand in een etmaal terug naar nul. Slaat de thermostaat in je vat af terwijl SolarBuffer vol vermogen vrijgeeft, dan is het vat op temperatuur en staat de voorraad direct vol. Een legionellaronde loopt daardoor niet meer een vaste tijd, maar tot het vat vol is, met een aftelling erbij. Een vat dat al warm was kost zo een minuut in plaats van drie uur van het net. Daarvoor heeft SolarBuffer de inhoud van je boiler en het vermogen van je element nodig: die vul je in de wizard in, en op de SolarBuffer-pagina pas je ze aan. Ontbreekt het elementvermogen, dan zie je dat bovenaan het dashboard.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.8.1" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.8.1" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -451,7 +451,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Groep- en fasebewaking: terugregelen voordat je zekering het begeeft</div>
             <div class="update-body">SolarBuffer kijkt nu mee met je zekering. Loopt een fase tegen zijn grens, bijvoorbeeld omdat de auto staat te laden, dan knijpt hij de boiler terug tot het weer past. Dat gaat boven alles heen: boven zon, boven een tijdschema, boven een legionellaronde en boven een goedkoop uur. Past het laagste standje ook niet meer, dan gaat de boiler even uit. Hetzelfde kan per groep, op basis van de vermogensmeter van die SolarBuffer zelf. In de wizard kies je bij stap 1 welke aansluiting je hebt, en op de P1-pagina stel je de grenzen in. Bij drie fasen kan SolarBuffer zelf opzoeken op welke fase je boiler zit. Zolang je geen aansluiting hebt gekozen doet deze bewaking niets, dus er verandert pas iets zodra jij die vraag beantwoordt. Daarnaast is er een derde stand voor de legionellaronde: Laag tarief. Die wacht met de ronde tot de stroomprijs onder je grens zakt, en draait hem uiterlijk na vijf dagen hoe dan ook. En in de expert-instellingen staat een terugvalbeveiliging: valt je P1-meter weg of bevriest zijn waarde, dan kun je de boiler laten uitschakelen in plaats van hem op zijn laatste stand te laten doorverwarmen.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.8.0" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.8.0" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -468,7 +468,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Je accu in een tijdschema, en een Zendure die weer laadt</div>
             <div class="update-body">Een tijdschema kan nu ook je accu laden, met een apart soort schema dat alleen over de accu gaat. Daarnaast voorkomt een nieuwe schakelaar in de expert-instellingen dat je accu de boiler voedt tijdens een legionellaronde, een tijdschema of een goedkoop tarief. Verder laadt een Zendure weer: SolarBuffer stuurde die accu elke twee seconden dezelfde opdrachten opnieuw, en daar liep het laden op vast. Bij de HomeWizard-accu's telt stand-by niet langer als een stand die jij zelf hebt gekozen, waardoor SolarBuffer zijn eigen blokkade niet meer voor jouw keuze aanziet. Tot slot drie kleinere herstellingen: de kWh-teller van de boiler blijft na een herstart staan, de status in Home Assistant komt overeen met die in de app, en de lettertypen staan nu op de Hub zelf in plaats van bij Google.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.7" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.7" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -482,7 +482,7 @@
             <span class="update-tag tag-fix">Verbeterd</span>
             <div class="update-title">Een accu op slim laden blijft van jou, en de accu komt weer op tijd aan de beurt</div>
             <div class="update-body">Zet je je HomeWizard-accu bewust op slim laden, dan overschreef SolarBuffer die keuze om de paar seconden met zijn eigen stand en rechten. Je zag je instelling terugspringen zonder dat ergens stond waarom. Vanaf nu blijft SolarBuffer overal vanaf zodra jij de accu zelf op een stand zet: geen stand schrijven, geen laad- of ontlaadrechten geven of afnemen. Op het dashboard staat dan ook waarom er niets gebeurt, en hoe je het weer overdraagt. De boiler wacht ondertussen nergens meer op, want op een accu die SolarBuffer niet aanstuurt valt niet te wachten; de prioriteit tussen accu en boiler doet in die stand dus niet meer mee. Verder drie herstellingen aan het vrijgeven van de accu. Stonden alle boilers bevroren of waren ze door een tijdschema verboden, dan bleef de accu geblokkeerd staan terwijl er niemand meer was om het overschot op te nemen, en ging het naar het net. De vermogensdrempel uit de vorige versie rekende bovendien in de verkeerde schaal: wie 50 invulde kreeg de accu al vrij bij een boilerstand van 29 op het dashboard. En de stroom per accupakket op de accupagina klopte niet, met bij ontladen zelfs waarden van duizenden ampères. Tot slot twee kleinigheden in de bediening: de terugknop op een instellingenpagina brengt je weer terug naar de sectie waar je vandaan kwam in plaats van twee stappen verder, en noemt die sectie nu ook bij naam. De grafiek met de stroomprijs per uur verschijnt alleen nog als je daadwerkelijk op een goedkoop tarief laat starten.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.6" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.6" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -496,7 +496,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Stroomprijs per uur op het dashboard, en een rustigere accuregeling</div>
             <div class="update-body">Naast de zonne-verwachting staat nu een tweede grafiek met de stroomprijs per uur, voor vandaag en voor morgen zodra de beurs die rond 13:00 vrijgeeft. De kleur loopt van groen voor het goedkoopste uur naar rood voor het duurste, en is een uur negatief dan kleurt hij blauw. Je kunt SolarBuffer daarbij laten rekenen met je eigen tarief: kies je leverancier en de opslag wordt ingevuld, waarna energiebelasting en btw erbij komen. Dan staat er hetzelfde bedrag als in de app van je leverancier, in plaats van de kale beursprijs die daar ruim de helft onder ligt. Bij het bouwen hiervan bleek de prijsophaling zelf een gat te hebben: het venster liep vanaf middernacht in wereldtijd in plaats van jouw tijd, waardoor de eerste uren van elke nacht ontbraken. Juist de uren waarin stroom vaak het goedkoopst is, dus met een dynamisch contract kon SolarBuffer die nooit als goedkoop uur zien. Aan de accukant is een hardnekkige onrust weg. Met accu-prioriteit wisselde de Hub elke twee seconden tussen volladen en geblokkeerd, urenlang, waarbij de boiler er nooit doorheen kwam en er bij te weinig zon stroom werd ingekocht om de accu te vullen. Verder is de laadstandbalk opnieuw gedaan: de kleur loopt nu door van rood naar groen in plaats van op vaste drempels om te klappen, en er loopt een veeg over de balk zolang er stroom in of uit gaat, naar rechts bij laden en naar links bij ontladen. In de instellingen kun je nu per accu testen of de verbinding werkelijk werkt voordat je opslaat, en opslaan zonder het token van de P1-meter wordt tegengehouden, want zonder dat token kan SolarBuffer je accu wel uitlezen maar niet aansturen. Nieuw is ook een instelbare vermogensdrempel: vanaf welk boilervermogen de accu mag bijladen. Die stond vast op honderd procent, wat een gat gaf zodra je de bevriesdrempel verlaagde. Tot slot zet een fabrieksreset de Hub nu echt terug naar nieuw, inclusief het wifi-netwerk, de meetgegevens en de kenmerken waaraan een Hub herkend wordt, en is een fout verholpen waarbij zelfverbruik en zelfvoorziening op nul bleven staan als je zonnemeter omgekeerd gemonteerd is.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.5" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.5" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -510,7 +510,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Home Assistant en Homey, en een flinke stap voor Zendure-accu's</div>
             <div class="update-body">SolarBuffer is nu te koppelen aan Home Assistant en Homey. De Hub meldt zichzelf aan op je netwerk, dus in beide gevallen wordt hij vanzelf gevonden: je ziet je status, je vermogen en je SolarBuffers als gewone apparaten en je kunt ze in je automatiseringen gebruiken. Voor Zendure-accu's is er veel veranderd. Nieuwere modellen zoals de SolarFlow 800 Plus praten in een ander formaat en werkten daardoor niet over het lokale netwerk; die worden nu herkend. Er kunnen meerdere accu's tegelijk aangestuurd worden, waarbij het vermogen wordt verdeeld naar hoeveel ruimte elke accu nog heeft, zodat ze elkaar gelijktrekken. Zitten er zonnepanelen op de accu zelf, dan telt die opbrengst voortaan mee op het dashboard en in je maandoverzicht, en je kunt instellen of het overschot bij een volle accu naar het net mag. De regeling controleert nu bovendien wat de accu werkelijk doet in plaats van wat hem gevraagd is, zodat een accu die zijn opdracht laat vallen meteen wordt bijgestuurd. Tot slot: de Hub werkt zichzelf niet meer elke nacht automatisch bij. Updaten doe je voortaan bewust via de knop hierboven.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.4" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.4" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -524,7 +524,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Zendure lokaal koppelen, maandoverzicht en een snellere, stabielere regeling</div>
             <div class="update-body">Zendure-accu's zijn nu rechtstreeks via je eigen netwerk uit te lezen en aan te sturen, zonder de Zendure-cloud, met een eigen batterijpagina voor de limieten en een accukeuze in Besturing: Automaat, Handmatig of Uit. Het dashboard toont voor Marstek en Zendure voortaan ook hoeveel kWh er die dag geladen en ontladen is. Onder Meer staat een nieuw maandoverzicht met per maand je import, export, zon, gas, accu en verbruikers; de telling begint vanaf deze versie. Nieuw is verder de snellere regeling: SolarBuffer meet eenmalig in wat je boiler bij elke dimstand werkelijk verbruikt en springt daarna bij een overschot meteen naar de juiste stand, in plaats van daar met kleine stapjes naartoe te kruipen. Hiervoor is een vermogensmeter op het apparaat nodig. Heb je een slimme meter die maar eens per tien seconden een waarde doorgeeft, dan wordt dat voortaan automatisch herkend en regelt SolarBuffer navenant rustiger; in een test zakte de schommeling op het net van ruim 1200 W naar minder dan 130 W. Daarnaast een aantal herstellingen, waaronder een Shelly EM Mini Gen 4 die als vermogensmeter altijd 0 W gaf, en een merkbaar snellere netwerkscan.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.3" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.3" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -538,7 +538,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Shelly als P1-bron, en een stabielere Marstek-koppeling</div>
             <div class="update-body">Naast de HomeWizard P1-meter kun je nu ook een Shelly Pro EM of 3EM kiezen als bron voor het live netvermogen (Instellingen → Configuratie → P1/Batterij), handig als je slimme meter maar eens per 10 seconden ververst in plaats van elke seconde. SolarBuffer herkent het apparaat automatisch via een netwerkscan, bepaalt zelf of het een driefasen-totaal of losse kanalen betreft, en herstelt de koppeling automatisch via het MAC-adres als het IP-adres ooit wijzigt. Voor Marstek-accu's zijn daarnaast een aantal betrouwbaarheidsverbeteringen doorgevoerd: een gewenste wissel tussen Auto- en Handmatige modus moet nu kort aanhouden voordat SolarBuffer 'm echt naar de accu stuurt, in plaats van bij elke kleine schommeling in het vermogen meteen te wisselen, wat de accu's eigen regeling minder vaak onderbreekt. De batterijkaart op het dashboard toont nu ook de actuele modus (Auto/Handmatig), en de laad/ontlaad-pijl gebruikt bij een gekoppelde vermogensmeter voortaan het teken van die meter zelf in plaats van accu-vlaggen die niet altijd betrouwbaar bleken. Ook is een weergavefout verholpen waarbij de batterijkaart een verouderde status kon tonen, en blijft de accu niet langer onnodig geblokkeerd wanneer de boiler sowieso niet kan draaien (bijvoorbeeld met automatische besturing uit). Bij de temperatuur-uitschakeling is de ondergrens iets verruimd (2 W in plaats van 3 W) zodat een meting die net op de grens schommelt de wachttijd niet steeds laat resetten. Tot slot gaat de regelsnelheid-schuif ("trager") nu tot -30% en regelt ook echt merkbaar geleidelijker, niet alleen intern.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.2" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.2" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -552,7 +552,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Anti-Legionella schema's, Bluetooth-koppeling en Marstek-betrouwbaarheid</div>
             <div class="update-body">Anti-Legionella kan nu Automatisch (op basis van een wekelijks schema) of Handmatig worden ingesteld via Instellingen → Configuratie. Bij tijdschema's is er een nieuw type "Verbieden": een SolarBuffer kan binnen een gekozen tijdvenster niet meer automatisch starten, zonder een al lopend apparaat te onderbreken. Expert-instellingen heeft nu een knop "Standaardwaarden herstellen" om alle expertvelden in één keer terug te zetten. Bij het koppelen van een SolarBuffer via Bluetooth wordt het wifi-wachtwoord voortaan automatisch ingevuld naast de netwerknaam, en een verbinding via ethernetkabel wordt nu herkend en getoond op het dashboard, dit bleef voorheen leeg. Een aantal kleinere problemen is daarbij verholpen: een Bluetooth-blokkade op de Hub wordt voortaan automatisch opgeheven bij elke opstart, een eerder gekoppeld en daarna gefactory-reset apparaat blijft niet langer onterecht verborgen bij een nieuwe Bluetooth-scan, de schema-knoppen "Aanzetten"/"Verbieden" op het dashboard reageerden niet meer goed na het wisselen, Expert-instellingen en Gebruikersbeheer waren op kleine schermen lastig te bedienen, en de installatiepagina van een nieuwe Hub probeerde onterecht lettertypen van internet te laden terwijl die nog geen verbinding heeft. Voor Marstek-accu's is de statusuitlezing betrouwbaarder gemaakt: op firmware die de hoofdstatusoproep niet beantwoordt, zoals Venus E 3.0, werd de accu voorheen onterecht als offline getoond met 0 W, dit valt nu automatisch terug op een tweede statusoproep. Optioneel is een losse Shelly- of HomeWizard-stekker op het stopcontact van de accu te koppelen (Instellingen → P1/Batterij) voor een exacte vermogensmeting op firmware die dit zelf niet goed teruggeeft. Tot slot, in bèta: Zendure Hyper 2000, Hub en ACE (legacy) kunnen via Bluetooth lokaal aan deze Hub gekoppeld worden in plaats van aan Zendure's cloud. Dit werkt door een bekende Zendure-firmwarebug nog niet betrouwbaar en wordt verder afgerond zodra Zendure dit met een firmware-update oplost.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.1" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.1" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -566,7 +566,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">SolarBuffer koppelen via Bluetooth — geen Shelly-app meer nodig</div>
             <div class="update-body">Een nieuwe SolarBuffer wordt nu rechtstreeks via Bluetooth aan je wifi-netwerk gekoppeld, zowel in de installatiewizard als bij het toevoegen van een extra SolarBuffer via Instellingen → SolarBuffers. Zoek via Bluetooth, kies het gevonden apparaat, de netwerknaam wordt automatisch overgenomen van de hub en na het invullen van het wachtwoord verschijnt de SolarBuffer binnen ongeveer 15 seconden vanzelf in de lijst. Werkt Bluetooth een keer niet, dan blijft koppelen via de Shelly-app of handmatig op IP-adres gewoon beschikbaar als terugvaloptie.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.7.0" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.7.0" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -583,7 +583,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Automatische IP-herkoppeling via MAC-adres</div>
             <div class="update-body">Wijzigt het IP-adres van je SolarBuffer, P1-meter, slimme stekker of vermogensmeter (bijvoorbeeld door een nieuwe DHCP-lease), dan blijft SolarBuffer niet langer definitief zonder verbinding zitten. Elk MAC-adres wordt automatisch vastgelegd zodra een apparaat online is; blijft het daarna onbereikbaar, dan scant SolarBuffer het netwerk om het via zijn MAC-adres terug te vinden en werkt het IP-adres vanzelf bij. Het hoofdapparaat probeert dit na 30 seconden onbereikbaarheid, met een nieuwe poging elke 90 seconden; stekker en vermogensmeter zijn minder urgent en worden hooguit eens per 15 minuten opnieuw gezocht. Een apparaat achter een uitgeschakelde stekker wordt hierbij herkend als legitiem offline. In de instellingen bij P1-meter en elke SolarBuffer staat nu een MAC-adresveld met een Reset-knop, handig bij vervanging van hardware. Op het dashboard verschijnt tijdens een actieve zoekpoging de status "Zoeken naar SolarBuffer…".</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.6" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.6.6" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -597,7 +597,7 @@
             <span class="update-tag tag-fix">Bugfix</span>
             <div class="update-title">Batterijrechten bij volle accu gecorrigeerd</div>
             <div class="update-body">Zodra de accu de ingestelde SoC-drempel had bereikt en de boiler stilstond, kreeg de accu voorheen geen enkel recht meer (niet laden, niet ontladen) — waardoor 's avonds onnodig stroom van het net werd gehaald terwijl de accu nog vol zat. De accu krijgt in die situatie nu "alleen ontladen", zodat hij het huishoudverbruik kan opvangen; zodra de boiler weer actief gaat regelen wordt dat recht automatisch weer ingetrokken. Ook tijdens de temperatuur-wachttijd van de boiler (waarin hij sowieso niet kan starten) krijgt de accu nu weer gewoon laadrecht, zodat resterend zonoverschot niet verloren gaat naar het net.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.5" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.6.5" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -611,7 +611,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Automatiseringen</div>
             <div class="update-body">Nieuwe pagina onder Instellingen → Configuratie: Automatiseringen. Hiermee laat je een Broadlink IR-commando of een stopcontact (Shelly/HomeWizard) automatisch uitvoeren zodra aan bepaalde voorwaarden wordt voldaan — bijvoorbeeld P1-vermogen, het percentage van een boiler, het vermogen van een ingestelde verbruiker en/of een tijdvenster met dagen. Voorwaarden moeten een zelf in te stellen tijd onafgebroken waar zijn voordat de actie wordt uitgevoerd, en een regel vuurt maar één keer per keer dat eraan wordt voldaan — zo blijft een IR "aan"-toets die eigenlijk een toggle is veilig. Regels zijn direct te testen, bewerken, tijdelijk uitzetten of verwijderen via het nieuwe menu op elke regel.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.4" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.6.4" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -625,7 +625,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Slimmere temperatuur-uitschakeling, zonnepanelengrafiek en regelsnelheid</div>
             <div class="update-body">De temperatuur-uitschakeling is verfijnd: het dashboard toont nu een aftelbare wachttijd (ook als een socket de SolarBuffer stroomloos heeft gemaakt), de herstart na de wachttijd verloopt zonder extra melding en de "op temperatuur"-melding komt alleen nog na een echte verwarmingsronde. Handmatig inschakelen annuleert de wachttijd direct. De grafiek van zonnepanelen tekent opwek voortaan omhoog met een passende schaal en eigen kleur. Nieuw in de expert-instellingen: een regelsnelheid-slider (±20%) waarmee de regeling vlotter of juist rustiger reageert. Verder wordt een SolarBuffer die achter een ingeschakelde socket onbereikbaar blijft nu duidelijk als offline gemarkeerd.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.3" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.6.3" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -639,7 +639,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Automatisch uitschakelen bij bereikte boilertemperatuur</div>
             <div class="update-body">Nieuwe optie op de SolarBuffers-instellingenpagina: schakel een boiler automatisch uit zodra hij op temperatuur is. Dit wordt herkend aan een volledig uitgeregelde PID-regelaar terwijl de vermogensmeter een minuut lang slechts 3–10&nbsp;W meet. Na een instelbare wachttijd (5–60 minuten, standaard 10) volgt automatisch een nieuwe startpoging zodra er weer teruglevering is. Werkt per boiler, ook met meerdere SolarBuffers, en vereist een gekoppelde vermogensmeter. Het dashboard toont in de wachttijd de status "Op temperatuur".</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.2" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.6.2" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -653,7 +653,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Zendure-accu's en slimmere batterijregeling</div>
             <div class="update-body">Zendure SolarFlow accu's worden nu ondersteund als thuisbatterij via de lokale API — volledig lokaal, zonder cloud-account. De Marstek-aansturing is herzien: de accu blijft in zijn eigen Auto-modus en wordt alleen met een tijdschema vastgezet wanneer dat nodig is. Nieuw is ook de uitgeregeld-detectie: als de accu het zonoverschot niet meer opneemt (bijna vol), krijgt de boiler voortaan automatisch vrijgave.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.1" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.6.1" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -667,7 +667,7 @@
             <span class="update-tag tag-ui">UI</span>
             <div class="update-title">Volledig vernieuwde interface</div>
             <div class="update-body">Het dashboard en alle instellingenpagina's hebben een nieuwe, strakke stijl gekregen met een donker thema, cyaan/violette accenten en overal consistente kleuren. Navigatie verloopt nu via een vaste onderbalk (Dashboard, Grafieken, Instellingen, Meer) in plaats van het oude hamburgermenu. Nieuw op het dashboard: een Netenergiebalans-paneel dat in één oogopslag toont hoeveel stroom je vandaag van het net haalde versus terugleverde.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.6.0" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.6.0" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -684,7 +684,7 @@
             <span class="update-tag tag-ui">UI</span>
             <div class="update-title">Verbeterde trendgrafieken</div>
             <div class="update-body">De trendpagina is grondig verbeterd. Inzoomen laadt automatisch hogere resolutie voor het zichtbare bereik — uitzoomt springt terug naar het volledige bereik. Slepen (pan) werkt vloeiend zonder de weergave te onderbreken. In volledig scherm (landscape) staat de sluit- en resetknop nu in een vaste balk buiten het canvas, zodat ze altijd betrouwbaar reageren. Nieuw: een draggable readout-slider waarmee je exact het tijdstip en de waarde op elk punt van de grafiek kunt aflezen.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.4" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.5.4" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -698,7 +698,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">SolarBuffer factory reset vanuit de app</div>
             <div class="update-body">SolarBuffer dimmers kunnen nu volledig worden gereset via de app, zonder de Shelly-app te openen. Ga naar Instellingen → Systeem → Factory reset SolarBuffers om een apparaat te selecteren en te resetten. De hub factory reset is hernoemd naar "Factory reset Hub" voor meer duidelijkheid.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.3" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.5.3" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -712,7 +712,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Marstek batterijintegratie &amp; bugfixes watchdog</div>
             <div class="update-body">Marstek Venus-accu's zijn nu te koppelen via de lokale UDP Open API. SolarBuffer berekent het laad- of ontlaadsetpoint zelf op basis van de P1-meting, zonder aparte CT-configuratie. Prioriteitslogica (batterij of boiler eerst) werkt identiek aan de HomeWizard-integratie. Het batterijtype is instelbaar via een merkkaart met logo, ook zichtbaar in de dashboard-widget. Daarnaast zijn twee watchdog-bugs opgelost waarbij handmatig gestartte apparaten direct werden uitgeschakeld.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.2" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.5.2" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -726,7 +726,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">HomeWizard batterijintegratie (HWE-BAT)</div>
             <div class="update-body">Koppel een HomeWizard HWE-BAT via de lokale REST API v2. Stel in of de batterij of de boiler voorrang heeft op het zonnestroom. Bij <em>Batterij eerst</em> laadt de accu tot een instelbare SoC-drempel voordat de boiler start. Laad- en ontlaadrechten worden automatisch bijgestuurd op basis van legionellarun, tijdschema's en dynamische tarieven. Het dashboard toont een live batterijwidget met SoC en vermogen.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.1" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.5.1" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -740,7 +740,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Broadlink IR-besturing &amp; instellingen heringedeeld</div>
             <div class="update-body">Broadlink RM4 en RM Pro apparaten zijn nu te koppelen en aan te sturen vanuit de app. IR-commando's inleren, opslaan en versturen via het dashboard. IR-apparaten tonen een aan/uit-indicator via een gekoppelde vermogensmeter. De instellingenpagina is heringedeeld in zes sectietegels voor een overzichtelijker navigatie.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.5.0" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.5.0" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -757,7 +757,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Zonnepanelen &amp; zelfverbruik</div>
             <div class="update-body">Verbruikers kunnen nu worden aangemerkt als zonnepanelenmeter. De vermogenstegel toont dan live opwekking (W), dagelijkse opbrengst (kWh) naast import en export, en berekent automatisch Zelfverbruik en Zelfvoorziening (%). De zonnepanelen-meter verdwijnt uit de verbruikerslijst en wordt alleen in de vermogenstegel getoond.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.4.2" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.4.2" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -771,7 +771,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Vakantiestand</div>
             <div class="update-body">Vakantiestand toegevoegd onder Instellingen → Besturing. Stel een terugkeerdatum in en kies of anti-legionella actief blijft.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.4.1" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.4.1" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -785,7 +785,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Grafieken &amp; energiehistoriek</div>
             <div class="update-body">Nieuwe grafieken­pagina met historiek van netvermogen en verbruikers. Per verbruiker instelbaar of vermogen of temperatuur wordt opgeslagen. Het dashboard toont nu ook de dagelijkse import en teruglevering (kWh) direct in de netvermogens­tegel.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.4.0" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.4.0" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -802,7 +802,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Firmware- &amp; systeemupdates</div>
             <div class="update-body">Nieuwe updatepagina met drie tabbladen: Firmware (per apparaat de huidige versie controleren en direct bijwerken via Shelly OTA), Software (SolarBuffer zelf) en Hardware (hub-pakketupdates via apt). Beschikbare updates worden gemarkeerd met een rode stip op het tabblad.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.4" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.3.4" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -816,7 +816,7 @@
             <span class="update-tag tag-ui">UI</span>
             <div class="update-title">Instellingen herontworpen</div>
             <div class="update-body">De instellingenpagina is opgesplitst in vier overzichtelijke sub-pagina's: P1 meter, SolarBuffers, Expert instellingen en MQTT / Home Assistant. Apparaatkaarten hebben een nieuw design met secties en twee-koloms layout, ook toegepast in de wizard. Donkere modus toggle verplaatst naar de instellingen onder Account.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.3" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.3.3" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -830,7 +830,7 @@
             <span class="update-tag tag-fix">Verbetering</span>
             <div class="update-title">PID-stabiliteit &amp; systeeminfo</div>
             <div class="update-body">PID-integrator wordt nu altijd correct gereset bij het opstarten van een nieuwe prioriteit, waardoor directe uitschieters naar 100% worden voorkomen. Nieuwe systeeminfo-pagina in de instellingen met live schijfruimte, geheugengebruik, CPU-temperatuur en uptime.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.2" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.3.2" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -844,7 +844,7 @@
             <span class="update-tag tag-fix">Verbetering</span>
             <div class="update-title">Betrouwbaardere regeling &amp; slimme overdracht</div>
             <div class="update-body">Zachte uitschakel, toestandherstel na tijdschema en legionellarun, naadloze hervatting van de regeling, offline-watchdog en automatische fallback bij een onbereikbare schakelstekker.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.1" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.3.1" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -858,7 +858,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Verbruikers dashboard</div>
             <div class="update-body">Voeg apparaten toe die alleen een vermogensmeter hebben, zoals een wasmachine, droger of vaatwasser. Live verbruik per apparaat zichtbaar op het dashboard. Kies een eigen icoon uit een catalogus van veelgebruikte apparaten. Meerdere meters per verbruiker combineren voor apparaten met meerdere groepen. Automatisch scannen op Shelly PM en HomeWizard meters in het netwerk.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.3.0" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.3.0" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -875,7 +875,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Zonne-verwachting, PWA &amp; Installatie</div>
             <div class="update-body">Zonne-verwachting via Open-Meteo op het dashboard met balkgrafiek per uur voor vandaag en morgen. Locatie automatisch invullen via plaatsnaam of automatisch. Volledige PWA-ondersteuning met service worker. Keuze tussen schone installatie of back-up importeren bij eerste opstart.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.3" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.2.3" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -889,7 +889,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Boost, Config back-up &amp; Instellingen</div>
             <div class="update-body">Boost-knop per apparaat voor tijdelijk 100% vermogen (instelbaar via expert-instellingen). Config exporteren en importeren via een aparte back-uppagina. Nieuw instellingenmenu met navigatie naar wizard, account en back-up.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.2" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.2.2" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
@@ -903,7 +903,7 @@
             <span class="update-tag tag-feature">Nieuw</span>
             <div class="update-title">Tailscale</div>
             <div class="update-body">Op het dashboard staat een nieuwe tegel voor Remote Acces. Door verbinding te maken met Tailscale kan je op afstand inloggen in SolarBuffer.</div>
-            <a class="update-notes-link" href="https://github.com/SolarBuffer/SolarBuffer/releases/tag/V0.2.1" target="_blank" rel="noopener">&rarr; Release notes</a>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.2.1" target="_blank" rel="noopener">&rarr; Release notes</a>
           </div>
         </div>
 
