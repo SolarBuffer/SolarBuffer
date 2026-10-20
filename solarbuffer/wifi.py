@@ -487,9 +487,29 @@ def android_captive_probe():
     return redirect(f'http://{PORTAL_IP}/', 302)
 
 
+# RFC 8908: de nette manier waarop een telefoon vraagt of er een portaal is. De
+# hub noemt dit adres in DHCP-optie 114 (zie ensure_captive_portal in app.py), en
+# iOS en Android halen het dan zelf op zodra ze verbinden. Dat is de weg die het
+# venster meteen opent; de probes hierboven zijn het vangnet voor oudere toestellen.
+# Het antwoord moet application/captive+json zijn, anders telt het niet mee.
+CAPPORT_PATH = '/captive-portal/api'
+
+
+@app.route(CAPPORT_PATH)
+def capport_api():
+    return (
+        jsonify({
+            'captive': True,
+            'user-portal-url': f'http://{PORTAL_IP}/',
+        }),
+        200,
+        {'Content-Type': 'application/captive+json'},
+    )
+
+
 @app.before_request
 def captive_portal_redirect():
-    if request.path in ('/', '/scan') or request.method == 'POST':
+    if request.path in ('/', '/scan', CAPPORT_PATH) or request.method == 'POST':
         return None
     # Specifieke Apple/Android routes worden hierboven al afgehandeld
     if request.path in APPLE_PROBES or request.path in ('/generate_204', '/gen_204'):

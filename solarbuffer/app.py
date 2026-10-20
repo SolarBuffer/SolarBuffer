@@ -5001,6 +5001,111 @@ def ensure_mdns_service():
             pass
 
 
+PORTAL_IP = "10.4.0.1"
+PORTAL_DNSMASQ_FILE = "/etc/NetworkManager/dnsmasq-shared.d/solarbuffer-portal.conf"
+PORTAL_AP_VERBINDING = "PI-SETUP"
+
+
+def _portal_dnsmasq_conf():
+    return (
+        "# Door SolarBuffer geschreven, niet met de hand aanpassen.\n"
+        "#\n"
+        "# Dit bestand geldt alleen zolang een gedeelde verbinding aanstaat, dus\n"
+        "# tijdens de setup-hotspot en niet op het netwerk van de klant.\n"
+        "#\n"
+        "# Elke naam wijst naar de hub. Een telefoon controleert bij het verbinden\n"
+        "# een vast adres van Apple of Google; zonder deze regel wordt die naam niet\n"
+        "# opgelost, komt de controle nooit bij ons aan en blijft het venster dicht.\n"
+        f"address=/#/{PORTAL_IP}\n"
+        "\n"
+        "# RFC 8910: vertel bij het uitdelen van het IP-adres meteen waar het portaal\n"
+        "# staat. Dit is de weg waarlangs iOS en Android het venster vanzelf openen;\n"
+        "# de omleidingen in wifi.py zijn het vangnet voor toestellen die dit niet\n"
+        "# kennen. Het adres wijst naar de JSON-API, niet naar de pagina zelf, want\n"
+        "# zo schrijft die RFC het voor.\n"
+        f"dhcp-option=114,http://{PORTAL_IP}/captive-portal/api\n"
+    )
+
+
+def ensure_captive_portal():
+    """Laat het instelvenster vanzelf opengaan bij het verbinden met de hotspot.
+
+    Zoals in een hotel. Een telefoon die net verbinding maakt haalt een vast
+    adres op, bij Apple captive.apple.com en bij Google connectivitycheck. Komt
+    daar niet het verwachte antwoord, dan opent het toestel een venster met de
+    pagina van het netwerk. wifi.py beantwoordt die controles al, maar daar kwam
+    tot nu toe niemand: zonder DNS die alles naar de hub wijst wordt die naam
+    niet opgelost en blijft het stil. Dat is het stuk dat hier wordt klaargezet.
+
+    Schrijft alleen als de inhoud werkelijk afwijkt, en faalt stil zoals de
+    andere opstartcontroles. Lukt het niet, dan werkt de hotspot nog gewoon;
+    je typt het adres dan zelf.
+    """
+    gewenst = _portal_dnsmasq_conf()
+    try:
+        with open(PORTAL_DNSMASQ_FILE, encoding="utf-8") as f:
+            if f.read() == gewenst:
+                _portal_controleer_ap()
+                return
+    except Exception:
+        pass
+
+    tmp = f"/tmp/solarbuffer-portal.{os.getpid()}.conf"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(gewenst)
+        subprocess.run(["sudo", "mkdir", "-p", os.path.dirname(PORTAL_DNSMASQ_FILE)],
+                       capture_output=True, text=True, timeout=10)
+        klaar = subprocess.run(["sudo", "cp", tmp, PORTAL_DNSMASQ_FILE],
+                               capture_output=True, text=True, timeout=10)
+        if klaar.returncode == 0:
+            # NetworkManager start zijn dnsmasq opnieuw bij het opzetten van een
+            # gedeelde verbinding, dus dit hoeft niet meteen te laden. Draait de
+            # hotspot nu, dan is een herstart van de dienst nodig om het mee te
+            # nemen; dat doen we niet vanzelf, want dat verbreekt juist de
+            # verbinding van wie er op dat moment op zit.
+            print(f"Portaal: {PORTAL_DNSMASQ_FILE} klaargezet")
+        else:
+            print(f"Portaal: kon {PORTAL_DNSMASQ_FILE} niet schrijven: "
+                  f"{klaar.stderr.strip()}")
+    except Exception as e:
+        print(f"Portaal: klaarzetten mislukt: {e}")
+    finally:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
+    _portal_controleer_ap()
+
+
+def _portal_controleer_ap():
+    """Kijkt of de hotspot het adres wel zelf uitdeelt.
+
+    Het bestand hierboven werkt alleen als de hotspot in NetworkManager op
+    'shared' staat, want alleen dan draait die zijn eigen dnsmasq en deelt hij
+    adressen uit. Staat hij op iets anders, dan wordt er niets opgelost en gaat
+    het venster niet open, terwijl alles er wel staat. Dat is precies het soort
+    stille mislukking waar je uren naar zoekt, dus zeggen we het in het logboek
+    in plaats van het te laten gebeuren. Zelf omzetten doen we niet: dat is de
+    verbinding waarmee een hub in nood bereikbaar is.
+    """
+    try:
+        uit = subprocess.run(
+            ["nmcli", "--terse", "--fields", "ipv4.method,ipv4.addresses",
+             "connection", "show", PORTAL_AP_VERBINDING],
+            capture_output=True, text=True, timeout=10)
+        if uit.returncode != 0:
+            return
+        regels = dict(r.split(":", 1) for r in uit.stdout.strip().split("\n") if ":" in r)
+        methode = (regels.get("ipv4.method") or "").strip()
+        if methode and methode != "shared":
+            print(f"Portaal: {PORTAL_AP_VERBINDING} staat op ipv4.method={methode} "
+                  f"en niet op shared. Het venster gaat dan niet vanzelf open, want "
+                  f"de hotspot deelt geen adressen uit en lost geen namen op.")
+    except Exception:
+        pass
+
+
 def ensure_shelly_ble_available():
     """Vangnet voor Pi's waar bleak buiten de in-app update-flow om ontbreekt
     (bv. een handmatige 'git pull' via SSH, die install_required_pip_packages()
@@ -13883,6 +13988,7 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_no_nightly_autoupdate, daemon=True).start()
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     threading.Thread(target=ensure_mdns_service, daemon=True).start()
+    threading.Thread(target=ensure_captive_portal, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
         def filter(self, record):
