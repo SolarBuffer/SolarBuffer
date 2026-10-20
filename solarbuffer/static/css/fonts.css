@@ -6,13 +6,20 @@
 
    Het zijn variabele lettertypen, dus alle gewichten zitten in een bestand.
    Beide onder de SIL Open Font License, dus meeleveren mag.
-   Inter: github.com/rsms/inter · Space Grotesk: github.com/floriankarsten/space-grotesk */
+   Inter: github.com/rsms/inter · Space Grotesk: github.com/floriankarsten/space-grotesk
+
+   font-display: optional in plaats van swap. Swap betekent letterlijk: teken nu
+   met de systeemletter en wissel zodra het bestand er is, dus die wissel zie je.
+   Optional geeft de browser een kort moment om de letter klaar te hebben, en is
+   hij dat niet, dan blijft die pagina op de systeemletter staan zonder ooit te
+   wisselen. Met de preload in _fonts.html haalt hij dat moment vrijwel altijd.
+   Hoe dan ook verspringt er niets meer tijdens het kijken. */
 
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
   src: url('/static/fonts/Inter-variable.woff2') format('woff2');
 }
 
@@ -20,6 +27,6 @@
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 300 700;
-  font-display: swap;
+  font-display: optional;
   src: url('/static/fonts/SpaceGrotesk-variable.woff2') format('woff2');
 }

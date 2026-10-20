@@ -1,0 +1,17 @@
+{# Lettertypen vroeg aankondigen, want anders zie je ze wisselen.
+
+   Eerder stond fonts.css als @import in theme.css en in de inline stijl van de
+   losse pagina's. Een @import wordt pas ontdekt nadat de stylesheet eromheen is
+   opgehaald en geparst, dus begon de woff2 pas aan zijn derde stap in de rij. De
+   pagina tekende ondertussen met de systeemletter en wisselde zodra het bestand
+   binnen was; dat is de sprong die je zag.
+
+   Preload zet de twee bestanden meteen in de wachtrij. crossorigin hoort erbij,
+   ook al staan ze op dezelfde server: lettertypen worden altijd in CORS-stand
+   gehaald, en zonder dat woord telt de preload niet mee en wordt het bestand een
+   tweede keer opgehaald. Dit hoort boven de stylesheets te staan. #}
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="{{ url_for('static', filename='fonts/Inter-variable.woff2') }}">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="{{ url_for('static', filename='fonts/SpaceGrotesk-variable.woff2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">

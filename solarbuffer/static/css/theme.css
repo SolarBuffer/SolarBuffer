@@ -1,5 +1,4 @@
 /* ===== SolarBuffer design tokens & app-shell ===== */
-@import url('/static/css/fonts.css');
 
 :root {
   --bg: hsl(224, 30%, 97%);
