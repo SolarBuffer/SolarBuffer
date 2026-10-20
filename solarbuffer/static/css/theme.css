@@ -308,12 +308,20 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
    pagina opent, en dan zie je elke schakelaar bij het laden één keer schieten.
    Een transition doet bij de eerste weergave niets.
 
-   De drie maten verschillen alleen in hoe ver de randen staan. De baan eromheen
+   De schaduw staat bewust zonder verticale verschuiving. Met 0 1px 4px liep hij
+   onderuit het balletje en smeerde hij de onderste 2 px dicht, waardoor de bal
+   lager leek te staan dan hij stond. Opgemeten zit hij precies in het midden,
+   baan 24 en bal 20 met 2 px boven en onder; het was dus de schaduw en niet de
+   plaatsing.
+
+   De maten verschillen alleen in hoe ver de randen staan. De baan eromheen
    staat nog per pagina. */
 
 .toggle .slider::before,
 .toggle-mini .slider::before,
-.sched-switch .slider::before {
+.sched-switch .slider::before,
+.dark-pill::before,
+.pill-thumb::before {
   content: "";
   position: absolute;
   top: 2px;
@@ -330,32 +338,49 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
    uitrekte, wat er verkeerd uitzag zonder dat je kon zeggen waarom. */
 .toggle .slider::before,
 .toggle-mini .slider::before,
-.sched-switch .slider::before {
+.sched-switch .slider::before,
+.dark-pill::before,
+.pill-thumb::before {
   transition: left  0.26s cubic-bezier(0.2, 0.7, 0.3, 1),
               right 0.40s cubic-bezier(0.35, 0.25, 0.3, 1);
 }
 .toggle input:checked + .slider::before,
 .toggle-mini input:checked + .slider::before,
-.sched-switch input:checked + .slider::before {
+.sched-switch input:checked + .slider::before,
+.dark-pill.on::before,
+.pill-toggle input:checked + .pill-thumb::before {
   transition: left  0.40s cubic-bezier(0.35, 0.25, 0.3, 1),
               right 0.26s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 /* 44 x 24, bal 20 */
-.toggle .slider::before { left: 2px; right: 22px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); }
+.toggle .slider::before { left: 2px; right: 22px; box-shadow: 0 0 3px rgba(0, 0, 0, 0.22); }
 .toggle input:checked + .slider::before { left: 22px; right: 2px; }
 
 /* 34 x 18, bal 14 */
-.toggle-mini .slider::before { left: 2px; right: 18px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.toggle-mini .slider::before { left: 2px; right: 18px; box-shadow: 0 0 2px rgba(0, 0, 0, 0.26); }
 .toggle-mini input:checked + .slider::before { left: 18px; right: 2px; }
 
 /* 38 x 22, bal 18 */
-.sched-switch .slider::before { left: 2px; right: 18px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.sched-switch .slider::before { left: 2px; right: 18px; box-shadow: 0 0 2px rgba(0, 0, 0, 0.26); }
 .sched-switch input:checked + .slider::before { left: 18px; right: 2px; }
+
+/* 40 x 24, bal 18. Deze staat op de accountpagina en wordt met een klasse
+   geschakeld in plaats van met een vinkje, want er zit geen checkbox onder. */
+.dark-pill::before { top: 3px; bottom: 3px; left: 3px; right: 19px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.26); }
+.dark-pill.on::before { left: 19px; right: 3px; }
+
+/* 44 x 26, bal 20. Deze staat bij de accessoires. */
+.pill-thumb::before { top: 3px; bottom: 3px; left: 3px; right: 21px;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.22); }
+.pill-toggle input:checked + .pill-thumb::before { left: 21px; right: 3px; }
 
 /* Wie bewegende beelden heeft uitgezet krijgt een bal die gewoon verschuift. */
 @media (prefers-reduced-motion: reduce) {
   .toggle .slider::before, .toggle-mini .slider::before, .sched-switch .slider::before,
+  .dark-pill::before, .dark-pill.on::before,
+  .pill-thumb::before, .pill-toggle input:checked + .pill-thumb::before,
   .toggle input:checked + .slider::before,
   .toggle-mini input:checked + .slider::before,
   .sched-switch input:checked + .slider::before {

@@ -352,16 +352,7 @@
       transition: background 0.2s;
       pointer-events: none;
     }
-    .dark-pill::after {
-      content: ''; position: absolute;
-      top: 3px; left: 3px;
-      width: 18px; height: 18px;
-      border-radius: 50%; background: white;
-      transition: transform 0.2s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    }
     .dark-pill.on { background: hsl(32, 95%, 52%); }
-    .dark-pill.on::after { transform: translateX(16px); }
 
     /* ===== UPDATE BADGE & DANGER ===== */
     .update-badge {

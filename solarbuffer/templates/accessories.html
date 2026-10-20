@@ -333,14 +333,7 @@ html[data-theme="dark"] .history-toggle-row[style*="hsl(40"] .history-toggle-lab
   background: hsl(224, 18%, 88%); border-radius: 999px;
   transition: background 0.2s;
 }
-.pill-thumb::before {
-  content: ''; position: absolute;
-  width: 20px; height: 20px; left: 3px; top: 3px;
-  background: white; border-radius: 50%;
-  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
 .pill-toggle input:checked + .pill-thumb { background: hsl(32, 95%, 52%); }
-.pill-toggle input:checked + .pill-thumb::before { transform: translateX(18px); }
 html[data-theme="dark"] .gas-settings-card { background: hsl(224, 38%, 14%); border-color: hsl(224, 38%, 17%); box-shadow: none; }
 html[data-theme="dark"] .gas-settings-icon { background: hsl(24, 30%, 24%); color: hsl(24, 80%, 60%); }
 html[data-theme="dark"] .gas-settings-sub { color: hsl(224, 18%, 73%); }
