@@ -357,6 +357,10 @@
     details.note[open] > summary::before { content: "▾ "; }
     details.note[open] > summary { margin-bottom: 0.4rem; }
     html[data-theme="dark"] details.note > summary { color: hsl(224, 18%, 82%); }
+    .toggle-compact { margin-bottom: 0.75rem; }
+    .toggle-label { cursor: pointer; }
+    /* Een hint binnen een label erft anders het vette van dat label. */
+    .toggle-row .hint { font-weight: 400; margin-top: 0.1rem; }
     .step-title {
       font-weight: 700;
       font-size: 0.92rem;
@@ -716,13 +720,6 @@
 
           <!-- Marstek-specifieke velden -->
           <div id="marstekFields" style="display:none;">
-            <div class="field-group">
-              <button type="button" class="btn-primary btn-inline" id="marstekScanBtn" onclick="scanMarstek()">
-                Marstek-accu's zoeken op netwerk
-              </button>
-              <div id="marstekScanStatus" class="status-box"></div>
-              <div id="marstekScanResults"></div>
-            </div>
             <div class="two-col-row">
               <div class="field-group">
                 <label for="marstek_port">UDP-poort</label>
@@ -739,10 +736,10 @@
                 <div class="hint">Max. laad- én ontlaadvermogen van je accu</div>
               </div>
             </div>
-            <div class="toggle-row" style="margin-bottom:0.75rem;">
-              <label for="marstekInvertPower" style="cursor:pointer;">
+            <div class="toggle-row toggle-compact">
+              <label for="marstekInvertPower" class="toggle-label">
                 Omgekeerde +/− (negatief = laden)
-                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);font-weight:400;">Zet uit als de accu ontlaadt terwijl hij zou moeten laden</div>
+                <div class="hint">Zet uit als de accu ontlaadt terwijl hij zou moeten laden</div>
               </label>
               <label class="toggle">
                 <input type="checkbox" id="marstekInvertPower" name="marstek_invert_power"
@@ -750,6 +747,15 @@
                 <span class="slider"></span>
               </label>
             </div>
+            <div class="field-group">
+              <label>Accu's op het netwerk zoeken</label>
+              <button type="button" class="btn-primary btn-inline" id="marstekScanBtn" onclick="scanMarstek()">
+                Zoeken
+              </button>
+              <div id="marstekScanStatus" class="status-box"></div>
+              <div id="marstekScanResults"></div>
+            </div>
+
             <details class="note">
               <summary>Wat je bij Marstek zelf moet instellen</summary>
               Stel de Open API in via de Marstek app en configureer een statisch IP-adres voor je accu.
@@ -758,12 +764,11 @@
               een eigen handmatig schema in slot 0 wordt dan overschreven.
             </details>
 
-            <div class="subsec">
-              <div class="subsec-title">Vermogensmeter op stopcontact accu (optioneel)</div>
+            <details class="note" {% if config.battery_power_meter %}open{% endif %}>
+              <summary>Losse vermogensmeter op het stopcontact (optioneel)</summary>
               <div class="subsec-sub">
                 Sommige Marstek-firmwares geven geen bruikbaar vermogen terug via de eigen API.
-                Koppel hier een losse Shelly- of HomeWizard-stekker op het stopcontact van de accu
-                voor een echte meting in plaats van een schatting.
+                Een losse Shelly- of HomeWizard-stekker geeft dan een echte meting.
               </div>
               <div class="two-col-row">
                 <div class="field-group">
@@ -781,7 +786,7 @@
                          value="{{ config.battery_power_ip or '' }}">
                 </div>
               </div>
-            </div>
+            </details>
           </div>
 
           <!-- Indevolt-specifieke velden -->
@@ -822,37 +827,23 @@
               </select>
               <div class="hint">MQTT is voor accu&#39;s zonder eigen HTTP-API; een IP-adres is dan niet nodig.</div>
             </div>
-            <div class="note">
-              Werkt met SolarFlow 800 (Plus/Pro), 1600 AC+ en 2400 AC (Pro). Geef je accu een vast IP-adres.
-            </div>
-
-            <div class="subsec">
-              <div class="subsec-title">Hyper 2000 / Hub / ACE (legacy, via Bluetooth)</div>
-              <div class="subsec-sub">
-                Deze modellen praten alleen via Zendure&#39;s cloud. Koppel ze hieronder via Bluetooth
-                en zet de verbinding hierboven op MQTT. Aansturen via die weg is nog niet op hardware
-                beproefd.
-              </div>
-
-              <div class="warn">
-                Let op: na het koppelen verdwijnt het apparaat uit de Zendure-app, want die werkt via
-                de cloud.
-              </div>
-
+            <div class="field-group">
+              <label>Koppelen via Bluetooth</label>
+              <div class="warn">Na het koppelen verdwijnt de accu uit de Zendure-app.</div>
               <button type="button" class="btn-primary btn-inline" id="zendureBleScanBtn" onclick="scanZendureBle()">
-                Zoek via Bluetooth
+                Zoeken
               </button>
               <div id="zendureBleScanStatus" class="status-box"></div>
               <div id="zendureBleScanResults"></div>
 
-              <div id="zendureBleProvisionPanel" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid hsl(224, 18%, 90%);">
-                <div id="zendureBleSelectedLabel" style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;"></div>
-                <div style="display:flex;gap:0.75rem;margin-bottom:0.6rem;">
-                  <div class="field-group" style="flex:1;margin-bottom:0;">
+              <div id="zendureBleProvisionPanel" class="subsec" style="display:none;">
+                <div class="subsec-title" id="zendureBleSelectedLabel"></div>
+                <div class="two-col-row">
+                  <div class="field-group">
                     <label for="zendureBleSsid">Wifi-netwerk</label>
                     <input type="text" id="zendureBleSsid" placeholder="Netwerknaam">
                   </div>
-                  <div class="field-group" style="flex:1;margin-bottom:0;">
+                  <div class="field-group">
                     <label for="zendureBlePassword">Wifi-wachtwoord</label>
                     <input type="password" id="zendureBlePassword" placeholder="Wachtwoord">
                   </div>
@@ -863,6 +854,15 @@
                 <div id="zendureBleProvisionStatus" class="status-box"></div>
               </div>
             </div>
+
+            <details class="note">
+              <summary>Welke modellen, en welke verbinding daarbij hoort</summary>
+              Via de lokale API op de accu: SolarFlow 800 (Plus/Pro), 1600 AC+ en 2400 AC (Pro). Geef
+              die een vast IP-adres. De Hyper 2000, Hub en ACE hebben geen eigen API; koppel die via
+              Bluetooth en zet de verbinding op MQTT. Een veld voor het maximale vermogen staat er
+              niet, want deze accu meldt zijn eigen laad- en ontlaadplafond en dat is preciezer dan
+              een ingevuld getal.
+            </details>
           </div>
           <!-- Gedrag, los van het aansluiten hierboven. Die twee stonden door elkaar
                in een doorlopende stapel, en dat is precies waarom de kaart onleesbaar
