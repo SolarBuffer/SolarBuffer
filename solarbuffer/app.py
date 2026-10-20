@@ -926,7 +926,7 @@ _indevolt_pv_gezien_ts = 0.0
 # de twee regelingen samen.
 INDEVOLT_REG_GAIN = 0.6         # deel van de resterende fout per stap
 INDEVOLT_REG_DEADBAND = 10      # W: kleinere bijstellingen zijn de moeite niet
-INDEVOLT_REG_MIN_INTERVAL = 4   # s: zo vaak mag een nieuwe waarde
+INDEVOLT_REG_MIN_INTERVAL = 5   # s: zo vaak mag een nieuwe waarde, zie de documentatie
 INDEVOLT_REG_REPEAT_INTERVAL = 10  # s: zo vaak mag dezelfde waarde opnieuw
 INDEVOLT_REG_LEAD = 250         # W: toegestaan verschil tussen opdracht en meting
 INDEVOLT_REG_LEAD_GRACE = 20    # s: zolang mag dat verschil aanhouden
@@ -2922,9 +2922,18 @@ def _probe_een_accu(soort, ip, token, marstek_port, indevolt_port=8080):
                 "vermogen": m.get("power_w")}
     except requests.HTTPError as e:
         code = getattr(e.response, "status_code", None)
+        if code in (401, 403):
+            # Bij HomeWizard gaat het om het token. Bij Indevolt betekent 401 dat
+            # de lokale API op HTTP Digest staat: dan verlangt de accu een inlog
+            # en die kennen wij niet. Dezelfde foutcode, een heel ander verhaal,
+            # dus ook een ander antwoord; anders zoekt iemand zich blind naar een
+            # token dat niet bestaat.
+            _fout = ("De lokale API staat op HTTP Digest. Zet hem in de "
+                     "Indevolt-app op HTTP." if soort == "indevolt"
+                     else "Token wordt niet geaccepteerd")
+            return {"ip": ip, "online": False, "fout": _fout}
         return {"ip": ip, "online": False,
-                "fout": "Token wordt niet geaccepteerd" if code in (401, 403)
-                        else f"Accu antwoordt met foutcode {code}"}
+                "fout": f"Accu antwoordt met foutcode {code}"}
     except Exception:
         return {"ip": ip, "online": False, "fout": "Geen antwoord op dit adres"}
 
@@ -11205,9 +11214,11 @@ def set_indevolt_control(ip, port, mode, perms, measured_power=0, max_power=2000
 
         # Niet sneller bijstellen dan de accu kan volgen, en niet blijven herhalen.
         # Bij de Zendure bleek juist het onophoudelijk herhalen van dezelfde opdracht
-        # het laden stuk te maken, en over de toegestane schrijffrequentie zegt deze
-        # fabrikant niets. Dus: alleen bij een echte verandering, plus een trage
-        # opfrisronde voor het geval de accu stil is teruggevallen.
+        # het laden stuk te maken. Indevolt noemt in zijn documentatie een aanbevolen
+        # interval van minstens 5 seconden tussen verzoeken, een minimum van 1 en een
+        # responstijd van 1 seconde; die 5 houden we aan. Dus: alleen bij een echte
+        # verandering, plus een trage opfrisronde voor het geval de accu stil is
+        # teruggevallen.
         _wachttijd = (INDEVOLT_REG_MIN_INTERVAL if nieuwe_opdracht
                       else INDEVOLT_REG_REPEAT_INTERVAL)
         if not mode_changed and (now - _last_indevolt_send) < _wachttijd:
@@ -12652,12 +12663,14 @@ def battery_poll_loop():
                 # een compromis tussen regelsnelheid en stabiliteit.
                 poll_interval = 15
             if bat_type == "indevolt":
-                # Over de toegestane pollfrequentie zegt deze fabrikant niets; zijn
-                # eigen integratie doet het elke 30 s. Dat is een keuze van die
-                # client en geen eigenschap van het apparaat, maar wel een hint dat
-                # het geen snelle server is. 10 s is ruim genoeg, want de regellus
-                # sluit via de P1-meter en niet via de telemetrie van de accu.
-                poll_interval = 10
+                # Indevolt vraagt om minstens 5 seconden tussen verzoeken, en dat
+                # geldt voor alle HTTP-aanroepen samen. Wij sturen er twee soorten:
+                # deze pollronde en de setpoints uit de regeling. Met 15 s hier en
+                # minstens 5 s per setpoint blijft het gemiddelde ruim boven die 5,
+                # ook als beide tegelijk bezig zijn. Dat kan, want de regellus sluit
+                # via de P1-meter en niet via de telemetrie van de accu; de eigen
+                # integratie van de fabrikant pollt zelfs maar elke 30 s.
+                poll_interval = 15
 
             if not cfg.get("battery_enabled") or not ips:
                 battery_state["online"] = False
