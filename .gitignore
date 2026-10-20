@@ -1,0 +1,5 @@
+# De echte uitsluitingen staan in solarbuffer/.gitignore, bij de app zelf.
+# Een gitignore geldt alleen vanaf zijn eigen map naar beneden, dus de rommel
+# die Finder in de hoofdmap achterlaat valt daarbuiten. Daar is dit bestand voor.
+.DS_Store
+._*
