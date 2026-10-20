@@ -525,7 +525,7 @@
             <label>Batterijtype</label>
             <div class="prio-grid bat-type-grid">
               <input type="radio" class="prio-option" name="battery_type" value="homewizard" id="bt_hw"
-                     {% if config.battery_type not in ('marstek', 'zendure') %}checked{% endif %}
+                     {% if config.battery_type not in ('marstek', 'zendure', 'indevolt') %}checked{% endif %}
                      onchange="updateBatteryType()">
               <label class="prio-card" for="bt_hw">
                 <div class="prio-icon">
@@ -555,6 +555,22 @@
                 </div>
                 <span class="prio-label">Zendure</span>
                 <span class="prio-sub">SolarFlow via lokale API</span>
+              </label>
+
+              <input type="radio" class="prio-option" name="battery_type" value="indevolt" id="bt_indevolt"
+                     {% if config.battery_type == 'indevolt' %}checked{% endif %}
+                     onchange="updateBatteryType()">
+              <label class="prio-card" for="bt_indevolt">
+                <div class="prio-icon">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                    <rect x="2" y="7" width="16" height="10" rx="2"/>
+                    <path d="M21 10.5v3"/>
+                    <path d="M9.5 9.5 7 12.5h3l-1 2.5 3-3H9l1.5-2.5z" fill="currentColor" stroke="none"/>
+                  </svg>
+                </div>
+                <span class="prio-label">Indevolt</span>
+                <span class="prio-sub">Via lokale API (real-time control)</span>
               </label>
             </div>
           </div>
@@ -685,6 +701,33 @@
             </div>
           </div>
 
+          <!-- Indevolt-specifieke velden -->
+          <div id="indevoltFields" style="display:none;">
+            <div class="two-col-row">
+              <div class="field-group">
+                <label for="indevolt_port">HTTP-poort</label>
+                <input type="number" id="indevolt_port" name="indevolt_port"
+                       min="1" max="65535" step="1"
+                       value="{{ config.indevolt_port or 8080 }}">
+                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Standaard 8080</div>
+              </div>
+              <div class="field-group">
+                <label for="indevolt_max_power">Max. vermogen (W)</label>
+                <input type="number" id="indevolt_max_power" name="indevolt_max_power"
+                       min="100" max="10800" step="100"
+                       value="{{ config.indevolt_max_power or 2000 }}">
+                <div style="font-size:0.75rem;color:hsl(224, 18%, 73%);margin-top:0.25rem;">Max. laad- en ontlaadvermogen van je accu</div>
+              </div>
+            </div>
+            <div style="font-size:0.82rem;color:hsl(224, 18%, 70%);padding:0.6rem 0.75rem;background:hsl(224, 20%, 96%);border-radius:0.5rem;margin-bottom:0.75rem;">
+              SolarBuffer zet deze accu in real-time control en stuurt zelf het laad- en
+              ontlaadvermogen, want in zijn eigen stand zelfverbruik neemt hij het
+              zonoverschot op dat naar de boiler moet. Zodra SolarBuffer niet meer regelt,
+              of de P1-meting wegvalt, krijgt de accu zijn eigen stand terug. Zet een vast
+              IP-adres voor je accu in je router.
+            </div>
+          </div>
+
           <!-- Zendure-specifieke velden -->
           <div id="zendureFields" style="display:none;">
             <div class="field-group">
@@ -806,16 +849,19 @@
     function updateBatteryType() {
       var isMarstek = document.getElementById('bt_marstek').checked;
       var isZendure = document.getElementById('bt_zendure').checked;
-      var isHw = !isMarstek && !isZendure;
+      var isIndevolt = document.getElementById('bt_indevolt').checked;
+      var isHw = !isMarstek && !isZendure && !isIndevolt;
       document.getElementById('hwFields').style.display = isHw ? 'block' : 'none';
       document.getElementById('marstekFields').style.display = isMarstek ? 'block' : 'none';
       document.getElementById('zendureFields').style.display = isZendure ? 'block' : 'none';
+      document.getElementById('indevoltFields').style.display = isIndevolt ? 'block' : 'none';
       document.querySelectorAll('#batteryIpsList #hwTokenRow').forEach(function(el) {
         el.style.display = isHw ? 'flex' : 'none';
       });
       document.getElementById('batteryIpsLabel').firstChild.textContent =
         isMarstek ? 'IP-adres(sen) Marstek  ' :
-        isZendure ? 'IP-adres(sen) Zendure  ' : 'IP-adres(sen) HWE-BAT  ';
+        isZendure ? 'IP-adres(sen) Zendure  ' :
+        isIndevolt ? 'IP-adres(sen) Indevolt  ' : 'IP-adres(sen) HWE-BAT  ';
     }
 
     // Elke prioriteit heeft zijn eigen drempel en de andere zegt dan niets.
@@ -1003,7 +1049,8 @@
         var aan = document.getElementById('batteryEnabled');
         if (!aan || !aan.checked) return;
         var isHw = !document.getElementById('bt_marstek').checked
-                && !document.getElementById('bt_zendure').checked;
+                && !document.getElementById('bt_zendure').checked
+                && !document.getElementById('bt_indevolt').checked;
         if (!isHw) return;
         var heeftAccu = Array.prototype.some.call(
           document.querySelectorAll('#batteryIpsList input[name="battery_ip[]"]'),
@@ -1050,7 +1097,9 @@
 
       var isMarstek = document.getElementById('bt_marstek').checked;
       var isZendure = document.getElementById('bt_zendure').checked;
+      var isIndevolt = document.getElementById('bt_indevolt').checked;
       var poortEl = document.getElementById('marstek_port');
+      var ivPoortEl = document.getElementById('indevolt_port');
 
       btn.disabled = true;
       btn.textContent = 'Testen…';
@@ -1063,8 +1112,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: isMarstek ? 'marstek' : isZendure ? 'zendure' : 'homewizard',
+          type: isMarstek ? 'marstek' : isZendure ? 'zendure'
+                : isIndevolt ? 'indevolt' : 'homewizard',
           marstek_port: poortEl ? poortEl.value : 30000,
+          indevolt_port: ivPoortEl ? ivPoortEl.value : 8080,
           units: units
         })
       })
@@ -1084,6 +1135,7 @@
             var extra = [];
             if (u.soc !== null && u.soc !== undefined) extra.push(Number(u.soc).toFixed(0) + '%');
             if (u.vermogen !== null && u.vermogen !== undefined) extra.push(Number(u.vermogen).toFixed(0) + ' W');
+            if (u.werkstand) extra.push('stand: ' + escapeHtml(String(u.werkstand)));
             setRowStatus(statusEl,
               'Online' + (extra.length ? ' — ' + escapeHtml(extra.join(', ')) : ''), 'success');
           });
