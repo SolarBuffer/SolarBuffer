@@ -448,7 +448,9 @@ p {
     <div class="icon">⏳</div>
     <h1><span class="solar">Solar</span>Buffer</h1>
     <h3>WiFi wordt opgeslagen</h3>
-    <p>De instellingen zijn ontvangen. SolarBuffer probeert nu verbinding te maken en start daarna opnieuw op.</p>
+    <p>De instellingen zijn ontvangen. SolarBuffer maakt nu verbinding met je netwerk.
+       Dat duurt een paar seconden. Daarna sluit dit netwerk zichzelf af en vind je
+       je hub terug in de app of op solarbuffer.local:5001.</p>
 </div>
 </body>
 </html>
@@ -611,7 +613,7 @@ def scan_networks(rescan=False):
         return []
 
 
-def configure_wifi_and_reboot(ssid, password):
+def configure_wifi_en_herstart(ssid, password):
     try:
         subprocess.run(
             ["nmcli", "connection", "delete", "customer-wifi"],
@@ -720,11 +722,32 @@ def configure_wifi_and_reboot(ssid, password):
             check=False
         )
 
-        time.sleep(5)
+        # Wachten tot er werkelijk een adres is in plaats van een vaste pauze.
+        # Lukt het binnen twintig seconden niet, dan gaan we toch door; dan is er
+        # iets mis met het netwerk en helpt langer wachten niet.
+        for _ in range(20):
+            uit = subprocess.run(
+                ["nmcli", "-g", "IP4.ADDRESS", "device", "show", "wlan0"],
+                capture_output=True, text=True,
+            )
+            if "." in (uit.stdout or ""):
+                break
+            time.sleep(1)
 
-        subprocess.Popen(["systemctl", "reboot"])
+        # Alleen de dienst herstarten en niet de hele machine. Dat laatste stond
+        # hier eerst en kostte de klant twintig tot veertig seconden op een leeg
+        # scherm, zonder dat het iets opleverde: het netwerk staat op dit moment
+        # al, avahi merkt de nieuwe interface zelf, en de hoofddienst draaide al
+        # tijdens het instellen.
+        #
+        # Die ene herstart van de dienst houden we wel. Een verse hub heeft bij
+        # het instellen nog geen kloktijd gehad, dus de dagtellers van de app zijn
+        # met een verkeerde datum begonnen; na een herstart kloppen die weer.
+        subprocess.Popen(["systemctl", "restart", "solarbuffer"])
 
     except Exception:
+        # Hier wel de machine, want dan weten we niet meer waar we staan en is
+        # een schone start de enige zekerheid.
         time.sleep(8)
         subprocess.Popen(["systemctl", "reboot"])
 
@@ -742,7 +765,7 @@ def index():
         password = request.form["password"]
 
         threading.Thread(
-            target=configure_wifi_and_reboot,
+            target=configure_wifi_en_herstart,
             args=(ssid, password),
             daemon=True
         ).start()
