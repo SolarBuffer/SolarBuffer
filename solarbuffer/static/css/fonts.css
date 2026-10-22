@@ -9,13 +9,19 @@
    Inter: github.com/rsms/inter, Space Grotesk: github.com/floriankarsten/space-grotesk
 
    WISSELEN TIJDENS HET LADEN
-   font-display staat op optional en niet op swap. Swap betekent letterlijk:
+   font-display staat op block. Niet op swap, want dat betekent letterlijk:
    teken nu met de systeemletter en wissel zodra het bestand er is, en die
-   wissel zie je dus gebeuren. Optional geeft de browser een kort moment om de
-   letter klaar te hebben; haalt hij dat niet, dan blijft die ene pagina op de
-   systeemletter staan zonder ooit te wisselen. Er verspringt dan niets meer
-   tijdens het kijken, in beide gevallen. De preload staat in _fonts.html en
-   hoort boven de stylesheets.
+   wissel zie je gebeuren. En niet op optional, want dat is hier eerst
+   geprobeerd en het pakte verkeerd uit: optional geeft de browser maar zo'n
+   honderd milliseconden, en wordt dat niet gehaald, dan blijft die pagina op de
+   systeemletter staan zonder ooit nog te wisselen. Nagemeten op een hub levert
+   deze Pi zijn eigen bestanden uit in 0,39 s voor Space Grotesk en 1,37 s voor
+   Inter. De bestandsgrootte was dus niet het probleem maar de server, en het
+   gevolg was dat Space Grotesk helemaal niet meer te zien was.
+
+   Block houdt de tekst kort onzichtbaar en gebruikt daarna altijd de goede
+   letter. Met de preload uit _fonts.html, die boven de stylesheets hoort, is
+   het bestand meestal al binnen tegen de tijd dat er tekst getekend wordt.
 
    UITGEDUND
    De meegeleverde bestanden bevatten alleen wat deze interface werkelijk
@@ -48,7 +54,7 @@
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
-  font-display: optional;
+  font-display: block;
   src: url('/static/fonts/Inter-variable.woff2') format('woff2');
 }
 
@@ -56,6 +62,6 @@
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 300 700;
-  font-display: optional;
+  font-display: block;
   src: url('/static/fonts/SpaceGrotesk-variable.woff2') format('woff2');
 }
