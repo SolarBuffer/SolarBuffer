@@ -232,9 +232,14 @@
               <div class="field">
                 <span class="field-label">Aangemelde toestellen</span>
                 {% for t in push_toestellen %}
-                  <div class="toggle-row">
+                  <div class="toggle-row" id="toestel-{{ t.id }}">
                     <span>{{ t.toestel }}{% if t.versie %} &middot; app {{ t.versie }}{% endif %}</span>
-                    <span style="opacity:0.6;">sinds {{ t.sinds }}</span>
+                    <span>
+                      <span style="opacity:0.6;">sinds {{ t.sinds }}</span>
+                      <button type="button" class="btn-toestel-weg"
+                              onclick="verwijderToestel('{{ t.id }}')"
+                              title="Dit toestel verwijderen">&times;</button>
+                    </span>
                   </div>
                 {% endfor %}
               </div>
@@ -360,6 +365,29 @@
     document.getElementById('ntfyEnabled').addEventListener('change', updateVisibility);
     document.getElementById('pushEnabled').addEventListener('change', updateVisibility);
     updateVisibility();
+
+    // Een toestel eruit gooien, bijvoorbeeld een telefoon die je niet meer hebt.
+    // De pagina stuurt een kenmerk mee en niet het token zelf: dat laatste staat
+    // hier bewust niet in, want daarmee kun je meldingen naar dat toestel sturen.
+    async function verwijderToestel(id) {
+      if (!confirm('Dit toestel geen meldingen meer sturen?')) return;
+      try {
+        const r = await fetch('/api/push/afmelden', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id })
+        });
+        const data = await r.json();
+        if (data.ok) {
+          const rij = document.getElementById('toestel-' + id);
+          if (rij) rij.remove();
+        } else {
+          alert(data.error || 'Verwijderen mislukt.');
+        }
+      } catch (e) {
+        alert('Verbindingsfout.');
+      }
+    }
 
     async function stuurPushTest() {
       const btn = document.getElementById('pushTestBtn');

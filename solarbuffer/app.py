@@ -11,6 +11,7 @@ import uuid
 import re
 import traceback
 import secrets
+import hashlib
 import shutil
 import sqlite3
 from datetime import datetime, timedelta
@@ -10900,6 +10901,10 @@ def _push_toestellen_voor_weergave(user):
         except Exception:
             wanneer = ""
         uit.append({
+            # Een kenmerk om dit toestel mee aan te wijzen zonder het token in de
+            # pagina te zetten. Wie de broncode van zijn eigen pagina leest ziet
+            # dan geen sleutel waarmee hij meldingen naar dat toestel kan sturen.
+            "id": hashlib.sha256((t.get("token") or "").encode()).hexdigest()[:12],
             "toestel": t.get("toestel") or ("iPhone" if t.get("platform") == "ios" else "Android-toestel"),
             "platform": t.get("platform") or "",
             "versie": t.get("app_versie") or "",
@@ -10917,6 +10922,17 @@ def api_push_afmelden():
         return jsonify({"error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
     token = (data.get("token") or "").strip()
+    kenmerk = (data.get("id") or "").strip()
+
+    # De app meldt zich af met het token zelf. De instellingenpagina gebruikt het
+    # kenmerk, want daar staat het token bewust niet in.
+    if not token and kenmerk:
+        cfg = load_config()
+        for user in cfg.get("users", []):
+            for t in (user.get("push_tokens") or []):
+                h = hashlib.sha256((t.get("token") or "").encode()).hexdigest()[:12]
+                if h == kenmerk:
+                    token = t.get("token") or ""
     if not token:
         return jsonify({"error": "geen token"}), 400
     _verwijder_push_token(token)
