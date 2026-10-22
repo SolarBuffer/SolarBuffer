@@ -401,7 +401,40 @@
       <div class="serie-inhoud">
         <div class="update-card">
           <div class="update-left">
-            <span class="version-badge new">v0.8.2</span>
+            <span class="version-badge new">v0.8.3</span>
+            <span class="update-date-small">22 okt</span>
+          </div>
+          <div class="update-divider"></div>
+          <div class="update-right">
+            <div class="tag-knoppen">
+              <button type="button" class="update-tag tag-feature actief" data-doel="u083-0">Nieuw</button>
+              <button type="button" class="update-tag tag-feature" data-doel="u083-1">Nieuw</button>
+              <button type="button" class="update-tag tag-fix" data-doel="u083-2">Opgelost</button>
+              <button type="button" class="update-tag tag-ui" data-doel="u083-3">Interface</button>
+            </div>
+            <div class="update-tekst" id="u083-0">
+              <div class="update-title">Het instelvenster gaat vanzelf open bij een nieuwe hub</div>
+              <div class="update-body">Verbind je met het netwerk PI-SETUP van een nieuwe hub, dan opent je telefoon nu zelf het scherm waarin je je wifi invult, zoals in een hotel. Dat werkt doordat een telefoon bij het verbinden een vast adres opvraagt bij Apple of Google om te kijken of er internet is; komt daar niet het verwachte antwoord, dan opent hij een venster met de pagina van het netwerk. De hub beantwoordde die controle al, maar daar kwam niemand, want zonder eigen DNS werd die naam niet eens opgezocht. Je hoeft dus geen adres meer in te typen. Lukt het openen toch niet, bijvoorbeeld omdat je telefoon een handmatige DNS-server heeft staan, dan blijft het instellen gewoon bereikbaar op http://10.42.0.1.</div>
+            </div>
+            <div class="update-tekst" id="u083-1" hidden>
+              <div class="update-title">Meldingen komen binnen in de SolarBuffer-app</div>
+              <div class="update-body">Meldingen gingen tot nu toe via ntfy: een tweede app installeren, een onderwerp verzinnen en die URL in de hub typen. Dat kan nu zonder omweg. Open de SolarBuffer-app, geef toestemming voor meldingen, en je toestel staat onder Instellingen, Pushmeldingen in de lijst. Verder hoef je niets in te vullen. Je hub laat weten wanneer er op zonnestroom is gestookt, wanneer het vat is doorgewarmd en wanneer er iets niet in orde is, en je kiest per gebeurtenis waarover je bericht wilt. Die keuzes gelden voor beide wegen, dus wie ntfy al gebruikte houdt dat gewoon. Verwijder je de app, dan ruimt de hub je toestel zelf op.</div>
+            </div>
+            <div class="update-tekst" id="u083-2" hidden>
+              <div class="update-title">Het lettertype was soms helemaal verdwenen</div>
+              <div class="update-body">In 0.8.2 werden de letters zo laat opgehaald dat ze bij een tragere verbinding helemaal niet verschenen en de pagina terugviel op de standaardletter van je telefoon. Opgemeten levert de hub de twee bestanden in 0,39 en 1,37 seconde, ruim buiten het venster van een tiende seconde waarin die instelling nog iets toont. De pagina wacht nu kort op de letters in plaats van ze over te slaan. Verder duurde het na het invullen van je wifi twintig seconden voordat je verder kon, omdat de hele hub opnieuw opstartte; nu herstart alleen de software en ben je binnen een paar seconden op het welkomstscherm.</div>
+            </div>
+            <div class="update-tekst" id="u083-3" hidden>
+              <div class="update-title">De balk onderin in de kleur van het merk</div>
+              <div class="update-body">De actieve knop onderin was felblauw met een verloop naar violet, terwijl alles eromheen oranje is. Dat leest als een onderdeel dat uit een andere app komt. Die knop en het streepje erboven zijn nu oranje.</div>
+            </div>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V0.8.3" target="_blank" rel="noopener">&rarr; Release notes</a>
+          </div>
+        </div>
+
+        <div class="update-card">
+          <div class="update-left">
+            <span class="version-badge mid">v0.8.2</span>
             <span class="update-date-small">20 okt</span>
           </div>
           <div class="update-divider"></div>
