@@ -506,6 +506,10 @@ _CAPTIVE_REDIRECT = (
 @app.route('/hotspot-detect.html')
 @app.route('/library/test/success.html')
 def apple_captive_probe():
+    if _app_regelt():
+        # De app toont de installatie al; dan hoeft iOS er geen venster
+        # overheen te leggen, en een venster dat al openstond sluit vanzelf.
+        return APPLE_SUCCES, 200, {'Content-Type': 'text/html'}
     # Geeft een non-Success pagina terug → iOS toont "Verbinden met netwerk" popup
     return _CAPTIVE_REDIRECT, 200, {'Content-Type': 'text/html'}
 
@@ -513,7 +517,40 @@ def apple_captive_probe():
 @app.route('/generate_204')
 @app.route('/gen_204')
 def android_captive_probe():
+    if _app_regelt():
+        return '', 204
     return redirect(f'http://{PORTAL_IP}/', 302)
+
+
+# Zolang dit in de toekomst ligt, regelt de app het instellen en hoeft iOS zijn
+# eigen portaalvenster niet te openen. De app meldt zich zodra hij met de hotspot
+# verbonden is; wij antwoorden daarna een tijdje alsof er niets te regelen valt,
+# en dan sluit iOS dat venster uit zichzelf weer.
+#
+# Waarom dit zo omslachtig moet: iOS controleert vrijwel direct bij het verbinden,
+# dus de app is per definitie te laat om het venster te vóórkomen. Wat wel kan is
+# het meteen weer laten sluiten. En zonder app blijft alles zoals het was, want
+# dan meldt niemand zich en blijft dit nul.
+_app_regelt_tot = 0.0
+APP_REGELT_DUUR = 600  # s
+
+
+def _app_regelt():
+    return time.time() < _app_regelt_tot
+
+
+@app.route('/portaal/app', methods=['POST', 'GET'])
+def portaal_app():
+    """De app laat weten dat hij de installatie zelf toont."""
+    global _app_regelt_tot
+    _app_regelt_tot = time.time() + APP_REGELT_DUUR
+    return jsonify({'ok': True, 'seconden': APP_REGELT_DUUR})
+
+
+# Dit is letterlijk wat Apple verwacht als er geen portaal is. Wijkt er iets af,
+# dan concludeert iOS juist dat er wel een portaal is.
+APPLE_SUCCES = ('<HTML><HEAD><TITLE>Success</TITLE></HEAD>'
+                '<BODY>Success</BODY></HTML>')
 
 
 # RFC 8908: de nette manier waarop een telefoon vraagt of er een portaal is. De
@@ -528,7 +565,7 @@ CAPPORT_PATH = '/captive-portal/api'
 def capport_api():
     return (
         jsonify({
-            'captive': True,
+            'captive': not _app_regelt(),
             'user-portal-url': f'http://{PORTAL_IP}/',
         }),
         200,
@@ -538,7 +575,8 @@ def capport_api():
 
 @app.before_request
 def captive_portal_redirect():
-    if request.path in ('/', '/scan', CAPPORT_PATH) or request.method == 'POST':
+    if request.path in ('/', '/scan', CAPPORT_PATH, '/portaal/app') \
+            or request.method == 'POST':
         return None
     # Specifieke Apple/Android routes worden hierboven al afgehandeld
     if request.path in APPLE_PROBES or request.path in ('/generate_204', '/gen_204'):
