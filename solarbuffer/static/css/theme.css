@@ -8,8 +8,6 @@
   --border: hsl(224, 20%, 88%);
 
   --accent-solar: hsl(32, 95%, 52%);
-  --accent-cyan: hsl(191, 90%, 42%);
-  --accent-violet: hsl(258, 75%, 58%);
 
   --nav-bg: rgba(255, 255, 255, 0.82);
   --nav-border: hsl(224, 20%, 88%);
@@ -25,8 +23,6 @@ html[data-theme="dark"] {
   --text-dim: hsl(224, 18%, 66%);
   --border: hsl(224, 30%, 18%);
 
-  --accent-cyan: hsl(191, 95%, 55%);
-  --accent-violet: hsl(258, 90%, 72%);
 
   --nav-bg: rgba(9, 13, 24, 0.78);
   --nav-border: hsl(224, 30%, 18%);
@@ -42,7 +38,7 @@ body {
   font-family: "Inter", sans-serif;
   background: var(--bg);
   color: var(--text);
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.1s ease, color 0.1s ease;
 }
 
 h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
@@ -150,7 +146,7 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
 
 .bn-item.active,
 .bn-item.open {
-  color: var(--accent-cyan);
+  color: var(--accent-solar);
 }
 
 .bn-item.active::before {
@@ -162,8 +158,8 @@ h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
   width: 22px;
   height: 3px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet));
-  box-shadow: 0 0 10px hsla(191, 95%, 55%, 0.7);
+  background: var(--accent-solar);
+  box-shadow: 0 0 10px hsla(32, 95%, 52%, 0.7);
 }
 
 .bn-item .bn-dot {

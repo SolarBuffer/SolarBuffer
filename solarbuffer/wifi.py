@@ -448,7 +448,9 @@ p {
     <div class="icon">⏳</div>
     <h1><span class="solar">Solar</span>Buffer</h1>
     <h3>WiFi wordt opgeslagen</h3>
-    <p>De instellingen zijn ontvangen. SolarBuffer probeert nu verbinding te maken en start daarna opnieuw op.</p>
+    <p>De instellingen zijn ontvangen. SolarBuffer maakt nu verbinding met je netwerk.
+       Dat duurt een paar seconden. Daarna sluit dit netwerk zichzelf af en vind je
+       je hub terug in de app of op solarbuffer.local:5001.</p>
 </div>
 </body>
 </html>
@@ -456,7 +458,36 @@ p {
 
 
 OWN_SSIDS = {"PI-SETUP"}
-PORTAL_IP = "10.4.0.1"
+
+
+def _bepaal_portal_ip(standaard="10.42.0.1"):
+    """Het adres waarop deze hotspot werkelijk luistert.
+
+    Hier stond een vast 10.4.0.1, en dat klopte niet. De PI-SETUP-verbinding
+    heeft geen eigen adres ingesteld en staat op ipv4.method=shared, en dan deelt
+    NetworkManager zijn eigen standaard uit: 10.42.0.1. Er was dus een 2
+    weggevallen, en omdat de handleiding klanten naar solarbuffer.local stuurt is
+    dat nooit opgevallen; alleen de omleidingen van het portaal wezen al die tijd
+    naar een adres waar niets luisterde.
+
+    Daarom nu opvragen in plaats van opschrijven. Deze code draait op de hotspot
+    zelf, dus het adres is er gewoon. Lukt het opvragen niet, dan valt hij terug
+    op de standaard van NetworkManager.
+    """
+    try:
+        uit = subprocess.run(
+            ["nmcli", "-g", "IP4.ADDRESS", "connection", "show", "--active", "PI-SETUP"],
+            capture_output=True, text=True, timeout=5)
+        for regel in uit.stdout.split("\n"):
+            adres = regel.strip().split("/")[0]
+            if adres.count(".") == 3 and all(d.isdigit() for d in adres.split(".")):
+                return adres
+    except Exception:
+        pass
+    return standaard
+
+
+PORTAL_IP = _bepaal_portal_ip()
 
 
 # iOS detecteert een captive portal als /hotspot-detect.html NIET de exacte
@@ -477,6 +508,10 @@ _CAPTIVE_REDIRECT = (
 @app.route('/hotspot-detect.html')
 @app.route('/library/test/success.html')
 def apple_captive_probe():
+    if _app_regelt():
+        # De app toont de installatie al; dan hoeft iOS er geen venster
+        # overheen te leggen, en een venster dat al openstond sluit vanzelf.
+        return APPLE_SUCCES, 200, {'Content-Type': 'text/html'}
     # Geeft een non-Success pagina terug → iOS toont "Verbinden met netwerk" popup
     return _CAPTIVE_REDIRECT, 200, {'Content-Type': 'text/html'}
 
@@ -484,12 +519,66 @@ def apple_captive_probe():
 @app.route('/generate_204')
 @app.route('/gen_204')
 def android_captive_probe():
+    if _app_regelt():
+        return '', 204
     return redirect(f'http://{PORTAL_IP}/', 302)
+
+
+# Zolang dit in de toekomst ligt, regelt de app het instellen en hoeft iOS zijn
+# eigen portaalvenster niet te openen. De app meldt zich zodra hij met de hotspot
+# verbonden is; wij antwoorden daarna een tijdje alsof er niets te regelen valt,
+# en dan sluit iOS dat venster uit zichzelf weer.
+#
+# Waarom dit zo omslachtig moet: iOS controleert vrijwel direct bij het verbinden,
+# dus de app is per definitie te laat om het venster te vóórkomen. Wat wel kan is
+# het meteen weer laten sluiten. En zonder app blijft alles zoals het was, want
+# dan meldt niemand zich en blijft dit nul.
+_app_regelt_tot = 0.0
+APP_REGELT_DUUR = 600  # s
+
+
+def _app_regelt():
+    return time.time() < _app_regelt_tot
+
+
+@app.route('/portaal/app', methods=['POST', 'GET'])
+def portaal_app():
+    """De app laat weten dat hij de installatie zelf toont."""
+    global _app_regelt_tot
+    _app_regelt_tot = time.time() + APP_REGELT_DUUR
+    return jsonify({'ok': True, 'seconden': APP_REGELT_DUUR})
+
+
+# Dit is letterlijk wat Apple verwacht als er geen portaal is. Wijkt er iets af,
+# dan concludeert iOS juist dat er wel een portaal is.
+APPLE_SUCCES = ('<HTML><HEAD><TITLE>Success</TITLE></HEAD>'
+                '<BODY>Success</BODY></HTML>')
+
+
+# RFC 8908: de nette manier waarop een telefoon vraagt of er een portaal is. De
+# hub noemt dit adres in DHCP-optie 114 (zie ensure_captive_portal in app.py), en
+# iOS en Android halen het dan zelf op zodra ze verbinden. Dat is de weg die het
+# venster meteen opent; de probes hierboven zijn het vangnet voor oudere toestellen.
+# Het antwoord moet application/captive+json zijn, anders telt het niet mee.
+CAPPORT_PATH = '/captive-portal/api'
+
+
+@app.route(CAPPORT_PATH)
+def capport_api():
+    return (
+        jsonify({
+            'captive': not _app_regelt(),
+            'user-portal-url': f'http://{PORTAL_IP}/',
+        }),
+        200,
+        {'Content-Type': 'application/captive+json'},
+    )
 
 
 @app.before_request
 def captive_portal_redirect():
-    if request.path in ('/', '/scan') or request.method == 'POST':
+    if request.path in ('/', '/scan', CAPPORT_PATH, '/portaal/app') \
+            or request.method == 'POST':
         return None
     # Specifieke Apple/Android routes worden hierboven al afgehandeld
     if request.path in APPLE_PROBES or request.path in ('/generate_204', '/gen_204'):
@@ -524,7 +613,7 @@ def scan_networks(rescan=False):
         return []
 
 
-def configure_wifi_and_reboot(ssid, password):
+def configure_wifi_en_herstart(ssid, password):
     try:
         subprocess.run(
             ["nmcli", "connection", "delete", "customer-wifi"],
@@ -633,11 +722,32 @@ def configure_wifi_and_reboot(ssid, password):
             check=False
         )
 
-        time.sleep(5)
+        # Wachten tot er werkelijk een adres is in plaats van een vaste pauze.
+        # Lukt het binnen twintig seconden niet, dan gaan we toch door; dan is er
+        # iets mis met het netwerk en helpt langer wachten niet.
+        for _ in range(20):
+            uit = subprocess.run(
+                ["nmcli", "-g", "IP4.ADDRESS", "device", "show", "wlan0"],
+                capture_output=True, text=True,
+            )
+            if "." in (uit.stdout or ""):
+                break
+            time.sleep(1)
 
-        subprocess.Popen(["systemctl", "reboot"])
+        # Alleen de dienst herstarten en niet de hele machine. Dat laatste stond
+        # hier eerst en kostte de klant twintig tot veertig seconden op een leeg
+        # scherm, zonder dat het iets opleverde: het netwerk staat op dit moment
+        # al, avahi merkt de nieuwe interface zelf, en de hoofddienst draaide al
+        # tijdens het instellen.
+        #
+        # Die ene herstart van de dienst houden we wel. Een verse hub heeft bij
+        # het instellen nog geen kloktijd gehad, dus de dagtellers van de app zijn
+        # met een verkeerde datum begonnen; na een herstart kloppen die weer.
+        subprocess.Popen(["systemctl", "restart", "solarbuffer"])
 
     except Exception:
+        # Hier wel de machine, want dan weten we niet meer waar we staan en is
+        # een schone start de enige zekerheid.
         time.sleep(8)
         subprocess.Popen(["systemctl", "reboot"])
 
@@ -655,7 +765,7 @@ def index():
         password = request.form["password"]
 
         threading.Thread(
-            target=configure_wifi_and_reboot,
+            target=configure_wifi_en_herstart,
             args=(ssid, password),
             daemon=True
         ).start()

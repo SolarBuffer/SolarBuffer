@@ -915,7 +915,7 @@
           </div>
           <div class="settings-text">
             <div class="settings-label">Pushmeldingen</div>
-            <div class="settings-sub">{% set _cu = config.users | selectattr("username","equalto", session_username) | first | default(None) %}{% if _cu and _cu.ntfy_enabled %}Ingeschakeld{% else %}Pushmeldingen via ntfy{% endif %}</div>
+            <div class="settings-sub">{% set _cu = config.users | selectattr("username","equalto", session_username) | first | default(None) %}{% if _cu and _cu.push_enabled and _cu.push_tokens %}Via de app{% elif _cu and _cu.ntfy_enabled %}Via ntfy{% else %}Nog niet ingesteld{% endif %}</div>
           </div>
           <svg class="settings-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
         </a>
