@@ -42,7 +42,7 @@ body {
   font-family: "Inter", sans-serif;
   background: var(--bg);
   color: var(--text);
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.1s ease, color 0.1s ease;
 }
 
 h1, h2, h3 { font-family: "Space Grotesk", sans-serif; }
