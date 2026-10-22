@@ -203,7 +203,7 @@
   </style>
 {% endblock %}
 
-{% block tagline %}<p>ntfy meldingen</p>{% endblock %}
+{% block tagline %}<p>pushmeldingen</p>{% endblock %}
 
 {% block content %}
     <a class="back-btn" href="/settings#verbinding">
@@ -214,7 +214,46 @@
     <form method="POST" action="/settings/ntfy">
       <div class="card">
         <div class="card-title" style="display:flex; align-items:center; gap:0.5rem;">
-          Pushmeldingen — via ntfy
+          Meldingen in de app
+          <span class="free-badge">aanbevolen</span>
+        </div>
+        <div class="toggle-row">
+          <label for="pushEnabled">Meldingen naar de SolarBuffer-app</label>
+          <label class="toggle">
+            <input type="checkbox" id="pushEnabled" name="push_enabled"
+                   {% if user.push_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div id="pushFields" style="display:none;">
+          {% if push_toestellen %}
+            <div class="fields">
+              <div class="field">
+                <span class="field-label">Aangemelde toestellen</span>
+                {% for t in push_toestellen %}
+                  <div class="toggle-row">
+                    <span>{{ t.toestel }}{% if t.versie %} &middot; app {{ t.versie }}{% endif %}</span>
+                    <span style="opacity:0.6;">sinds {{ t.sinds }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            <button type="button" class="btn-test" id="pushTestBtn" onclick="stuurPushTest()">Stuur testbericht</button>
+            <div class="test-result" id="pushTestResult"></div>
+          {% else %}
+            <div class="hint-box">
+              Nog geen toestel aangemeld. Open de SolarBuffer-app op je telefoon
+              en geef toestemming voor meldingen; daarna staat je toestel hier.
+              Je hoeft verder niets in te vullen.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="display:flex; align-items:center; gap:0.5rem;">
+          Meldingen via ntfy
           <span class="free-badge">gratis &amp; geen account</span>
         </div>
         <div class="toggle-row">
@@ -307,13 +346,44 @@
 
 {% block scripts %}
   <script>
+    // De kaart met gebeurtenissen hing eerst alleen aan ntfy. Die schakelaars
+    // gelden voor beide kanalen, dus hij hoort te verschijnen zodra er één van
+    // de twee aan staat; anders kan iemand die alleen de app gebruikt niet meer
+    // kiezen waarover hij bericht wil.
     function updateVisibility() {
-      const enabled = document.getElementById('ntfyEnabled').checked;
-      document.getElementById('ntfyFields').style.display = enabled ? 'block' : 'none';
-      document.getElementById('eventsCard').style.display = enabled ? 'block' : 'none';
+      const ntfy = document.getElementById('ntfyEnabled').checked;
+      const push = document.getElementById('pushEnabled').checked;
+      document.getElementById('ntfyFields').style.display = ntfy ? 'block' : 'none';
+      document.getElementById('pushFields').style.display = push ? 'block' : 'none';
+      document.getElementById('eventsCard').style.display = (ntfy || push) ? 'block' : 'none';
     }
     document.getElementById('ntfyEnabled').addEventListener('change', updateVisibility);
+    document.getElementById('pushEnabled').addEventListener('change', updateVisibility);
     updateVisibility();
+
+    async function stuurPushTest() {
+      const btn = document.getElementById('pushTestBtn');
+      const result = document.getElementById('pushTestResult');
+      btn.disabled = true;
+      result.className = 'test-result';
+      result.textContent = 'Versturen…';
+      try {
+        const r = await fetch('/push/test', { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) {
+          result.className = 'test-result';
+          result.textContent = 'Testbericht verstuurd';
+        } else {
+          result.className = 'test-result err';
+          result.textContent = data.error || 'Versturen mislukt.';
+        }
+      } catch {
+        result.className = 'test-result err';
+        result.textContent = 'Verbindingsfout.';
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
     async function sendTest() {
       const btn = document.getElementById('testBtn');

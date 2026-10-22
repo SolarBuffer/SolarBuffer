@@ -369,6 +369,13 @@ def load_config():
             user["dark_mode"] = False
         if "ntfy_enabled" not in user:
             user["ntfy_enabled"] = False
+        # Meldingen via de app staan standaard aan. Dat kan geen kwaad: zolang
+        # er geen toestel is aangemeld gebeurt er niets, en wie de app opent en
+        # toestemming geeft verwacht ook meldingen te krijgen.
+        if "push_enabled" not in user:
+            user["push_enabled"] = True
+        if "push_tokens" not in user:
+            user["push_tokens"] = []
         if "ntfy_url" not in user:
             user["ntfy_url"] = ""
         if "ntfy_notify_start" not in user:
@@ -10750,6 +10757,187 @@ def control_loop():
             time.sleep(1)
 
 
+# ================= PUSHMELDINGEN (eigen app) =================
+# Meldingen gingen hiervoor alleen via ntfy: de klant moest daar zelf een app
+# voor installeren, een onderwerp verzinnen en die URL hier invullen. Met een
+# eigen app is dat een omweg geworden.
+#
+# De hub stuurt met opzet niet rechtstreeks naar Apple. Dat zou kunnen, maar dan
+# moet de ondertekeningssleutel van het ontwikkelaarsaccount op elke hub staan.
+# Die hubs staan bij klanten en halen hun updates met git; een sleutel die zo
+# verspreid raakt is niet meer in te trekken zonder iedereen stil te zetten.
+# Daarom gaat het langs een doorgeefluik waar die sleutel wel op één plek staat.
+# De hub kent alleen een URL, en die mag gewoon in de broncode staan: er is dus
+# niets per hub in te vullen en niets dat een update kan overschrijven.
+PUSH_RELAY_URL = os.environ.get(
+    "SOLARBUFFER_PUSH_RELAY", "https://push.solarbuffer.nl/v1/stuur")
+PUSH_MAX_TOKENS = 10   # per gebruiker; meer toestellen dan dit is onzin
+PUSH_TIMEOUT = 8       # s
+
+
+def _push_tokens_voor(user):
+    if not user.get("push_enabled", True):
+        return []
+    return [t for t in (user.get("push_tokens") or [])
+            if (t.get("token") or "").strip()]
+
+
+def _verwijder_push_token(token):
+    """Haalt een token overal weg. Wordt gebruikt als het doorgeefluik meldt dat
+    het toestel de app niet meer heeft."""
+    cfg = load_config()
+    weg = False
+    for user in cfg.get("users", []):
+        over = [t for t in (user.get("push_tokens") or [])
+                if t.get("token") != token]
+        if len(over) != len(user.get("push_tokens") or []):
+            user["push_tokens"] = over
+            weg = True
+    if weg:
+        save_config(cfg)
+
+
+def _stuur_push(tokens, tekst, titel="SolarBuffer"):
+    """Geeft de melding aan het doorgeefluik, dat hem bij Apple of Google
+    aflevert.
+
+    Hier geen eigen draad: dit wordt alleen aangeroepen uit send_notification en
+    die draait al buiten het verzoek om.
+    """
+    for t in tokens:
+        try:
+            r = requests.post(PUSH_RELAY_URL, json={
+                "platform": (t.get("platform") or "ios"),
+                "token": t.get("token") or "",
+                # Apple houdt een gescheiden test- en productieomgeving aan met
+                # elk eigen tokens. Welke erbij hoort is niet aan het token te
+                # zien, dus de app zegt het bij het aanmelden. Een oudere app die
+                # dit nog niet meestuurt laat dit leeg; het doorgeefluik probeert
+                # dan beide.
+                "omgeving": t.get("omgeving") or "",
+                "titel": titel,
+                "tekst": tekst,
+            }, timeout=PUSH_TIMEOUT)
+            # 410 betekent bij Apple: dit toestel heeft de app verwijderd. Dan
+            # het token opruimen, anders blijft de lijst vollopen met toestellen
+            # die nooit meer antwoorden.
+            if r.status_code == 410:
+                _verwijder_push_token(t.get("token") or "")
+        except Exception:
+            pass
+
+
+def _gebruiker_uit_verzoek(cfg):
+    """De ingelogde gebruiker, of hij nu met een sessiekoekje of met een
+    api-token aanklopt. De app gebruikt het koekje van de webweergave."""
+    naam = session.get("username") or _get_bearer_username() or ""
+    if not naam:
+        return None
+    return next((u for u in cfg.get("users", []) if u.get("username") == naam), None)
+
+
+def _geldig_push_token(token):
+    # Apple geeft 64 tekens hex, Google een langere tekst met streepjes en
+    # dubbele punten. Daarom ruim, maar niet zo ruim dat er willekeurige rommel
+    # in de configuratie belandt.
+    if not (32 <= len(token) <= 512):
+        return False
+    return all(c.isalnum() or c in "-_:.~" for c in token)
+
+
+@app.route("/api/push/aanmelden", methods=["POST"])
+def api_push_aanmelden():
+    """De app meldt hier zijn apparaattoken aan.
+
+    Dit vraagt om een sessie, en dat is wezenlijk: een apparaattoken zegt niets
+    over wie je bent. Namen we het zonder inlog aan, dan kon iedereen op het
+    netwerk zich aanmelden en meelezen wat er in de meldingen staat.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    platform = (data.get("platform") or "").strip().lower()
+    if platform not in ("ios", "android"):
+        return jsonify({"error": "onbekend platform"}), 400
+    if not _geldig_push_token(token):
+        return jsonify({"error": "geen geldig token"}), 400
+
+    cfg = load_config()
+    user = _gebruiker_uit_verzoek(cfg)
+    if user is None:
+        return jsonify({"error": "unauthorized"}), 401
+
+    # Hetzelfde toestel kan eerder onder een andere gebruiker hebben aangemeld.
+    # Dan hoort het daar weg te gaan, anders krijgt wie nu inlogt de meldingen
+    # van de vorige gebruiker ook.
+    for u in cfg.get("users", []):
+        u["push_tokens"] = [t for t in (u.get("push_tokens") or [])
+                            if t.get("token") != token]
+
+    lijst = user.setdefault("push_tokens", [])
+    lijst.append({
+        "token": token,
+        "platform": platform,
+        "omgeving": (data.get("omgeving") or "").strip().lower()[:12],
+        "toestel": (data.get("toestel") or "")[:60],
+        "app_versie": (data.get("app_versie") or "")[:20],
+        "aangemeld": time.time(),
+    })
+    del lijst[:-PUSH_MAX_TOKENS]
+    save_config(cfg)
+    return jsonify({"ok": True, "toestellen": len(lijst)})
+
+
+def _push_toestellen_voor_weergave(user):
+    """De aangemelde toestellen, klaar om te tonen. De datum wordt hier opgemaakt
+    omdat een tijdstempel in de template een kaal getal zou blijven."""
+    uit = []
+    for t in (user.get("push_tokens") or []) if user else []:
+        tijd = t.get("aangemeld")
+        try:
+            wanneer = datetime.fromtimestamp(float(tijd)).strftime("%d-%m-%Y")
+        except Exception:
+            wanneer = ""
+        uit.append({
+            "toestel": t.get("toestel") or ("iPhone" if t.get("platform") == "ios" else "Android-toestel"),
+            "platform": t.get("platform") or "",
+            "versie": t.get("app_versie") or "",
+            "sinds": wanneer,
+            # Nooit het hele token tonen: daarmee kan iemand meldingen naar dit
+            # toestel sturen. De staart is genoeg om twee telefoons te scheiden.
+            "staart": (t.get("token") or "")[-6:],
+        })
+    return uit
+
+
+@app.route("/api/push/afmelden", methods=["POST"])
+def api_push_afmelden():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    if not token:
+        return jsonify({"error": "geen token"}), 400
+    _verwijder_push_token(token)
+    return jsonify({"ok": True})
+
+
+@app.route("/push/test", methods=["POST", "GET"])
+def push_test():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    user = _gebruiker_uit_verzoek(cfg)
+    tokens = _push_tokens_voor(user) if user else []
+    if not tokens:
+        return jsonify({"error": "Nog geen toestel aangemeld. Open de "
+                                 "SolarBuffer-app en geef toestemming voor "
+                                 "meldingen."}), 400
+    _stuur_push(tokens, "De meldingen werken.")
+    return jsonify({"ok": True, "toestellen": len(tokens)})
+
+
 # ================= TELEGRAM =================
 def _strip_html(text):
     import re
@@ -10757,12 +10945,29 @@ def _strip_html(text):
 
 
 def send_notification(text, event_key=None):
+    """Stuurt een melding langs alle kanalen die een gebruiker aan heeft staan.
+
+    De schakelaars per gebeurtenis (ntfy_notify_*) gelden voor beide kanalen. Dat
+    is met opzet: wie heeft aangegeven geen bericht te willen bij het starten,
+    bedoelt dat ongeacht of het via de app of via ntfy komt. De namen beginnen
+    nog met ntfy_ omdat ze in de configuratie van elke bestaande hub zo heten;
+    omdopen zou een migratie kosten zonder dat iemand er iets aan merkt.
+    """
     def _send():
         cfg = load_config()
+        kaal = _strip_html(text)
         for user in cfg.get("users", []):
-            if not user.get("ntfy_enabled"):
-                continue
             if event_key and not user.get(event_key, True):
+                continue
+
+            # Kanaal 1: de eigen app. Staat er geen toestel aangemeld, dan valt
+            # hier niets te doen en blijft alleen ntfy over.
+            tokens = _push_tokens_voor(user)
+            if tokens:
+                _stuur_push(tokens, kaal)
+
+            # Kanaal 2: ntfy, voor wie dat al had staan.
+            if not user.get("ntfy_enabled"):
                 continue
             url = (user.get("ntfy_url") or "").strip().rstrip("/")
             if not url:
@@ -10770,7 +10975,7 @@ def send_notification(text, event_key=None):
             try:
                 requests.post(
                     url,
-                    data=_strip_html(text).encode("utf-8"),
+                    data=kaal.encode("utf-8"),
                     headers={"Title": "SolarBuffer"},
                     timeout=5
                 )
@@ -10794,6 +10999,7 @@ def settings_ntfy():
         return redirect("/settings")
     if request.method == "POST":
         old_cfg = load_config()
+        user["push_enabled"] = "push_enabled" in request.form
         user["ntfy_enabled"] = "ntfy_enabled" in request.form
         user["ntfy_url"] = request.form.get("ntfy_url", "").strip().rstrip("/")
         user["ntfy_notify_start"] = "ntfy_notify_start" in request.form
@@ -10806,7 +11012,9 @@ def settings_ntfy():
         if changes:
             write_audit_log("config_updated", changes)
         return redirect("/settings")
-    return render_template("settings_ntfy.html", config=cfg, user=user, dark_mode=get_user_dark_mode())
+    return render_template("settings_ntfy.html", config=cfg, user=user,
+                           push_toestellen=_push_toestellen_voor_weergave(user),
+                           dark_mode=get_user_dark_mode())
 
 
 @app.route("/ntfy/test")
