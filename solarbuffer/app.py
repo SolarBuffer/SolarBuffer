@@ -10871,11 +10871,13 @@ def ensure_tunnel_firewall():
 
 
 def afstand_bewaak_loop():
-    """Sluit de onderhoudsdeur zodra de afgesproken tijd om is.
+    """Sluit de onderhoudsdeur zodra de tijd om is, en klopt af en toe aan.
 
     Elke minuut kijken is ruim genoeg voor een venster van een dag, en het kost
-    niets.
+    niets. Het aankloppen gaat elk kwartier; vaker heeft geen zin, want het dient
+    alleen om te laten weten dat deze hub er is en welke versie hij draait.
     """
+    laatste_klop = 0.0
     while True:
         try:
             cfg = load_config()
@@ -10885,6 +10887,12 @@ def afstand_bewaak_loop():
                 cfg["afstand_support_tot"] = 0
                 save_config(cfg)
                 write_audit_log("support_toegang_verlopen", {})
+
+            hub_id = cfg.get("afstand_hub_id") or ""
+            if (cfg.get("afstand_aan") and hub_id
+                    and time.time() - laatste_klop > 900):
+                _afstand.klop(hub_id)
+                laatste_klop = time.time()
         except Exception:
             pass
         time.sleep(60)

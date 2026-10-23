@@ -89,10 +89,38 @@ def sleutels():
     return prive, publiek
 
 
+def versie():
+    """Welke versie deze hub draait.
+
+    Uit git en niet uit een nummer in de code, want dat laatste klopt alleen
+    zolang iemand eraan denkt het bij te werken. Een hub die op een branch staat
+    of een paar commits verder is, zegt dat hier dan ook eerlijk.
+    """
+    map_ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    uit = _draai(["git", "-C", map_, "describe", "--tags", "--always", "--dirty"])
+    return (uit.stdout or "").strip()[:40]
+
+
+def naam():
+    uit = _draai(["hostname"])
+    return (uit.stdout or "").strip()[:60]
+
+
+def klop(hub_id, tijd=10):
+    """Laat de server weten dat deze hub er is en welke versie hij draait."""
+    try:
+        requests.post(f"{SERVER}/v1/klop", timeout=tijd, json={
+            "hub_id": hub_id, "versie": versie(), "naam": naam()})
+        return True
+    except Exception:
+        return False
+
+
 def meld_aan(publieke_sleutel, tijd=20):
     """Schrijft deze hub in bij de server en krijgt een plek in de tunnel."""
-    r = requests.post(f"{SERVER}/v1/aanmelden",
-                      json={"publieke_sleutel": publieke_sleutel}, timeout=tijd)
+    r = requests.post(f"{SERVER}/v1/aanmelden", timeout=tijd,
+                      json={"publieke_sleutel": publieke_sleutel,
+                            "versie": versie(), "naam": naam()})
     if r.status_code != 200:
         reden = ""
         try:
