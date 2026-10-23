@@ -228,24 +228,16 @@
 
         <div id="pushFields" style="display:none;">
           {% if push_toestellen %}
-            <div class="fields">
-              <div class="field">
-                <span class="field-label">Aangemelde toestellen</span>
-                {% for t in push_toestellen %}
-                  <div class="toggle-row" id="toestel-{{ t.id }}">
-                    <span>{{ t.toestel }}{% if t.versie %} &middot; app {{ t.versie }}{% endif %}</span>
-                    <span>
-                      <span style="opacity:0.6;">sinds {{ t.sinds }}</span>
-                      <button type="button" class="btn-toestel-weg"
-                              onclick="verwijderToestel('{{ t.id }}')"
-                              title="Dit toestel verwijderen">&times;</button>
-                    </span>
-                  </div>
-                {% endfor %}
-              </div>
+            <div class="hint-box" id="toestelStand">
+              {% if push_toestellen | length == 1 %}
+                Je toestel is aangemeld en krijgt meldingen.
+              {% else %}
+                {{ push_toestellen | length }} toestellen zijn aangemeld en krijgen meldingen.
+              {% endif %}
             </div>
             <button type="button" class="btn-test" id="pushTestBtn" onclick="stuurPushTest()">Stuur testbericht</button>
             <div class="test-result" id="pushTestResult"></div>
+            <button type="button" class="btn-vergeten" onclick="vergeetToestellen()">Toestellen vergeten</button>
           {% else %}
             <div class="hint-box">
               Nog geen toestel aangemeld. Open de SolarBuffer-app op je telefoon
@@ -366,23 +358,23 @@
     document.getElementById('pushEnabled').addEventListener('change', updateVisibility);
     updateVisibility();
 
-    // Een toestel eruit gooien, bijvoorbeeld een telefoon die je niet meer hebt.
-    // De pagina stuurt een kenmerk mee en niet het token zelf: dat laatste staat
-    // hier bewust niet in, want daarmee kun je meldingen naar dat toestel sturen.
-    async function verwijderToestel(id) {
-      if (!confirm('Dit toestel geen meldingen meer sturen?')) return;
+    // Alles vergeten, voor wie zijn telefoon heeft vervangen. Dat kan geen kwaad:
+    // een app die nog in gebruik is meldt zich bij de volgende start vanzelf
+    // opnieuw aan. Daarom staat er ook geen waarschuwing bij die zwaarder klinkt
+    // dan het is.
+    async function vergeetToestellen() {
+      if (!confirm('Alle aangemelde toestellen vergeten? Een app die je nog gebruikt meldt zich vanzelf opnieuw aan.')) return;
       try {
         const r = await fetch('/api/push/afmelden', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: id })
+          body: JSON.stringify({ alles: true })
         });
         const data = await r.json();
         if (data.ok) {
-          const rij = document.getElementById('toestel-' + id);
-          if (rij) rij.remove();
+          location.reload();
         } else {
-          alert(data.error || 'Verwijderen mislukt.');
+          alert(data.error || 'Vergeten mislukt.');
         }
       } catch (e) {
         alert('Verbindingsfout.');
