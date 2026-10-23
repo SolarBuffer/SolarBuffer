@@ -227,17 +227,16 @@
         </div>
 
         <div id="pushFields" style="display:none;">
-          {% if push_toestellen %}
-            <div class="hint-box" id="toestelStand">
-              {% if push_toestellen | length == 1 %}
+          {% if push_aantal %}
+            <div class="hint-box">
+              {% if push_aantal == 1 %}
                 Je toestel is aangemeld en krijgt meldingen.
               {% else %}
-                {{ push_toestellen | length }} toestellen zijn aangemeld en krijgen meldingen.
+                {{ push_aantal }} toestellen zijn aangemeld en krijgen meldingen.
               {% endif %}
             </div>
             <button type="button" class="btn-test" id="pushTestBtn" onclick="stuurPushTest()">Stuur testbericht</button>
             <div class="test-result" id="pushTestResult"></div>
-            <button type="button" class="btn-vergeten" onclick="vergeetToestellen()">Toestellen vergeten</button>
           {% else %}
             <div class="hint-box">
               Nog geen toestel aangemeld. Open de SolarBuffer-app op je telefoon
@@ -357,29 +356,6 @@
     document.getElementById('ntfyEnabled').addEventListener('change', updateVisibility);
     document.getElementById('pushEnabled').addEventListener('change', updateVisibility);
     updateVisibility();
-
-    // Alles vergeten, voor wie zijn telefoon heeft vervangen. Dat kan geen kwaad:
-    // een app die nog in gebruik is meldt zich bij de volgende start vanzelf
-    // opnieuw aan. Daarom staat er ook geen waarschuwing bij die zwaarder klinkt
-    // dan het is.
-    async function vergeetToestellen() {
-      if (!confirm('Alle aangemelde toestellen vergeten? Een app die je nog gebruikt meldt zich vanzelf opnieuw aan.')) return;
-      try {
-        const r = await fetch('/api/push/afmelden', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ alles: true })
-        });
-        const data = await r.json();
-        if (data.ok) {
-          location.reload();
-        } else {
-          alert(data.error || 'Vergeten mislukt.');
-        }
-      } catch (e) {
-        alert('Verbindingsfout.');
-      }
-    }
 
     async function stuurPushTest() {
       const btn = document.getElementById('pushTestBtn');

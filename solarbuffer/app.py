@@ -10889,26 +10889,17 @@ def api_push_aanmelden():
     return jsonify({"ok": True, "toestellen": len(lijst)})
 
 
-def _push_toestellen_voor_weergave(user):
-    """De aangemelde toestellen, klaar om te tonen. De datum wordt hier opgemaakt
-    omdat een tijdstempel in de template een kaal getal zou blijven."""
-    uit = []
-    for t in (user.get("push_tokens") or []) if user else []:
-        tijd = t.get("aangemeld")
-        try:
-            wanneer = datetime.fromtimestamp(float(tijd)).strftime("%d-%m-%Y")
-        except Exception:
-            wanneer = ""
-        uit.append({
-            "toestel": t.get("toestel") or ("iPhone" if t.get("platform") == "ios" else "Android-toestel"),
-            "platform": t.get("platform") or "",
-            "versie": t.get("app_versie") or "",
-            "sinds": wanneer,
-            # Nooit het hele token tonen: daarmee kan iemand meldingen naar dit
-            # toestel sturen. De staart is genoeg om twee telefoons te scheiden.
-            "staart": (t.get("token") or "")[-6:],
-        })
-    return uit
+def _aantal_push_toestellen(user):
+    """Hoeveel toestellen er meldingen krijgen.
+
+    Alleen het aantal: de pagina zegt dát het aanstaat en niet welke telefoon
+    wanneer is aangemeld. Daar stond eerder een lijst met datums en een kruisje
+    om er een te verwijderen, maar dat loste een probleem op dat niet bestaat.
+    Wie de app verwijdert wordt vanzelf opgeruimd, want dan antwoordt Apple met
+    410, en wie de app houdt maar geen berichten wil zet de schakelaar uit.
+    """
+    return len([t for t in (user.get("push_tokens") or [])
+                if (t.get("token") or "").strip()]) if user else 0
 
 
 @app.route("/api/push/afmelden", methods=["POST"])
@@ -10917,19 +10908,6 @@ def api_push_afmelden():
         return jsonify({"error": "unauthorized"}), 401
     data = request.get_json(silent=True) or {}
     token = (data.get("token") or "").strip()
-
-    # Alles vergeten, voor wie zijn telefoon heeft vervangen of niet meer weet
-    # welke toestellen er ooit zijn aangemeld. Dat kan geen kwaad: een app die nog
-    # in gebruik is meldt zich bij de volgende start vanzelf opnieuw aan.
-    if data.get("alles"):
-        cfg = load_config()
-        user = _gebruiker_uit_verzoek(cfg)
-        if user is None:
-            return jsonify({"error": "unauthorized"}), 401
-        aantal = len(user.get("push_tokens") or [])
-        user["push_tokens"] = []
-        save_config(cfg)
-        return jsonify({"ok": True, "vergeten": aantal})
 
     if not token:
         return jsonify({"error": "geen token"}), 400
@@ -11027,7 +11005,7 @@ def settings_ntfy():
             write_audit_log("config_updated", changes)
         return redirect("/settings")
     return render_template("settings_ntfy.html", config=cfg, user=user,
-                           push_toestellen=_push_toestellen_voor_weergave(user),
+                           push_aantal=_aantal_push_toestellen(user),
                            dark_mode=get_user_dark_mode())
 
 
