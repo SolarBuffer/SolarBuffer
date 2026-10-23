@@ -10776,6 +10776,7 @@ def api_afstand_stand():
     stand = _afstand.stand()
     stand["gekoppeld"] = bool(cfg.get("afstand_hub_id"))
     stand["server"] = _afstand.SERVER
+    stand["support_tot"] = float(cfg.get("afstand_support_tot") or 0)
     return jsonify(stand)
 
 
@@ -10810,6 +10811,83 @@ def api_afstand_uit():
     save_config(cfg)
     write_audit_log("afstand_uit", {})
     return jsonify({"ok": True})
+
+
+# Hoe lang support mag meekijken nadat de klant het aanzet. Een dag is genoeg om
+# een probleem uit te zoeken en kort genoeg dat niemand vergeet het weer uit te
+# zetten, want dat gebeurt vanzelf.
+SUPPORT_DUUR = 24 * 3600
+
+
+@app.route("/api/afstand/support", methods=["POST"])
+def api_afstand_support():
+    """Zet ssh op de tunnel tijdelijk open, zodat SolarBuffer kan meekijken.
+
+    Dit staat los van de toegang op afstand van de klant zelf: die loopt over
+    poort 5001 en blijft gewoon werken. Hier gaat alleen de onderhoudsdeur open,
+    en die is nodig omdat je met ssh root bent op deze machine.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    cfg = load_config()
+
+    if data.get("aan"):
+        try:
+            _afstand.support_aan()
+        except Exception as e:
+            return jsonify({"error": str(e)[:300]}), 500
+        cfg["afstand_support_tot"] = time.time() + SUPPORT_DUUR
+        save_config(cfg)
+        write_audit_log("support_toegang_aan", {"tot": cfg["afstand_support_tot"]})
+        return jsonify({"ok": True, "tot": cfg["afstand_support_tot"]})
+
+    _afstand.support_uit()
+    cfg["afstand_support_tot"] = 0
+    save_config(cfg)
+    write_audit_log("support_toegang_uit", {})
+    return jsonify({"ok": True, "tot": 0})
+
+
+def ensure_tunnel_firewall():
+    """Zet bij het starten vast wat er op de tunnel bereikbaar is.
+
+    Dit moet bij elke start, want regels in iptables overleven een herstart niet.
+    Zonder dit zou ssh na een stroomstoring open staan op de tunnel zonder dat
+    iemand daarom heeft gevraagd.
+    """
+    cfg = load_config()
+    if not cfg.get("afstand_aan"):
+        return
+    try:
+        _afstand.firewall_opbouwen()
+        # Stond support nog open en is die tijd nog niet om, dan hoort hij open
+        # te blijven; de klant zou anders midden in een gesprek dichtvallen.
+        tot = float(cfg.get("afstand_support_tot") or 0)
+        if tot > time.time():
+            _afstand.support_aan()
+    except Exception as e:
+        print(f"[afstand] firewall opzetten mislukt: {e}")
+
+
+def afstand_bewaak_loop():
+    """Sluit de onderhoudsdeur zodra de afgesproken tijd om is.
+
+    Elke minuut kijken is ruim genoeg voor een venster van een dag, en het kost
+    niets.
+    """
+    while True:
+        try:
+            cfg = load_config()
+            tot = float(cfg.get("afstand_support_tot") or 0)
+            if tot and time.time() > tot:
+                _afstand.support_uit()
+                cfg["afstand_support_tot"] = 0
+                save_config(cfg)
+                write_audit_log("support_toegang_verlopen", {})
+        except Exception:
+            pass
+        time.sleep(60)
 
 
 @app.route("/api/afstand/sleutel")
@@ -14287,6 +14365,8 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     threading.Thread(target=ensure_mdns_service, daemon=True).start()
     threading.Thread(target=ensure_captive_portal, daemon=True).start()
+    threading.Thread(target=ensure_tunnel_firewall, daemon=True).start()
+    threading.Thread(target=afstand_bewaak_loop, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
         def filter(self, record):

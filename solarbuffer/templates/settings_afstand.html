@@ -240,6 +240,32 @@
         praat de app rechtstreeks met je hub en gaat er niets langs ons.
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-title">Hulp op afstand</div>
+
+      <div class="toggle-row">
+        <label for="supportAan">SolarBuffer mag 24 uur meekijken</label>
+        <label class="toggle">
+          <input type="checkbox" id="supportAan">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="hint-box" id="supportStand">&nbsp;</div>
+
+      <div class="hint-box">
+        Zet dit alleen aan als je om hulp hebt gevraagd. Zolang het uit staat kan
+        niemand bij ons op je hub inloggen, ook niet met de verbinding hierboven
+        aan: die gaat alleen naar je dashboard, en daar hoort nog steeds je eigen
+        wachtwoord bij. Met deze schakelaar openen wij er een onderhoudsdeur bij,
+        en daarmee kunnen we alles op het apparaat.
+      </div>
+
+      <div class="hint-box">
+        Hij sluit zichzelf na 24 uur. Je kunt hem ook eerder weer uitzetten.
+      </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -249,6 +275,7 @@
       try {
         const r = await fetch('/api/afstand/stand');
         const d = await r.json();
+        toonSupport(d);
         if (!d.gekoppeld) {
           vak.textContent = 'Nog niet aangezet. Zet de schakelaar aan; dat duurt een paar seconden.';
           return;
@@ -263,10 +290,51 @@
         }
         const geleden = Math.max(0, Math.round(Date.now() / 1000 - d.laatste_handshake));
         vak.textContent = 'Verbonden met de server, laatste contact ' + geleden + ' seconden geleden.';
+        toonSupport(d);
       } catch (e) {
         vak.textContent = 'Stand niet op te vragen.';
       }
     }
+
+    function toonSupport(d) {
+      const vak = document.getElementById('supportStand');
+      const knop = document.getElementById('supportAan');
+      const tot = d.support_tot || 0;
+      const open = tot > Date.now() / 1000;
+      knop.checked = open;
+      if (!open) {
+        vak.textContent = 'Staat uit. Niemand bij SolarBuffer kan op je hub inloggen.';
+        return;
+      }
+      const uren = Math.floor((tot - Date.now() / 1000) / 3600);
+      const minuten = Math.max(0, Math.round((tot - Date.now() / 1000) / 60) % 60);
+      vak.textContent = 'Staat open, nog ' + (uren > 0 ? uren + ' uur en ' : '')
+                      + minuten + ' minuten. Daarna sluit hij vanzelf.';
+    }
+
+    document.getElementById('supportAan').addEventListener('change', async function (e) {
+      const aan = e.target.checked;
+      e.target.disabled = true;
+      try {
+        const r = await fetch('/api/afstand/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aan: aan })
+        });
+        const d = await r.json();
+        if (!d.ok) {
+          document.getElementById('supportStand').textContent = d.error || 'Mislukt.';
+          e.target.checked = !aan;
+        } else {
+          toonSupport({ support_tot: d.tot });
+        }
+      } catch (err) {
+        document.getElementById('supportStand').textContent = 'Verbindingsfout.';
+        e.target.checked = !aan;
+      } finally {
+        e.target.disabled = false;
+      }
+    });
 
     document.getElementById('afstandAan').addEventListener('change', async function (e) {
       const aan = e.target.checked;

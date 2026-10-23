@@ -155,12 +155,86 @@ def zet_aan():
     uit = _draai(["systemctl", "start", f"wg-quick@{WG_INTERFACE}"], tijd=30)
     if uit.returncode != 0:
         raise RuntimeError((uit.stderr or uit.stdout or "").strip()[:300])
+
+    # Meteen dichtzetten. Zou dit pas bij de volgende controle gebeuren, dan
+    # staat ssh in de tussentijd open op de tunnel.
+    firewall_opbouwen()
     return gegevens
 
 
 def zet_uit():
     _draai(["systemctl", "disable", "--now", f"wg-quick@{WG_INTERFACE}"], tijd=30)
     return True
+
+
+# ================= WAT ER OP DE TUNNEL BEREIKBAAR IS =================
+# Standaard alleen poort 5001, waar het dashboard achter een inlog zit. Ssh staat
+# op de tunnel dicht, want daarmee is iemand root op deze machine en kan hij ook
+# het wachtwoord van de klant omzetten. Dat gaat pas open als de klant zelf om
+# hulp vraagt, en dan tijdelijk.
+#
+# De regels staan in een eigen keten, zodat ze in één keer opnieuw op te bouwen
+# zijn zonder aan de rest van de firewall te komen. Ze overleven een herstart
+# niet, dus app.py zet ze bij elke start opnieuw.
+KETEN = "SOLARBUFFER-WG"
+HUB_POORT = 5001
+SSH_POORT = 22
+
+
+def _iptables(*argumenten, controleer=False):
+    uit = _draai(["iptables", *argumenten])
+    if controleer and uit.returncode != 0:
+        raise RuntimeError((uit.stderr or uit.stdout or "").strip()[:200])
+    return uit.returncode == 0
+
+
+def firewall_opbouwen():
+    """Zet de basisregels op de tunnel: alleen het dashboard, verder niets."""
+    # Keten maken als hij er nog niet is, en legen als hij er al was.
+    if not _iptables("-n", "-L", KETEN):
+        _iptables("-N", KETEN)
+    _iptables("-F", KETEN)
+
+    # Antwoorden op verbindingen die wij zelf zijn begonnen moeten erdoor, anders
+    # werkt de keepalive naar de server niet meer.
+    _iptables("-A", KETEN, "-m", "conntrack", "--ctstate",
+              "ESTABLISHED,RELATED", "-j", "ACCEPT")
+    _iptables("-A", KETEN, "-p", "tcp", "--dport", str(HUB_POORT), "-j", "ACCEPT")
+    # Pingen mag, dat helpt bij het zoeken naar een storing en geeft niets prijs.
+    _iptables("-A", KETEN, "-p", "icmp", "-j", "ACCEPT")
+    _iptables("-A", KETEN, "-j", "DROP")
+
+    # De keten aan de tunnel hangen, precies één keer.
+    _iptables("-D", "INPUT", "-i", WG_INTERFACE, "-j", KETEN)
+    _iptables("-I", "INPUT", "1", "-i", WG_INTERFACE, "-j", KETEN, controleer=True)
+    return True
+
+
+def support_aan():
+    """Zet ssh open op de tunnel. Vóór de DROP, anders heeft het geen zin."""
+    firewall_opbouwen()
+    _iptables("-I", KETEN, "2", "-p", "tcp", "--dport", str(SSH_POORT),
+              "-j", "ACCEPT", controleer=True)
+    return True
+
+
+def support_uit():
+    """Haalt die ene regel er weer uit. Meermaals aanroepen kan geen kwaad."""
+    for _ in range(5):
+        if not _iptables("-D", KETEN, "-p", "tcp", "--dport", str(SSH_POORT),
+                         "-j", "ACCEPT"):
+            break
+    return True
+
+
+def support_staat_open():
+    uit = _draai(["iptables", "-n", "-L", KETEN])
+    if uit.returncode != 0:
+        return False
+    for regel in uit.stdout.splitlines():
+        if "ACCEPT" in regel and f"dpt:{SSH_POORT}" in regel:
+            return True
+    return False
 
 
 def stand():
@@ -184,4 +258,5 @@ def stand():
             if treffer:
                 adres = treffer.group(1)
     return {"actief": actief == "active", "adres": adres,
-            "laatste_handshake": laatste}
+            "laatste_handshake": laatste,
+            "support_open": support_staat_open()}
