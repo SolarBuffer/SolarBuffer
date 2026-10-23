@@ -10757,6 +10757,89 @@ def control_loop():
             time.sleep(1)
 
 
+# ================= TOEGANG OP AFSTAND =================
+# De hub belt uit zichzelf naar de server van SolarBuffer en is daarna van
+# buitenaf bereikbaar op één naam, zonder dat de klant Tailscale nodig heeft of
+# iets in zijn router open moet zetten. Het werk zelf staat in afstand.py; hier
+# staan alleen de routes en wat er in de configuratie wordt onthouden.
+try:
+    from . import afstand as _afstand
+except ImportError:
+    import afstand as _afstand
+
+
+@app.route("/api/afstand/stand")
+def api_afstand_stand():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    stand = _afstand.stand()
+    stand["gekoppeld"] = bool(cfg.get("afstand_hub_id"))
+    stand["server"] = _afstand.SERVER
+    return jsonify(stand)
+
+
+@app.route("/api/afstand/aan", methods=["POST"])
+def api_afstand_aan():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        gegevens = _afstand.zet_aan()
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 500
+
+    cfg = load_config()
+    cfg["afstand_hub_id"] = gegevens.get("hub_id", "")
+    # De toegangssleutel waarmee de app zich aan deze hub koppelt. Die staat hier
+    # en nergens anders; wie hem wil zien moet op deze hub kunnen inloggen, en dat
+    # is precies het bewijs van eigendom waar de server om vraagt.
+    cfg["afstand_toegangssleutel"] = gegevens.get("toegangssleutel", "")
+    cfg["afstand_aan"] = True
+    save_config(cfg)
+    write_audit_log("afstand_aan", {"hub_id": cfg["afstand_hub_id"]})
+    return jsonify({"ok": True, "adres": gegevens.get("adres", "")})
+
+
+@app.route("/api/afstand/uit", methods=["POST"])
+def api_afstand_uit():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    _afstand.zet_uit()
+    cfg = load_config()
+    cfg["afstand_aan"] = False
+    save_config(cfg)
+    write_audit_log("afstand_uit", {})
+    return jsonify({"ok": True})
+
+
+@app.route("/api/afstand/sleutel")
+def api_afstand_sleutel():
+    """De toegangssleutel, voor de app.
+
+    De app haalt die op terwijl hij thuis op het eigen netwerk is en bewaart hem.
+    Van buitenaf wisselt hij hem bij de server in voor een koekje, en daarna werkt
+    het adres ook onderweg.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    sleutel = (cfg.get("afstand_toegangssleutel") or "").strip()
+    if not sleutel:
+        return jsonify({"error": "toegang op afstand staat niet aan"}), 404
+    return jsonify({"ok": True, "toegangssleutel": sleutel,
+                    "hub_id": cfg.get("afstand_hub_id", ""),
+                    "server": _afstand.SERVER})
+
+
+@app.route("/settings/afstand", methods=["GET"])
+def settings_afstand():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    return render_template("settings_afstand.html", config=cfg,
+                           dark_mode=get_user_dark_mode())
+
+
 # ================= PUSHMELDINGEN (eigen app) =================
 # Meldingen gingen hiervoor alleen via ntfy: de klant moest daar zelf een app
 # voor installeren, een onderwerp verzinnen en die URL hier invullen. Met een

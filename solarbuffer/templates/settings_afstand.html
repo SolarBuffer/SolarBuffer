@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+
+    .page-header { text-align: center; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(224, 20%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(224, 26%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(224, 20%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(224, 18%, 71%);
+      margin-bottom: 0.85rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .toggle-row > label:first-child { cursor: pointer; }
+
+    .fields { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-label { font-size: 0.82rem; font-weight: 600; color: hsl(224, 18%, 67%); }
+    .field-help { font-size: 0.74rem; color: hsl(224, 18%, 75%); line-height: 1.4; }
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(224, 20%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(224, 26%, 14%);
+      transition: border-color 0.2s;
+    }
+    .field input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+
+    .hint-box {
+      background: hsl(215, 60%, 96%);
+      border: 1px solid hsl(215, 50%, 84%);
+      border-radius: 0.5rem;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.8rem;
+      color: hsl(215, 50%, 30%);
+      line-height: 1.5;
+      margin-top: 0.75rem;
+    }
+    .hint-box code {
+      background: hsl(215, 50%, 88%);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 0.78rem;
+    }
+
+    .btn-test {
+      display: block;
+      width: 100%;
+      padding: 0.6rem;
+      background: hsl(224, 20%, 95%);
+      color: hsl(224, 26%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid hsl(224, 20%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+      margin-top: 0.75rem;
+    }
+    .btn-test:hover { background: hsl(224, 20%, 88%); }
+    .btn-test:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .test-result {
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      min-height: 1.1rem;
+      color: hsl(145, 55%, 32%);
+    }
+    .test-result.err { color: hsl(0, 65%, 44%); }
+
+    .events-list {
+      margin-top: 0.6rem;
+      padding-left: 1rem;
+      font-size: 0.82rem;
+      color: hsl(224, 38%, 22%);
+      line-height: 1.8;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+    .btn-secondary {
+      flex: 1;
+      background: hsl(224, 20%, 95%);
+      color: hsl(224, 26%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(224, 20%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-secondary:hover { background: hsl(224, 20%, 88%); }
+    .btn-row { display: flex; gap: 0.75rem; }
+    .btn-row .btn-primary { flex: 1; }
+
+    /* DARK MODE */
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
+    html[data-theme="dark"] .card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .toggle-row { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field-label { color: hsl(224, 18%, 74%); }
+    html[data-theme="dark"] .field-help { color: hsl(224, 18%, 69%); }
+    html[data-theme="dark"] .field input { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .hint-box { background: hsl(215, 20%, 24%); border-color: hsl(215, 20%, 34%); color: hsl(215, 30%, 70%); }
+    html[data-theme="dark"] .hint-box code { background: hsl(215, 20%, 30%); }
+    html[data-theme="dark"] .events-list { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .test-result { color: hsl(145, 50%, 56%); }
+    html[data-theme="dark"] .test-result.err { color: hsl(0, 60%, 60%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 17%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(224, 38%, 17%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .btn-test { background: hsl(224, 38%, 17%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .btn-test:hover { background: hsl(224, 38%, 19%); }
+    .free-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: hsl(145, 55%, 30%);
+      background: hsl(145, 55%, 92%);
+      border: 1px solid hsl(145, 45%, 76%);
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    html[data-theme="dark"] .free-badge { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
+  </style>
+{% endblock %}
+
+{% block title %}Toegang op afstand{% endblock %}
+{% block tagline %}<p>toegang op afstand</p>{% endblock %}
+
+{% block content %}
+    <a class="back-btn" href="/settings#verbinding">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Verbinding
+    </a>
+
+    <div class="card">
+      <div class="card-title" style="display:flex; align-items:center; gap:0.5rem;">
+        Je hub van buiten je huis
+        <span class="free-badge">aanbevolen</span>
+      </div>
+
+      <div class="toggle-row">
+        <label for="afstandAan">Toegang op afstand</label>
+        <label class="toggle">
+          <input type="checkbox" id="afstandAan" {% if config.afstand_aan %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="hint-box" id="afstandStand">Stand opvragen&hellip;</div>
+
+      <div class="hint-box">
+        Je hub maakt hiervoor zelf verbinding met de server van SolarBuffer en
+        houdt die open. Er hoeft niets open in je router en je hebt geen vast
+        IP-adres nodig. Daarna vindt de app je hub ook als je niet thuis bent,
+        zonder dat je verder iets hoeft in te vullen.
+      </div>
+
+      <div class="hint-box">
+        Wat er wel verandert: het verkeer van buitenaf loopt via die server. Thuis
+        praat de app rechtstreeks met je hub en gaat er niets langs ons.
+      </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    async function haalStand() {
+      const vak = document.getElementById('afstandStand');
+      try {
+        const r = await fetch('/api/afstand/stand');
+        const d = await r.json();
+        if (!d.gekoppeld) {
+          vak.textContent = 'Nog niet aangezet. Zet de schakelaar aan; dat duurt een paar seconden.';
+          return;
+        }
+        if (!d.actief) {
+          vak.textContent = 'Aangemeld, maar de verbinding staat niet. Zet de schakelaar uit en weer aan.';
+          return;
+        }
+        if (!d.laatste_handshake) {
+          vak.textContent = 'Verbinding opgezet, nog geen contact met de server. Even geduld.';
+          return;
+        }
+        const geleden = Math.max(0, Math.round(Date.now() / 1000 - d.laatste_handshake));
+        vak.textContent = 'Verbonden met de server, laatste contact ' + geleden + ' seconden geleden.';
+      } catch (e) {
+        vak.textContent = 'Stand niet op te vragen.';
+      }
+    }
+
+    document.getElementById('afstandAan').addEventListener('change', async function (e) {
+      const aan = e.target.checked;
+      const vak = document.getElementById('afstandStand');
+      e.target.disabled = true;
+      vak.textContent = aan ? 'Bezig met aanzetten, dit duurt even\u2026' : 'Bezig met uitzetten\u2026';
+      try {
+        const r = await fetch(aan ? '/api/afstand/aan' : '/api/afstand/uit', { method: 'POST' });
+        const d = await r.json();
+        if (!d.ok) {
+          vak.textContent = d.error || 'Mislukt.';
+          e.target.checked = !aan;
+        } else {
+          await haalStand();
+        }
+      } catch (err) {
+        vak.textContent = 'Verbindingsfout.';
+        e.target.checked = !aan;
+      } finally {
+        e.target.disabled = false;
+      }
+    });
+
+    haalStand();
+    setInterval(haalStand, 15000);
+  </script>
+{% endblock %}
