@@ -397,11 +397,47 @@
         <button class="btn-action" id="swUpdateBtn" onclick="runSoftwareUpdate()">Controleer</button>
       </div>
 
+      <div class="serie-kop">Versie 1.0</div>
+      <div class="serie-inhoud">
+        <div class="update-card">
+          <div class="update-left">
+            <span class="version-badge new">v1.0</span>
+            <span class="update-date-small">24 okt</span>
+          </div>
+          <div class="update-divider"></div>
+          <div class="update-right">
+            <div class="tag-knoppen">
+              <button type="button" class="update-tag tag-feature actief" data-doel="u100-0">Nieuw</button>
+              <button type="button" class="update-tag tag-feature" data-doel="u100-1">Nieuw</button>
+              <button type="button" class="update-tag tag-fix" data-doel="u100-2">Sneller</button>
+              <button type="button" class="update-tag tag-ui" data-doel="u100-3">Interface</button>
+            </div>
+            <div class="update-tekst" id="u100-0">
+              <div class="update-title">Je hub van buiten je huis, zonder dat je iets instelt</div>
+              <div class="update-body">De app vindt je hub nu ook als je niet thuis bent. Je hoeft daarvoor niets te installeren, geen account aan te maken en geen adres in te typen: je hub maakt zelf verbinding met de server van SolarBuffer en houdt die open. Er hoeft niets open in je router en je hebt geen vast IP-adres nodig. Open de app één keer thuis op je eigen netwerk, dan onthoudt hij de koppeling, en daarna werkt het onderweg vanzelf. Van buitenaf loopt het verkeer via die server; thuis praat de app rechtstreeks met je hub en gaat er niets langs ons. Er gaat alleen een kenmerk van het apparaat en de softwareversie naartoe, niets over jou of je verbruik. Wie liever zijn eigen weg naar buiten houdt, bijvoorbeeld via Tailscale, kan dat blijven gebruiken; de app probeert dat alsnog als het andere niet lukt.</div>
+            </div>
+            <div class="update-tekst" id="u100-1" hidden>
+              <div class="update-title">Hulp op afstand, maar alleen als jij het aanzet</div>
+              <div class="update-body">Bij Instellingen, Toegang op afstand staat een tweede schakelaar waarmee je SolarBuffer 24 uur laat meekijken. Zet die alleen aan als je om hulp hebt gevraagd. Zolang hij uit staat kan niemand bij ons op je hub inloggen, ook niet met de verbinding hierboven aan: die gaat alleen naar je dashboard en daar hoort nog steeds je eigen wachtwoord bij. Met die schakelaar openen wij er een onderhoudsdeur bij, en daarmee kunnen we alles op het apparaat. Hij sluit zichzelf na 24 uur, je ziet in je eigen scherm hoeveel tijd er nog over is, en elk openen en sluiten komt in het logboek te staan.</div>
+            </div>
+            <div class="update-tekst" id="u100-2" hidden>
+              <div class="update-title">Van pagina wisselen gaat sneller, vooral van buitenaf</div>
+              <div class="update-body">De hub liet je browser elk plaatje en elke stylesheet bij iedere paginawissel opnieuw nakijken. Thuis kost dat vijf milliseconden per bestand en merkt niemand het, maar van buitenaf honderdzestig, en met elf bestanden per pagina zag je de pagina zich opbouwen. Die bestanden worden nu vijf minuten bewaard. Niet langer, zodat je na een update nooit lang met oude opmaak zit.</div>
+            </div>
+            <div class="update-tekst" id="u100-3" hidden>
+              <div class="update-title">Minder tekst, en je configuratie beter afgeschermd</div>
+              <div class="update-body">De pagina's voor meldingen en toegang stonden vol met tekstvakken die allemaal even hard schreeuwden. Er staat nu per onderwerp één regel die zegt of het aanstaat, met de uitleg eronder die je open kunt klappen als je hem nodig hebt. Verder was het bestand met je instellingen leesbaar voor elk account op de hub, terwijl daar je wachtwoord en je sleutels in staan; dat is nu afgeschermd. En een fabrieksreset ruimt voortaan ook de verbinding met onze server op, zodat een hub die van eigenaar wisselt geen spoor achterlaat.</div>
+            </div>
+            <a class="update-notes-link" href="https://github.com/SolarBuffer/solarbuffer-releases/releases/tag/V1.0" target="_blank" rel="noopener">&rarr; Release notes</a>
+          </div>
+        </div>
+      </div>
+
       <div class="serie-kop">Versie 0.8</div>
       <div class="serie-inhoud">
         <div class="update-card">
           <div class="update-left">
-            <span class="version-badge new">v0.8.3</span>
+            <span class="version-badge mid">v0.8.3</span>
             <span class="update-date-small">22 okt</span>
           </div>
           <div class="update-divider"></div>
