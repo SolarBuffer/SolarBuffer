@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+<style>
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    h1, h2 { font-family: 'Space Grotesk', sans-serif; }
+
+    .page-header { text-align: center; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header h1 .solar {
+      background: linear-gradient(135deg, hsl(32, 95%, 52%), hsl(40, 100%, 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .page-header p { color: hsl(224, 18%, 67%); font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1.5px solid hsl(224, 20%, 85%);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: hsl(224, 26%, 30%);
+      text-decoration: none;
+      box-shadow: 0 2px 8px -2px rgba(0,0,0,0.10);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .back-btn:hover { background: hsl(32, 100%, 96%); border-color: hsl(32, 85%, 60%); color: hsl(32, 90%, 40%); }
+
+    .card {
+      background: white;
+      border: 1px solid hsl(224, 20%, 88%);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px hsla(32, 95%, 52%, 0.15);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: hsl(224, 18%, 71%);
+      margin-bottom: 0.85rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .toggle-row > label:first-child { cursor: pointer; }
+
+    .fields { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-label { font-size: 0.82rem; font-weight: 600; color: hsl(224, 18%, 67%); }
+    .field-help { font-size: 0.74rem; color: hsl(224, 18%, 75%); line-height: 1.4; }
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid hsl(224, 20%, 82%);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      color: hsl(224, 26%, 14%);
+      transition: border-color 0.2s;
+    }
+    .field input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
+
+
+    .btn-test {
+      display: block;
+      width: 100%;
+      padding: 0.6rem;
+      background: hsl(224, 20%, 95%);
+      color: hsl(224, 26%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid hsl(224, 20%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+      margin-top: 0.75rem;
+    }
+    .btn-test:hover { background: hsl(224, 20%, 88%); }
+    .btn-test:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .test-result {
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      min-height: 1.1rem;
+      color: hsl(145, 55%, 32%);
+    }
+    .test-result.err { color: hsl(0, 65%, 44%); }
+
+    .events-list {
+      margin-top: 0.6rem;
+      padding-left: 1rem;
+      font-size: 0.82rem;
+      color: hsl(224, 38%, 22%);
+      line-height: 1.8;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: hsl(32, 95%, 52%);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: hsl(32, 90%, 45%); transform: translateY(-1px); }
+    .btn-secondary {
+      flex: 1;
+      background: hsl(224, 20%, 95%);
+      color: hsl(224, 26%, 30%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem;
+      border: 1px solid hsl(224, 20%, 84%);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-secondary:hover { background: hsl(224, 20%, 88%); }
+    .btn-row { display: flex; gap: 0.75rem; }
+    .btn-row .btn-primary { flex: 1; }
+
+    /* DARK MODE */
+    html[data-theme="dark"] .page-header p { color: hsl(224, 18%, 75%); }
+    html[data-theme="dark"] .card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
+    html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+    html[data-theme="dark"] .toggle-row { color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field-label { color: hsl(224, 18%, 74%); }
+    html[data-theme="dark"] .field-help { color: hsl(224, 18%, 69%); }
+    html[data-theme="dark"] .field input { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
+    html[data-theme="dark"] .field input:focus { border-color: hsl(32, 75%, 52%); }
+    html[data-theme="dark"] .events-list { color: hsl(224, 18%, 71%); }
+    html[data-theme="dark"] .test-result { color: hsl(145, 50%, 56%); }
+    html[data-theme="dark"] .test-result.err { color: hsl(0, 60%, 60%); }
+    html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 91%); }
+    html[data-theme="dark"] .back-btn:hover { background: hsl(224, 38%, 17%); border-color: hsl(32, 70%, 50%); color: hsl(32, 80%, 62%); }
+    html[data-theme="dark"] .btn-secondary { background: hsl(224, 38%, 17%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .btn-secondary:hover { background: hsl(224, 38%, 19%); }
+    html[data-theme="dark"] .btn-test { background: hsl(224, 38%, 17%); border-color: hsl(224, 38%, 21%); color: hsl(224, 18%, 90%); }
+    html[data-theme="dark"] .btn-test:hover { background: hsl(224, 38%, 19%); }
+    .free-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: hsl(145, 55%, 30%);
+      background: hsl(145, 55%, 92%);
+      border: 1px solid hsl(145, 45%, 76%);
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    html[data-theme="dark"] .free-badge { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
+
+    /* Een regel met de stand, en de uitleg eronder weggeklapt. Hetzelfde
+       patroon als bij de accu-instellingen, zodat deze pagina er niet anders
+       uitziet dan de rest. */
+    .note {
+      font-size: 0.82rem;
+      color: hsl(224, 18%, 45%);
+      padding: 0.6rem 0.75rem;
+      background: hsl(224, 20%, 96%);
+      border-radius: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    html[data-theme="dark"] .note {
+      /* Lichter dan de kaart en niet gelijk eraan. Met hsl(224,38%,15%) was dit
+         exact dezelfde kleur als .card en viel het vak in donkere modus volledig
+         weg; opgemeten rgb(24,31,53) voor allebei. */
+      background: hsl(224, 30%, 24%);
+      color: hsl(224, 18%, 78%);
+    }
+    details.note > summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: hsl(224, 20%, 35%);
+      list-style: none;
+    }
+    details.note > summary::-webkit-details-marker { display: none; }
+    details.note > summary::before { content: "\25B8  "; }
+    details.note[open] > summary::before { content: "\25BE  "; }
+    details.note[open] > summary { margin-bottom: 0.4rem; }
+    html[data-theme="dark"] details.note > summary { color: hsl(224, 18%, 82%); }
+  </style>
+{% endblock %}
+
+{% block title %}Toegang op afstand{% endblock %}
+{% block tagline %}<p>toegang op afstand</p>{% endblock %}
+
+{% block content %}
+    <a class="back-btn" href="/settings#verbinding">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+      Verbinding
+    </a>
+
+    <div class="card">
+      <div class="card-title" style="display:flex; align-items:center; gap:0.5rem;">
+        Je hub van buiten je huis
+        <span class="free-badge">aanbevolen</span>
+      </div>
+
+      <div class="note" id="afstandStand">Stand opvragen&hellip;</div>
+
+      <details class="note">
+        <summary>Hoe dit werkt</summary>
+        Je hub maakt zelf verbinding met de server van SolarBuffer en houdt die
+        open, zodat de app je hub ook vindt als je niet thuis bent. Er hoeft niets
+        open in je router en je hebt geen vast IP-adres nodig. Van buitenaf loopt
+        het verkeer via die server; thuis praat de app rechtstreeks met je hub en
+        gaat er niets langs ons. Er gaat alleen een kenmerk van het apparaat en de
+        versie van de software naartoe, niets over jou of je verbruik.
+      </details>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Hulp op afstand</div>
+
+      <div class="toggle-row">
+        <label for="supportAan">SolarBuffer mag 24 uur meekijken</label>
+        <label class="toggle">
+          <input type="checkbox" id="supportAan">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="note" id="supportStand">Stand opvragen&hellip;</div>
+
+      <details class="note">
+        <summary>Wat dit precies openzet</summary>
+        Zet dit alleen aan als je om hulp hebt gevraagd. Zolang het uit staat kan
+        niemand bij ons op je hub inloggen, ook niet met de verbinding hierboven
+        aan: die gaat alleen naar je dashboard en daar hoort je eigen wachtwoord
+        bij. Deze schakelaar opent er een onderhoudsdeur bij, en daarmee kunnen we
+        alles op het apparaat. Hij sluit zichzelf na 24 uur; eerder uitzetten kan
+        altijd.
+      </details>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    async function haalStand() {
+      const vak = document.getElementById('afstandStand');
+      try {
+        const r = await fetch('/api/afstand/stand');
+        const d = await r.json();
+        toonSupport(d);
+        if (!d.gekoppeld) {
+          vak.textContent = 'Nog bezig met aanmelden. Dat gebeurt vanzelf, meestal binnen een minuut na het opstarten.';
+          return;
+        }
+        if (!d.actief) {
+          vak.textContent = 'Aangemeld, maar de verbinding staat even niet. Hij probeert het elk kwartier opnieuw.';
+          return;
+        }
+        if (!d.laatste_handshake) {
+          vak.textContent = 'Verbinding opgezet, nog geen contact met de server. Even geduld.';
+          return;
+        }
+        const geleden = Math.max(0, Math.round(Date.now() / 1000 - d.laatste_handshake));
+        vak.textContent = 'Verbonden met de server, laatste contact ' + geleden + ' seconden geleden.';
+        toonSupport(d);
+      } catch (e) {
+        vak.textContent = 'Stand niet op te vragen.';
+      }
+    }
+
+    function toonSupport(d) {
+      const vak = document.getElementById('supportStand');
+      const knop = document.getElementById('supportAan');
+      const tot = d.support_tot || 0;
+      const open = tot > Date.now() / 1000;
+      knop.checked = open;
+      if (!open) {
+        vak.textContent = 'Staat uit. Niemand bij SolarBuffer kan op je hub inloggen.';
+        return;
+      }
+      const uren = Math.floor((tot - Date.now() / 1000) / 3600);
+      const minuten = Math.max(0, Math.round((tot - Date.now() / 1000) / 60) % 60);
+      vak.textContent = 'Staat open, nog ' + (uren > 0 ? uren + ' uur en ' : '')
+                      + minuten + ' minuten. Daarna sluit hij vanzelf.';
+    }
+
+    document.getElementById('supportAan').addEventListener('change', async function (e) {
+      const aan = e.target.checked;
+      e.target.disabled = true;
+      try {
+        const r = await fetch('/api/afstand/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aan: aan })
+        });
+        const d = await r.json();
+        if (!d.ok) {
+          document.getElementById('supportStand').textContent = d.error || 'Mislukt.';
+          e.target.checked = !aan;
+        } else {
+          toonSupport({ support_tot: d.tot });
+        }
+      } catch (err) {
+        document.getElementById('supportStand').textContent = 'Verbindingsfout.';
+        e.target.checked = !aan;
+      } finally {
+        e.target.disabled = false;
+      }
+    });
+
+    haalStand();
+    setInterval(haalStand, 15000);
+  </script>
+{% endblock %}

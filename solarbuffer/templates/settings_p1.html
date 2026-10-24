@@ -309,7 +309,13 @@
       border: 1px solid transparent;
     }
     html[data-theme="dark"] .hint { color: hsl(224, 18%, 60%); }
-    html[data-theme="dark"] .note { background: hsl(224, 38%, 15%); color: hsl(224, 18%, 78%); }
+    html[data-theme="dark"] .note {
+      /* Lichter dan de kaart en niet gelijk eraan. Met hsl(224,38%,15%) was dit
+         exact dezelfde kleur als .card en viel het vak in donkere modus volledig
+         weg; opgemeten rgb(24,31,53) voor allebei. */
+      background: hsl(224, 30%, 24%);
+      color: hsl(224, 18%, 78%);
+    }
     html[data-theme="dark"] .warn {
       background: hsl(32, 40%, 16%);
       border-color: hsl(32, 45%, 30%);

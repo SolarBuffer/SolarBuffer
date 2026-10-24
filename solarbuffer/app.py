@@ -56,6 +56,15 @@ _broadlink_learn_state = {}  # learn_id -> {status, code, error}
 # ================= CONFIG =================
 BASE_DIR = os.path.dirname(__file__)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+
+# Rechten goedzetten zodra de software start. Het opslaan doet dat ook, maar op
+# een hub waar niemand iets wijzigt kan dat lang duren, en tot die tijd staat een
+# bestand met wachtwoordhashes en sleutels leesbaar voor elk account.
+try:
+    if os.path.exists(CONFIG_FILE):
+        os.chmod(CONFIG_FILE, 0o600)
+except OSError:
+    pass
 AUDIT_LOG_FILE = os.path.join(BASE_DIR, "audit.log")
 STATE_FILE = os.path.join(BASE_DIR, "state.json")
 ENERGY_BASELINES_FILE = os.path.join(BASE_DIR, "energy_baselines.json")
@@ -603,9 +612,21 @@ def save_config(data):
     # achtergrondlus + een HTTP-request) elkaars tempbestand nooit kunnen wegkapen.
     tmp = f"{CONFIG_FILE}.{os.getpid()}.{threading.get_ident()}.tmp"
     with _config_save_lock:
-        with open(tmp, "w", encoding="utf-8") as f:
+        # Alleen leesbaar voor de eigenaar, en al bij het aanmaken. In dit bestand
+        # staan de wachtwoordhashes, de apparaattokens voor de meldingen en de
+        # toegangssleutel voor van buitenaf; met de standaardrechten is dat
+        # leesbaar voor elk account op de hub. Het recht moet bij het openen al
+        # goed staan en niet pas erna, anders is het er even wel.
+        beschrijving = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(beschrijving, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
         os.replace(tmp, CONFIG_FILE)
+        # os.replace neemt de rechten van het tempbestand mee, maar een bestand
+        # dat van vroeger nog ruimer stond wordt hiermee alsnog goed gezet.
+        try:
+            os.chmod(CONFIG_FILE, 0o600)
+        except OSError:
+            pass
 
 
 def load_state():
@@ -1405,6 +1426,19 @@ def _legionella_trigger_due(triggers):
 
 # ================= FLASK =================
 app = Flask(__name__)
+
+# Statische bestanden vijf minuten laten bewaren door de browser.
+#
+# Flask zet er standaard no-cache op en laat de browser elk bestand bij elke
+# paginawissel opnieuw nakijken. Thuis kost dat vijf milliseconden per bestand en
+# merkt niemand het. Door de tunnel van buitenaf kost het er honderdzestig, en met
+# elf bestanden per pagina zie je de pagina zich dan opbouwen.
+#
+# Vijf minuten en niet langer: binnen een sessie verdwijnen die verzoeken
+# daarmee vrijwel allemaal, terwijl een klant na een update nooit langer dan dat
+# met oude opmaak zit. Een jaar bewaren zou sneller zijn, maar dan moeten de
+# adressen een versienummer dragen en dat staat op te veel plekken vast.
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 300
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "verander_dit_naar_iets_veiligs!")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -4245,6 +4279,27 @@ def _reset_gegevens():
     return ", ".join(weg) or "niets"
 
 
+def _reset_toegang_op_afstand():
+    """Schrijft deze hub uit bij de server en haalt de tunnel van de schijf.
+
+    Moet vóór _reset_gegevens draaien, want de toegangssleutel waarmee dit
+    uitschrijven wordt bewezen staat in de configuratie en die wordt daar
+    leeggemaakt.
+
+    Dit hoort er net zo goed bij als het uitloggen bij Tailscale. Zonder dit
+    blijft de hub als dode regel in het overzicht staan met zijn adres bezet, en
+    draagt een gekopieerde kaart dezelfde tunnelsleutel; twee hubs claimen dan
+    hetzelfde adres en geen van beide werkt betrouwbaar.
+    """
+    cfg = load_config()
+    sleutel = (cfg.get("afstand_toegangssleutel") or "").strip()
+    try:
+        gemeld = _afstand.meld_af(sleutel)
+        return "uitgeschreven en tunnel weg" if gemeld else "tunnel weg, server niet bereikt"
+    except Exception as e:
+        return f"mislukt: {e}"
+
+
 def _reset_identiteit():
     """Wist waaraan deze Hub te herkennen is, zodat een kopie geen tweeling wordt.
 
@@ -4323,6 +4378,7 @@ def _voer_fabrieksreset_uit(shelly_devices):
     try:
         sync_configured_devices_off(shelly_devices)
         time.sleep(1.5)
+        print(f"[RESET] toegang op afstand: {_reset_toegang_op_afstand()}")
         print(f"[RESET] gegevens: {_reset_gegevens()}")
         if os.name == "nt":
             return
@@ -10757,6 +10813,224 @@ def control_loop():
             time.sleep(1)
 
 
+# ================= TOEGANG OP AFSTAND =================
+# De hub belt uit zichzelf naar de server van SolarBuffer en is daarna van
+# buitenaf bereikbaar op één naam, zonder dat de klant Tailscale nodig heeft of
+# iets in zijn router open moet zetten. Het werk zelf staat in afstand.py; hier
+# staan alleen de routes en wat er in de configuratie wordt onthouden.
+try:
+    from . import afstand as _afstand
+except ImportError:
+    import afstand as _afstand
+
+
+@app.route("/api/afstand/stand")
+def api_afstand_stand():
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    stand = _afstand.stand()
+    stand["gekoppeld"] = bool(cfg.get("afstand_hub_id"))
+    stand["server"] = _afstand.SERVER
+    stand["support_tot"] = float(cfg.get("afstand_support_tot") or 0)
+    return jsonify(stand)
+
+
+def _afstand_inschrijven():
+    """Schrijft deze hub in bij de server en zet de tunnel op.
+
+    Geeft het antwoord van de server terug en bewaart wat er onthouden moet
+    worden. Wordt zowel bij het opstarten als vanuit de bewakingslus aangeroepen.
+    """
+    gegevens = _afstand.zet_aan()
+    cfg = load_config()
+    cfg["afstand_hub_id"] = gegevens.get("hub_id", "")
+    # De toegangssleutel waarmee de app zich aan deze hub koppelt. Die staat hier
+    # en nergens anders; wie hem wil zien moet op deze hub kunnen inloggen, en dat
+    # is precies het bewijs van eigendom waar de server om vraagt.
+    cfg["afstand_toegangssleutel"] = gegevens.get("toegangssleutel", "")
+    cfg["afstand_aan"] = True
+    save_config(cfg)
+    write_audit_log("afstand_aan", {"hub_id": cfg["afstand_hub_id"]})
+    return gegevens
+
+
+def ensure_toegang_op_afstand():
+    """Zorgt dat deze hub van buitenaf bereikbaar is.
+
+    Dit is geen keuze meer van de klant: de app leunt erop, en een schakelaar die
+    standaard uit staat betekent dat iemand op vakantie "geen hub gevonden" te
+    zien krijgt en eerst een instelling moet vinden waarvan hij niet wist dat hij
+    bestond.
+
+    Wel blijft er een uitweg: staat afstand_aan in de configuratie uitdrukkelijk
+    op false, dan gebeurt hier niets. Die staat in geen enkel scherm, maar zo kan
+    een klant die er bezwaar tegen maakt met de hand worden ontzien zonder dat de
+    software daarvoor aangepast hoeft te worden.
+
+    Faalt het, dan is dat geen ramp en ook geen reden om door te drammen: de
+    bewakingslus probeert het elk kwartier opnieuw. Een hub die net opstart heeft
+    vaak nog geen netwerk.
+    """
+    cfg = load_config()
+    if cfg.get("afstand_aan") is False and cfg.get("afstand_hub_id"):
+        return
+    if _afstand.stand().get("actief") and cfg.get("afstand_hub_id"):
+        return
+    try:
+        gegevens = _afstand_inschrijven()
+        print(f"[afstand] ingeschreven op {gegevens.get('adres')}")
+    except Exception as e:
+        print(f"[afstand] inschrijven nog niet gelukt: {e}")
+
+
+# Hoe lang support mag meekijken nadat de klant het aanzet. Een dag is genoeg om
+# een probleem uit te zoeken en kort genoeg dat niemand vergeet het weer uit te
+# zetten, want dat gebeurt vanzelf.
+SUPPORT_DUUR = 24 * 3600
+
+
+@app.route("/api/afstand/support", methods=["POST"])
+def api_afstand_support():
+    """Zet ssh op de tunnel tijdelijk open, zodat SolarBuffer kan meekijken.
+
+    Dit staat los van de toegang op afstand van de klant zelf: die loopt over
+    poort 5001 en blijft gewoon werken. Hier gaat alleen de onderhoudsdeur open,
+    en die is nodig omdat je met ssh root bent op deze machine.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    cfg = load_config()
+
+    if data.get("aan"):
+        try:
+            _afstand.support_aan()
+        except Exception as e:
+            return jsonify({"error": str(e)[:300]}), 500
+        cfg["afstand_support_tot"] = time.time() + SUPPORT_DUUR
+        save_config(cfg)
+        write_audit_log("support_toegang_aan", {"tot": cfg["afstand_support_tot"]})
+        # Meteen melden in plaats van bij het volgende kwartier: iemand die belt
+        # om hulp wil dat je het binnen een paar seconden ziet staan.
+        if cfg.get("afstand_hub_id"):
+            threading.Thread(target=_afstand.klop,
+                             args=(cfg["afstand_hub_id"], cfg["afstand_support_tot"]),
+                             daemon=True).start()
+        return jsonify({"ok": True, "tot": cfg["afstand_support_tot"]})
+
+    _afstand.support_uit()
+    cfg["afstand_support_tot"] = 0
+    save_config(cfg)
+    write_audit_log("support_toegang_uit", {})
+    if cfg.get("afstand_hub_id"):
+        threading.Thread(target=_afstand.klop, args=(cfg["afstand_hub_id"], 0),
+                         daemon=True).start()
+    return jsonify({"ok": True, "tot": 0})
+
+
+def ensure_tunnel_firewall():
+    """Zet bij het starten vast wat er op de tunnel bereikbaar is.
+
+    Dit moet bij elke start, want regels in iptables overleven een herstart niet.
+    Zonder dit zou ssh na een stroomstoring open staan op de tunnel zonder dat
+    iemand daarom heeft gevraagd.
+
+    De regels hangen met opzet aan de tunnel zelf en niet aan de schakelaar in de
+    configuratie. Die twee kunnen uit elkaar lopen, en dat is ook gebeurd: een
+    hub waarvan de tunnel aanstond terwijl de schakelaar op uit stond kreeg
+    helemaal geen regels, en dan staat ssh open. Draait de tunnel, dan horen de
+    regels er te zijn, ongeacht wat er in een bestand staat.
+    """
+    cfg = load_config()
+    # Alleen overslaan als deze hub uitdrukkelijk is ontzien én nog nergens staat
+    # ingeschreven; in elk ander geval horen de regels er te zijn voordat de
+    # tunnel opkomt.
+    if cfg.get("afstand_aan") is False and not cfg.get("afstand_hub_id"):
+        return
+    try:
+        _afstand.firewall_opbouwen()
+        # Stond support nog open en is die tijd nog niet om, dan hoort hij open
+        # te blijven; de klant zou anders midden in een gesprek dichtvallen.
+        tot = float(cfg.get("afstand_support_tot") or 0)
+        if tot > time.time():
+            _afstand.support_aan()
+    except Exception as e:
+        print(f"[afstand] firewall opzetten mislukt: {e}")
+
+
+def afstand_bewaak_loop():
+    """Sluit de onderhoudsdeur zodra de tijd om is, en klopt af en toe aan.
+
+    Elke minuut kijken is ruim genoeg voor een venster van een dag, en het kost
+    niets. Het aankloppen gaat elk kwartier; vaker heeft geen zin, want het dient
+    alleen om te laten weten dat deze hub er is en welke versie hij draait.
+    """
+    laatste_klop = 0.0
+    laatste_poging = 0.0
+    while True:
+        try:
+            cfg = load_config()
+            tot = float(cfg.get("afstand_support_tot") or 0)
+            if tot and time.time() > tot:
+                _afstand.support_uit()
+                cfg["afstand_support_tot"] = 0
+                save_config(cfg)
+                write_audit_log("support_toegang_verlopen", {})
+
+            hub_id = cfg.get("afstand_hub_id") or ""
+            uitgezet = cfg.get("afstand_aan") is False and hub_id
+
+            # Ligt de tunnel eruit, dan hem opnieuw opzetten. Dat gebeurt na een
+            # stroomstoring voordat er netwerk was, of als de server even weg was
+            # toen deze hub opstartte. Elk kwartier proberen is ruim genoeg en
+            # belast niemand.
+            if not uitgezet and time.time() - laatste_poging > 900:
+                laatste_poging = time.time()
+                if not _afstand.stand().get("actief") or not hub_id:
+                    try:
+                        _afstand_inschrijven()
+                    except Exception as e:
+                        print(f"[afstand] opnieuw inschrijven mislukte: {e}")
+                    cfg = load_config()
+                    hub_id = cfg.get("afstand_hub_id") or ""
+
+            if hub_id and not uitgezet and time.time() - laatste_klop > 900:
+                _afstand.klop(hub_id, float(cfg.get("afstand_support_tot") or 0))
+                laatste_klop = time.time()
+        except Exception:
+            pass
+        time.sleep(60)
+
+
+@app.route("/api/afstand/sleutel")
+def api_afstand_sleutel():
+    """De toegangssleutel, voor de app.
+
+    De app haalt die op terwijl hij thuis op het eigen netwerk is en bewaart hem.
+    Van buitenaf wisselt hij hem bij de server in voor een koekje, en daarna werkt
+    het adres ook onderweg.
+    """
+    if not require_login():
+        return jsonify({"error": "unauthorized"}), 401
+    cfg = load_config()
+    sleutel = (cfg.get("afstand_toegangssleutel") or "").strip()
+    if not sleutel:
+        return jsonify({"error": "toegang op afstand staat niet aan"}), 404
+    return jsonify({"ok": True, "toegangssleutel": sleutel,
+                    "hub_id": cfg.get("afstand_hub_id", ""),
+                    "server": _afstand.SERVER})
+
+
+@app.route("/settings/afstand", methods=["GET"])
+def settings_afstand():
+    if not require_login():
+        return redirect("/login")
+    cfg = load_config()
+    return render_template("settings_afstand.html", config=cfg,
+                           dark_mode=get_user_dark_mode())
+
+
 # ================= PUSHMELDINGEN (eigen app) =================
 # Meldingen gingen hiervoor alleen via ntfy: de klant moest daar zelf een app
 # voor installeren, een onderwerp verzinnen en die URL hier invullen. Met een
@@ -14204,6 +14478,9 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     threading.Thread(target=ensure_mdns_service, daemon=True).start()
     threading.Thread(target=ensure_captive_portal, daemon=True).start()
+    threading.Thread(target=ensure_tunnel_firewall, daemon=True).start()
+    threading.Thread(target=ensure_toegang_op_afstand, daemon=True).start()
+    threading.Thread(target=afstand_bewaak_loop, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
         def filter(self, record):
