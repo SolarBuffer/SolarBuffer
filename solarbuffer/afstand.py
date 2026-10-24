@@ -27,7 +27,6 @@ SERVER = os.environ.get("SOLARBUFFER_TOEGANG", "https://hub.solarbuffer.nl")
 WG_INTERFACE = "wg0"
 WG_MAP = "/etc/wireguard"
 WG_CONF = f"{WG_MAP}/{WG_INTERFACE}.conf"
-SLEUTEL_PAD = f"{WG_MAP}/{WG_INTERFACE}.key"
 # Zonder dit valt de tunnel dicht zodra de router van de klant de uitgaande
 # verbinding opruimt, en is de hub van buitenaf onbereikbaar tot hij zelf weer
 # iets stuurt. Vijfentwintig seconden is wat WireGuard zelf aanraadt.
@@ -37,6 +36,19 @@ KEEPALIVE = 25
 def _draai(opdracht, invoer=None, tijd=20):
     return subprocess.run(opdracht, input=invoer, capture_output=True,
                           text=True, timeout=tijd)
+
+
+def _root(opdracht, invoer=None, tijd=20):
+    """Hetzelfde, maar met root-rechten.
+
+    De webdienst draait als gebruiker solarbuffer en niet als root, terwijl dit
+    allemaal het systeem raakt: een pakket installeren, in /etc/wireguard
+    schrijven, een dienst starten, de firewall zetten. Zonder sudo ervoor
+    mislukte elke schakelaar met een rechtenfout, en die kwam alleen in de
+    browser terecht en niet in het logboek.
+    """
+    return subprocess.run(["sudo", "-n", *opdracht], input=invoer,
+                          capture_output=True, text=True, timeout=tijd)
 
 
 def wireguard_aanwezig():
@@ -51,10 +63,10 @@ def installeer_wireguard():
     """
     if wireguard_aanwezig():
         return True, "was al aanwezig"
-    omgeving = dict(os.environ, DEBIAN_FRONTEND="noninteractive")
-    uit = subprocess.run(["apt-get", "install", "-y", "wireguard-tools"],
-                         capture_output=True, text=True, timeout=300,
-                         env=omgeving)
+    uit = subprocess.run(
+        ["sudo", "-n", "env", "DEBIAN_FRONTEND=noninteractive",
+         "apt-get", "install", "-y", "wireguard-tools"],
+        capture_output=True, text=True, timeout=300)
     if uit.returncode != 0:
         return False, (uit.stderr or uit.stdout or "").strip()[:300]
     return True, "geinstalleerd"
@@ -63,14 +75,16 @@ def installeer_wireguard():
 def sleutels():
     """Het sleutelpaar van deze hub, aangemaakt als het er nog niet is.
 
-    De private sleutel blijft hier en gaat nooit over de lijn; de server krijgt
-    alleen de publieke helft.
+    De private sleutel staat in wg0.conf en nergens anders. Eerder hield ik hem
+    daarnaast in een eigen bestand bij, maar dan staat hetzelfde geheim op twee
+    plekken en kunnen die uit elkaar gaan lopen. Lezen en schrijven gaat met
+    root-rechten, want /etc/wireguard is van root en de webdienst draait dat niet.
     """
-    os.makedirs(WG_MAP, exist_ok=True)
-    if os.path.exists(SLEUTEL_PAD):
-        with open(SLEUTEL_PAD) as f:
-            prive = f.read().strip()
-        if prive:
+    bestaand = _root(["cat", WG_CONF])
+    if bestaand.returncode == 0:
+        treffer = re.search(r"^PrivateKey\s*=\s*(\S+)", bestaand.stdout, re.M)
+        if treffer:
+            prive = treffer.group(1)
             publiek = _draai(["wg", "pubkey"], invoer=prive + "\n").stdout.strip()
             if publiek:
                 return prive, publiek
@@ -79,13 +93,6 @@ def sleutels():
     if not prive:
         raise RuntimeError("kon geen sleutel maken; is wireguard-tools er?")
     publiek = _draai(["wg", "pubkey"], invoer=prive + "\n").stdout.strip()
-    vorige = os.umask(0o077)
-    try:
-        with open(SLEUTEL_PAD, "w") as f:
-            f.write(prive + "\n")
-    finally:
-        os.umask(vorige)
-    os.chmod(SLEUTEL_PAD, 0o600)
     return prive, publiek
 
 
@@ -151,13 +158,10 @@ def schrijf_conf(prive, adres, server_publieke_sleutel, endpoint):
         f"AllowedIPs = {net}\n"
         f"PersistentKeepalive = {KEEPALIVE}\n"
     )
-    vorige = os.umask(0o077)
-    try:
-        with open(WG_CONF, "w") as f:
-            f.write(inhoud)
-    finally:
-        os.umask(vorige)
-    os.chmod(WG_CONF, 0o600)
+    uit = _root(["tee", WG_CONF], invoer=inhoud)
+    if uit.returncode != 0:
+        raise RuntimeError((uit.stderr or "").strip()[:200] or "kon de tunnel niet opschrijven")
+    _root(["chmod", "600", WG_CONF])
     return inhoud
 
 
@@ -176,11 +180,11 @@ def zet_aan():
     schrijf_conf(prive, gegevens["adres"],
                  gegevens["server_publieke_sleutel"], gegevens["server_endpoint"])
 
-    _draai(["systemctl", "enable", f"wg-quick@{WG_INTERFACE}"], tijd=30)
+    _root(["systemctl", "enable", f"wg-quick@{WG_INTERFACE}"], tijd=30)
     # Eerst stoppen: draait hij al met een oude configuratie, dan neemt een
     # enkele start de nieuwe niet over.
-    _draai(["systemctl", "stop", f"wg-quick@{WG_INTERFACE}"], tijd=30)
-    uit = _draai(["systemctl", "start", f"wg-quick@{WG_INTERFACE}"], tijd=30)
+    _root(["systemctl", "stop", f"wg-quick@{WG_INTERFACE}"], tijd=30)
+    uit = _root(["systemctl", "start", f"wg-quick@{WG_INTERFACE}"], tijd=30)
     if uit.returncode != 0:
         raise RuntimeError((uit.stderr or uit.stdout or "").strip()[:300])
 
@@ -191,7 +195,7 @@ def zet_aan():
 
 
 def zet_uit():
-    _draai(["systemctl", "disable", "--now", f"wg-quick@{WG_INTERFACE}"], tijd=30)
+    _root(["systemctl", "disable", "--now", f"wg-quick@{WG_INTERFACE}"], tijd=30)
     return True
 
 
@@ -210,7 +214,7 @@ SSH_POORT = 22
 
 
 def _iptables(*argumenten, controleer=False):
-    uit = _draai(["iptables", *argumenten])
+    uit = _root(["iptables", *argumenten])
     if controleer and uit.returncode != 0:
         raise RuntimeError((uit.stderr or uit.stdout or "").strip()[:200])
     return uit.returncode == 0
@@ -256,7 +260,7 @@ def support_uit():
 
 
 def support_staat_open():
-    uit = _draai(["iptables", "-n", "-L", KETEN])
+    uit = _root(["iptables", "-n", "-L", KETEN])
     if uit.returncode != 0:
         return False
     for regel in uit.stdout.splitlines():
@@ -273,18 +277,18 @@ def stand():
     of er werkelijk contact is.
     """
     actief = _draai(["systemctl", "is-active", f"wg-quick@{WG_INTERFACE}"]).stdout.strip()
-    uit = _draai(["wg", "show", WG_INTERFACE, "latest-handshakes"]).stdout.strip()
+    uit = _root(["wg", "show", WG_INTERFACE, "latest-handshakes"]).stdout.strip()
     laatste = 0
     if uit:
         deel = uit.split()
         if len(deel) >= 2 and deel[-1].isdigit():
             laatste = int(deel[-1])
     adres = ""
-    if os.path.exists(WG_CONF):
-        with open(WG_CONF) as f:
-            treffer = re.search(r"^Address = ([0-9.]+)", f.read(), re.M)
-            if treffer:
-                adres = treffer.group(1)
+    inhoud = _root(["cat", WG_CONF])
+    if inhoud.returncode == 0:
+        treffer = re.search(r"^Address = ([0-9.]+)", inhoud.stdout, re.M)
+        if treffer:
+            adres = treffer.group(1)
     return {"actief": actief == "active", "adres": adres,
             "laatste_handshake": laatste,
             "support_open": support_staat_open()}
