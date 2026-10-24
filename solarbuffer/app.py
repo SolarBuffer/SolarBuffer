@@ -10855,6 +10855,77 @@ def _afstand_inschrijven():
     return gegevens
 
 
+NOODLUIK_SCRIPT = "/usr/local/bin/solarbuffer-noodluik"
+NOODLUIK_DIENST = "/etc/systemd/system/solarbuffer-noodluik.service"
+NOODLUIK_DROPIN = "/etc/systemd/system/solarbuffer.service.d/noodluik.conf"
+NOODLUIK_TOT = "/run/solarbuffer-noodluik-tot"
+
+
+def ensure_noodluik():
+    """Zorgt dat ssh op de tunnel opengaat als de software het opgeeft.
+
+    De tunnel staat los van de software en blijft draaien bij een crash, maar op
+    die tunnel is alleen poort 5001 open en dat is precies wat een gecrashte app
+    niet meer bedient. Ssh zou helpen, en de schakelaar die dat opent zit in de
+    app die net is omgevallen.
+
+    Daarom hangt dit aan systemd en niet aan ons: OnFailure vuurt zodra systemd
+    het herstarten opgeeft, dus na een reeks mislukte pogingen en niet na één
+    hikje. Het luik sluit zichzelf na twee uur, gepland door systemd, want als de
+    app niet terugkomt kan hij het ook niet dichtdoen.
+    """
+    bron = os.path.join(BASE_DIR, "noodluik.sh")
+    dienst = (
+        "[Unit]\n"
+        "Description=SolarBuffer noodluik: ssh op de tunnel openzetten\n"
+        "\n"
+        "[Service]\n"
+        "Type=oneshot\n"
+        f"ExecStart={NOODLUIK_SCRIPT} open\n"
+    )
+    dropin = (
+        "# Gaat de software onderuit en geeft systemd het herstarten op, dan\n"
+        "# zetten we ssh op de tunnel open zodat het van buitenaf te repareren is.\n"
+        "[Unit]\n"
+        "OnFailure=solarbuffer-noodluik.service\n"
+    )
+    try:
+        wijzig = False
+        if not os.path.exists(NOODLUIK_SCRIPT) or \
+                open(bron).read() != _sudo_lees(NOODLUIK_SCRIPT):
+            _sudo_schrijf(NOODLUIK_SCRIPT, open(bron).read(), uitvoerbaar=True)
+            wijzig = True
+        if _sudo_lees(NOODLUIK_DIENST) != dienst:
+            _sudo_schrijf(NOODLUIK_DIENST, dienst)
+            wijzig = True
+        if _sudo_lees(NOODLUIK_DROPIN) != dropin:
+            subprocess.run(["sudo", "-n", "mkdir", "-p", os.path.dirname(NOODLUIK_DROPIN)],
+                           capture_output=True, timeout=15)
+            _sudo_schrijf(NOODLUIK_DROPIN, dropin)
+            wijzig = True
+        if wijzig:
+            subprocess.run(["sudo", "-n", "systemctl", "daemon-reload"],
+                           capture_output=True, timeout=30)
+            print("[noodluik] klaargezet")
+    except Exception as e:
+        print(f"[noodluik] klaarzetten mislukt: {e}")
+
+
+def _sudo_lees(pad):
+    uit = subprocess.run(["sudo", "-n", "cat", pad], capture_output=True,
+                         text=True, timeout=15)
+    return uit.stdout if uit.returncode == 0 else None
+
+
+def _sudo_schrijf(pad, inhoud, uitvoerbaar=False):
+    uit = subprocess.run(["sudo", "-n", "tee", pad], input=inhoud,
+                         capture_output=True, text=True, timeout=15)
+    if uit.returncode != 0:
+        raise RuntimeError((uit.stderr or "").strip()[:200])
+    subprocess.run(["sudo", "-n", "chmod", "755" if uitvoerbaar else "644", pad],
+                   capture_output=True, timeout=15)
+
+
 def ensure_toegang_op_afstand():
     """Zorgt dat deze hub van buitenaf bereikbaar is.
 
@@ -10953,6 +11024,14 @@ def ensure_tunnel_firewall():
         # Stond support nog open en is die tijd nog niet om, dan hoort hij open
         # te blijven; de klant zou anders midden in een gesprek dichtvallen.
         tot = float(cfg.get("afstand_support_tot") or 0)
+        # Ook het noodluik telt mee. Komt de software terug terwijl dat nog
+        # openstaat, dan zou het opnieuw opbouwen van de keten die deur
+        # dichtgooien, mogelijk terwijl er iemand aan het werk is.
+        try:
+            with open(NOODLUIK_TOT) as f:
+                tot = max(tot, float(f.read().strip() or 0))
+        except (OSError, ValueError):
+            pass
         if tot > time.time():
             _afstand.support_aan()
     except Exception as e:
@@ -14480,6 +14559,7 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_captive_portal, daemon=True).start()
     threading.Thread(target=ensure_tunnel_firewall, daemon=True).start()
     threading.Thread(target=ensure_toegang_op_afstand, daemon=True).start()
+    threading.Thread(target=ensure_noodluik, daemon=True).start()
     threading.Thread(target=afstand_bewaak_loop, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
