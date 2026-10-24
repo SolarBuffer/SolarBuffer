@@ -182,6 +182,33 @@
       white-space: nowrap;
     }
     html[data-theme="dark"] .free-badge { background: hsl(145, 20%, 22%); border-color: hsl(145, 30%, 32%); color: hsl(145, 50%, 62%); }
+
+    /* Een regel met de stand, en de uitleg eronder weggeklapt. Hetzelfde
+       patroon als bij de accu-instellingen, zodat deze pagina er niet anders
+       uitziet dan de rest. */
+    .note {
+      font-size: 0.82rem;
+      color: hsl(224, 18%, 45%);
+      padding: 0.6rem 0.75rem;
+      background: hsl(224, 20%, 96%);
+      border-radius: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    html[data-theme="dark"] .note {
+      background: hsl(224, 38%, 15%);
+      color: hsl(224, 18%, 78%);
+    }
+    details.note > summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: hsl(224, 20%, 35%);
+      list-style: none;
+    }
+    details.note > summary::-webkit-details-marker { display: none; }
+    details.note > summary::before { content: "\25B8  "; }
+    details.note[open] > summary::before { content: "\25BE  "; }
+    details.note[open] > summary { margin-bottom: 0.4rem; }
+    html[data-theme="dark"] details.note > summary { color: hsl(224, 18%, 82%); }
   </style>
 {% endblock %}
 
@@ -230,7 +257,7 @@
         </label>
       </div>
 
-      <div class="note" id="supportStand">&nbsp;</div>
+      <div class="note" id="supportStand">Stand opvragen&hellip;</div>
 
       <details class="note">
         <summary>Wat dit precies openzet</summary>
