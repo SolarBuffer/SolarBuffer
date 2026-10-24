@@ -10858,7 +10858,11 @@ def _afstand_inschrijven():
 NOODLUIK_SCRIPT = "/usr/local/bin/solarbuffer-noodluik"
 NOODLUIK_DIENST = "/etc/systemd/system/solarbuffer-noodluik.service"
 NOODLUIK_DROPIN = "/etc/systemd/system/solarbuffer.service.d/noodluik.conf"
-NOODLUIK_TOT = "/run/solarbuffer-noodluik-tot"
+NOODLUIK_OPEN = "/run/solarbuffer-noodluik-open"
+# Zo lang blijft het luik nog open nadat de software weer draait. Meteen sluiten
+# zou je er middenin uit gooien, en de app komt juist terug terwijl jij aan het
+# repareren bent.
+NOODLUIK_RESPIJT = 1800
 
 
 def ensure_noodluik():
@@ -11027,11 +11031,8 @@ def ensure_tunnel_firewall():
         # Ook het noodluik telt mee. Komt de software terug terwijl dat nog
         # openstaat, dan zou het opnieuw opbouwen van de keten die deur
         # dichtgooien, mogelijk terwijl er iemand aan het werk is.
-        try:
-            with open(NOODLUIK_TOT) as f:
-                tot = max(tot, float(f.read().strip() or 0))
-        except (OSError, ValueError):
-            pass
+        if os.path.exists(NOODLUIK_OPEN):
+            tot = time.time() + 1
         if tot > time.time():
             _afstand.support_aan()
     except Exception as e:
@@ -11047,6 +11048,7 @@ def afstand_bewaak_loop():
     """
     laatste_klop = 0.0
     laatste_poging = 0.0
+    gestart = time.time()
     while True:
         try:
             cfg = load_config()
@@ -11056,6 +11058,17 @@ def afstand_bewaak_loop():
                 cfg["afstand_support_tot"] = 0
                 save_config(cfg)
                 write_audit_log("support_toegang_verlopen", {})
+
+            # Het noodluik sluiten zodra de software weer een tijdje overeind
+            # staat. Niet meteen: de app komt juist terug terwijl er iemand aan
+            # het repareren is, en die hoort er niet uit gegooid te worden. Een
+            # vaste tijdslimiet bij het openen zou het verkeerde oplossen; dan
+            # valt de deur dicht terwijl je onderweg bent naar een klant.
+            if os.path.exists(NOODLUIK_OPEN) and time.time() - gestart > NOODLUIK_RESPIJT:
+                subprocess.run(["sudo", "-n", NOODLUIK_SCRIPT, "dicht"],
+                               capture_output=True, timeout=20)
+                write_audit_log("noodluik_gesloten", {})
+                print("[noodluik] gesloten, de software draait weer")
 
             hub_id = cfg.get("afstand_hub_id") or ""
             uitgezet = cfg.get("afstand_aan") is False and hub_id

@@ -9,11 +9,12 @@
 # dicht, en de schakelaar die het opent zit in de app die net is omgevallen.
 #
 # Dit draait daarom buiten de app om, aangeroepen door systemd zodra die het
-# herstarten opgeeft. Twee uur, daarna vanzelf weer dicht.
+# herstarten opgeeft. Het blijft open zolang de software niet draait: een vaste
+# tijdslimiet zou precies aflopen terwijl je onderweg bent. De app sluit het zelf
+# zodra hij weer een tijdje overeind staat.
 set -u
 KETEN=SOLARBUFFER-WG
-TOT_BESTAND=/run/solarbuffer-noodluik-tot
-DUUR=7200
+OPEN_BESTAND=/run/solarbuffer-noodluik-open
 
 open_luik() {
     # De keten bestaat alleen als de tunnel ooit is opgezet. Zo niet, dan valt er
@@ -22,18 +23,13 @@ open_luik() {
     # Niet dubbel toevoegen bij een tweede keer.
     iptables -C "$KETEN" -p tcp --dport 22 -j ACCEPT 2>/dev/null \
         || iptables -I "$KETEN" 2 -p tcp --dport 22 -j ACCEPT
-    echo $(( $(date +%s) + DUUR )) > "$TOT_BESTAND"
-    logger -t solarbuffer-noodluik "ssh op de tunnel geopend voor $((DUUR/3600)) uur, de software gaf het op"
-    # Het sluiten zelf plannen, zodat het ook gebeurt als de app niet meer
-    # terugkomt; die zou het anders moeten doen en die is er juist niet.
-    systemd-run --quiet --on-active="${DUUR}s" \
-        --unit=solarbuffer-noodluik-dicht \
-        /usr/local/bin/solarbuffer-noodluik dicht >/dev/null 2>&1 || true
+    date +%s > "$OPEN_BESTAND"
+    logger -t solarbuffer-noodluik "ssh op de tunnel geopend, de software gaf het op"
 }
 
 sluit_luik() {
     while iptables -D "$KETEN" -p tcp --dport 22 -j ACCEPT 2>/dev/null; do :; done
-    rm -f "$TOT_BESTAND"
+    rm -f "$OPEN_BESTAND"
     logger -t solarbuffer-noodluik "ssh op de tunnel weer gesloten"
 }
 
