@@ -10874,12 +10874,21 @@ def api_afstand_support():
         cfg["afstand_support_tot"] = time.time() + SUPPORT_DUUR
         save_config(cfg)
         write_audit_log("support_toegang_aan", {"tot": cfg["afstand_support_tot"]})
+        # Meteen melden in plaats van bij het volgende kwartier: iemand die belt
+        # om hulp wil dat je het binnen een paar seconden ziet staan.
+        if cfg.get("afstand_hub_id"):
+            threading.Thread(target=_afstand.klop,
+                             args=(cfg["afstand_hub_id"], cfg["afstand_support_tot"]),
+                             daemon=True).start()
         return jsonify({"ok": True, "tot": cfg["afstand_support_tot"]})
 
     _afstand.support_uit()
     cfg["afstand_support_tot"] = 0
     save_config(cfg)
     write_audit_log("support_toegang_uit", {})
+    if cfg.get("afstand_hub_id"):
+        threading.Thread(target=_afstand.klop, args=(cfg["afstand_hub_id"], 0),
+                         daemon=True).start()
     return jsonify({"ok": True, "tot": 0})
 
 
@@ -10932,7 +10941,7 @@ def afstand_bewaak_loop():
             hub_id = cfg.get("afstand_hub_id") or ""
             if (cfg.get("afstand_aan") and hub_id
                     and time.time() - laatste_klop > 900):
-                _afstand.klop(hub_id)
+                _afstand.klop(hub_id, float(cfg.get("afstand_support_tot") or 0))
                 laatste_klop = time.time()
         except Exception:
             pass

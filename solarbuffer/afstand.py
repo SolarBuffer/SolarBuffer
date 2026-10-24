@@ -113,11 +113,36 @@ def naam():
     return (uit.stdout or "").strip()[:60]
 
 
-def klop(hub_id, tijd=10):
-    """Laat de server weten dat deze hub er is en welke versie hij draait."""
+def apparaat_id():
+    """De aanduiding waarmee deze hub al in het hele systeem bekend staat.
+
+    Dezelfde die Homey en Home Assistant gebruiken om een hub uit elkaar te
+    houden, uit /etc/machine-id. Hiermee kun je een hub in de lijst terugvinden
+    in je eigen administratie, zonder dat er iets over de klant zelf naar de
+    server gaat; de naam die de hub meldt is bij iedereen "SolarBuffer".
+    """
+    try:
+        with open("/etc/machine-id", encoding="utf-8") as f:
+            waarde = f.read().strip()
+        if waarde:
+            return waarde[:40]
+    except Exception:
+        pass
+    return ""
+
+
+def klop(hub_id, support_tot=0, tijd=10):
+    """Laat de server weten dat deze hub er is, welke versie hij draait en of de
+    onderhoudsdeur openstaat.
+
+    Dat laatste is wat je bij veertig hubs wilt zien: wie heeft er om hulp
+    gevraagd. Daarom wordt dit ook meteen gestuurd als die schakelaar omgaat en
+    niet pas bij het volgende kwartier.
+    """
     try:
         requests.post(f"{SERVER}/v1/klop", timeout=tijd, json={
-            "hub_id": hub_id, "versie": versie(), "naam": naam()})
+            "hub_id": hub_id, "versie": versie(), "naam": naam(),
+            "apparaat_id": apparaat_id(), "support_tot": support_tot})
         return True
     except Exception:
         return False
@@ -127,7 +152,8 @@ def meld_aan(publieke_sleutel, tijd=20):
     """Schrijft deze hub in bij de server en krijgt een plek in de tunnel."""
     r = requests.post(f"{SERVER}/v1/aanmelden", timeout=tijd,
                       json={"publieke_sleutel": publieke_sleutel,
-                            "versie": versie(), "naam": naam()})
+                            "versie": versie(), "naam": naam(),
+                            "apparaat_id": apparaat_id()})
     if r.status_code != 200:
         reden = ""
         try:
