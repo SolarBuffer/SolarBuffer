@@ -4279,6 +4279,27 @@ def _reset_gegevens():
     return ", ".join(weg) or "niets"
 
 
+def _reset_toegang_op_afstand():
+    """Schrijft deze hub uit bij de server en haalt de tunnel van de schijf.
+
+    Moet vóór _reset_gegevens draaien, want de toegangssleutel waarmee dit
+    uitschrijven wordt bewezen staat in de configuratie en die wordt daar
+    leeggemaakt.
+
+    Dit hoort er net zo goed bij als het uitloggen bij Tailscale. Zonder dit
+    blijft de hub als dode regel in het overzicht staan met zijn adres bezet, en
+    draagt een gekopieerde kaart dezelfde tunnelsleutel; twee hubs claimen dan
+    hetzelfde adres en geen van beide werkt betrouwbaar.
+    """
+    cfg = load_config()
+    sleutel = (cfg.get("afstand_toegangssleutel") or "").strip()
+    try:
+        gemeld = _afstand.meld_af(sleutel)
+        return "uitgeschreven en tunnel weg" if gemeld else "tunnel weg, server niet bereikt"
+    except Exception as e:
+        return f"mislukt: {e}"
+
+
 def _reset_identiteit():
     """Wist waaraan deze Hub te herkennen is, zodat een kopie geen tweeling wordt.
 
@@ -4357,6 +4378,7 @@ def _voer_fabrieksreset_uit(shelly_devices):
     try:
         sync_configured_devices_off(shelly_devices)
         time.sleep(1.5)
+        print(f"[RESET] toegang op afstand: {_reset_toegang_op_afstand()}")
         print(f"[RESET] gegevens: {_reset_gegevens()}")
         if os.name == "nt":
             return

@@ -225,6 +225,32 @@ def zet_uit():
     return True
 
 
+def meld_af(toegangssleutel, tijd=10):
+    """Schrijft deze hub uit bij de server en wist de tunnel van de schijf.
+
+    Hoort bij een fabrieksreset, om dezelfde reden als het uitloggen bij
+    Tailscale: zonder dit blijft de hub als dode regel in het overzicht staan en
+    blijft zijn adres bezet. En belangrijker: de private sleutel staat in
+    wg0.conf, dus een kaart die gekopieerd wordt levert twee hubs met dezelfde
+    sleutel op, die allebei hetzelfde tunneladres claimen. Daarom gaat dat bestand
+    hier weg, net zoals machine-id en de ssh-hostsleutels dat doen.
+    """
+    gemeld = False
+    if toegangssleutel:
+        try:
+            r = requests.post(f"{SERVER}/v1/afmelden", timeout=tijd,
+                              json={"toegangssleutel": toegangssleutel})
+            gemeld = r.status_code == 200
+        except Exception:
+            # Geen netwerk meer, of de server is weg. De tunnel gaat er lokaal
+            # hoe dan ook af; een achtergebleven regel in het overzicht is dan
+            # hooguit rommel en geen storing.
+            pass
+    _root(["systemctl", "disable", "--now", f"wg-quick@{WG_INTERFACE}"], tijd=30)
+    _root(["rm", "-f", WG_CONF], tijd=15)
+    return gemeld
+
+
 # ================= WAT ER OP DE TUNNEL BEREIKBAAR IS =================
 # Standaard alleen poort 5001, waar het dashboard achter een inlog zit. Ssh staat
 # op de tunnel dicht, want daarmee is iemand root op deze machine en kan hij ook
