@@ -603,9 +603,21 @@ def save_config(data):
     # achtergrondlus + een HTTP-request) elkaars tempbestand nooit kunnen wegkapen.
     tmp = f"{CONFIG_FILE}.{os.getpid()}.{threading.get_ident()}.tmp"
     with _config_save_lock:
-        with open(tmp, "w", encoding="utf-8") as f:
+        # Alleen leesbaar voor de eigenaar, en al bij het aanmaken. In dit bestand
+        # staan de wachtwoordhashes, de apparaattokens voor de meldingen en de
+        # toegangssleutel voor van buitenaf; met de standaardrechten is dat
+        # leesbaar voor elk account op de hub. Het recht moet bij het openen al
+        # goed staan en niet pas erna, anders is het er even wel.
+        beschrijving = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(beschrijving, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
         os.replace(tmp, CONFIG_FILE)
+        # os.replace neemt de rechten van het tempbestand mee, maar een bestand
+        # dat van vroeger nog ruimer stond wordt hiermee alsnog goed gezet.
+        try:
+            os.chmod(CONFIG_FILE, 0o600)
+        except OSError:
+            pass
 
 
 def load_state():
