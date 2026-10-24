@@ -272,23 +272,50 @@ def _iptables(*argumenten, controleer=False):
     return uit.returncode == 0
 
 
+NOODLUIK_OPEN = "/run/solarbuffer-noodluik-open"
+
+
 def firewall_opbouwen():
-    """Zet de basisregels op de tunnel: alleen het dashboard, verder niets."""
-    # Keten maken als hij er nog niet is, en legen als hij er al was.
-    if not _iptables("-n", "-L", KETEN):
-        _iptables("-N", KETEN)
-    _iptables("-F", KETEN)
+    """Zet vast wat er op de tunnel bereikbaar is: alleen het dashboard.
 
-    # Antwoorden op verbindingen die wij zelf zijn begonnen moeten erdoor, anders
-    # werkt de keepalive naar de server niet meer.
-    _iptables("-A", KETEN, "-m", "conntrack", "--ctstate",
-              "ESTABLISHED,RELATED", "-j", "ACCEPT")
-    _iptables("-A", KETEN, "-p", "tcp", "--dport", str(HUB_POORT), "-j", "ACCEPT")
-    # Pingen mag, dat helpt bij het zoeken naar een storing en geeft niets prijs.
-    _iptables("-A", KETEN, "-p", "icmp", "-j", "ACCEPT")
-    _iptables("-A", KETEN, "-j", "DROP")
+    Dit gaat met iptables-restore en niet met losse regels, en dat is geen
+    nettigheid. Eerder leegde deze functie de keten en bouwde hem daarna regel
+    voor regel opnieuw op. Wordt de app precies daartussen doodgeschoten, dan
+    blijft er een lege keten achter, en een lege keten laat álles door: niet
+    alleen ssh maar ook poort 80 met de wifi-pagina zonder wachtwoord. Dat is bij
+    een echte crashproef op hardware ook gebeurd.
 
-    # De keten aan de tunnel hangen, precies één keer.
+    Met iptables-restore wordt de hele keten in één keer vervangen. Er is dus
+    geen moment waarop hij half gevuld is.
+
+    Staat het noodluik open, dan hoort ssh erbij te blijven. Dat staat hier en
+    niet alleen bij het opstarten van de app: zit de dienst in een herstartlus,
+    dan wordt deze keten bij elke poging vervangen en zou de regel van het luik
+    anders telkens verdwijnen.
+    """
+    regels = [
+        "*filter",
+        f":{KETEN} - [0:0]",
+        # Antwoorden op verbindingen die wij zelf zijn begonnen moeten erdoor,
+        # anders werkt de keepalive naar de server niet meer.
+        f"-A {KETEN} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT",
+        f"-A {KETEN} -p tcp --dport {HUB_POORT} -j ACCEPT",
+    ]
+    if os.path.exists(NOODLUIK_OPEN):
+        regels.append(f"-A {KETEN} -p tcp --dport {SSH_POORT} -j ACCEPT")
+    regels += [
+        # Pingen mag, dat helpt bij het zoeken naar een storing en geeft niets prijs.
+        f"-A {KETEN} -p icmp -j ACCEPT",
+        f"-A {KETEN} -j DROP",
+        "COMMIT",
+        "",
+    ]
+    uit = _root(["iptables-restore", "--noflush"], invoer="\n".join(regels))
+    if uit.returncode != 0:
+        raise RuntimeError((uit.stderr or "").strip()[:200] or "firewall niet te zetten")
+
+    # De keten aan de tunnel hangen, precies één keer. Dit is één regel en dus
+    # niet half uit te voeren.
     _iptables("-D", "INPUT", "-i", WG_INTERFACE, "-j", KETEN)
     _iptables("-I", "INPUT", "1", "-i", WG_INTERFACE, "-j", KETEN, controleer=True)
     return True
