@@ -230,22 +230,16 @@
         <span class="free-badge">aanbevolen</span>
       </div>
 
-      <div class="toggle-row">
-        <label for="afstandAan">Toegang op afstand</label>
-        <label class="toggle">
-          <input type="checkbox" id="afstandAan" {% if config.afstand_aan %}checked{% endif %}>
-          <span class="slider"></span>
-        </label>
-      </div>
-
       <div class="note" id="afstandStand">Stand opvragen&hellip;</div>
 
       <details class="note">
         <summary>Hoe dit werkt</summary>
         Je hub maakt zelf verbinding met de server van SolarBuffer en houdt die
-        open. Er hoeft niets open in je router en je hebt geen vast IP-adres
-        nodig. Van buitenaf loopt het verkeer via die server; thuis praat de app
-        rechtstreeks met je hub en gaat er niets langs ons.
+        open, zodat de app je hub ook vindt als je niet thuis bent. Er hoeft niets
+        open in je router en je hebt geen vast IP-adres nodig. Van buitenaf loopt
+        het verkeer via die server; thuis praat de app rechtstreeks met je hub en
+        gaat er niets langs ons. Er gaat alleen een kenmerk van het apparaat en de
+        versie van de software naartoe, niets over jou of je verbruik.
       </details>
     </div>
 
@@ -283,11 +277,11 @@
         const d = await r.json();
         toonSupport(d);
         if (!d.gekoppeld) {
-          vak.textContent = 'Nog niet aangezet. Zet de schakelaar aan; dat duurt een paar seconden.';
+          vak.textContent = 'Nog bezig met aanmelden. Dat gebeurt vanzelf, meestal binnen een minuut na het opstarten.';
           return;
         }
         if (!d.actief) {
-          vak.textContent = 'Aangemeld, maar de verbinding staat niet. Zet de schakelaar uit en weer aan.';
+          vak.textContent = 'Aangemeld, maar de verbinding staat even niet. Hij probeert het elk kwartier opnieuw.';
           return;
         }
         if (!d.laatste_handshake) {
@@ -336,28 +330,6 @@
         }
       } catch (err) {
         document.getElementById('supportStand').textContent = 'Verbindingsfout.';
-        e.target.checked = !aan;
-      } finally {
-        e.target.disabled = false;
-      }
-    });
-
-    document.getElementById('afstandAan').addEventListener('change', async function (e) {
-      const aan = e.target.checked;
-      const vak = document.getElementById('afstandStand');
-      e.target.disabled = true;
-      vak.textContent = aan ? 'Bezig met aanzetten, dit duurt even\u2026' : 'Bezig met uitzetten\u2026';
-      try {
-        const r = await fetch(aan ? '/api/afstand/aan' : '/api/afstand/uit', { method: 'POST' });
-        const d = await r.json();
-        if (!d.ok) {
-          vak.textContent = d.error || 'Mislukt.';
-          e.target.checked = !aan;
-        } else {
-          await haalStand();
-        }
-      } catch (err) {
-        vak.textContent = 'Verbindingsfout.';
         e.target.checked = !aan;
       } finally {
         e.target.disabled = false;

@@ -10814,15 +10814,13 @@ def api_afstand_stand():
     return jsonify(stand)
 
 
-@app.route("/api/afstand/aan", methods=["POST"])
-def api_afstand_aan():
-    if not require_login():
-        return jsonify({"error": "unauthorized"}), 401
-    try:
-        gegevens = _afstand.zet_aan()
-    except Exception as e:
-        return jsonify({"error": str(e)[:300]}), 500
+def _afstand_inschrijven():
+    """Schrijft deze hub in bij de server en zet de tunnel op.
 
+    Geeft het antwoord van de server terug en bewaart wat er onthouden moet
+    worden. Wordt zowel bij het opstarten als vanuit de bewakingslus aangeroepen.
+    """
+    gegevens = _afstand.zet_aan()
     cfg = load_config()
     cfg["afstand_hub_id"] = gegevens.get("hub_id", "")
     # De toegangssleutel waarmee de app zich aan deze hub koppelt. Die staat hier
@@ -10832,19 +10830,36 @@ def api_afstand_aan():
     cfg["afstand_aan"] = True
     save_config(cfg)
     write_audit_log("afstand_aan", {"hub_id": cfg["afstand_hub_id"]})
-    return jsonify({"ok": True, "adres": gegevens.get("adres", "")})
+    return gegevens
 
 
-@app.route("/api/afstand/uit", methods=["POST"])
-def api_afstand_uit():
-    if not require_login():
-        return jsonify({"error": "unauthorized"}), 401
-    _afstand.zet_uit()
+def ensure_toegang_op_afstand():
+    """Zorgt dat deze hub van buitenaf bereikbaar is.
+
+    Dit is geen keuze meer van de klant: de app leunt erop, en een schakelaar die
+    standaard uit staat betekent dat iemand op vakantie "geen hub gevonden" te
+    zien krijgt en eerst een instelling moet vinden waarvan hij niet wist dat hij
+    bestond.
+
+    Wel blijft er een uitweg: staat afstand_aan in de configuratie uitdrukkelijk
+    op false, dan gebeurt hier niets. Die staat in geen enkel scherm, maar zo kan
+    een klant die er bezwaar tegen maakt met de hand worden ontzien zonder dat de
+    software daarvoor aangepast hoeft te worden.
+
+    Faalt het, dan is dat geen ramp en ook geen reden om door te drammen: de
+    bewakingslus probeert het elk kwartier opnieuw. Een hub die net opstart heeft
+    vaak nog geen netwerk.
+    """
     cfg = load_config()
-    cfg["afstand_aan"] = False
-    save_config(cfg)
-    write_audit_log("afstand_uit", {})
-    return jsonify({"ok": True})
+    if cfg.get("afstand_aan") is False and cfg.get("afstand_hub_id"):
+        return
+    if _afstand.stand().get("actief") and cfg.get("afstand_hub_id"):
+        return
+    try:
+        gegevens = _afstand_inschrijven()
+        print(f"[afstand] ingeschreven op {gegevens.get('adres')}")
+    except Exception as e:
+        print(f"[afstand] inschrijven nog niet gelukt: {e}")
 
 
 # Hoe lang support mag meekijken nadat de klant het aanzet. Een dag is genoeg om
@@ -10906,8 +10921,10 @@ def ensure_tunnel_firewall():
     regels er te zijn, ongeacht wat er in een bestand staat.
     """
     cfg = load_config()
-    draait = _afstand.stand().get("actief")
-    if not draait and not cfg.get("afstand_aan"):
+    # Alleen overslaan als deze hub uitdrukkelijk is ontzien én nog nergens staat
+    # ingeschreven; in elk ander geval horen de regels er te zijn voordat de
+    # tunnel opkomt.
+    if cfg.get("afstand_aan") is False and not cfg.get("afstand_hub_id"):
         return
     try:
         _afstand.firewall_opbouwen()
@@ -10928,6 +10945,7 @@ def afstand_bewaak_loop():
     alleen om te laten weten dat deze hub er is en welke versie hij draait.
     """
     laatste_klop = 0.0
+    laatste_poging = 0.0
     while True:
         try:
             cfg = load_config()
@@ -10939,8 +10957,23 @@ def afstand_bewaak_loop():
                 write_audit_log("support_toegang_verlopen", {})
 
             hub_id = cfg.get("afstand_hub_id") or ""
-            if (cfg.get("afstand_aan") and hub_id
-                    and time.time() - laatste_klop > 900):
+            uitgezet = cfg.get("afstand_aan") is False and hub_id
+
+            # Ligt de tunnel eruit, dan hem opnieuw opzetten. Dat gebeurt na een
+            # stroomstoring voordat er netwerk was, of als de server even weg was
+            # toen deze hub opstartte. Elk kwartier proberen is ruim genoeg en
+            # belast niemand.
+            if not uitgezet and time.time() - laatste_poging > 900:
+                laatste_poging = time.time()
+                if not _afstand.stand().get("actief") or not hub_id:
+                    try:
+                        _afstand_inschrijven()
+                    except Exception as e:
+                        print(f"[afstand] opnieuw inschrijven mislukte: {e}")
+                    cfg = load_config()
+                    hub_id = cfg.get("afstand_hub_id") or ""
+
+            if hub_id and not uitgezet and time.time() - laatste_klop > 900:
                 _afstand.klop(hub_id, float(cfg.get("afstand_support_tot") or 0))
                 laatste_klop = time.time()
         except Exception:
@@ -14424,6 +14457,7 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_mdns_service, daemon=True).start()
     threading.Thread(target=ensure_captive_portal, daemon=True).start()
     threading.Thread(target=ensure_tunnel_firewall, daemon=True).start()
+    threading.Thread(target=ensure_toegang_op_afstand, daemon=True).start()
     threading.Thread(target=afstand_bewaak_loop, daemon=True).start()
     import logging
     class _NoRequestLogs(logging.Filter):
