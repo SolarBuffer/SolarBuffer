@@ -1426,6 +1426,19 @@ def _legionella_trigger_due(triggers):
 
 # ================= FLASK =================
 app = Flask(__name__)
+
+# Statische bestanden vijf minuten laten bewaren door de browser.
+#
+# Flask zet er standaard no-cache op en laat de browser elk bestand bij elke
+# paginawissel opnieuw nakijken. Thuis kost dat vijf milliseconden per bestand en
+# merkt niemand het. Door de tunnel van buitenaf kost het er honderdzestig, en met
+# elf bestanden per pagina zie je de pagina zich dan opbouwen.
+#
+# Vijf minuten en niet langer: binnen een sessie verdwijnen die verzoeken
+# daarmee vrijwel allemaal, terwijl een klant na een update nooit langer dan dat
+# met oude opmaak zit. Een jaar bewaren zou sneller zijn, maar dan moeten de
+# adressen een versienummer dragen en dat staat op te veel plekken vast.
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 300
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "verander_dit_naar_iets_veiligs!")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
