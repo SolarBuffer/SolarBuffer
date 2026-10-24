@@ -228,13 +228,6 @@
 
         <div id="pushFields" style="display:none;">
           {% if push_aantal %}
-            <div class="hint-box">
-              {% if push_aantal == 1 %}
-                Je toestel is aangemeld en krijgt meldingen.
-              {% else %}
-                {{ push_aantal }} toestellen zijn aangemeld en krijgen meldingen.
-              {% endif %}
-            </div>
             <button type="button" class="btn-test" id="pushTestBtn" onclick="stuurPushTest()">Stuur testbericht</button>
             <div class="test-result" id="pushTestResult"></div>
           {% else %}

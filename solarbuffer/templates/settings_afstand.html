@@ -77,22 +77,6 @@
     }
     .field input:focus { outline: none; border-color: hsl(32, 85%, 55%); }
 
-    .hint-box {
-      background: hsl(215, 60%, 96%);
-      border: 1px solid hsl(215, 50%, 84%);
-      border-radius: 0.5rem;
-      padding: 0.75rem 0.9rem;
-      font-size: 0.8rem;
-      color: hsl(215, 50%, 30%);
-      line-height: 1.5;
-      margin-top: 0.75rem;
-    }
-    .hint-box code {
-      background: hsl(215, 50%, 88%);
-      border-radius: 3px;
-      padding: 1px 5px;
-      font-size: 0.78rem;
-    }
 
     .btn-test {
       display: block;
@@ -174,8 +158,6 @@
     html[data-theme="dark"] .field-help { color: hsl(224, 18%, 69%); }
     html[data-theme="dark"] .field input { background: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .field input:focus { border-color: hsl(32, 75%, 52%); }
-    html[data-theme="dark"] .hint-box { background: hsl(215, 20%, 24%); border-color: hsl(215, 20%, 34%); color: hsl(215, 30%, 70%); }
-    html[data-theme="dark"] .hint-box code { background: hsl(215, 20%, 30%); }
     html[data-theme="dark"] .events-list { color: hsl(224, 18%, 71%); }
     html[data-theme="dark"] .test-result { color: hsl(145, 50%, 56%); }
     html[data-theme="dark"] .test-result.err { color: hsl(0, 60%, 60%); }
@@ -226,19 +208,15 @@
         </label>
       </div>
 
-      <div class="hint-box" id="afstandStand">Stand opvragen&hellip;</div>
+      <div class="note" id="afstandStand">Stand opvragen&hellip;</div>
 
-      <div class="hint-box">
-        Je hub maakt hiervoor zelf verbinding met de server van SolarBuffer en
-        houdt die open. Er hoeft niets open in je router en je hebt geen vast
-        IP-adres nodig. Daarna vindt de app je hub ook als je niet thuis bent,
-        zonder dat je verder iets hoeft in te vullen.
-      </div>
-
-      <div class="hint-box">
-        Wat er wel verandert: het verkeer van buitenaf loopt via die server. Thuis
-        praat de app rechtstreeks met je hub en gaat er niets langs ons.
-      </div>
+      <details class="note">
+        <summary>Hoe dit werkt</summary>
+        Je hub maakt zelf verbinding met de server van SolarBuffer en houdt die
+        open. Er hoeft niets open in je router en je hebt geen vast IP-adres
+        nodig. Van buitenaf loopt het verkeer via die server; thuis praat de app
+        rechtstreeks met je hub en gaat er niets langs ons.
+      </details>
     </div>
 
     <div class="card">
@@ -252,19 +230,17 @@
         </label>
       </div>
 
-      <div class="hint-box" id="supportStand">&nbsp;</div>
+      <div class="note" id="supportStand">&nbsp;</div>
 
-      <div class="hint-box">
+      <details class="note">
+        <summary>Wat dit precies openzet</summary>
         Zet dit alleen aan als je om hulp hebt gevraagd. Zolang het uit staat kan
         niemand bij ons op je hub inloggen, ook niet met de verbinding hierboven
-        aan: die gaat alleen naar je dashboard, en daar hoort nog steeds je eigen
-        wachtwoord bij. Met deze schakelaar openen wij er een onderhoudsdeur bij,
-        en daarmee kunnen we alles op het apparaat.
-      </div>
-
-      <div class="hint-box">
-        Hij sluit zichzelf na 24 uur. Je kunt hem ook eerder weer uitzetten.
-      </div>
+        aan: die gaat alleen naar je dashboard en daar hoort je eigen wachtwoord
+        bij. Deze schakelaar opent er een onderhoudsdeur bij, en daarmee kunnen we
+        alles op het apparaat. Hij sluit zichzelf na 24 uur; eerder uitzetten kan
+        altijd.
+      </details>
     </div>
 {% endblock %}
 
