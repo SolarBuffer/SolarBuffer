@@ -195,7 +195,10 @@
       margin-top: 0.75rem;
     }
     html[data-theme="dark"] .note {
-      background: hsl(224, 38%, 15%);
+      /* Lichter dan de kaart en niet gelijk eraan. Met hsl(224,38%,15%) was dit
+         exact dezelfde kleur als .card en viel het vak in donkere modus volledig
+         weg; opgemeten rgb(24,31,53) voor allebei. */
+      background: hsl(224, 30%, 24%);
       color: hsl(224, 18%, 78%);
     }
     details.note > summary {
