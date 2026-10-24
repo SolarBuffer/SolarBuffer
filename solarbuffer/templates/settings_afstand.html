@@ -289,7 +289,12 @@
           return;
         }
         const geleden = Math.max(0, Math.round(Date.now() / 1000 - d.laatste_handshake));
-        vak.textContent = 'Verbonden met de server, laatste contact ' + geleden + ' seconden geleden.';
+        // Het hubnummer erbij, zodat SolarBuffer bij een telefoontje kan vragen
+        // welke hub het is. Alle hubs heten namelijk "SolarBuffer", dus zonder dit
+        // nummer is er niets om op te zoeken.
+        vak.innerHTML = 'Verbonden met de server, laatste contact ' + geleden
+          + ' seconden geleden.<br>Je hubnummer is <strong>' + (d.adres || 'nog onbekend')
+          + '</strong>. Dat kan SolarBuffer je vragen als je belt.';
         toonSupport(d);
       } catch (e) {
         vak.textContent = 'Stand niet op te vragen.';
