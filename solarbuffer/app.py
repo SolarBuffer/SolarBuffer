@@ -10855,9 +10855,16 @@ def ensure_tunnel_firewall():
     Dit moet bij elke start, want regels in iptables overleven een herstart niet.
     Zonder dit zou ssh na een stroomstoring open staan op de tunnel zonder dat
     iemand daarom heeft gevraagd.
+
+    De regels hangen met opzet aan de tunnel zelf en niet aan de schakelaar in de
+    configuratie. Die twee kunnen uit elkaar lopen, en dat is ook gebeurd: een
+    hub waarvan de tunnel aanstond terwijl de schakelaar op uit stond kreeg
+    helemaal geen regels, en dan staat ssh open. Draait de tunnel, dan horen de
+    regels er te zijn, ongeacht wat er in een bestand staat.
     """
     cfg = load_config()
-    if not cfg.get("afstand_aan"):
+    draait = _afstand.stand().get("actief")
+    if not draait and not cfg.get("afstand_aan"):
         return
     try:
         _afstand.firewall_opbouwen()
