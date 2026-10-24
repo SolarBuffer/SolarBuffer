@@ -10919,6 +10919,17 @@ def ensure_noodluik():
             subprocess.run(["sudo", "-n", "systemctl", "daemon-reload"],
                            capture_output=True, timeout=30)
             print("[noodluik] klaargezet")
+        # Een unit die op failed staat wordt door systemd niet meer gestart. Dat
+        # kon gebeuren voordat StartLimitIntervalSec er stond, en het hoeft niet
+        # met de hand te worden rechtgezet: zonder dit blijft het luik stil bij de
+        # volgende crash, en dat merk je pas als je het nodig hebt.
+        if subprocess.run(["systemctl", "is-failed", "solarbuffer-noodluik.service"],
+                          capture_output=True, text=True,
+                          timeout=15).stdout.strip() == "failed":
+            subprocess.run(["sudo", "-n", "systemctl", "reset-failed",
+                            "solarbuffer-noodluik.service"],
+                           capture_output=True, timeout=15)
+            print("[noodluik] gefaalde stand opgeruimd")
     except Exception as e:
         print(f"[noodluik] klaarzetten mislukt: {e}")
 
