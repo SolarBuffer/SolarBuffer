@@ -272,8 +272,18 @@ def _iptables(*argumenten, controleer=False):
     return uit.returncode == 0
 
 
+NOODLUIK_OPEN = "/run/solarbuffer-noodluik-open"
+
+
 def firewall_opbouwen():
-    """Zet de basisregels op de tunnel: alleen het dashboard, verder niets."""
+    """Zet de basisregels op de tunnel: alleen het dashboard, verder niets.
+
+    Staat het noodluik open, dan hoort ssh daarbij te blijven. Dat moet hier en
+    niet alleen bij het opstarten van de app: zit de dienst in een herstartlus,
+    dan wordt deze keten bij elke poging geleegd en verdwijnt de regel die het
+    luik net had gezet. Opgemerkt tijdens een echte crashproef, waarbij het luik
+    tweemaal openging en de regel er daarna toch niet stond.
+    """
     # Keten maken als hij er nog niet is, en legen als hij er al was.
     if not _iptables("-n", "-L", KETEN):
         _iptables("-N", KETEN)
@@ -286,6 +296,9 @@ def firewall_opbouwen():
     _iptables("-A", KETEN, "-p", "tcp", "--dport", str(HUB_POORT), "-j", "ACCEPT")
     # Pingen mag, dat helpt bij het zoeken naar een storing en geeft niets prijs.
     _iptables("-A", KETEN, "-p", "icmp", "-j", "ACCEPT")
+    # Vóór de DROP, anders heeft het geen zin.
+    if os.path.exists(NOODLUIK_OPEN):
+        _iptables("-A", KETEN, "-p", "tcp", "--dport", str(SSH_POORT), "-j", "ACCEPT")
     _iptables("-A", KETEN, "-j", "DROP")
 
     # De keten aan de tunnel hangen, precies één keer.

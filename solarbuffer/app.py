@@ -11028,11 +11028,8 @@ def ensure_tunnel_firewall():
         # Stond support nog open en is die tijd nog niet om, dan hoort hij open
         # te blijven; de klant zou anders midden in een gesprek dichtvallen.
         tot = float(cfg.get("afstand_support_tot") or 0)
-        # Ook het noodluik telt mee. Komt de software terug terwijl dat nog
-        # openstaat, dan zou het opnieuw opbouwen van de keten die deur
-        # dichtgooien, mogelijk terwijl er iemand aan het werk is.
-        if os.path.exists(NOODLUIK_OPEN):
-            tot = time.time() + 1
+        # Het noodluik hoeft hier niet meer: firewall_opbouwen hierboven zet die
+        # regel zelf terug zolang de markering in /run staat.
         if tot > time.time():
             _afstand.support_aan()
     except Exception as e:
