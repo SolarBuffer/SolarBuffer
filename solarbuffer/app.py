@@ -56,6 +56,15 @@ _broadlink_learn_state = {}  # learn_id -> {status, code, error}
 # ================= CONFIG =================
 BASE_DIR = os.path.dirname(__file__)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+
+# Rechten goedzetten zodra de software start. Het opslaan doet dat ook, maar op
+# een hub waar niemand iets wijzigt kan dat lang duren, en tot die tijd staat een
+# bestand met wachtwoordhashes en sleutels leesbaar voor elk account.
+try:
+    if os.path.exists(CONFIG_FILE):
+        os.chmod(CONFIG_FILE, 0o600)
+except OSError:
+    pass
 AUDIT_LOG_FILE = os.path.join(BASE_DIR, "audit.log")
 STATE_FILE = os.path.join(BASE_DIR, "state.json")
 ENERGY_BASELINES_FILE = os.path.join(BASE_DIR, "energy_baselines.json")
