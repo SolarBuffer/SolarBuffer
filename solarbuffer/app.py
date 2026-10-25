@@ -1439,7 +1439,43 @@ app = Flask(__name__)
 # met oude opmaak zit. Een jaar bewaren zou sneller zijn, maar dan moeten de
 # adressen een versienummer dragen en dat staat op te veel plekken vast.
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 300
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "verander_dit_naar_iets_veiligs!")
+def _sessie_sleutel():
+    """De sleutel waarmee sessiekoekjes worden ondertekend, uniek per hub.
+
+    Dit moet per hub verschillen, en dat was het niet: er stond een vaste waarde
+    in de code. Daardoor accepteerde elke hub het sessiekoekje van elke andere
+    hub, want ze ondertekenden allemaal met hetzelfde geheim. Wie op één hub kon
+    inloggen was daarmee ingelogd op alle hubs die hij via de tunnel bereikt.
+
+    De sleutel staat in een bestand naast de configuratie en wordt bij de eerste
+    start aangemaakt. In een bestand en niet puur in de omgeving, zodat een
+    sessie een herstart overleeft en niemand opnieuw hoeft in te loggen. Een
+    waarde uit de omgeving gaat voor, voor wie hem liever daar zet.
+    """
+    uit_omgeving = os.environ.get("FLASK_SECRET_KEY", "").strip()
+    if uit_omgeving:
+        return uit_omgeving
+    pad = os.path.join(BASE_DIR, "secret_key")
+    try:
+        with open(pad, "r", encoding="utf-8") as f:
+            waarde = f.read().strip()
+        if waarde:
+            return waarde
+    except OSError:
+        pass
+    waarde = secrets.token_hex(32)
+    try:
+        beschrijving = os.open(pad, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(beschrijving, "w", encoding="utf-8") as f:
+            f.write(waarde)
+    except OSError as e:
+        # Lukt opslaan niet, dan nog altijd een eigen sleutel voor deze draai;
+        # beter een sessie die een herstart niet overleeft dan een gedeeld geheim.
+        print(f"[sessie] kon de sleutel niet bewaren: {e}")
+    return waarde
+
+
+app.secret_key = _sessie_sleutel()
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",

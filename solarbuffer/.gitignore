@@ -11,6 +11,10 @@ audit.log
 # API-tokens geven dezelfde toegang als een wachtwoord
 api_tokens.json
 
+# De sleutel waarmee sessiekoekjes worden ondertekend. Moet per hub verschillen;
+# kwam hij in git, dan deelden alle hubs hem weer en was het lek terug.
+secret_key
+
 # Meethistorie
 history.db
 history.db-wal
