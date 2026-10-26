@@ -527,6 +527,13 @@ def load_config():
     while len(cfg["battery_tokens"]) < _n_bats:
         cfg["battery_tokens"].append("")
     cfg["battery_tokens"] = cfg["battery_tokens"][:_n_bats]
+    # MAC-adressen van de accu's, om ze terug te vinden als hun IP wijzigt.
+    # Wordt vanzelf gevuld bij de eerste geslaagde uitlezing.
+    if "battery_macs" not in cfg:
+        cfg["battery_macs"] = []
+    while len(cfg["battery_macs"]) < _n_bats:
+        cfg["battery_macs"].append("")
+    cfg["battery_macs"] = cfg["battery_macs"][:_n_bats]
     if "battery_control_token" not in cfg:
         cfg["battery_control_token"] = ""
     if "marstek_port" not in cfg:
@@ -1802,6 +1809,12 @@ MAC_RESCAN_AFTER = 30      # s: pas herkoppelen na deze onafgebroken offline-tij
 MAC_RESCAN_COOLDOWN = 90   # s: minimale tijd tussen twee scanpogingen per apparaat
 AUX_MAC_RESCAN_COOLDOWN = 900  # s: stekker/vermogensmeter zijn minder urgent — max 1x per 15 min
 
+# Per accu-adres: sinds wanneer onbereikbaar, en wanneer we voor het laatst naar
+# zijn MAC-adres hebben gezocht. Een accu die van IP wisselt is niet stuk, dus
+# die willen we terugvinden in plaats van hem uit de optelsom te laten vallen.
+_accu_offline_sinds = {}
+_accu_laatste_scan = {}
+
 
 def get_mac_for_type(ip, dev_type):
     t = (dev_type or "").lower().strip()
@@ -2528,6 +2541,16 @@ def settings_p1():
         # Sync lengte met battery_ips
         while len(cfg["battery_tokens"]) < len(cfg["battery_ips"]):
             cfg["battery_tokens"].append("")
+        # De onthouden MAC-adressen schuiven mee met de rijen. Wie zelf het IP van
+        # een rij wijzigt, bedoelt mogelijk een andere accu; dan vergeten we het
+        # MAC daar en wordt het bij de eerstvolgende uitlezing opnieuw opgehaald.
+        oude_ips = old_cfg.get("battery_ips") or []
+        oude_macs = old_cfg.get("battery_macs") or []
+        cfg["battery_macs"] = [
+            (oude_macs[idx] if idx < len(oude_macs) else "")
+            if (idx < len(oude_ips) and oude_ips[idx] == ip) else ""
+            for idx, ip in enumerate(cfg["battery_ips"])
+        ]
         cfg["battery_control_token"] = request.form.get("battery_control_token", "").strip()
         try:
             cfg["marstek_port"] = int(request.form.get("marstek_port", 30000))
@@ -13235,6 +13258,124 @@ def get_battery_measurement(ip, token):
     return r.json()
 
 
+def get_battery_serial(ip, token):
+    """Serienummer en type van een HomeWizard-accu, als MAC-adres teruggegeven.
+
+    Bij HomeWizard is het serienummer het MAC-adres. Anders dan bij de P1-meter
+    en de Shelly's kan dit niet zonder token: poort 80 is bij een accu dicht en
+    /api antwoordt zonder token met 401. Dat is hier geen bezwaar maar juist
+    handig: een token hoort bij precies één apparaat, dus een accu die met dit
+    token antwoordt is per definitie de accu die we zoeken.
+    """
+    try:
+        r = requests.get(
+            f"https://{ip}/api",
+            headers=_hw_v2_headers(token), timeout=2, verify=False,
+        )
+        if r.status_code != 200:
+            return None, None
+        d = r.json()
+        rauw = (d.get("serial") or "").strip()
+        return (format_mac(rauw) if rauw else None), (d.get("product_type") or "").strip()
+    except Exception:
+        return None, None
+
+
+def zoek_accu_op_mac(mac, token):
+    """Zoek de accu met dit MAC-adres terug op het netwerk.
+
+    Nodig omdat een router bij een herstart zomaar een ander adres kan uitdelen;
+    dan is de accu niet stuk, hij staat alleen ergens anders. Het token blijft
+    daarbij gewoon geldig, want dat zit op de accu en niet aan zijn adres.
+
+    We filteren eerst op poort 443, want dat is de enige poort die een accu
+    opent. Daarna is het antwoord het bewijs: alleen de juiste accu geeft met
+    dit token een 200 met het verwachte serienummer terug.
+    """
+    doel = (mac or "").upper()
+    if not doel or not token:
+        return None
+    ips = filter_live_hosts(get_subnet_ips(), port=443)
+    with ThreadPoolExecutor(max_workers=25) as executor:
+        futures = {executor.submit(get_battery_serial, ip, token): ip for ip in ips}
+        for future in as_completed(futures):
+            ip = futures[future]
+            try:
+                gevonden, soort = future.result()
+                if gevonden and gevonden.upper() == doel and soort == "HWE-BAT":
+                    return ip
+            except Exception:
+                pass
+    return None
+
+
+def onthoud_accu_mac(ip, mac):
+    """Zet het MAC-adres bij de accu op dit IP, als het er nog niet staat."""
+    if not mac:
+        return
+    cfg = load_config()
+    ips = cfg.get("battery_ips") or []
+    macs = cfg.get("battery_macs") or []
+    while len(macs) < len(ips):
+        macs.append("")
+    for i, bekend_ip in enumerate(ips):
+        if bekend_ip == ip and not (macs[i] or "").strip():
+            macs[i] = mac
+            cfg["battery_macs"] = macs
+            save_config(cfg)
+            print(f"[BAT] MAC onthouden voor {ip}: {mac}")
+            return
+
+
+def herstel_accu_adres(index, ip, token, fout):
+    """Een accu antwoordde niet. Kijk of hij op een ander adres staat.
+
+    Pas na MAC_RESCAN_AFTER, want een enkele time-out hoort bij het leven en een
+    netwerkscan is te zwaar om daar meteen op los te laten. Zonder bekend MAC
+    kan dit niet; dat is het geval bij een accu waarvan het token is verlopen,
+    want dan is het serienummer nooit opgehaald.
+    """
+    nu = time.time()
+    _accu_offline_sinds.setdefault(ip, nu)
+    offline_voor = nu - _accu_offline_sinds[ip]
+    print(f"[BAT] accu {index + 1} ({ip}) antwoordt niet: "
+          f"{type(fout).__name__} — {int(offline_voor)}s offline")
+    if offline_voor < MAC_RESCAN_AFTER:
+        return
+    if nu - _accu_laatste_scan.get(ip, 0) < MAC_RESCAN_COOLDOWN:
+        return
+    _accu_laatste_scan[ip] = nu
+    cfg = load_config()
+    macs = cfg.get("battery_macs") or []
+    mac = (macs[index] if index < len(macs) else "") or ""
+    if not mac.strip():
+        print(f"[BAT] accu {index + 1} ({ip}): geen MAC bekend, zoeken kan niet")
+        return
+    print(f"[BAT] accu {index + 1}: zoeken naar {mac} op het netwerk")
+    gevonden = zoek_accu_op_mac(mac, token)
+    if not gevonden:
+        print(f"[BAT] accu {index + 1}: {mac} nergens gevonden")
+        return
+    if gevonden == ip:
+        print(f"[BAT] accu {index + 1}: staat nog op {ip}, dus het ligt niet aan het adres")
+        return
+    cfg = load_config()
+    ips = cfg.get("battery_ips") or []
+    if index < len(ips):
+        ips[index] = gevonden
+        cfg["battery_ips"] = ips
+        save_config(cfg)
+        _accu_offline_sinds.pop(ip, None)
+        _accu_laatste_scan.pop(ip, None)
+        print(f"[BAT] accu {index + 1} teruggevonden: {ip} → {gevonden}")
+        write_audit_log("battery_ip_relocated",
+                        {"index": index + 1, "van": ip, "naar": gevonden, "mac": mac})
+        send_notification(
+            f"🔋 Accu {index + 1} had een ander IP-adres gekregen en is "
+            f"teruggevonden op <b>{gevonden}</b>.",
+            event_key="ntfy_notify_battery_relocated")
+
+
 def get_battery_control(control_ip, token):
     r = requests.get(
         f"https://{control_ip}/api/batteries",
@@ -13778,6 +13919,14 @@ def battery_poll_loop():
                     try:
                         data = get_battery_measurement(ip, token)
                         any_online = True
+                        _accu_offline_sinds.pop(ip, None)
+                        # MAC onthouden zodra het kan, zodat deze accu later op
+                        # een ander adres terug te vinden is. Gebeurt eenmalig.
+                        _macs = cfg.get("battery_macs") or []
+                        if not ((_macs[i] if i < len(_macs) else "") or "").strip():
+                            _mac, _soort = get_battery_serial(ip, token)
+                            if _mac and _soort == "HWE-BAT":
+                                onthoud_accu_mac(ip, _mac)
                         soc = data.get("state_of_charge_pct")
                         pw = data.get("power_w")
                         vv = data.get("voltage_v")
@@ -13798,8 +13947,11 @@ def battery_poll_loop():
                             import_total += float(ei)
                         if ee is not None:
                             export_total += float(ee)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        # Niet wegslikken: een accu die stilletjes uit de optelsom
+                        # valt, maakt het gemeten vermogen en de SoC te laag, en
+                        # daarop blokkeert de regeling de boiler.
+                        herstel_accu_adres(i, ip, token, e)
                 if any_online:
                     today = datetime.now().strftime('%Y-%m-%d')
                     if _bat_day_date != today or _bat_charge_start_kwh is None:
