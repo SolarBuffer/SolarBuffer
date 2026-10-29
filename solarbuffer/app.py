@@ -2164,6 +2164,12 @@ def first_boot_user():
 def login():
     if is_first_boot():
         return redirect("/first_boot/welcome")
+    # Al binnen? Dan is dit scherm een dubbele deur. Dat gebeurt sinds de app
+    # met een toegangsbewijs binnenkomt: het bewijs is na anderhalve minuut
+    # verlopen, en een pagina die daarna herlaadt kwam hier terecht terwijl de
+    # sessie gewoon nog liep.
+    if session.get("logged_in"):
+        return redirect("/")
     cfg = load_config()
     client_ip = get_client_ip()
 
