@@ -2170,6 +2170,15 @@ def login():
     # sessie gewoon nog liep.
     if session.get("logged_in"):
         return redirect("/")
+    # Via hub.solarbuffer.nl hoef je hier niet te zijn: daar weet de server al
+    # wie je bent en maakt hij een vers toegangsbewijs. Dit is het scherm dat
+    # anders als tweede inlog verschijnt nadat je net op je account inlogde.
+    #
+    # Behalve als er juist een bewijs is afgekeurd; dan zou terugsturen een
+    # kringetje worden en is dit scherm het eerlijke antwoord.
+    if (request.method == "GET" and _via_toegangsserver()
+            and request.args.get("bewijs") != "afgekeurd"):
+        return redirect("/account/naar-hub")
     cfg = load_config()
     client_ip = get_client_ip()
 
@@ -2198,7 +2207,29 @@ def logout():
     old_username = session.get("username", "unknown")
     session.clear()
     write_audit_log("logout", {"username": old_username})
+    # Kwam je via hub.solarbuffer.nl binnen, dan ben je hier met een account en
+    # hoort uitloggen ook dat account uit te loggen. Alleen de hubsessie wissen
+    # laat je achter op het inlogscherm van de hub terwijl je even later met
+    # hetzelfde account zo weer binnen bent; dat is geen uitloggen.
+    if _via_toegangsserver():
+        return redirect("/account/uitloggen")
     return redirect("/login")
+
+
+def _via_toegangsserver():
+    """Of dit verzoek via hub.solarbuffer.nl binnenkwam en niet over het LAN.
+
+    nginx geeft de oorspronkelijke Host door, dus die naam is hier te zien.
+    """
+    from urllib.parse import urlparse
+    # Zelfde dans als onderaan dit bestand: de hub draait zowel als pakket als
+    # los script, en dan werkt maar een van de twee invoerregels.
+    try:
+        from .afstand import SERVER
+    except ImportError:
+        from afstand import SERVER
+    eigen = (urlparse(SERVER).hostname or "").lower()
+    return bool(eigen) and (request.host or "").split(":")[0].lower() == eigen
 
 
 def _cors_headers(response):
@@ -11205,7 +11236,7 @@ def afstand_toegang():
     cfg = load_config()
     sleutel = (cfg.get("afstand_toegangssleutel") or "").strip()
     if not sleutel or bewijs.count(".") != 1:
-        return redirect("/login")
+        return redirect("/login?bewijs=afgekeurd")
 
     deel, gegeven = bewijs.split(".")
     verwacht = base64.urlsafe_b64encode(
@@ -11215,20 +11246,20 @@ def afstand_toegang():
     # ver iemand ernaast zat.
     if not hmac.compare_digest(verwacht, gegeven):
         write_audit_log("afstand_bewijs_afgekeurd", {"reden": "handtekening"})
-        return redirect("/login")
+        return redirect("/login?bewijs=afgekeurd")
 
     try:
         lading = json.loads(base64.urlsafe_b64decode(
             deel + "=" * (-len(deel) % 4)).decode())
     except Exception:
-        return redirect("/login")
+        return redirect("/login?bewijs=afgekeurd")
     if float(lading.get("t", 0)) < time.time():
         write_audit_log("afstand_bewijs_afgekeurd", {"reden": "verlopen"})
-        return redirect("/login")
+        return redirect("/login?bewijs=afgekeurd")
 
     naam = (lading.get("e") or "").strip().lower()
     if not naam:
-        return redirect("/login")
+        return redirect("/login?bewijs=afgekeurd")
     rol = "admin" if lading.get("r") == "eigenaar" else "viewer"
 
     # De gebruiker moet in de eigen lijst staan, want daar hangt de rest aan:
