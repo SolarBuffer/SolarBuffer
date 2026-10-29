@@ -935,6 +935,12 @@ _bat_int_charge_wh = 0.0
 _bat_int_discharge_wh = 0.0
 _bat_int_last_ts = None
 _bat_int_last_save = 0.0
+# Per accu het ijkpunt van vandaag, met het MAC-adres als sleutel en anders het
+# IP. Eén optelsom met één ijkpunt gaat mis zodra het aantal accu's dat antwoordt
+# verandert: bij Ludwig stond het ijkpunt op twee accu's en gingen er later vier
+# antwoorden, en toen telde de levensloop van die twee erbij als "vandaag
+# geladen". Per accu bijhouden is de enige manier waarop dat niet kan gebeuren.
+_bat_per_accu = {}
 _bat_charge_start_kwh = None
 _bat_discharge_start_kwh = None
 _last_marstek_send = 0.0
@@ -13525,10 +13531,15 @@ def get_battery_meter_power(cfg):
 
 def battery_poll_loop():
     global battery_state, _bat_day_date, _bat_charge_start_kwh, _bat_discharge_start_kwh
+    global _bat_per_accu  # noqa: wordt in de lus herschreven bij een nieuwe dag
     bl = load_energy_baselines().get("__battery__", {})
     _bat_day_date = bl.get("date")
     _bat_charge_start_kwh = bl.get("charge_start_kwh")
     _bat_discharge_start_kwh = bl.get("discharge_start_kwh")
+    # Oude bestanden hebben alleen één optelsom. Die is niet om te rekenen naar
+    # een stand per accu, dus dan begint de dagteller opnieuw. Dat is beter dan
+    # verder rekenen met een getal waarvan we weten dat het niet klopt.
+    _bat_per_accu = dict(bl.get("per") or {})
     _marstek_fail_streak = 0
     while True:
         poll_interval = 5
@@ -13912,6 +13923,12 @@ def battery_poll_loop():
                 import_total, export_total = 0.0, 0.0
                 cycles_total = 0
                 any_online = False
+                # Per accu de standen van dit moment, met het MAC-adres als
+                # sleutel en anders het IP. Nodig omdat de dagteller per accu
+                # moet worden bijgehouden: telde je de som af tegen één ijkpunt,
+                # dan springt die som zodra er een accu bij komt of wegvalt.
+                _macs_nu = cfg.get("battery_macs") or []
+                standen_nu = {}
                 for i, ip in enumerate(ips):
                     token = tokens[i] if i < len(tokens) else ""
                     if not token:
@@ -13947,6 +13964,10 @@ def battery_poll_loop():
                             import_total += float(ei)
                         if ee is not None:
                             export_total += float(ee)
+                        _sleutel = ((_macs_nu[i] if i < len(_macs_nu) else "")
+                                    or "").strip() or ip
+                        if ei is not None and ee is not None:
+                            standen_nu[_sleutel] = (float(ei), float(ee))
                     except Exception as e:
                         # Niet wegslikken: een accu die stilletjes uit de optelsom
                         # valt, maakt het gemeten vermogen en de SoC te laag, en
@@ -13954,18 +13975,33 @@ def battery_poll_loop():
                         herstel_accu_adres(i, ip, token, e)
                 if any_online:
                     today = datetime.now().strftime('%Y-%m-%d')
-                    if _bat_day_date != today or _bat_charge_start_kwh is None:
+                    nieuwe_dag = _bat_day_date != today
+                    if nieuwe_dag:
                         _bat_day_date = today
-                        _bat_charge_start_kwh = import_total
-                        _bat_discharge_start_kwh = export_total
+                        _bat_per_accu = {}
+                    gewijzigd = nieuwe_dag
+                    geladen = ontladen = 0.0
+                    for _sleutel, (_imp, _exp) in standen_nu.items():
+                        _ijk = _bat_per_accu.get(_sleutel)
+                        # Een accu die vandaag pas voor het eerst antwoordt krijgt
+                        # zijn huidige stand als ijkpunt. Zonder dit zou zijn hele
+                        # levensloop als "vandaag geladen" meetellen. Dat gebeurde
+                        # bij een klant die er twee van de vier kon uitlezen toen
+                        # het ijkpunt werd gezet, en vier toen hij werd gelezen.
+                        if (_ijk is None or _imp < _ijk.get("i", 0)
+                                or _exp < _ijk.get("e", 0)):
+                            _bat_per_accu[_sleutel] = {"i": _imp, "e": _exp}
+                            gewijzigd = True
+                            continue
+                        geladen += _imp - _ijk["i"]
+                        ontladen += _exp - _ijk["e"]
+                    if gewijzigd:
                         _energy_baselines["__battery__"] = {
-                            "date": today,
-                            "charge_start_kwh": import_total,
-                            "discharge_start_kwh": export_total,
+                            "date": today, "per": _bat_per_accu,
                         }
                         save_energy_baselines()
-                    charge_today = round(max(0.0, import_total - _bat_charge_start_kwh), 2)
-                    discharge_today = round(max(0.0, export_total - _bat_discharge_start_kwh), 2)
+                    charge_today = round(max(0.0, geladen), 2)
+                    discharge_today = round(max(0.0, ontladen), 2)
                     battery_state.update({
                         "soc": round(sum(soc_list) / len(soc_list), 1) if soc_list else None,
                         "power_w": round(power_total, 1),
