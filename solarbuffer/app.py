@@ -10,6 +10,7 @@ import subprocess
 import uuid
 import re
 import traceback
+import base64
 import hashlib
 import hmac
 import secrets
