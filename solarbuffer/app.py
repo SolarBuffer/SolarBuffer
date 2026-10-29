@@ -10,6 +10,8 @@ import subprocess
 import uuid
 import re
 import traceback
+import hashlib
+import hmac
 import secrets
 import shutil
 import sqlite3
@@ -11174,6 +11176,79 @@ def afstand_bewaak_loop():
         except Exception:
             pass
         time.sleep(60)
+
+
+@app.route("/afstand/toegang")
+def afstand_toegang():
+    """Binnenkomen met een bewijs dat de server heeft ondertekend.
+
+    Hiermee hoeft iemand die al op zijn account is ingelogd niet nog een keer
+    op deze hub in te loggen. Het bewijs is ondertekend met de toegangssleutel
+    van juist deze hub, en die heeft hij al sinds zijn inschrijving. Daardoor is
+    dit hier te controleren zonder internet: als de verbinding met de server
+    wegvalt blijft een bewijs dat al is uitgegeven gewoon werken, en dat is het
+    moment waarop iemand juist wil kunnen kijken.
+
+    Dat de handtekening per hub verschilt is geen detail: een gestolen sleutel
+    van de ene hub kan geen bewijs maken dat op een andere hub werkt.
+    """
+    from werkzeug.security import generate_password_hash
+
+    bewijs = (request.args.get("bewijs") or "").strip()
+    cfg = load_config()
+    sleutel = (cfg.get("afstand_toegangssleutel") or "").strip()
+    if not sleutel or bewijs.count(".") != 1:
+        return redirect("/login")
+
+    deel, gegeven = bewijs.split(".")
+    verwacht = base64.urlsafe_b64encode(
+        hmac.new(sleutel.encode(), deel.encode(), hashlib.sha256).digest()
+    ).rstrip(b"=").decode()
+    # compare_digest en niet ==, zodat de vergelijking niets verraadt over hoe
+    # ver iemand ernaast zat.
+    if not hmac.compare_digest(verwacht, gegeven):
+        write_audit_log("afstand_bewijs_afgekeurd", {"reden": "handtekening"})
+        return redirect("/login")
+
+    try:
+        lading = json.loads(base64.urlsafe_b64decode(
+            deel + "=" * (-len(deel) % 4)).decode())
+    except Exception:
+        return redirect("/login")
+    if float(lading.get("t", 0)) < time.time():
+        write_audit_log("afstand_bewijs_afgekeurd", {"reden": "verlopen"})
+        return redirect("/login")
+
+    naam = (lading.get("e") or "").strip().lower()
+    if not naam:
+        return redirect("/login")
+    rol = "admin" if lading.get("r") == "eigenaar" else "viewer"
+
+    # De gebruiker moet in de eigen lijst staan, want daar hangt de rest aan:
+    # of iemand beheerder is, zijn donkere modus, en bij wie een melding hoort.
+    # Hij krijgt een onbruikbaar wachtwoord: inloggen met dit account kan alleen
+    # via de server, niet met een wachtwoord op deze pagina.
+    gebruikers = cfg.get("users", [])
+    bestaand = next((u for u in gebruikers if u.get("username") == naam), None)
+    if bestaand is None:
+        gebruikers.append({
+            "username": naam,
+            "password_hash": generate_password_hash(secrets.token_urlsafe(32)),
+            "dark_mode": False,
+            "role": rol,
+            "via_account": True,
+        })
+        cfg["users"] = gebruikers
+        save_config(cfg)
+        write_audit_log("gebruiker_via_account", {"username": naam, "role": rol})
+    elif bestaand.get("via_account") and bestaand.get("role") != rol:
+        bestaand["role"] = rol
+        save_config(cfg)
+
+    session["logged_in"] = True
+    session["username"] = naam
+    write_audit_log("login_via_account", {"username": naam})
+    return redirect("/")
 
 
 @app.route("/api/afstand/sleutel")
