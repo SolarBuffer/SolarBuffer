@@ -8047,6 +8047,26 @@ def _voer_app_update_uit(aanleiding):
         print(f"Update fout ({aanleiding}): {e}")
 
 
+def update_bewaak_loop():
+    """Kijkt elke tien minuten of er een nieuwe versie klaarstaat.
+
+    Een eigen lus en niet meeliften op de MQTT-lus, waar dit eerst in zat. Die
+    lus springt er bovenaan uit zodra MQTT uit staat of er geen broker is
+    ingevuld, en bij de meeste klanten is dat zo. Op die hubs is dus nooit
+    gekeken of er een update was: geen stipje in het menu, en sinds kort ook
+    geen balk op het dashboard, terwijl de update gewoon klaarlag.
+    """
+    # Even wachten na het opstarten: het netwerk is er dan nog niet altijd, en
+    # een mislukte eerste poging zou tien minuten blijven staan.
+    time.sleep(90)
+    while True:
+        try:
+            _check_update_available()
+        except Exception as e:
+            print(f"[update] controle mislukt: {e}")
+        time.sleep(600)
+
+
 def _check_update_available():
     global _update_available
     try:
@@ -8382,7 +8402,6 @@ def mqtt_loop():
     current_key = None
     client = None
     last_publish = 0
-    last_update_check = 0
 
     while True:
         try:
@@ -8494,10 +8513,6 @@ def mqtt_loop():
                 prefix = cfg.get("mqtt_topic_prefix", "solarbuffer")
                 _publish_mqtt_state(client, prefix, cfg)
                 last_publish = now
-
-            if now - last_update_check >= 600:
-                threading.Thread(target=_check_update_available, daemon=True).start()
-                last_update_check = now
 
             time.sleep(5)
 
@@ -15011,6 +15026,7 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_ssh_available, daemon=True).start()
     threading.Thread(target=ensure_git_remote_uses_deploy_key, daemon=True).start()
     threading.Thread(target=ensure_no_nightly_autoupdate, daemon=True).start()
+    threading.Thread(target=update_bewaak_loop, daemon=True).start()
     threading.Thread(target=ensure_shelly_ble_available, daemon=True).start()
     threading.Thread(target=ensure_mdns_service, daemon=True).start()
     threading.Thread(target=ensure_captive_portal, daemon=True).start()
