@@ -131,6 +131,16 @@ def apparaat_id():
     return ""
 
 
+# Wat deze versie van de hub aankan, zodat de server en de app dat niet uit een
+# versienummer hoeven te raden. Een oude hub noemt dit niet, en dan weet de
+# server dat hij het niet kan; dat is precies het verschil dat nodig is.
+#
+# "bewijs" betekent: deze hub kent /afstand/toegang en laat iemand binnen met
+# een door de server ondertekend toegangsbewijs. Stuurt de app dat adres naar
+# een hub die het niet kent, dan krijgt de klant een kale 404 in zijn app.
+KUNSTJES = ["bewijs"]
+
+
 def klop(hub_id, support_tot=0, tijd=10):
     """Laat de server weten dat deze hub er is, welke versie hij draait en of de
     onderhoudsdeur openstaat.
@@ -142,7 +152,8 @@ def klop(hub_id, support_tot=0, tijd=10):
     try:
         requests.post(f"{SERVER}/v1/klop", timeout=tijd, json={
             "hub_id": hub_id, "versie": versie(), "naam": naam(),
-            "apparaat_id": apparaat_id(), "support_tot": support_tot})
+            "apparaat_id": apparaat_id(), "support_tot": support_tot,
+            "kan": KUNSTJES})
         return True
     except Exception:
         return False
