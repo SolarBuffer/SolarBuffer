@@ -1635,6 +1635,11 @@
       text-decoration: none;
     }
     .update-banner i { flex-shrink: 0; font-size: 1.05rem; line-height: 1; }
+    /* Dezelfde balk, maar dan als knop. Een knop brengt zijn eigen opmaak mee
+       en die moet eraf, anders staat hij smal en grijs tussen de rest. */
+    button.update-banner {
+      width: 100%; cursor: pointer; font-family: inherit; text-align: left;
+    }
     .update-banner .pijl { margin-left: auto; opacity: 0.7; }
     html[data-theme="dark"] .update-banner {
       background: hsl(32, 40%, 22%); color: hsl(32, 95%, 72%);
@@ -2957,6 +2962,15 @@
       </div>
     </div>
 
+    <!-- Wie het koppelscherm wegklikte krijgt deze balk in de plaats. Zonder
+         dat is er een dag lang geen weg terug, en dat is precies het moment
+         waarop iemand het alsnog wil doen. -->
+    <button type="button" id="koppelBanner" class="update-banner" style="display:none;">
+      <i class="mdi mdi-link-variant"></i>
+      <span>Koppel deze hub aan je SolarBuffer-account</span>
+      <i class="mdi mdi-chevron-right pijl"></i>
+    </button>
+
     <a id="updateBanner" class="update-banner" href="/updates" style="display:none;">
       <i class="mdi mdi-arrow-up-circle"></i>
       <span>Er is een nieuwe versie voor je hub</span>
@@ -3577,10 +3591,13 @@
 
     function renderKoppelScherm(data) {
       const scherm = document.getElementById("koppelScherm");
+      const balk = document.getElementById("koppelBanner");
       if (!scherm) return;
       const stand = data.account_koppeling;
-      const nodig = stand && stand.gekoppeld === false && !koppelUitgesteld();
-      scherm.style.display = nodig ? "flex" : "none";
+      const ongekoppeld = !!(stand && stand.gekoppeld === false);
+      const uitgesteld = koppelUitgesteld();
+      scherm.style.display = (ongekoppeld && !uitgesteld) ? "flex" : "none";
+      if (balk) balk.style.display = (ongekoppeld && uitgesteld) ? "flex" : "none";
     }
 
     (function () {
@@ -3591,7 +3608,18 @@
           localStorage.setItem(KOPPEL_UITSTEL, String(Date.now() + 86400000));
         } catch (e) {}
         document.getElementById("koppelScherm").style.display = "none";
+        const balk = document.getElementById("koppelBanner");
+        if (balk) balk.style.display = "flex";
       });
+
+      const balk = document.getElementById("koppelBanner");
+      if (balk) {
+        balk.addEventListener("click", function () {
+          try { localStorage.removeItem(KOPPEL_UITSTEL); } catch (e) {}
+          balk.style.display = "none";
+          document.getElementById("koppelScherm").style.display = "flex";
+        });
+      }
     })();
 
     (function () {
