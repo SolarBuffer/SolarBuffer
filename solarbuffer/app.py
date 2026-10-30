@@ -1518,6 +1518,16 @@ def _get_bearer_username():
 
 def require_login():
     if session.get("logged_in"):
+        # Bestaat deze gebruiker nog wel? Dat werd niet gecontroleerd, en
+        # daardoor bleef iemand die je van de gebruikerspagina had verwijderd
+        # gewoon binnen zolang zijn tabblad openstond of zijn koekje gold.
+        # Verwijderen voelde als dichtdoen en was het niet.
+        naam = session.get("username")
+        if naam:
+            namen = {u.get("username") for u in load_config().get("users", [])}
+            if namen and naam not in namen:
+                session.clear()
+                return False
         return True
     return _get_bearer_username() is not None
 
@@ -11277,6 +11287,39 @@ def afstand_bewaak_loop():
 _koppelstand = {"op": 0.0, "stand": None}
 
 
+def _ruim_ingetrokken_op(stand):
+    """Haalt gebruikers weg die hun toegang via het account zijn kwijtgeraakt.
+
+    Een uitnodiging intrekken gebeurt op de server, en de hub hoorde daar
+    nooit iets van. De gebruiker die bij het aannemen van die uitnodiging hier
+    is aangemaakt bleef dus staan, en wie nog een lopende sessie had kwam
+    gewoon weer binnen. Verwijderen voelde als dichtdoen en was het niet.
+
+    Alleen gebruikers met via_account: wie jij met de hand hebt aangemaakt
+    blijft staan, ook als hij toevallig niet in die lijst voorkomt.
+    """
+    if not stand or not stand.get("gekoppeld"):
+        return
+    mogen = {str(e).strip().lower() for e in (stand.get("mensen") or [])}
+    # Een leeg antwoord kan ook betekenen dat deze server de lijst nog niet
+    # meestuurt. Dan niets opruimen, want dan gooien we iedereen eruit.
+    if not mogen:
+        return
+    cfg = load_config()
+    gebruikers = cfg.get("users", [])
+    houden = [u for u in gebruikers
+              if not u.get("via_account")
+              or str(u.get("username", "")).strip().lower() in mogen]
+    if len(houden) == len(gebruikers):
+        return
+    weg = [u.get("username") for u in gebruikers if u not in houden]
+    cfg["users"] = houden
+    save_config(cfg)
+    for naam in weg:
+        write_audit_log("gebruiker_toegang_ingetrokken", {"username": naam})
+    print(f"[account] toegang ingetrokken voor: {', '.join(weg)}")
+
+
 def koppelstand(vers=False):
     """Of deze hub aan een SolarBuffer-account hangt, volgens de server.
 
@@ -11301,6 +11344,7 @@ def koppelstand(vers=False):
             return None
         _koppelstand["stand"] = r.json()
         _koppelstand["op"] = nu
+        _ruim_ingetrokken_op(_koppelstand["stand"])
         return _koppelstand["stand"]
     except Exception:
         return None
