@@ -11392,6 +11392,12 @@ def afstand_toegang():
     session["logged_in"] = True
     session["username"] = naam
     write_audit_log("login_via_account", {"username": naam})
+    # Wie hier binnenkomt heeft een geldig bewijs, en dat bestaat alleen voor
+    # een hub die aan een account hangt. Het onthouden antwoord van vijf
+    # minuten geleden klopt dus niet meer: zonder dit zou iemand die net
+    # gekoppeld heeft nog minutenlang het scherm "koppel deze hub" zien.
+    _koppelstand["stand"] = {"gekoppeld": True, "email": naam}
+    _koppelstand["op"] = time.time()
     return redirect("/")
 
 

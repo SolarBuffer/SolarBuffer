@@ -208,6 +208,11 @@
     }
     .koppel-knop:disabled { opacity: 0.6; cursor: default; }
     .koppel-klein { margin: 0.9rem 0 0 !important; font-size: 0.8rem !important; }
+    .koppel-later {
+      margin-top: 0.9rem; border: 0; background: none; cursor: pointer;
+      color: hsl(224, 14%, 55%); font-size: 0.85rem; font-weight: 600;
+      text-decoration: underline; padding: 0.3rem;
+    }
     html[data-theme="dark"] .koppel-kaart { background: hsl(224, 26%, 16%); }
     html[data-theme="dark"] .koppel-kaart h2 { color: hsl(224, 26%, 96%); }
 
@@ -2942,6 +2947,13 @@
           Je gaat naar hub.solarbuffer.nl, logt daar in of maakt een account,
           en komt daarna vanzelf hier terug.
         </p>
+        <!-- Een uitweg, en een kleine. Zonder dit staat iemand voor een dichte
+             deur zodra er iets misgaat met de bevestigingsmail, en dan kan hij
+             niet meer bij zijn eigen boiler. Morgen staat het scherm er weer,
+             dus de vraag blijft staan. -->
+        <button type="button" id="koppelLater" class="koppel-later">
+          Niet nu
+        </button>
       </div>
     </div>
 
@@ -3549,12 +3561,38 @@
     // Alleen tonen als de server werkelijk zegt dat er geen account aan deze
     // hub hangt. Weten we het niet, bijvoorbeeld zonder internet, dan blijft
     // het scherm weg; anders staat er een deur dicht die niemand open krijgt.
+    // Een dag uitstel wordt hier onthouden en niet op de hub. Het is een
+    // keuze van deze persoon op dit apparaat, en niet iets waar de hub een
+    // instelling voor hoort te krijgen.
+    const KOPPEL_UITSTEL = "koppelschermUitgesteld";
+
+    function koppelUitgesteld() {
+      try {
+        const tot = Number(localStorage.getItem(KOPPEL_UITSTEL) || 0);
+        return tot > Date.now();
+      } catch (e) {
+        return false;
+      }
+    }
+
     function renderKoppelScherm(data) {
       const scherm = document.getElementById("koppelScherm");
       if (!scherm) return;
       const stand = data.account_koppeling;
-      scherm.style.display = (stand && stand.gekoppeld === false) ? "flex" : "none";
+      const nodig = stand && stand.gekoppeld === false && !koppelUitgesteld();
+      scherm.style.display = nodig ? "flex" : "none";
     }
+
+    (function () {
+      const later = document.getElementById("koppelLater");
+      if (!later) return;
+      later.addEventListener("click", function () {
+        try {
+          localStorage.setItem(KOPPEL_UITSTEL, String(Date.now() + 86400000));
+        } catch (e) {}
+        document.getElementById("koppelScherm").style.display = "none";
+      });
+    })();
 
     (function () {
       const knop = document.getElementById("koppelKnop");
