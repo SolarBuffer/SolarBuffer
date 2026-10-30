@@ -48,8 +48,16 @@
       flex-shrink: 0;
     }
 
-    .user-info { flex: 1; min-width: 90px; }
-    .user-name { font-weight: 600; font-size: 0.9rem; }
+    /* flex-basis en min-width: 0 horen bij elkaar. Zonder die nul krimpt een
+       flexkind nooit kleiner dan zijn inhoud, en een lang e-mailadres zonder
+       spaties is een woord van soms dertig tekens; dat liep dan onder de
+       rolknoppen door. Met de basis van 8rem springen die knoppen bij een smal
+       scherm naar de regel eronder in plaats van over de naam heen. */
+    .user-info { flex: 1 1 8rem; min-width: 0; }
+    .user-name {
+      font-weight: 600; font-size: 0.9rem;
+      overflow-wrap: anywhere;
+    }
     .user-you  { font-size: 0.7rem; color: hsl(224, 18%, 75%); font-weight: 400; margin-left: 0.3rem; }
 
     /* ===== ROLE PILL TOGGLE ===== */
@@ -327,8 +335,10 @@
         SolarBuffer-account en komt daarna in deze lijst te staan, waar je
         instelt of hij beheerder is of alleen mag meekijken.
       </p>
-      <a class="back-btn" href="https://hub.solarbuffer.nl/account/delen"
-         target="_blank" rel="noopener">
+      <!-- Gewoon navigeren en niet in een nieuw tabblad. Dit dashboard staat
+           vaak in het venster van de app, en daar doet target="_blank" niets:
+           zo'n venster opent geen tweede tabblad en de knop lijkt kapot. -->
+      <a class="back-btn" href="https://hub.solarbuffer.nl/account/delen">
         Uitnodigen via je account
       </a>
     </div>
