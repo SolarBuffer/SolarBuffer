@@ -3342,8 +3342,6 @@
           renderSchedules(data.schedules || [], data.active_schedule || null, data.active_block_schedule_ids || []);
           renderVacationStatus(data);
           renderKoppelScherm(data);
-          var ub = document.getElementById("updateBanner");
-          if (ub) ub.style.display = data.update_available ? "flex" : "none";
 
           // ---- Batterij widget ----
           const batCard = document.getElementById('batteryCard');
@@ -4427,6 +4425,12 @@
           const sub = document.getElementById("updateMenuSub");
           sub.textContent = visible ? "Nieuwe versie beschikbaar!" : "Versiegeschiedenis & update uitvoeren";
           sub.classList.toggle("update-active", visible);
+          // De balk bovenaan hoort hetzelfde te zeggen als het stipje. Hij las
+          // eerst een andere waarde uit de statusopvraging, en die wordt maar
+          // eens in de tien minuten ververst en alleen door een eigen lus; dan
+          // brandde het stipje wel en bleef de balk weg.
+          const balk = document.getElementById("updateBanner");
+          if (balk) balk.style.display = visible ? "flex" : "none";
         })
         .catch(() => {});
     }
