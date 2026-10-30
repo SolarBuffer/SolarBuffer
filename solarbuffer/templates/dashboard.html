@@ -3260,7 +3260,10 @@
 
 {% block footer %}
 <div class="footer">Live data · Verversing elke seconde</div>
-<div class="footer">Version 1.0</div>
+{# Niet met de hand ingetypt. Dat stond hier wel, en bleef daardoor op 1.0
+   staan terwijl de hub allang iets anders draaide. Dit komt uit git, net als
+   wat de hub aan de server meldt, dus het kan niet meer uit de pas lopen. #}
+<div class="footer">Versie {{ versie or "onbekend" }}</div>
 {% endblock %}
 
 {% block scripts %}

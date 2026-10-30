@@ -3379,7 +3379,8 @@ def dashboard():
     cfg = load_config()
     if not _p1_configured(cfg) or not cfg.get("shelly_devices"):
         return redirect("/")
-    return render_template("dashboard.html", config=cfg, dark_mode=get_user_dark_mode())
+    return render_template("dashboard.html", config=cfg,
+                           dark_mode=get_user_dark_mode(), versie=_draaiende_versie())
 
 
 @app.route("/status_json")
@@ -8001,6 +8002,18 @@ def startup_sync_devices():
 
 
 # ================= MQTT =================
+def _draaiende_versie():
+    """Welke versie er draait, zoals die ook aan de server wordt gemeld.
+
+    Uit git en niet uit een getal in de code. Dat laatste stond in de voettekst
+    van het dashboard en bleef daardoor op 1.0 staan terwijl er allang iets
+    anders draaide; een versienummer dat je met de hand moet bijwerken klopt
+    precies zolang iemand eraan denkt.
+    """
+    rauw = _afstand.versie()
+    return rauw[1:] if rauw[:1] in ("V", "v") else rauw
+
+
 def _git_versie(ref):
     """Korte commit-aanduiding van de code die draait, of die klaarstaat.
 
