@@ -90,6 +90,12 @@
             font-size: 0.95rem;
         }
 
+        /* Deze pagina staat in een vaste lichte kleurstelling. Zeg dat ook,
+           anders maakt de telefoon in donkere modus zijn eigen versie van een
+           invoerveld: witte letters, op een kaart die wit blijft. Dan typ je
+           onzichtbaar, en dat is precies wat er gebeurde. */
+        :root { color-scheme: light; }
+
         input {
             width: 100%;
             padding: 0.65rem 0.75rem;
@@ -98,6 +104,9 @@
             font-size: 1rem;
             font-family: 'Inter', sans-serif;
             transition: all 0.2s ease;
+            /* Niet aan het systeem overlaten, om dezelfde reden. */
+            background: #fff;
+            color: hsl(224, 38%, 17%);
         }
 
         input:focus {
