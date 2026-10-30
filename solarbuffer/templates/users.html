@@ -315,6 +315,25 @@
     <div class="error-banner">{{ error }}</div>
     {% endif %}
 
+    <!-- Iemand van buiten erbij halen. Dat gaat niet hier maar via het
+         SolarBuffer-account, want diegene moet eerst een eigen account hebben
+         en daar een uitnodiging voor krijgen. Wat hij daarna op deze hub mag,
+         zet je gewoon hieronder. -->
+    {% if account_gekoppeld %}
+    <div class="card">
+      <h2>Iemand anders toegang geven</h2>
+      <p style="color: hsl(224, 14%, 46%); margin: 0 0 1rem;">
+        Nodig iemand uit op zijn e-mailadres. Hij maakt of gebruikt zijn eigen
+        SolarBuffer-account en komt daarna in deze lijst te staan, waar je
+        instelt of hij beheerder is of alleen mag meekijken.
+      </p>
+      <a class="back-btn" href="https://hub.solarbuffer.nl/account/delen"
+         target="_blank" rel="noopener">
+        Uitnodigen via je account
+      </a>
+    </div>
+    {% endif %}
+
     <!-- Bestaande gebruikers -->
     <div class="card">
       <h2>Gebruikers</h2>

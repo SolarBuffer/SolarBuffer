@@ -6731,8 +6731,12 @@ def users_page():
     cfg = load_config()
     error = request.args.get("error", "")
     current_user = session.get("username", "")
+    # Uitnodigen kan alleen als deze hub aan een account hangt; zonder dat is
+    # er niets om iemand voor uit te nodigen.
+    stand = koppelstand()
     return render_template("users.html", users=cfg.get("users", []), error=error,
-                           dark_mode=get_user_dark_mode(), current_user=current_user)
+                           dark_mode=get_user_dark_mode(), current_user=current_user,
+                           account_gekoppeld=bool(stand and stand.get("gekoppeld")))
 
 
 @app.route("/users/add", methods=["POST"])
@@ -11346,7 +11350,10 @@ def afstand_toegang():
     naam = (lading.get("e") or "").strip().lower()
     if not naam:
         return redirect("/login?bewijs=afgekeurd")
-    rol = "admin" if lading.get("r") == "eigenaar" else "viewer"
+    # Alleen de rol waarmee iemand begint. De eigenaar bepaalt daarna zelf op
+    # de gebruikerspagina wat iemand mag; die keuze hoort niet bij elke inlog
+    # overschreven te worden door wat de server over de koppeling weet.
+    beginrol = "admin" if lading.get("r") == "eigenaar" else "viewer"
 
     # De gebruiker moet in de eigen lijst staan, want daar hangt de rest aan:
     # of iemand beheerder is, zijn donkere modus, en bij wie een melding hoort.
@@ -11359,15 +11366,13 @@ def afstand_toegang():
             "username": naam,
             "password_hash": generate_password_hash(secrets.token_urlsafe(32)),
             "dark_mode": False,
-            "role": rol,
+            "role": beginrol,
             "via_account": True,
         })
         cfg["users"] = gebruikers
         save_config(cfg)
-        write_audit_log("gebruiker_via_account", {"username": naam, "role": rol})
-    elif bestaand.get("via_account") and bestaand.get("role") != rol:
-        bestaand["role"] = rol
-        save_config(cfg)
+        write_audit_log("gebruiker_via_account",
+                        {"username": naam, "role": beginrol})
 
     session["logged_in"] = True
     session["username"] = naam
