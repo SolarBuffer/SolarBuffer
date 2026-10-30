@@ -1617,6 +1617,25 @@
       font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem;
     }
     .vacation-banner svg { flex-shrink: 0; }
+    /* De balk voor een nieuwe hubversie. Oranje en niet rood: dit is goed
+       nieuws en geen storing, en het verschil moet je in een halve seconde
+       kunnen zien. Hij stond eerder alleen als stipje in het menu, en daar
+       keek iedereen overheen. */
+    .update-banner {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: hsl(32, 100%, 94%); color: hsl(32, 95%, 32%);
+      border: 1px solid hsl(32, 90%, 82%);
+      border-radius: 0.6rem; padding: 0.6rem 0.85rem;
+      font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;
+      text-decoration: none;
+    }
+    .update-banner i { flex-shrink: 0; font-size: 1.05rem; line-height: 1; }
+    .update-banner .pijl { margin-left: auto; opacity: 0.7; }
+    html[data-theme="dark"] .update-banner {
+      background: hsl(32, 40%, 22%); color: hsl(32, 95%, 72%);
+      border-color: hsl(32, 40%, 34%);
+    }
+
     .warn-banner {
       display: flex; align-items: center; gap: 0.5rem;
       background: hsl(0, 85%, 95%); color: hsl(0, 65%, 35%);
@@ -2926,6 +2945,12 @@
       </div>
     </div>
 
+    <a id="updateBanner" class="update-banner" href="/updates" style="display:none;">
+      <i class="mdi mdi-arrow-up-circle"></i>
+      <span>Er is een nieuwe versie voor je hub</span>
+      <i class="mdi mdi-chevron-right pijl"></i>
+    </a>
+
     <a id="elementPowerBanner" class="warn-banner" href="/settings/solarbuffers" style="display:none;">
       <i class="mdi mdi-alert-circle" style="font-size:1rem;line-height:1;"></i>
       <span id="elementPowerText"></span>
@@ -3288,6 +3313,8 @@
           renderSchedules(data.schedules || [], data.active_schedule || null, data.active_block_schedule_ids || []);
           renderVacationStatus(data);
           renderKoppelScherm(data);
+          var ub = document.getElementById("updateBanner");
+          if (ub) ub.style.display = data.update_available ? "flex" : "none";
 
           // ---- Batterij widget ----
           const batCard = document.getElementById('batteryCard');
