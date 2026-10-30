@@ -176,6 +176,37 @@
       display: block;
     }
 
+    /* ===== KOPPELSCHERM ===== */
+    .koppel-achter {
+      position: fixed; inset: 0; z-index: 400;
+      background: hsla(224, 26%, 14%, 0.55);
+      backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.4rem;
+    }
+    .koppel-kaart {
+      background: white; border-radius: 1.1rem; padding: 1.8rem 1.5rem;
+      max-width: 23rem; width: 100%; text-align: center;
+      box-shadow: 0 24px 60px hsla(224, 26%, 14%, 0.3);
+    }
+    .koppel-merk {
+      font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .koppel-merk span { color: hsl(32, 95%, 52%); }
+    .koppel-kaart h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }
+    .koppel-kaart p { margin: 0 0 1rem; color: hsl(224, 14%, 46%); font-size: 0.92rem; }
+    .koppel-fout { color: hsl(0, 65%, 45%); font-weight: 600; }
+    .koppel-knop {
+      width: 100%; padding: 0.85rem; border: 0; border-radius: 0.75rem;
+      background: hsl(32, 95%, 52%); color: white; font-weight: 600;
+      font-size: 1rem; cursor: pointer;
+    }
+    .koppel-knop:disabled { opacity: 0.6; cursor: default; }
+    .koppel-klein { margin: 0.9rem 0 0 !important; font-size: 0.8rem !important; }
+    html[data-theme="dark"] .koppel-kaart { background: hsl(224, 26%, 16%); }
+    html[data-theme="dark"] .koppel-kaart h2 { color: hsl(224, 26%, 96%); }
+
     /* ===== REST VAN DE STIJLEN ===== */
     .grid {
       display: grid;
@@ -2867,6 +2898,30 @@
 {% block tagline %}<p>Dashboard</p>{% endblock %}
 
 {% block content %}
+    <!-- Koppelen aan een SolarBuffer-account. Met opzet een scherm dat ervoor
+         gaat staan en niet een balkje bovenaan: een balk is twee weken lang te
+         negeren, en zonder account is een vergeten wachtwoord niet te
+         herstellen en is deze hub van buitenaf niet te bereiken. -->
+    <div id="koppelScherm" class="koppel-achter" style="display:none;">
+      <div class="koppel-kaart">
+        <div class="koppel-merk"><span>Solar</span>Buffer</div>
+        <h2>Koppel deze hub aan je account</h2>
+        <p>
+          Met een SolarBuffer-account kun je je wachtwoord herstellen als je het
+          kwijt bent, en bereik je deze hub van buiten je eigen netwerk. Het
+          duurt een halve minuut.
+        </p>
+        <p id="koppelFout" class="koppel-fout" style="display:none;"></p>
+        <button type="button" id="koppelKnop" class="koppel-knop">
+          Koppelen
+        </button>
+        <p class="koppel-klein">
+          Je gaat naar hub.solarbuffer.nl, logt daar in of maakt een account,
+          en komt daarna vanzelf hier terug.
+        </p>
+      </div>
+    </div>
+
     <a id="elementPowerBanner" class="warn-banner" href="/settings/solarbuffers" style="display:none;">
       <i class="mdi mdi-alert-circle" style="font-size:1rem;line-height:1;"></i>
       <span id="elementPowerText"></span>
@@ -3228,6 +3283,7 @@
           }
           renderSchedules(data.schedules || [], data.active_schedule || null, data.active_block_schedule_ids || []);
           renderVacationStatus(data);
+          renderKoppelScherm(data);
 
           // ---- Batterij widget ----
           const batCard = document.getElementById('batteryCard');
@@ -3457,6 +3513,40 @@
         </div>`;
       }).join("");
     }
+
+    // ===== KOPPELEN AAN EEN ACCOUNT =====
+    // Alleen tonen als de server werkelijk zegt dat er geen account aan deze
+    // hub hangt. Weten we het niet, bijvoorbeeld zonder internet, dan blijft
+    // het scherm weg; anders staat er een deur dicht die niemand open krijgt.
+    function renderKoppelScherm(data) {
+      const scherm = document.getElementById("koppelScherm");
+      if (!scherm) return;
+      const stand = data.account_koppeling;
+      scherm.style.display = (stand && stand.gekoppeld === false) ? "flex" : "none";
+    }
+
+    (function () {
+      const knop = document.getElementById("koppelKnop");
+      if (!knop) return;
+      knop.addEventListener("click", function () {
+        const fout = document.getElementById("koppelFout");
+        knop.disabled = true;
+        knop.textContent = "Even geduld";
+        fout.style.display = "none";
+        fetch("/api/account/koppelcode", { method: "POST" })
+          .then(r => r.json())
+          .then(d => {
+            if (d.success && d.url) { window.location.href = d.url; return; }
+            throw new Error(d.error || "Het lukte niet om te koppelen.");
+          })
+          .catch(e => {
+            fout.textContent = e.message;
+            fout.style.display = "block";
+            knop.disabled = false;
+            knop.textContent = "Koppelen";
+          });
+      });
+    })();
 
     // ===== VAKANTIESTAND (banner only — beheer via Instellingen) =====
     function renderVacationStatus(data) {

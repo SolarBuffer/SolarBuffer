@@ -3514,6 +3514,7 @@ def status_json():
                          if _zon_vandaag_wh else None),
         broadlink_ir_states=broadlink_ir_states,
         broadlink_devices=cfg.get("broadlink_devices", []),
+        account_koppeling=koppelstand(),
         vacation_mode=cfg.get("vacation_mode", False),
         vacation_until=cfg.get("vacation_until"),
         vacation_legionella=cfg.get("vacation_legionella", False),
@@ -11227,6 +11228,66 @@ def afstand_bewaak_loop():
         except Exception:
             pass
         time.sleep(60)
+
+
+_koppelstand = {"op": 0.0, "stand": None}
+
+
+def koppelstand(vers=False):
+    """Of deze hub aan een SolarBuffer-account hangt, volgens de server.
+
+    Het antwoord blijft vijf minuten staan. Het dashboard vraagt de status elke
+    paar seconden op, en dat zou anders elke paar seconden een verzoek naar
+    buiten betekenen voor iets dat hooguit een keer per jaar verandert.
+
+    Geeft None als het niet te zeggen is: geen sleutel, geen internet, server
+    plat. Dat is met opzet geen "niet gekoppeld", want op dat verschil hangt of
+    het dashboard een scherm voor iemands neus zet.
+    """
+    nu = time.time()
+    if not vers and _koppelstand["stand"] is not None and nu - _koppelstand["op"] < 300:
+        return _koppelstand["stand"]
+    sleutel = (load_config().get("afstand_toegangssleutel") or "").strip()
+    if not sleutel:
+        return None
+    try:
+        r = requests.post(f"{_afstand.SERVER}/v1/hub/koppelstand", timeout=8,
+                          json={"toegangssleutel": sleutel})
+        if r.status_code != 200:
+            return None
+        _koppelstand["stand"] = r.json()
+        _koppelstand["op"] = nu
+        return _koppelstand["stand"]
+    except Exception:
+        return None
+
+
+@app.route("/api/account/koppelcode", methods=["POST"])
+def api_account_koppelcode():
+    """Haalt bij de server een eenmalige code op om deze hub te koppelen.
+
+    De sleutel van de hub blijft hier; wat de browser meekrijgt is een code die
+    een kwartier geldig is en daarna verbruikt. Alleen een beheerder mag dit,
+    want dit bepaalt bij wiens account deze hub komt te horen.
+    """
+    if not require_login():
+        return jsonify(success=False), 401
+    if not is_current_user_admin():
+        return jsonify(success=False, error="Geen toegang"), 403
+    sleutel = (load_config().get("afstand_toegangssleutel") or "").strip()
+    if not sleutel:
+        return jsonify(success=False,
+                       error="Deze hub staat nog niet bij de server bekend."), 409
+    try:
+        r = requests.post(f"{_afstand.SERVER}/v1/hub/koppelcode", timeout=10,
+                          json={"toegangssleutel": sleutel})
+        if r.status_code != 200:
+            return jsonify(success=False,
+                           error="De server gaf geen code terug."), 502
+        return jsonify(success=True, url=r.json().get("url"))
+    except Exception as e:
+        return jsonify(success=False,
+                       error="Geen verbinding met SolarBuffer."), 502
 
 
 @app.route("/afstand/toegang")
