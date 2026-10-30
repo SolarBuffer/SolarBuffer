@@ -2216,6 +2216,16 @@ def logout():
     return redirect("/login")
 
 
+def _uit_de_app():
+    """Of deze pagina in de SolarBuffer-app staat en niet in een browser.
+
+    De app plakt zijn naam achter de User-Agent. Dat is geen beveiliging en
+    hoeft het niet te zijn: het enige dat ervan afhangt is of we iemand een
+    scherm voorhouden dat hij niet nodig heeft.
+    """
+    return "SolarBufferApp" in (request.headers.get("User-Agent") or "")
+
+
 def _met_account():
     """Of hier iemand is met een SolarBuffer-account, binnengekomen via de server.
 
@@ -3514,7 +3524,9 @@ def status_json():
                          if _zon_vandaag_wh else None),
         broadlink_ir_states=broadlink_ir_states,
         broadlink_devices=cfg.get("broadlink_devices", []),
-        account_koppeling=koppelstand(),
+        # In de app niet vragen om te koppelen: die doet dat zelf zodra je
+        # bent ingelogd. Het scherm is er voor wie alleen de browser gebruikt.
+        account_koppeling=None if _uit_de_app() else koppelstand(),
         vacation_mode=cfg.get("vacation_mode", False),
         vacation_until=cfg.get("vacation_until"),
         vacation_legionella=cfg.get("vacation_legionella", False),
