@@ -2176,7 +2176,7 @@ def login():
     #
     # Behalve als er juist een bewijs is afgekeurd; dan zou terugsturen een
     # kringetje worden en is dit scherm het eerlijke antwoord.
-    if (request.method == "GET" and _via_toegangsserver()
+    if (request.method == "GET" and _met_account()
             and request.args.get("bewijs") != "afgekeurd"):
         return redirect("/account/naar-hub")
     cfg = load_config()
@@ -2211,9 +2211,22 @@ def logout():
     # hoort uitloggen ook dat account uit te loggen. Alleen de hubsessie wissen
     # laat je achter op het inlogscherm van de hub terwijl je even later met
     # hetzelfde account zo weer binnen bent; dat is geen uitloggen.
-    if _via_toegangsserver():
+    if _met_account():
         return redirect("/account/uitloggen")
     return redirect("/login")
+
+
+def _met_account():
+    """Of hier iemand is met een SolarBuffer-account, binnengekomen via de server.
+
+    Allebei moet kloppen, en dat tweede is geen overbodige voorzichtigheid. De
+    app zoals die in de winkel staat kent geen accounts: die komt ook via
+    hub.solarbuffer.nl binnen, met alleen de toegangssleutel van deze hub, en
+    logt daarna gewoon hier in. Keek ik alleen naar de servernaam, dan stuurde
+    ik die gebruikers naar een accountpagina waar ze niets te zoeken hebben en
+    kwamen ze hun eigen hub niet meer in.
+    """
+    return _via_toegangsserver() and bool(request.cookies.get("sb_account"))
 
 
 def _via_toegangsserver():
