@@ -6790,10 +6790,37 @@ def users_delete():
         return redirect("/users?error=Je kunt je eigen account niet verwijderen")
     if len(users) <= 1:
         return redirect("/users?error=Laatste gebruiker kan niet worden verwijderd")
+    weg = next((u for u in users if u["username"] == username), None)
     cfg["users"] = [u for u in users if u["username"] != username]
     save_config(cfg)
     write_audit_log("user_deleted", {"deleted_username": username})
+    # Kwam deze gebruiker binnen via een SolarBuffer-account, dan moet die
+    # toegang ook bij de server weg. Zonder dat loog deze pagina: je haalde
+    # iemand weg en bij zijn volgende bezoek stond hij er weer, omdat de server
+    # nog steeds zei dat hij erbij mocht.
+    if weg and weg.get("via_account"):
+        _trek_accounttoegang_in(username)
     return redirect("/users")
+
+
+def _trek_accounttoegang_in(email):
+    """Zegt tegen de server dat deze persoon hier niet meer bij mag.
+
+    De eigenaar wordt daar geweigerd, en terecht: dan zou een hub zichzelf
+    losmaken van het account waar hij aan hangt en kwam niemand er meer in.
+    """
+    sleutel = (load_config().get("afstand_toegangssleutel") or "").strip()
+    if not sleutel:
+        return
+    try:
+        requests.post(f"{_afstand.SERVER}/v1/hub/toegang-intrekken", timeout=10,
+                      json={"toegangssleutel": sleutel, "email": email})
+    except Exception as e:
+        print(f"[account] toegang van {email} niet ingetrokken: {e}")
+        return
+    # Het onthouden antwoord klopt nu niet meer, dus bij de volgende opvraging
+    # meteen vers ophalen.
+    _koppelstand["op"] = 0.0
 
 
 @app.route("/users/set_role", methods=["POST"])
