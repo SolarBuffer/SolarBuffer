@@ -504,7 +504,12 @@
       color: hsl(224, 18%, 58%);
     }
 
-    .balance-equation .be-import { color: hsl(20, 80%, 42%); }
+    /* Paars en niet oranje. Oranje naast groen is voor iemand met
+       rood-groenblindheid vrijwel dezelfde kleur, en dan zegt deze balk niets
+       meer; nagemeten met een simulatie werden het twee keer hetzelfde olijf.
+       Paars is dezelfde kleur als het verbruik in de grafieken, dus de app
+       spreekt nu ook één taal. */
+    .balance-equation .be-import { color: hsl(270, 60%, 45%); }
     .balance-equation .be-export { color: hsl(145, 60%, 36%); }
     .balance-equation .be-net    { color: hsl(224, 26%, 14%); }
 
@@ -526,7 +531,7 @@
       transition: left 0.5s ease, right 0.5s ease, width 0.5s ease;
     }
 
-    .balance-bar-track.import { right: 50%; border-radius: 999px 0 0 999px; background: linear-gradient(90deg, hsla(24, 80%, 50%, 0.16), hsla(24, 80%, 50%, 0.32)); }
+    .balance-bar-track.import { right: 50%; border-radius: 999px 0 0 999px; background: linear-gradient(90deg, hsla(270, 70%, 55%, 0.16), hsla(270, 70%, 55%, 0.32)); }
     .balance-bar-track.export { left: 50%; border-radius: 0 999px 999px 0; background: linear-gradient(90deg, hsla(150, 60%, 45%, 0.32), hsla(150, 60%, 45%, 0.16)); }
 
     /* Duidelijke som-balk: toont de nettobalans t.o.v. het midden */
@@ -540,7 +545,7 @@
       z-index: 1;
     }
 
-    .balance-bar-sum.import { background: linear-gradient(90deg, hsl(28, 85%, 50%), hsl(18, 80%, 40%)); }
+    .balance-bar-sum.import { background: linear-gradient(90deg, hsl(270, 60%, 45%), hsl(270, 70%, 55%)); }
     .balance-bar-sum.export { background: linear-gradient(90deg, hsl(145, 60%, 38%), hsl(150, 60%, 48%)); }
 
     .balance-bar-marker {
@@ -577,12 +582,12 @@
       display: inline-block;
     }
 
-    .balance-dot.import { background: hsl(24, 80%, 45%); }
+    .balance-dot.import { background: hsl(270, 70%, 55%); }
     .balance-dot.export { background: hsl(145, 60%, 40%); }
 
     html[data-theme="dark"] .balance-sub { color: hsl(224, 18%, 55%); }
     html[data-theme="dark"] .balance-equation .be-op { color: hsl(224, 18%, 55%); }
-    html[data-theme="dark"] .balance-equation .be-import { color: hsl(24, 85%, 62%); }
+    html[data-theme="dark"] .balance-equation .be-import { color: hsl(270, 80%, 72%); }
     html[data-theme="dark"] .balance-equation .be-export { color: hsl(145, 55%, 55%); }
     html[data-theme="dark"] .balance-equation .be-net    { color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .balance-legend { color: hsl(224, 18%, 58%); }
