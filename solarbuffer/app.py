@@ -13151,11 +13151,26 @@ def zendure_verdeel(totaal, units, max_per_accu):
     plafonds = {u["id"]: _zendure_plafond(u, laden, max_per_accu) for u in units}
 
     def ruimte(u):
-        """Hoeveel ruimte heeft deze accu nog, in procenten."""
+        """Hoeveel bruikbare ruimte heeft deze accu nog, in procenten.
+
+        Bruikbaar, en niet rauw. Een accu mag niet verder dan zijn ondergrens
+        ontladen en niet voorbij zijn doel-SoC laden; daarbuiten stopt het
+        apparaat zelf. Rekenden we met de rauwe lading, dan kreeg zo'n accu nog
+        steeds een deel van het setpoint, leverde hij dat niet, en zag de
+        regeling dat pas een ronde later op de meter. Nu valt hij meteen op nul
+        en gaat zijn deel naar de accu's die nog wel kunnen.
+        """
         soc = u.get("soc")
         if soc is None:
             return 50.0            # onbekend: middenmoot, dan valt hij niet af
-        return max(0.0, 100.0 - soc) if laden else max(0.0, float(soc))
+        soc = float(soc)
+        if laden:
+            boven = u.get("soc_set")
+            grens = float(boven) if boven is not None else 100.0
+            return max(0.0, grens - soc)
+        onder = u.get("min_soc")
+        grens = float(onder) if onder is not None else 0.0
+        return max(0.0, soc - grens)
 
     gewichten = {u["id"]: ruimte(u) for u in units}
     if sum(gewichten.values()) <= 0:
@@ -14214,6 +14229,17 @@ def battery_poll_loop():
                                 # het dubbele vragen van wat hij kan.
                                 "max_charge_w": _int_of_none(props.get("chargeLimit")
                                                              or props.get("chargeMaxLimit")),
+                                # De eigen grenzen van deze accu, in procenten.
+                                # Zonder deze rekende de verdeling met de rauwe
+                                # lading: een accu op zijn ondergrens kreeg dan
+                                # nog steeds werk toebedeeld, stopte zelf, en
+                                # dat deel werd niet geleverd. De regeling zag
+                                # dat pas op de meter en corrigeerde een ronde
+                                # later; nu gaat het meteen naar de rest.
+                                "min_soc": (float(props["minSoc"]) / 10.0
+                                            if props.get("minSoc") is not None else None),
+                                "soc_set": (float(props["socSet"]) / 10.0
+                                            if props.get("socSet") is not None else None),
                                 "max_discharge_w": _int_of_none(props.get("inverseMaxPower")),
                             })
                         _zon = props.get("solarInputPower")
@@ -14256,6 +14282,17 @@ def battery_poll_loop():
                                 "power_w": p,
                                 "max_charge_w": _int_of_none(props.get("chargeLimit")
                                                              or props.get("chargeMaxLimit")),
+                                # De eigen grenzen van deze accu, in procenten.
+                                # Zonder deze rekende de verdeling met de rauwe
+                                # lading: een accu op zijn ondergrens kreeg dan
+                                # nog steeds werk toebedeeld, stopte zelf, en
+                                # dat deel werd niet geleverd. De regeling zag
+                                # dat pas op de meter en corrigeerde een ronde
+                                # later; nu gaat het meteen naar de rest.
+                                "min_soc": (float(props["minSoc"]) / 10.0
+                                            if props.get("minSoc") is not None else None),
+                                "soc_set": (float(props["socSet"]) / 10.0
+                                            if props.get("socSet") is not None else None),
                                 "max_discharge_w": _int_of_none(props.get("inverseMaxPower")),
                             })
                             _zon = props.get("solarInputPower")
