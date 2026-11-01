@@ -2995,7 +2995,9 @@ def battery_transitions():
                 van_s = f"{van['mode']}/{van['perms']}" if van else "(start)"
                 naar = e["naar"]
                 lines.append(
-                    f"{e['timestamp']}  GEWENST  {van_s} -> {naar['mode']}/{naar['perms']}  "
+                    f"{e['timestamp']}  "
+                    + ("VOORWAARDE" if e.get("alleen_voorwaarde") else "GEWENST")
+                    + f"  {van_s} -> {naar['mode']}/{naar['perms']}  "
                     f"trigger={','.join(e.get('trigger') or []) or 'onbekend'}  "
                     + " ".join(f"{k}={v}" for k, v in e.get("flags", {}).items()) + "  "
                     + " ".join(f"{k}={v}" for k, v in e.get("meting", {}).items())
@@ -9610,6 +9612,12 @@ def control_loop():
                             st["legionella_required"] = False
                             save_state(force=True)
                             print(f"Anti-Legionella: cyclus gestart voor {ip}")
+                            # Ook in het logboek. Het stond alleen in de
+                            # uitvoer van de dienst, en die is na een herstart
+                            # weg. Achteraf was dus niet meer te zien of er een
+                            # ronde heeft gelopen, terwijl dat de eerste vraag
+                            # is zodra iemand belt over een accu die leegliep.
+                            write_audit_log("legionella_gestart", {"device_ip": ip})
 
                     if st.get("legionella_active"):
                         elapsed = now - (st.get("legionella_start") or now)
@@ -9623,6 +9631,11 @@ def control_loop():
                             st["legionella_start"] = None
                             st["last_active_time"] = now
                             save_state(force=True)
+                            write_audit_log("legionella_klaar", {
+                                "device_ip": ip,
+                                "reden": "voorraad vol" if voorraad_vol else "noodstop",
+                                "minuten": round(elapsed / 60),
+                            })
                             if voorraad_vol:
                                 print(f"Anti-Legionella: cyclus voltooid voor {ip}, "
                                       f"warmtevoorraad vol na {elapsed / 60:.0f} min")
@@ -10468,7 +10481,17 @@ def control_loop():
                             "sb_kan_draaien": _sb_can_run,
                             "sb_actief": _any_sb_active,
                             "pid_op_max": _pid_at_max,
+                            # De uitkomst, en daarnaast waar hij uit is
+                            # opgebouwd. Alleen de uitkomst zei te weinig: bij
+                            # False wist je niet of er geen ronde liep, geen
+                            # schema, geen laag tarief, of dat het vinkje
+                            # gewoon uit stond.
                             "geen_ontladen": _force_no_discharge,
+                            "vinkje_geen_ontladen": bool(
+                                cfg.get("battery_block_discharge_when_forced", False)),
+                            "legionella": _legionella_active,
+                            "schema_actief": _schedule_active,
+                            "tarief_actief": _price_active,
                             "schema_laadt": _sched_accu_w,
                             "temp_blokkeert_alles": _temp_shutoff_blocking_all,
                             "blokkeert_start": battery_blocks_start,
@@ -11870,7 +11893,15 @@ def log_battery_decision(mode, perms, flags, meting):
     global _bat_decision_prev
     state = (mode, tuple(sorted(perms or [])))
     prev_state, prev_flags = _bat_decision_prev if _bat_decision_prev else (None, None)
-    if state == prev_state:
+    # Normaal alleen bij een wisseling van modus of rechten, anders staat dit
+    # logboek binnen een dag vol. Deze paar voorwaarden zijn de uitzondering:
+    # ze bepalen of de accu een boiler mag voeden, en als ze omgaan zonder dat
+    # de rechten veranderen bleef dat onzichtbaar. Precies dat maakte een
+    # melding over een accu die leegliep tijdens het verwarmen onnavolgbaar.
+    _gewicht = ("legionella", "schema_actief", "tarief_actief", "geen_ontladen")
+    _omgeslagen = bool(prev_flags) and any(
+        prev_flags.get(k) != flags.get(k) for k in _gewicht)
+    if state == prev_state and not _omgeslagen:
         _bat_decision_prev = (state, flags)   # alleen context verversen
         return
     trigger = sorted(k for k in flags if prev_flags.get(k) != flags[k]) if prev_flags else []
@@ -11879,6 +11910,9 @@ def log_battery_decision(mode, perms, flags, meting):
         "soort": "gewenst",
         "van": {"mode": prev_state[0], "perms": list(prev_state[1])} if prev_state else None,
         "naar": {"mode": state[0], "perms": list(state[1])},
+        # Bij een regel die alleen om een omgeslagen voorwaarde is geschreven
+        # staat er links en rechts hetzelfde; dit zegt waarom hij er toch is.
+        "alleen_voorwaarde": bool(state == prev_state),
         "trigger": trigger,
         "flags": dict(flags),
         "meting": dict(meting),
