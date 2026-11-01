@@ -2739,8 +2739,23 @@ def api_p1_shelly_probe():
     return jsonify(success=True, **result)
 
 
-def _zendure_dev_snapshot():
-    """Het enige (of eerste) Zendure-apparaat, ongeacht hoe het gekoppeld is.
+def _zendure_dev_snapshots():
+    """Alle Zendure-apparaten, als lijst van (id, apparaat).
+
+    Een vloot kan uit meerdere accu's bestaan, en bij een klant met drie stuks
+    toonde de accupagina er maar een: de functie hieronder pakt het eerste en
+    laat de rest liggen. Voor de regeling gaat dat goed, die loopt zijn eigen
+    lijst af, maar op het scherm bestonden die andere accu's niet.
+    """
+    snap = zendure_mqtt_snapshot()
+    if snap:
+        return list(snap.items())
+    did, dev = _zendure_dev_snapshot()
+    return [(did, dev)] if dev is not None else []
+
+
+def _zendure_dev_snapshot(gevraagd=None):
+    """Een Zendure-apparaat: het gevraagde, of anders het eerste.
 
     Eerst de MQTT-momentopname. Staat de accu op de lokale HTTP-API, dan is er
     geen momentopname en vragen we hem rechtstreeks. Zonder die terugval bleef de
@@ -2750,6 +2765,8 @@ def _zendure_dev_snapshot():
     """
     snap = zendure_mqtt_snapshot()
     if snap:
+        if gevraagd and gevraagd in snap:
+            return gevraagd, snap[gevraagd]
         did = next(iter(snap))
         return did, snap[did]
 
@@ -2816,30 +2833,59 @@ def api_zendure_status():
     """Limieten en toestand van de Zendure, samengesteld uit de MQTT-momentopname."""
     if not require_login():
         return jsonify({"error": "unauthorized"}), 401
-    did, dev = _zendure_dev_snapshot()
+    gevraagd = (request.args.get("device") or "").strip() or None
+    alle = _zendure_dev_snapshots()
+    did, dev = _zendure_dev_snapshot(gevraagd)
     if dev is None:
         return jsonify(success=True, online=False)
     p = dev["properties"]
 
-    packs = []
-    for sn, pk in dev["packs"].items():
-        packs.append({
-            "sn": sn,
-            "soc": pk.get("socLevel"),
-            "voltage_v": _scale(pk.get("totalVol"), 100),
-            "cell_min_v": _scale(pk.get("minVol"), 100),
-            "cell_max_v": _scale(pk.get("maxVol"), 100),
-            "temp_c": _scale(pk.get("maxTemp"), 100, 1),
-            "current_a": _scale_signed16(pk.get("batcur"), 10, 1),
-            "power_w": pk.get("power"),
-            "firmware": pk.get("softVersion"),
+    def _packs_van(d):
+        uit = []
+        for sn, pk in d["packs"].items():
+            # Het oude schema stuurt honderdsten, het nieuwe tienden. Zonder dit
+            # onderscheid staat er bij een SolarFlow 297 graden op het scherm.
+            deler = 1000 if d.get("schema") == "ha" else 100
+            uit.append({
+                "sn": sn,
+                "soc": pk.get("socLevel"),
+                "voltage_v": (pk.get("totalVol") if d.get("schema") == "ha"
+                              else _scale(pk.get("totalVol"), 100)),
+                "cell_min_v": _scale(pk.get("minVol"), 100),
+                "cell_max_v": _scale(pk.get("maxVol"), 100),
+                "temp_c": _scale(pk.get("maxTemp"), deler, 1),
+                "current_a": _scale_signed16(pk.get("batcur"), 10, 1),
+                "power_w": pk.get("power"),
+                "firmware": pk.get("softVersion"),
+            })
+        uit.sort(key=lambda x: x["sn"] or "")
+        return uit
+
+    packs = _packs_van(dev)
+
+    # Alle accu's, zodat het scherm er niet maar een laat zien.
+    vloot = []
+    for _id, _d in alle:
+        _p = _d["properties"]
+        vloot.append({
+            "device_id": _id,
+            "sn": _d.get("sn"),
+            "schema": _d.get("schema"),
+            "soc": _p.get("electricLevel"),
+            "charge_w": _p.get("chargePower") or _p.get("outputPackPower"),
+            "output_w": _p.get("outputPower") or _p.get("packInputPower"),
+            "temp_c": _scale(_p.get("hyperTmp"), 100, 1),
+            "pack_num": _p.get("packNum"),
+            "max_charge_w": _p.get("chargeLimit") or _p.get("chargeMaxLimit"),
+            "max_discharge_w": _p.get("inverseMaxPower"),
+            "packs": _packs_van(_d),
         })
-    packs.sort(key=lambda x: x["sn"] or "")
 
     return jsonify(
         success=True,
         online=True,
         device_id=did,
+        vloot=vloot,
         sn=dev.get("sn"),
         prodkey=dev.get("prodkey"),
         limits={
@@ -2897,7 +2943,9 @@ def api_zendure_limits():
     if cfg.get("battery_type") != "zendure":
         return jsonify(success=False, error="Alleen beschikbaar voor een gekoppelde Zendure"), 400
 
-    _did, dev = _zendure_dev_snapshot()
+    # Welke accu je bewerkt. Zonder dit schreef het scherm bij een vloot altijd
+    # naar de eerste, ook als je een andere had aangeklikt.
+    _did, dev = _zendure_dev_snapshot((request.args.get("device") or "").strip() or None)
     if dev is None:
         return jsonify(success=False, error="Accu niet bereikbaar"), 503
     huidig = dev["properties"]
@@ -12977,7 +13025,21 @@ def zendure_mqtt_ha_set_power(power_w, serienummer=None):
     now = time.time()
     vorig = _zendure_ha_gestuurd.get(sn) or {}
     herhaal = (now - vorig.get("ts", 0.0)) >= _ZENDURE_HA_HERHAAL
-    wissel = doel_mode is not None and vorig.get("acMode") != doel_mode
+
+    # De richting vergelijken met wat de accu zelf meldt, en niet alleen met wat
+    # wij het laatst stuurden. Zet het apparaat zichzelf terug, bijvoorbeeld door
+    # zijn eigen slimme stand of na een herstart, dan bleef onze herinnering
+    # staan en stuurden we de richting nooit opnieuw. Gemeten bij een klant met
+    # drie accu's: de twee SolarFlows stonden op laden terwijl wij om ontladen
+    # vroegen, met een ontlaadlimiet die netjes was aangekomen maar betekenisloos
+    # was. De accu gaf dus niets en het net bleef 140 W opnemen.
+    with _zendure_mqtt_lock:
+        _gemeld = ((_zendure_mqtt_devices.get(sn) or {})
+                   .get("properties") or {}).get("acMode")
+    _doel_nr = 1 if power_w > 0 else (2 if power_w < 0 else None)
+    wissel = doel_mode is not None and (
+        vorig.get("acMode") != doel_mode
+        or (_gemeld is not None and _doel_nr is not None and _gemeld != _doel_nr))
 
     # Terugkoppeling. Vragen we al een tijd om te laden terwijl er nergens
     # vermogen binnenkomt, dan is de opdracht niet aangekomen. Dat bleef vroeger

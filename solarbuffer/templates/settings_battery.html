@@ -112,6 +112,29 @@
     html[data-theme="dark"] .back-btn { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 22%); color: hsl(224, 18%, 85%); }
     html[data-theme="dark"] .card { background: hsl(224, 38%, 15%); border-color: hsl(224, 38%, 18%); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2); }
     html[data-theme="dark"] .card-title { color: hsl(224, 18%, 70%); }
+
+    /* Een rij per accu: kies er een en de toestand en limieten eronder gaan mee.
+       Alles onder elkaar zetten zou een pagina van drie schermen geven. */
+    .accu-rij {
+      display: flex; align-items: center; gap: 0.6rem; width: 100%;
+      padding: 0.6rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer;
+      border: 1px solid hsl(224, 20%, 88%); border-radius: 0.6rem;
+      background: hsl(224, 20%, 98%); font: inherit; text-align: left;
+    }
+    .accu-rij.gekozen {
+      border-color: hsl(32, 95%, 52%);
+      background: hsl(32, 100%, 97%);
+      box-shadow: 0 0 0 1px hsl(32, 95%, 52%);
+    }
+    .accu-rij:last-child { margin-bottom: 0; }
+    .accu-naam { flex: 1 1 8rem; min-width: 0; overflow-wrap: anywhere;
+                 font-weight: 600; font-size: 0.85rem; }
+    .accu-soc { font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+    .accu-stand { color: hsl(224, 14%, 48%); font-size: 0.8rem; white-space: nowrap; }
+    html[data-theme="dark"] .accu-rij {
+      background: hsl(224, 38%, 17%); border-color: hsl(224, 38%, 22%);
+    }
+    html[data-theme="dark"] .accu-rij.gekozen { background: hsl(32, 40%, 20%); }
     html[data-theme="dark"] .field-group label { color: hsl(224, 18%, 74%); }
     html[data-theme="dark"] .field-group input, html[data-theme="dark"] .field-group select { background-color: hsl(224, 38%, 13%); border-color: hsl(224, 38%, 19%); color: hsl(224, 18%, 95%); }
     html[data-theme="dark"] .field-group input:focus, html[data-theme="dark"] .field-group select:focus { border-color: hsl(32, 75%, 52%); }
@@ -139,6 +162,19 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
       Configuratie
     </a>
+
+    <!-- Alle accu's, zodat een vloot niet als een enkele accu oogt. Verschijnt
+         alleen als er meer dan een is; bij een enkele accu zou het een lijstje
+         van een worden boven de toestand die er toch al staat. -->
+    <div class="card" id="vlootKaart" style="display:none">
+      <div class="card-title">Je accu's</div>
+      <div id="vlootLijst"></div>
+      <div class="field-hint" style="margin-top:0.6rem">
+        Kies een accu om zijn toestand te zien. De limieten onderaan gelden voor
+        alle accu's tegelijk: een doel-SoC die per accu verschilt laat een vloot
+        uit elkaar lopen.
+      </div>
+    </div>
 
     <div class="card">
       <div class="card-title">Toestand</div>
@@ -252,14 +288,46 @@
       document.getElementById(id).addEventListener('input', function () { _limitsDirty = true; });
     });
 
-    function toon(id, waarde, leeg) {
+    // Welke accu je op dit scherm bekijkt en bewerkt. Leeg betekent: de eerste.
+    let _gekozenAccu = null;
+
+    function toonVloot(d) {
+      const kaart = document.getElementById('vlootKaart');
+      const lijst = document.getElementById('vlootLijst');
+      const vloot = d.vloot || [];
+      if (vloot.length < 2) { kaart.style.display = 'none'; return; }
+      kaart.style.display = '';
+      lijst.innerHTML = '';
+      vloot.forEach(function (a) {
+        const gekozen = (_gekozenAccu || d.device_id) === a.device_id;
+        const rij = document.createElement('button');
+        rij.type = 'button';
+        rij.className = 'accu-rij' + (gekozen ? ' gekozen' : '');
+        const vermogen = (a.output_w > 0) ? ('ontlaadt ' + a.output_w + ' W')
+          : ((a.charge_w > 0) ? ('laadt ' + a.charge_w + ' W') : 'stil');
+        rij.innerHTML =
+          '<span class="accu-naam">' + (a.sn || a.device_id) + '</span>'
+          + '<span class="accu-soc">' + (a.soc == null ? '—' : a.soc + ' %') + '</span>'
+          + '<span class="accu-stand">' + vermogen + '</span>';
+        rij.addEventListener('click', function () {
+          _gekozenAccu = a.device_id;
+          _limitsDirty = false;
+          laadStatus();
+        });
+        lijst.appendChild(rij);
+      });
+    }
+
+  function toon(id, waarde, leeg) {
       document.getElementById(id).textContent = (waarde === null || waarde === undefined) ? (leeg || '—') : waarde;
     }
 
     async function laadStatus() {
       try {
-        const r = await fetch('/api/battery/zendure_status');
+        const r = await fetch('/api/battery/zendure_status'
+                              + (_gekozenAccu ? '?device=' + encodeURIComponent(_gekozenAccu) : ''));
         const d = await r.json();
+        toonVloot(d);
         document.getElementById('offlineNotice').style.display = d.online ? 'none' : '';
         if (!d.online) return;
 
@@ -342,7 +410,8 @@
           discharge_limit: parseInt(document.getElementById('dischargeLimit').value, 10),
           grid_reverse: parseInt(document.getElementById('gridReverse').value, 10)
         };
-        const r = await fetch('/api/battery/zendure_limits', {
+        const r = await fetch('/api/battery/zendure_limits'
+                              + (_gekozenAccu ? '?device=' + encodeURIComponent(_gekozenAccu) : ''), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
