@@ -9246,6 +9246,9 @@ def control_loop():
     prev_schedule_active_ips = set()
     _bat_tofull_active = False  # to_full mode actief voor accu-eerst: accu bevroren op max lading
     _vorige_eigen_stand = None   # laatst gemelde eigen stand van de klant, om niet te blijven herhalen
+    # Of we de stand nog niet kenden, zodat die melding niet elke ronde opnieuw
+    # in het logboek komt.
+    _vorige_stand_onbekend = False
     _bat_tofull_leeg_sinds = None  # sinds wanneer er geen overschot meer is terwijl to_full loopt
     _bat_saturated = False       # accu uitgeregeld: neemt overschot niet op → boiler vrijgeven
     _bat_saturated_since = None  # start aanhoudende export terwijl accu zou moeten laden
@@ -10218,6 +10221,29 @@ def control_loop():
                     and bool(_bat_gelezen_stand)
                     and _bat_gelezen_stand not in HW_EIGEN_STANDEN
                 )
+                # Zolang we de stand niet hebben gelezen weten we niet of de
+                # klant zijn accu zelf heeft ingesteld. Dan sturen we niets.
+                #
+                # Gemeten bij een klant op 1 november 2026: twee seconden na het
+                # opstarten ging er "zero" naar de accu met vanaf_modus=None, en
+                # pas twintig minuten later las de hub "predictive", de naam die
+                # HomeWizard aan slim laden geeft, en trok hij zich terug. In die
+                # twintig minuten had hij de keuze van de klant al overschreven.
+                #
+                # De meting en de regelpoort zijn twee aparte vragen met een
+                # eigen sleutel: de accu kan dus online zijn terwijl zijn stand
+                # nog onbekend is. Onzekerheid hoort hier in het voordeel van de
+                # klant uit te vallen, niet in dat van ons.
+                _bat_stand_onbekend = (
+                    cfg.get("battery_type", "homewizard") not in
+                    ("marstek", "zendure", "indevolt")
+                    and not _bat_gelezen_stand
+                )
+                if _bat_stand_onbekend and not _vorige_stand_onbekend:
+                    print("[BAT] stand van de accu nog onbekend, SolarBuffer "
+                          "stuurt niets tot hij hem heeft gelezen", flush=True)
+                _vorige_stand_onbekend = _bat_stand_onbekend
+
                 if _bat_eigen_regie and _bat_gelezen_stand != _vorige_eigen_stand:
                     print(f"[BAT] accu staat op '{_bat_gelezen_stand}', door de klant "
                           f"ingesteld. SolarBuffer laat hem met rust tot hij weer op "
@@ -10546,6 +10572,7 @@ def control_loop():
                             # Staat dit op true, dan wordt de gewenste stand
                             # hierboven wel uitgerekend maar niet verstuurd.
                             "eigen_regie": _bat_eigen_regie,
+                            "stand_onbekend": _bat_stand_onbekend,
                         },
                         {
                             "net_w": round(measured_power, 1) if measured_power is not None else None,
@@ -10652,7 +10679,8 @@ def control_loop():
                                                              _bat_manual_power)},
                                     daemon=True,
                                 ).start()
-                    elif _bat_token and _bat_control_ip and not _bat_eigen_regie and (
+                    elif (_bat_token and _bat_control_ip and not _bat_eigen_regie
+                          and not _bat_stand_onbekend) and (
                         sorted(_desired_perms) != (_last_battery_permissions or []) or
                         _desired_mode != _last_battery_mode or
                         (now - _last_hw_battery_send) > HW_BATTERY_REFRESH_SECONDS
